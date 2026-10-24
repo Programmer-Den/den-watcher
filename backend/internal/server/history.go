@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/history"
+	"github.com/Programmer-Den/den-watcher/backend/internal/history"
 )
 
 // HistoryReader reads the machine's usage over time, averaged over steps so

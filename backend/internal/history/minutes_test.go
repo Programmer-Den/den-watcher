@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // hub is the id a hub sends.

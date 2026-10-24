@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // testSuggester answers like a home network: the hub is 192.168.1.9 in a

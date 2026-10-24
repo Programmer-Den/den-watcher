@@ -9,7 +9,7 @@
 # What every add-on container shares: the image, no network, and no
 # privileges beyond reading.
 x-addon: &addon
-  image: ghcr.io/chriszly/den-watcher:${IMAGE_TAG:-latest}
+  image: ghcr.io/programmer-den/den-watcher:${IMAGE_TAG:-latest}
   restart: unless-stopped
   network_mode: none
   read_only: true
@@ -21,7 +21,7 @@ x-addon: &addon
 services:
   den-watcher:
     build: .
-    image: ghcr.io/chriszly/den-watcher:${IMAGE_TAG:-latest}
+    image: ghcr.io/programmer-den/den-watcher:${IMAGE_TAG:-latest}
     restart: unless-stopped
     # Published over IPv4 only. The program refuses requests from outside the
     # local network by the client's address, and Docker's proxy would hand

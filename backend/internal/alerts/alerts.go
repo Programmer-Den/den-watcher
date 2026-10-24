@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // Level is how serious an alert is.

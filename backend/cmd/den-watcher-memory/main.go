@@ -14,8 +14,8 @@
 package main
 
 import (
-	"github.com/Chriszly/den-watcher/backend/internal/addons"
-	"github.com/Chriszly/den-watcher/backend/internal/addons/memory"
+	"github.com/Programmer-Den/den-watcher/backend/internal/addons"
+	"github.com/Programmer-Den/den-watcher/backend/internal/addons/memory"
 )
 
 func main() {

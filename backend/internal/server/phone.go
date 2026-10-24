@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/hub"
-	"github.com/Chriszly/den-watcher/backend/internal/pairing"
+	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
+	"github.com/Programmer-Den/den-watcher/backend/internal/pairing"
 )
 
 // pushHandler serves POST /api/phone/minutes: what a phone kept of its own

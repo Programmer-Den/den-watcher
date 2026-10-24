@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"github.com/Chriszly/den-watcher/backend/internal/pdh"
+	"github.com/Programmer-Den/den-watcher/backend/internal/pdh"
 )
 
 // system reads the power meters Windows offers itself: the "Energy Meter"

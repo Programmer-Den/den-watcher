@@ -8,7 +8,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 const sample = `Inter-| sta-|   Quality        |   Discarded packets               | Missed | WE

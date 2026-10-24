@@ -23,10 +23,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/addons"
-	"github.com/Chriszly/den-watcher/backend/internal/addons/bluetooth"
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
-	"github.com/Chriszly/den-watcher/backend/internal/sysfile"
+	"github.com/Programmer-Den/den-watcher/backend/internal/addons"
+	"github.com/Programmer-Den/den-watcher/backend/internal/addons/bluetooth"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/sysfile"
 )
 
 func main() {

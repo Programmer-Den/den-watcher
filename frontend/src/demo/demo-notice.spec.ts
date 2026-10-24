@@ -33,6 +33,6 @@ describe('DemoNotice', () => {
     const notice = render({});
     expect(notice.textContent).toContain('Development version from main');
     const links = Array.from(notice.querySelectorAll('a')).map((a) => a.getAttribute('href'));
-    expect(links).toEqual(['https://github.com/Chriszly/den-watcher#readme']);
+    expect(links).toEqual(['https://github.com/Programmer-Den/den-watcher#readme']);
   });
 });

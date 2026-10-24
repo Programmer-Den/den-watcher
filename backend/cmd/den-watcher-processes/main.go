@@ -15,9 +15,9 @@
 package main
 
 import (
-	"github.com/Chriszly/den-watcher/backend/internal/addons"
-	"github.com/Chriszly/den-watcher/backend/internal/addons/processes"
-	"github.com/Chriszly/den-watcher/backend/internal/sysfile"
+	"github.com/Programmer-Den/den-watcher/backend/internal/addons"
+	"github.com/Programmer-Den/den-watcher/backend/internal/addons/processes"
+	"github.com/Programmer-Den/den-watcher/backend/internal/sysfile"
 )
 
 func main() {

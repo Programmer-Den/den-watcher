@@ -3,7 +3,7 @@ package memory
 import (
 	"testing"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 func TestCounterItems(t *testing.T) {

@@ -18,9 +18,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/addons"
-	"github.com/Chriszly/den-watcher/backend/internal/addons/inodes"
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/addons"
+	"github.com/Programmer-Den/den-watcher/backend/internal/addons/inodes"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 func main() {

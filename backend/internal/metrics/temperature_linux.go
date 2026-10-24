@@ -10,7 +10,7 @@ import (
 
 	"github.com/shirou/gopsutil/v4/sensors"
 
-	"github.com/Chriszly/den-watcher/backend/internal/sysfile"
+	"github.com/Programmer-Den/den-watcher/backend/internal/sysfile"
 )
 
 // readSensors reads the temperature sensors in /sys/class/hwmon as gopsutil

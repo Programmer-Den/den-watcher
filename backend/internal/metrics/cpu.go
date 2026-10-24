@@ -12,7 +12,7 @@ import (
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/load"
 
-	"github.com/Chriszly/den-watcher/backend/internal/sysfile"
+	"github.com/Programmer-Den/den-watcher/backend/internal/sysfile"
 )
 
 // LoadAverage is the average number of processes running or waiting for the

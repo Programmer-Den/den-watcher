@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // single are the metrics a device has once.

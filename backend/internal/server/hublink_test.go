@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/hub"
+	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 )
 
 // otherHubID is the id of a second hub, besides testHubID.

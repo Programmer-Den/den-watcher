@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/addons"
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/addons"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // size is a value of /proc/meminfo shown in bytes.

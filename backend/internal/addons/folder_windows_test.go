@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // junction makes a folder and a junction to it in a temporary folder.

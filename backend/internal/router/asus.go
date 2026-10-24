@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/lan"
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/lan"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // ASUSPaths are the only pages of an ASUS router's web interface a reader

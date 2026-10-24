@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/history"
-	"github.com/Chriszly/den-watcher/backend/internal/hub"
+	"github.com/Programmer-Den/den-watcher/backend/internal/history"
+	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 )
 
 type fakeMinutes struct {

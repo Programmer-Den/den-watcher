@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/pairing"
+	"github.com/Programmer-Den/den-watcher/backend/internal/pairing"
 )
 
 // startPairedDevice starts a device that answers a hub only with code, as

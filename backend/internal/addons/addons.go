@@ -19,8 +19,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
-	"github.com/Chriszly/den-watcher/backend/internal/winservice"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/winservice"
 )
 
 // Interval is how often an add-on reads, as often as den-watcher reads the

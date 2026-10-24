@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/password"
+	"github.com/Programmer-Den/den-watcher/backend/internal/password"
 )
 
 // fakePassword answers at once, without the wait of the real one.

@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/Chriszly/den-watcher/backend/internal/sysfile"
+	"github.com/Programmer-Den/den-watcher/backend/internal/sysfile"
 )
 
 // readLinks reads the speed of each interface from /sys/class/net and the

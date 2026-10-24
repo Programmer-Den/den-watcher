@@ -1,7 +1,7 @@
 package memory
 
 import (
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // This file turns the memory counters of Windows into extras. It has no build

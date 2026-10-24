@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/addons"
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/addons"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // query is what nvidia-smi is asked, in this order, one line per GPU.

@@ -4,7 +4,7 @@
 # install.sh puts it in /etc/systemd/system when the add-on is picked.
 [Unit]
 Description=Den-Watcher Wi-Fi add-on: reads the link quality and signal of each connected Wi-Fi interface; runs as root without capabilities
-Documentation=https://github.com/Chriszly/den-watcher
+Documentation=https://github.com/Programmer-Den/den-watcher
 PartOf=den-watcher.service
 After=den-watcher.service
 

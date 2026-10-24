@@ -16,11 +16,11 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/alerts"
-	"github.com/Chriszly/den-watcher/backend/internal/history"
-	"github.com/Chriszly/den-watcher/backend/internal/hub"
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
-	"github.com/Chriszly/den-watcher/backend/internal/update"
+	"github.com/Programmer-Den/den-watcher/backend/internal/alerts"
+	"github.com/Programmer-Den/den-watcher/backend/internal/history"
+	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/update"
 )
 
 // DeviceList is a fixed list of devices, as the tests need it.
@@ -593,7 +593,7 @@ func TestAvailabilityOfAnotherDevice(t *testing.T) {
 }
 
 func TestUpdateTellsANewerRelease(t *testing.T) {
-	want := update.Status{Current: "0.1.0", Latest: "0.2.0", URL: "https://github.com/Chriszly/den-watcher/releases/tag/v0.2.0"}
+	want := update.Status{Current: "0.1.0", Latest: "0.2.0", URL: "https://github.com/Programmer-Den/den-watcher/releases/tag/v0.2.0"}
 	handler := New(Site{Devices: DeviceList(device(fakeCollector{}, nil)), Files: site, Update: func() update.Status { return want }})
 
 	rec := get(handler, "/api/update", "192.168.1.20:5000")

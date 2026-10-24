@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // The standard OIDs an SNMP reader asks, which every SNMP router has with

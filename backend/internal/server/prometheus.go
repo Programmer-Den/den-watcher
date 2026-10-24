@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Chriszly/den-watcher/backend/internal/alerts"
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/alerts"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // localName is what GET /metrics calls the machine the site runs on when no

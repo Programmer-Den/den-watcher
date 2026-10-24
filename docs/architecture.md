@@ -78,7 +78,7 @@ What goes over the wire:
 | Program on the device | The device | `GET /api/hub`: the hub's page as `{"url": "http://192.168.1.20:9393/"}`, empty until a hub asked; only answered to 127.0.0.1 and ::1 | when needed |
 | Prometheus | Hub | `GET /metrics`: the usage of every device in the Prometheus text format; only with `PROMETHEUS=true` | as often as Prometheus scrapes |
 | Browser anywhere | Hub | the [status page](#the-status-page) on `STATUS_ADDR`, over HTTPS: whether each device is online and how many alerts it has; only with `STATUS_ADDR` | once a minute while it is open |
-| Hub | GitHub | `GET https://api.github.com/repos/Chriszly/den-watcher/releases/latest` | once a day, at start and every 24 h after, or an hour after a failed check; only on releases, never with `DATA_ONLY` |
+| Hub | GitHub | `GET https://api.github.com/repos/Programmer-Den/den-watcher/releases/latest` | once a day, at start and every 24 h after, or an hour after a failed check; only on releases, never with `DATA_ONLY` |
 
 The usage, availability, chart, event and disk forecast polls pause while the tab is hidden and read again at once when it is shown; the list of devices, which carries the alerts that last, is read every 30 seconds then, for the tab's title and the browser's notifications. All traffic on the local network is plain HTTP. Nothing else leaves the network: no telemetry, no account, no cloud service. The daily version check only reads the newest release's tag; nothing is downloaded or installed.
 

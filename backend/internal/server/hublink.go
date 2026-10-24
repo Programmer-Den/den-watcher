@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/hub"
+	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 )
 
 // hubLinkTakeover is how long the remembered hub must not have asked before

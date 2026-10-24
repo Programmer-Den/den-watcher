@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/addons"
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
-	"github.com/Chriszly/den-watcher/backend/internal/pdh"
+	"github.com/Programmer-Den/den-watcher/backend/internal/addons"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/pdh"
 )
 
 // On Windows the memory details come from the performance counters of the

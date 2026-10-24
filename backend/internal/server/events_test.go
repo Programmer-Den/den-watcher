@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/alerts"
-	"github.com/Chriszly/den-watcher/backend/internal/events"
-	"github.com/Chriszly/den-watcher/backend/internal/hub"
+	"github.com/Programmer-Den/den-watcher/backend/internal/alerts"
+	"github.com/Programmer-Den/den-watcher/backend/internal/events"
+	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 )
 
 // fakeEventLog holds the events of every device, or fails while err is set.

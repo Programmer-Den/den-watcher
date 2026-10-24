@@ -14,13 +14,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/alerts"
-	"github.com/Chriszly/den-watcher/backend/internal/events"
-	"github.com/Chriszly/den-watcher/backend/internal/hub"
-	"github.com/Chriszly/den-watcher/backend/internal/lan"
-	"github.com/Chriszly/den-watcher/backend/internal/layout"
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
-	"github.com/Chriszly/den-watcher/backend/internal/update"
+	"github.com/Programmer-Den/den-watcher/backend/internal/alerts"
+	"github.com/Programmer-Den/den-watcher/backend/internal/events"
+	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
+	"github.com/Programmer-Den/den-watcher/backend/internal/lan"
+	"github.com/Programmer-Den/den-watcher/backend/internal/layout"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/update"
 )
 
 // Device is a machine whose usage the site shows: the one it runs on and, in

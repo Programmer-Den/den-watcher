@@ -25,7 +25,7 @@ COPY --from=frontend /src/backend/internal/web/files/build ./internal/web/files/
 RUN go run ./cmd/licenses
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -trimpath \
-      -ldflags="-s -w -X github.com/Chriszly/den-watcher/backend/internal/version.Version=$VERSION" \
+      -ldflags="-s -w -X github.com/Programmer-Den/den-watcher/backend/internal/version.Version=$VERSION" \
       -o /out/den-watcher ./cmd/den-watcher
 # The add-ons, each run as a container of its own when its profile in
 # compose.yaml is picked: every command but den-watcher, the Windows tray

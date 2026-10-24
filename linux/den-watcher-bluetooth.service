@@ -3,7 +3,7 @@
 # shows. install.sh puts it in /etc/systemd/system when the add-on is picked.
 [Unit]
 Description=Den-Watcher Bluetooth add-on: reads which Bluetooth devices are connected, with their name, kind or battery; runs as a user without privileges
-Documentation=https://github.com/Chriszly/den-watcher
+Documentation=https://github.com/Programmer-Den/den-watcher
 PartOf=den-watcher.service
 After=den-watcher.service bluetooth.service
 

@@ -87,7 +87,7 @@ jobs:
             folder="den-watcher-$VERSION-linux-$arch"
             mkdir -p "dist/$folder"
             (cd backend && CGO_ENABLED=0 GOOS=linux GOARCH="$arch" go build -trimpath \
-              -ldflags="-s -w -X github.com/Chriszly/den-watcher/backend/internal/version.Version=$VERSION" \
+              -ldflags="-s -w -X github.com/Programmer-Den/den-watcher/backend/internal/version.Version=$VERSION" \
               -o "../dist/$folder/den-watcher" ./cmd/den-watcher)
             # Every add-on, each with its service file in linux/.
             for addon in linux/den-watcher-*.service; do

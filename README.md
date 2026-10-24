@@ -19,7 +19,7 @@ flowchart LR
     hub -- "every 5 s" --> windows["Windows PC"]
 ```
 
-**[Try the demo](https://chriszly.github.io/den-watcher/)**: the real page with made-up Windows and Linux devices, to click through before installing anything. It shows the latest release; the development version from main is at [/main/](https://chriszly.github.io/den-watcher/main/).
+**[Try the demo](https://programmer-den.github.io/den-watcher/)**: the real page with made-up Windows and Linux devices, to click through before installing anything. It shows the latest release; the development version from main is at [/main/](https://programmer-den.github.io/den-watcher/main/).
 
 ## Quick start
 

@@ -19,9 +19,9 @@ import (
 
 const (
 	// latestURL answers with the newest release that is not a pre-release.
-	latestURL = "https://api.github.com/repos/Chriszly/den-watcher/releases/latest"
+	latestURL = "https://api.github.com/repos/Programmer-Den/den-watcher/releases/latest"
 	// releaseURL is the page of one release, for its tag.
-	releaseURL = "https://github.com/Chriszly/den-watcher/releases/tag/"
+	releaseURL = "https://github.com/Programmer-Den/den-watcher/releases/tag/"
 	// Interval is how often GitHub is asked.
 	Interval = 24 * time.Hour
 	// RetryInterval is how soon a failed check is tried again, so a network

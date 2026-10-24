@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/Chriszly/den-watcher/backend/internal/password"
+	"github.com/Programmer-Den/den-watcher/backend/internal/password"
 )
 
 // StatusPage is the remote status page, a minimal page on a port of its own

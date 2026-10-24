@@ -31,7 +31,7 @@ func TestStatusNamesANewerRelease(t *testing.T) {
 		t.Fatalf("check() error = %v", err)
 	}
 
-	want := Status{Current: "0.1.0", Latest: "0.10.0", URL: "https://github.com/Chriszly/den-watcher/releases/tag/v0.10.0"}
+	want := Status{Current: "0.1.0", Latest: "0.10.0", URL: "https://github.com/Programmer-Den/den-watcher/releases/tag/v0.10.0"}
 	if got := c.Status(); got != want {
 		t.Errorf("Status() = %+v, want %+v", got, want)
 	}
@@ -44,7 +44,7 @@ func TestStatusLinksATagWithoutV(t *testing.T) {
 	if err := c.check(context.Background()); err != nil {
 		t.Fatalf("check() error = %v", err)
 	}
-	if got := c.Status().URL; got != "https://github.com/Chriszly/den-watcher/releases/tag/0.2.0" {
+	if got := c.Status().URL; got != "https://github.com/Programmer-Den/den-watcher/releases/tag/0.2.0" {
 		t.Errorf("Status().URL = %q, want the release page of tag 0.2.0", got)
 	}
 }
@@ -159,7 +159,7 @@ func TestStatusNamesTheReleaseAfterAPreRelease(t *testing.T) {
 	if err := c.check(context.Background()); err != nil {
 		t.Fatalf("check() error = %v", err)
 	}
-	want := Status{Current: "2.0.0-alpha", Latest: "2.0.0", URL: "https://github.com/Chriszly/den-watcher/releases/tag/v2.0.0"}
+	want := Status{Current: "2.0.0-alpha", Latest: "2.0.0", URL: "https://github.com/Programmer-Den/den-watcher/releases/tag/v2.0.0"}
 	if got := c.Status(); got != want {
 		t.Errorf("Status() = %+v, want %+v", got, want)
 	}
@@ -172,7 +172,7 @@ func TestStatusNamesANewerBugfixRelease(t *testing.T) {
 	if err := c.check(context.Background()); err != nil {
 		t.Fatalf("check() error = %v", err)
 	}
-	want := Status{Current: "1.0.8", Latest: "1.0.8h", URL: "https://github.com/Chriszly/den-watcher/releases/tag/1.0.8h"}
+	want := Status{Current: "1.0.8", Latest: "1.0.8h", URL: "https://github.com/Programmer-Den/den-watcher/releases/tag/1.0.8h"}
 	if got := c.Status(); got != want {
 		t.Errorf("Status() = %+v, want %+v", got, want)
 	}

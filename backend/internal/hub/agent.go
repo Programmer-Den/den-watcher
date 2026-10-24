@@ -13,10 +13,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/history"
-	"github.com/Chriszly/den-watcher/backend/internal/lan"
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
-	"github.com/Chriszly/den-watcher/backend/internal/pairing"
+	"github.com/Programmer-Den/den-watcher/backend/internal/history"
+	"github.com/Programmer-Den/den-watcher/backend/internal/lan"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/pairing"
 )
 
 const (

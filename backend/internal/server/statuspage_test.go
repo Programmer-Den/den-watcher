@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Chriszly/den-watcher/backend/internal/password"
+	"github.com/Programmer-Den/den-watcher/backend/internal/password"
 )
 
 type fakeStatusPage struct{ password string }

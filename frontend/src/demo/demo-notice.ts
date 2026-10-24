@@ -78,7 +78,7 @@ const TEXT: Record<LanguageCode, NoticeText> = {
       </p>
     }
     <p>
-      <a href="https://github.com/Chriszly/den-watcher#readme">{{ text().install }}</a>
+      <a href="https://github.com/Programmer-Den/den-watcher#readme">{{ text().install }}</a>
     </p>
   `,
   styles: `

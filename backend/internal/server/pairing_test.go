@@ -8,9 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Chriszly/den-watcher/backend/internal/history"
-	"github.com/Chriszly/den-watcher/backend/internal/hub"
-	"github.com/Chriszly/den-watcher/backend/internal/pairing"
+	"github.com/Programmer-Den/den-watcher/backend/internal/history"
+	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
+	"github.com/Programmer-Den/den-watcher/backend/internal/pairing"
 )
 
 // fakePairing pairs the hubs in paired, and every hub that sends code.

@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/winservice"
+	"github.com/Programmer-Den/den-watcher/backend/internal/winservice"
 )
 
 // childVariable makes the test program act as an add-on den-watcher starts:

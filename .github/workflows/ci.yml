@@ -175,7 +175,7 @@ jobs:
           context: .
           platforms: linux/amd64
           load: true
-          tags: ghcr.io/chriszly/den-watcher:ci
+          tags: ghcr.io/programmer-den/den-watcher:ci
           cache-from: type=gha
 
       # Starts den-watcher with two add-on containers as compose.yaml sets
@@ -225,5 +225,5 @@ jobs:
           }
           check compose.yaml "den-watcher power processes " den-watcher ""
           gh api "repos/$GITHUB_REPOSITORY/contents/compose.yaml?ref=2.0.7a" -H 'Accept: application/vnd.github.raw' > old-compose.yaml
-          docker tag ghcr.io/chriszly/den-watcher:ci ghcr.io/chriszly/usage-control:ci
+          docker tag ghcr.io/programmer-den/den-watcher:ci ghcr.io/chriszly/usage-control:ci
           check old-compose.yaml "power processes usage-control " "the compose.yaml from before the rename" " from before the rename"

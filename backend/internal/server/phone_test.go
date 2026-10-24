@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Chriszly/den-watcher/backend/internal/hub"
-	"github.com/Chriszly/den-watcher/backend/internal/pairing"
+	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
+	"github.com/Programmer-Den/den-watcher/backend/internal/pairing"
 )
 
 func TestAddAPhone(t *testing.T) {

@@ -4,7 +4,7 @@
 # add-on is picked.
 [Unit]
 Description=Den-Watcher processes add-on: lists the twenty processes using the most CPU and memory; runs as root without capabilities
-Documentation=https://github.com/Chriszly/den-watcher
+Documentation=https://github.com/Programmer-Den/den-watcher
 PartOf=den-watcher.service
 After=den-watcher.service
 

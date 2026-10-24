@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/Chriszly/den-watcher/backend/internal/sysfile"
+	"github.com/Programmer-Den/den-watcher/backend/internal/sysfile"
 )
 
 // batteryReader reads the batteries Linux lists in /sys/class/power_supply.

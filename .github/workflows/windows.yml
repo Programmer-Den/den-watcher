@@ -162,7 +162,7 @@ jobs:
           for arch in amd64 arm64; do
             CGO_ENABLED=0 GOOS=windows GOARCH="$arch" \
               go build -trimpath \
-                -ldflags="-s -w -X github.com/Chriszly/den-watcher/backend/internal/version.Version=$VERSION" \
+                -ldflags="-s -w -X github.com/Programmer-Den/den-watcher/backend/internal/version.Version=$VERSION" \
                 -o "../dist/$arch/den-watcher.exe" ./cmd/den-watcher
             # Every add-on; the installer picks the ones that work on Windows.
             for cmd in cmd/den-watcher-*/; do
