@@ -39,6 +39,7 @@ import {
 import { saveFile } from '../browser';
 import { I18n } from '../i18n/i18n';
 import {
+  ADD_KINDS,
   DEVICE_KINDS,
   Device,
   DeviceKind,
@@ -98,6 +99,15 @@ export class DevicesDialog {
   /** This device's own pairing code, for a hub that collects from it; empty until it is read. */
   protected readonly ownCode = signal('');
   protected readonly kinds = DEVICE_KINDS;
+  protected readonly addKinds = ADD_KINDS;
+  /** Whether the device to add is a phone, which has no address but needs its pairing code. */
+  protected readonly addsPhone = computed(() => this.kind() === 'phone');
+  /** Whether the form holds enough to add the device. */
+  protected readonly canAdd = computed(
+    () => !!this.name().trim() && !!(this.addsPhone() ? this.code().trim() : this.address().trim()),
+  );
+  /** The hub's address as the page was opened with it, which a phone's app is given. */
+  protected readonly hubAddress = this.document.location.host;
   protected readonly kindName = kindName;
   /** The remote status page; null until it is read, and when the hub has none. */
   protected readonly statusPage = signal<StatusPage | null>(null);
@@ -190,15 +200,17 @@ export class DevicesDialog {
   }
 
   protected add(): void {
-    const name = this.name().trim();
-    const address = this.address().trim();
-    if (!name || !address) {
+    if (!this.canAdd()) {
       return;
     }
+    const name = this.name().trim();
+    const address = this.address().trim();
     const kind = this.kind();
     const code = this.code().trim();
     this.change({ action: 'add', deviceName: name }, (result) =>
-      this.devices.add(name, address, kind, code, result.password),
+      kind === 'phone'
+        ? this.devices.addPhone(name, code, result.password)
+        : this.devices.add(name, address, kind, code, result.password),
     ).subscribe(() => {
       this.name.set('');
       this.address.set('');

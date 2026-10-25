@@ -172,6 +172,38 @@ describe('DevicesDialog', () => {
     expect((element().querySelector('input[name="name"]') as HTMLInputElement).value).toBe('');
   });
 
+  it('adds a phone with the code its app shows and without an address', async () => {
+    formKind('Phone').click();
+    fixture.detectChanges();
+    expect(input('address')).toBeNull();
+    expect(element().textContent).toContain("enter this hub's address in the app");
+    await type('name', 'Pixel');
+    expect(button('Add').disabled).toBe(true);
+    await type('code', '7KQM-X2RP');
+    button('Add').click();
+
+    const add = http.expectOne('/api/phones');
+    expect(add.request.method).toBe('POST');
+    expect(add.request.body).toEqual({
+      name: 'Pixel',
+      code: '7KQM-X2RP',
+      password: 'correct horse',
+    });
+    add.flush(
+      { id: 'pixel', name: 'Pixel', kind: 'phone', removable: true },
+      { status: 201, statusText: 'Created' },
+    );
+    http
+      .expectOne((r) => r.method === 'GET' && r.url === '/api/devices')
+      .flush({ devices: [{ id: 'local', name: '' }], passwordSet: true });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(input('code').value).toBe('');
+    expect(input('address')).not.toBeNull();
+  });
+
   it('adds a device with the pairing code it shows', async () => {
     await type('name', 'Laptop');
     await type('address', '192.168.1.40:9393');

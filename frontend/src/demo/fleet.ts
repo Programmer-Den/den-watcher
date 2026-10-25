@@ -1659,7 +1659,8 @@ const androidPhone: DemoMachine = {
     maker: 'Google',
     model: 'Pixel 8',
   },
-  cores: 9,
+  // The app cannot read the processor's usage, so the phone tells no cores.
+  cores: 0,
   maxClockMHz: 2910,
   memoryBytes: 8 * GB,
   disks: [{ path: '/data', totalBytes: 119 * GB }],
@@ -1667,9 +1668,9 @@ const androidPhone: DemoMachine = {
   extras: wifiAddOn('wlan0'),
   bootedDaysAgo: 6.1,
   values: (t, step) => {
+    // How busy the phone is, which only warms its battery: the app cannot read it.
     const cpu = vary(t, step, 141, 6, 1, 100, [4, 30], [8, 1800]);
     return {
-      cpu,
       memory: vary(t, step, 142, 68, 0, 100, [5, 900]),
       battery: batteryPercent(t + 1500),
       'temperature:battery': 29 + cpu * 0.12,
@@ -1966,7 +1967,9 @@ export function snapshotOf(machine: DemoMachine, t: number, version: string): Sn
   const percentOf = (total: number, percent: number) => Math.round((total * percent) / 100);
   // The load average over a window: the usage at a few moments in it, as busy cores.
   const load = (window: number) => {
-    const moments = [0, 1, 2, 3, 4, 5].map((i) => machine.values(t - (i * window) / 6, 0)['cpu']);
+    const moments = [0, 1, 2, 3, 4, 5].map(
+      (i) => machine.values(t - (i * window) / 6, 0)['cpu'] ?? 0,
+    );
     return (moments.reduce((sum, cpu) => sum + cpu, 0) / moments.length / 100) * machine.cores;
   };
   const disks = machine.disks.map((disk) => {
@@ -2026,6 +2029,9 @@ export function snapshotOf(machine: DemoMachine, t: number, version: string): Sn
     };
   }
 
+  // A phone tells no processor usage; its page leaves the processor out.
+  const cpu = v['cpu'] ?? 0;
+
   return {
     ...(machine.router
       ? {}
@@ -2038,16 +2044,16 @@ export function snapshotOf(machine: DemoMachine, t: number, version: string): Sn
     time: new Date(t * 1000).toISOString(),
     uptimeSeconds,
     cpu: {
-      usagePercent: v['cpu'],
+      usagePercent: cpu,
       cores: machine.cores,
       coreUsagePercent: Array.from({ length: machine.cores }, (_, core) =>
-        vary(t, 0, seed + core, v['cpu'], 0, 100, [v['cpu'] * 0.8 + 4, 6]),
+        vary(t, 0, seed + core, cpu, 0, 100, [cpu * 0.8 + 4, 6]),
       ),
       ...(machine.router
         ? {}
         : {
             clockMHz: Math.round(
-              machine.maxClockMHz * (0.45 + (0.55 * Math.min(100, v['cpu'] * 3)) / 100),
+              machine.maxClockMHz * (0.45 + (0.55 * Math.min(100, cpu * 3)) / 100),
             ),
           }),
       ...(linux
@@ -2060,7 +2066,7 @@ export function snapshotOf(machine: DemoMachine, t: number, version: string): Sn
             stealPercent: 0,
             processes: {
               total: Math.round(140 + machine.cores * 12 + v['memory']),
-              running: Math.max(1, Math.round((v['cpu'] / 100) * machine.cores)),
+              running: Math.max(1, Math.round((cpu / 100) * machine.cores)),
             },
           }
         : {}),
@@ -2106,7 +2112,7 @@ export function snapshotOf(machine: DemoMachine, t: number, version: string): Sn
             percent: v['battery'],
             pluggedIn: charging(t),
             ...(machine.batteryDetails
-              ? { watts: charging(t) ? 38 : 7 + v['cpu'] * 0.2, healthPercent: 91 }
+              ? { watts: charging(t) ? 38 : 7 + cpu * 0.2, healthPercent: 91 }
               : {}),
           },
         }

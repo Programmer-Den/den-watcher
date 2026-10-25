@@ -9,13 +9,16 @@ import { PageVisibility } from '../page-visibility';
 /**
  * What another device is used as. The times a server does not answer are
  * outages; a PC or laptop that does not answer is switched off or asleep, so
- * it is just not in use, and so is a phone that is away or asleep. A phone is
- * added from its app and stays one, so the page does not offer it as a kind.
+ * it is just not in use, and so is a phone that is away or asleep. A phone
+ * stays one, so the page offers it only when adding a device.
  */
 export type DeviceKind = 'server' | 'pc' | 'phone';
 
-/** The kinds in the order the page offers them. */
+/** The kinds in the order the page offers them for a device it has. */
 export const DEVICE_KINDS: readonly DeviceKind[] = ['server', 'pc'];
+
+/** The kinds in the order the page offers them for a device to add. */
+export const ADD_KINDS: readonly DeviceKind[] = ['server', 'pc', 'phone'];
 
 /** The kinds in the order the list of devices groups them. */
 export const DEVICE_GROUPS: readonly DeviceKind[] = ['server', 'pc', 'phone'];
@@ -262,6 +265,14 @@ export class DeviceService {
     password: string,
   ): Observable<Device> {
     return this.http.post<Device>('/api/devices', { name, address, kind, code, password });
+  }
+
+  /**
+   * Adds a phone, with the pairing code its app shows; it has no address, as it sends its usage
+   * to the hub itself. Without a password yet, `password` becomes the password.
+   */
+  addPhone(name: string, code: string, password: string): Observable<Device> {
+    return this.http.post<Device>('/api/phones', { name, code, password });
   }
 
   /** Changes the pairing code the hub sends a device, one from the hub's .env file too. */

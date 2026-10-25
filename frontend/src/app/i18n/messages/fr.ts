@@ -163,6 +163,9 @@ export const fr: Messages = {
   'devicesDialog.code': "Code d'appairage",
   'devicesDialog.codeHint':
     "Affiché sur la page de l'appareil sous Appareils, dans le menu de son icône de la barre des tâches ou dans son journal.",
+  'devicesDialog.phoneCodeHint': "Affiché dans l'app Den-Watcher du téléphone.",
+  'devicesDialog.phoneHint':
+    "Installez l'app Den-Watcher sur le téléphone et saisissez ici le code d'appairage qu'elle affiche, puis l'adresse de ce hub dans l'app : {address}. Le téléphone envoie son utilisation dès qu'il est sur ce réseau ; tant qu'il est absent ou en veille, il n'est simplement pas utilisé.",
   'devicesDialog.pairingNeeded':
     "Attend son code d'appairage ; d'ici là, seule sa disponibilité est suivie.",
   'devicesDialog.pairingWrong':

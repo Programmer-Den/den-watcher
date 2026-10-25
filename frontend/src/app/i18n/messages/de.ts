@@ -165,6 +165,9 @@ export const de: Messages = {
   'devicesDialog.code': 'Kopplungscode',
   'devicesDialog.codeHint':
     'Steht auf der Seite des Geräts unter Geräte, im Menü seines Tray-Symbols oder in seinem Log.',
+  'devicesDialog.phoneCodeHint': 'Wird in der Den-Watcher-App des Handys angezeigt.',
+  'devicesDialog.phoneHint':
+    'Installiere die Den-Watcher-App auf dem Handy, gib hier den Kopplungscode ein, den sie anzeigt, und in der App die Adresse dieses Hubs: {address}. Das Handy schickt seine Nutzung, sobald es in diesem Netz ist; solange es weg ist oder schläft, ist es nur nicht in Benutzung.',
   'devicesDialog.pairingNeeded':
     'Wartet auf seinen Kopplungscode; bis dahin wird nur seine Verfügbarkeit erfasst.',
   'devicesDialog.pairingWrong':
