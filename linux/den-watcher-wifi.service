@@ -1,29 +1,36 @@
 # The Wi-Fi add-on of den-watcher: reads the link quality and signal of
-# each connected wireless interface and writes them to
-# /run/den-watcher-addons, which den-watcher shows.
+# each connected wireless interface, and the Wi-Fi networks nearby, and
+# writes them to /run/den-watcher-addons, which den-watcher shows.
 # install.sh puts it in /etc/systemd/system when the add-on is picked.
 [Unit]
-Description=Den-Watcher Wi-Fi add-on: reads the link quality and signal of each connected Wi-Fi interface; runs as root without capabilities
+Description=Den-Watcher Wi-Fi add-on: reads the link quality and signal of each connected Wi-Fi interface and the Wi-Fi networks nearby; runs as a user without privileges
 Documentation=https://github.com/Programmer-Den/den-watcher
 PartOf=den-watcher.service
-After=den-watcher.service
+After=den-watcher.service NetworkManager.service
 
 [Service]
 ExecStart=/usr/local/bin/den-watcher-wifi
-Environment=ADDONS_DIR=/run/den-watcher-addons
-# The add-on folder den-watcher reads; others may read it, only root writes.
-RuntimeDirectory=den-watcher-addons
+# It asks NetworkManager over the system D-Bus for the networks nearby,
+# where root could have systemd and other services act for it, so like the
+# Bluetooth add-on it runs as a throwaway user. That user may not write to
+# the root-owned add-on folder, so it writes to a folder of its own in it,
+# and a link in the add-on folder, made and removed by systemd as root
+# ("+"), points den-watcher at its report.
+DynamicUser=yes
+Environment=ADDONS_DIR=/run/den-watcher-addons/wifi
+RuntimeDirectory=den-watcher-addons/wifi
 RuntimeDirectoryMode=0755
-# Shared with the other add-ons, so it stays when one of them stops.
-RuntimeDirectoryPreserve=yes
+ExecStartPre=+/bin/ln -sfn wifi/wifi.json /run/den-watcher-addons/wifi.json
+ExecStopPost=+/bin/rm -f /run/den-watcher-addons/wifi.json
 Restart=on-failure
 RestartSec=5
 
-# /proc/net/wireless is readable by anyone, but runs as root without any
-# capability like the other add-ons, as they share the root-owned add-on
-# folder. It reads the host's network through /proc/1/net, so it needs no
-# network of its own, and starts no other program.
-User=root
+# It reads the host's network through /proc/1/net, whose wireless file
+# anyone may read, so it needs no network of its own, only the Unix socket
+# of the system D-Bus, and starts no other program. NetworkManager lets any
+# user read its access points, the ones its own scans found; the add-on
+# starts no scan, and changing a connection takes an authorization polkit
+# does not give a user outside a login session.
 NoNewPrivileges=yes
 CapabilityBoundingSet=
 ProtectSystem=strict
@@ -40,15 +47,7 @@ ProtectControlGroups=yes
 # calls that set it, as in the other add-ons' units.
 SystemCallFilter=~@clock
 ProtectHostname=yes
-# No socket of any kind: as root it could otherwise connect to the Unix
-# sockets of services such as Docker or systemd and have them act for it.
-RestrictAddressFamilies=none
-# The call that opens a socket is denied as well, so this does not rest on
-# how systemd reads "none": before 249 (as on Raspberry Pi OS bullseye) it
-# warns that it does not know the word, though it still allows no family.
-SystemCallFilter=~socket
-# A denied call fails instead of ending the program.
-SystemCallErrorNumber=EPERM
+RestrictAddressFamilies=AF_UNIX
 RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes

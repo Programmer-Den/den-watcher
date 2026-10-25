@@ -1,9 +1,11 @@
 // Package wifi reads the link quality and signal of each connected wireless
 // interface, for the Wi-Fi add-on: on Linux from /proc/net/wireless, which
 // lists an interface only while it is connected, and on Windows through its
-// Native Wifi API (see wlan.go). macOS reports nothing.
+// Native Wifi API (see wlan.go). It also reads the Wi-Fi networks nearby that
+// the system's own scans found (see networks.go): on Linux from
+// NetworkManager, on Windows through the same API. macOS reports nothing.
 //
-// It only reads; nothing in here changes the machine.
+// It only reads, and starts no scan; nothing in here changes the machine.
 package wifi
 
 import (
