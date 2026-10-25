@@ -188,7 +188,7 @@ export const de: Messages = {
   'devicesDialog.statusChange': 'Passwort ändern',
   'devicesDialog.statusSaved': 'Das Passwort der Statusseite ist gesetzt.',
   'devices.problem.wrongPassword': 'Das Passwort ist falsch.',
-  'devices.problem.passwordLength': 'Das Passwort braucht mindestens {count} Zeichen.',
+  'devices.problem.passwordLength': 'Das Passwort braucht {count} bis {max} Zeichen.',
   'devices.problem.name':
     'Gib dem Gerät einen Namen mit bis zu 64 Zeichen und mindestens einem Buchstaben oder einer Ziffer.',
   'devices.problem.nameTaken': 'Ein anderes Gerät hat bereits diesen Namen. Wähle einen anderen.',

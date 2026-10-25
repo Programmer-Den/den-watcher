@@ -1,8 +1,9 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Subscription } from 'rxjs';
 
+import { I18n } from '../i18n/i18n';
 import {
   DEVICES_HIDDEN_REFRESH_MS,
   DEVICES_REFRESH_MS,
@@ -10,6 +11,7 @@ import {
   backupName,
   deviceState,
   notInUse,
+  problemMessage,
 } from './devices';
 
 describe('DeviceService', () => {
@@ -128,5 +130,14 @@ describe('notInUse', () => {
     expect(notInUse({ id: 'laptop', name: 'Laptop', kind: 'pc', unreachable: true })).toBe(true);
     expect(notInUse({ id: 'nas', name: 'NAS', kind: 'server', unreachable: true })).toBe(false);
     expect(notInUse({ id: 'phone', name: 'Phone', kind: 'phone' })).toBe(false);
+  });
+});
+
+describe('problemMessage', () => {
+  it('names both lengths a password may have', () => {
+    const i18n = TestBed.inject(I18n);
+    i18n.language.set('en-GB');
+    const refused = new HttpErrorResponse({ status: 400, error: { problem: 'passwordLength' } });
+    expect(problemMessage(refused, i18n)).toBe('The password needs 8 to 128 characters.');
   });
 });

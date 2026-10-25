@@ -43,6 +43,7 @@ import {
   Device,
   DeviceKind,
   DeviceService,
+  MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
   StatusPage,
   Suggestion,
@@ -104,12 +105,14 @@ export class DevicesDialog {
   protected readonly statusPassword = signal('');
   protected readonly statusRepeated = signal('');
   protected readonly minLength = MIN_PASSWORD_LENGTH;
+  protected readonly maxLength = MAX_PASSWORD_LENGTH;
   protected readonly statusMismatch = computed(
     () => this.statusRepeated() !== '' && this.statusRepeated() !== this.statusPassword(),
   );
   protected readonly canSetStatusPassword = computed(
     () =>
       this.statusPassword().length >= MIN_PASSWORD_LENGTH &&
+      this.statusPassword().length <= MAX_PASSWORD_LENGTH &&
       this.statusRepeated() === this.statusPassword(),
   );
   /** Set once the status page's password was set in this dialog. */

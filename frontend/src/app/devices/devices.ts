@@ -181,6 +181,9 @@ export const DEVICES_HIDDEN_REFRESH_MS = 30_000;
 /** The shortest password that can be chosen; the backend checks it too. */
 export const MIN_PASSWORD_LENGTH = 8;
 
+/** The longest password that can be chosen; the backend checks it too. */
+export const MAX_PASSWORD_LENGTH = 128;
+
 /**
  * The devices the backend shows and the one picked on the page. The backend
  * collects from other devices on the local network too when they are added on
@@ -398,7 +401,10 @@ export function problemMessage(error: unknown, i18n: I18n): string {
       ? (error.error as { problem?: string } | null)?.problem
       : undefined;
   if (problem === 'passwordLength') {
-    return i18n.t('devices.problem.passwordLength', { count: MIN_PASSWORD_LENGTH });
+    return i18n.t('devices.problem.passwordLength', {
+      count: MIN_PASSWORD_LENGTH,
+      max: MAX_PASSWORD_LENGTH,
+    });
   }
   const known = KNOWN_PROBLEMS.find((p) => p === problem);
   return i18n.t(known ? `devices.problem.${known}` : 'devices.problem.other');

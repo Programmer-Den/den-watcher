@@ -186,7 +186,7 @@ export const fr: Messages = {
   'devicesDialog.statusChange': 'Changer le mot de passe',
   'devicesDialog.statusSaved': 'Le mot de passe de la page d’état est défini.',
   'devices.problem.wrongPassword': 'Le mot de passe est incorrect.',
-  'devices.problem.passwordLength': 'Le mot de passe doit comporter au moins {count} caractères.',
+  'devices.problem.passwordLength': 'Le mot de passe doit comporter de {count} à {max} caractères.',
   'devices.problem.name':
     'Donnez à l’appareil un nom de 64 caractères au plus, avec au moins une lettre ou un chiffre.',
   'devices.problem.nameTaken': 'Un autre appareil porte déjà ce nom. Choisissez-en un autre.',

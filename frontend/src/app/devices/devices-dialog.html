@@ -173,6 +173,7 @@
           type="password"
           name="status-password"
           autocomplete="new-password"
+          [maxlength]="maxLength"
           [(ngModel)]="statusPassword"
         />
         <mat-hint>{{ i18n.t('passwordDialog.minLength', { count: minLength }) }}</mat-hint>
@@ -184,6 +185,7 @@
           type="password"
           name="status-repeated"
           autocomplete="new-password"
+          [maxlength]="maxLength"
           [(ngModel)]="statusRepeated"
         />
         @if (statusMismatch()) {
