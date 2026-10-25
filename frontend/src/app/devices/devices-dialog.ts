@@ -9,6 +9,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { formatDate } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { fromEvent } from 'rxjs';
 import { FormsModule } from '@angular/forms';
@@ -265,6 +266,20 @@ export class DevicesDialog {
     this.change({ action: 'remove', deviceName: device.name }, (result) =>
       this.devices.remove(device.id, result.password, result.keepHistory),
     ).subscribe();
+  }
+
+  /** Lets a phone change its hub for a while; its app keeps it locked otherwise. */
+  protected releasePhone(device: Device): void {
+    this.change({ action: 'release', deviceName: device.name }, (result) =>
+      this.devices.releasePhone(device.id, result.password),
+    ).subscribe();
+  }
+
+  /** Until when a phone may change its hub, as a time of day; empty while it may not. */
+  protected releasedUntil(device: Device): string {
+    return device.releasedUntil
+      ? formatDate(device.releasedUntil, this.i18n.t('format.time'), this.i18n.language())
+      : '';
   }
 
   /** Asks for the password and downloads a copy of the hub's database. */

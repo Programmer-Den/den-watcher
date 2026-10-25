@@ -67,6 +67,8 @@ export const DEMO_STATUS_PAGE: StatusPage = {
 export class DemoBackend implements HttpBackend {
   private readonly version = demoVersion(inject(DEMO_BUILD));
   private readonly window = inject(DOCUMENT).defaultView;
+  /** Until when each phone may change its hub, in Unix seconds, once it was let. */
+  private readonly released = new Map<string, number>();
 
   handle(request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> {
     const url = new URL(request.urlWithParams, 'http://demo');
@@ -75,7 +77,7 @@ export class DemoBackend implements HttpBackend {
     const now = Date.now() / 1000;
 
     if (request.method === 'GET' && url.pathname === '/api/devices') {
-      return respond(request, deviceList(now));
+      return respond(request, deviceList(now, this.released));
     }
     if (request.method === 'GET' && url.pathname === '/api/alerts') {
       return respond(request, alertLog(Math.floor(now)));
@@ -102,6 +104,12 @@ export class DemoBackend implements HttpBackend {
     }
     if (url.pathname === '/api/layout') {
       return this.layout(request);
+    }
+    const release = /^\/api\/phones\/([^/]+)\/release$/.exec(url.pathname);
+    if (request.method === 'POST' && release) {
+      // Changes nothing but what the list tells, as the demo's phone has no app to tell.
+      this.released.set(decodeURIComponent(release[1]), now + RELEASE_SECONDS);
+      return respond(request, null);
     }
     if (request.method === 'POST' && url.pathname === '/api/backup') {
       return fail(request, 403, { problem: 'demoBackup' });
@@ -193,12 +201,20 @@ export class DemoBackend implements HttpBackend {
   }
 }
 
-function deviceList(now: number): DeviceList {
+/** How long a phone may change its hub once it was let, as on a hub. */
+const RELEASE_SECONDS = 10 * 60;
+
+function deviceList(now: number, released: ReadonlyMap<string, number>): DeviceList {
   const alerts = fleetAlerts(Math.floor(now));
   return {
     devices: FLEET.map((m) => {
       const active = alerts.get(m.device.id) ?? [];
-      return active.length > 0 ? { ...m.device, alerts: active } : m.device;
+      const until = released.get(m.device.id) ?? 0;
+      return {
+        ...m.device,
+        ...(active.length > 0 && { alerts: active }),
+        ...(until > now && { releasedUntil: new Date(until * 1000).toISOString() }),
+      };
     }),
     passwordSet: true,
     pagePort: '9393',

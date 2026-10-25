@@ -18,7 +18,7 @@ import { DeviceKind, MIN_PASSWORD_LENGTH, kindName } from './devices';
 
 /** What the password is asked for. */
 export interface PasswordDialogData {
-  action: 'add' | 'remove' | 'kind' | 'pairing' | 'backup' | 'statusPassword';
+  action: 'add' | 'remove' | 'kind' | 'pairing' | 'release' | 'backup' | 'statusPassword';
   /** The name of the device that is changed; empty for a backup and the status page's password. */
   deviceName: string;
   /** For changing the kind: the new kind. */
@@ -35,7 +35,8 @@ export interface PasswordDialogResult {
 }
 
 /**
- * Asks for the password before a device is added, removed or changed, a backup is downloaded or the status
+ * Asks for the password before a device is added, removed or changed, a phone may change its hub, a
+ * backup is downloaded or the status
  * page's password is set. Before the first
  * change it asks to choose one instead, twice, since it cannot be changed later.
  */
@@ -93,6 +94,8 @@ export class PasswordDialog {
         });
       case 'pairing':
         return this.i18n.t('passwordDialog.pairing', { device });
+      case 'release':
+        return this.i18n.t('passwordDialog.release', { device });
       case 'backup':
         return this.i18n.t('passwordDialog.backup');
       case 'statusPassword':
@@ -109,6 +112,8 @@ export class PasswordDialog {
       case 'kind':
       case 'pairing':
         return this.i18n.t('passwordDialog.confirmKind');
+      case 'release':
+        return this.i18n.t('passwordDialog.confirmRelease');
       case 'backup':
         return this.i18n.t('passwordDialog.confirmBackup');
       case 'statusPassword':

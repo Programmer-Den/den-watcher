@@ -119,6 +119,21 @@ form.pairing button {
   margin-left: 0;
 }
 
+/* Whether a phone may change its hub, and the button to let it, below its name. */
+.release {
+  display: flex;
+  flex-wrap: wrap;
+  flex-basis: 100%;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  padding-bottom: 0.25rem;
+}
+
+.release .hint {
+  flex: 1 1 12rem;
+  margin: 0;
+}
+
 /* This device's own code, large enough to read off and type in elsewhere. */
 .own-code {
   font: var(--mat-sys-title-large);

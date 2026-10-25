@@ -177,6 +177,9 @@ export const en = {
   'devicesDialog.pairingWrong':
     "The pairing code is not this device's; until it is, only its availability is kept.",
   'devicesDialog.setCode': 'Save code',
+  'devicesDialog.hubLocked': "Its app keeps this hub's address and recording locked.",
+  'devicesDialog.releasedUntil': 'May change its hub or stop recording until {time}.',
+  'devicesDialog.release': 'Allow changing the hub',
   'devicesDialog.ownCodeTitle': "This device's pairing code",
   'devicesDialog.ownCodeHint':
     'A hub asks for this code when this device is added there; without it, the hub keeps only whether the device answers.',
@@ -239,6 +242,9 @@ export const en = {
   'passwordDialog.confirmRemove': 'Remove',
   'passwordDialog.kind': 'Change {device} to {kind}?',
   'passwordDialog.confirmKind': 'Change',
+  'passwordDialog.release':
+    'Let {device} change its hub or stop recording for the next 10 minutes?',
+  'passwordDialog.confirmRelease': 'Allow',
   'passwordDialog.pairing': 'Give {device} the new pairing code?',
   'passwordDialog.confirmBackup': 'Download',
   'passwordDialog.backupHint':

@@ -175,6 +175,9 @@ export const es: Messages = {
   'devicesDialog.pairingWrong':
     'El código de emparejamiento no es el de este dispositivo; hasta entonces solo se registra su disponibilidad.',
   'devicesDialog.setCode': 'Guardar código',
+  'devicesDialog.hubLocked': 'Su app bloquea la dirección de este hub y la grabación.',
+  'devicesDialog.releasedUntil': 'Puede cambiar de hub o detener la grabación hasta las {time}.',
+  'devicesDialog.release': 'Permitir cambiar de hub',
   'devicesDialog.ownCodeTitle': 'Código de emparejamiento de este dispositivo',
   'devicesDialog.ownCodeHint':
     'Un hub pide este código cuando este dispositivo se añade allí; sin él, el hub solo registra si el dispositivo responde.',
@@ -242,6 +245,9 @@ export const es: Messages = {
   'passwordDialog.confirmRemove': 'Quitar',
   'passwordDialog.kind': '¿Cambiar {device} a {kind}?',
   'passwordDialog.confirmKind': 'Cambiar',
+  'passwordDialog.release':
+    '¿Dejar que {device} cambie de hub o detenga la grabación durante los próximos 10 minutos?',
+  'passwordDialog.confirmRelease': 'Permitir',
   'passwordDialog.pairing': '¿Dar a {device} el nuevo código de emparejamiento?',
   'passwordDialog.confirmBackup': 'Descargar',
   'passwordDialog.backupHint':

@@ -295,6 +295,48 @@ describe('DevicesDialog', () => {
       .flush({ devices: [{ id: 'local', name: '' }], passwordSet: true });
   });
 
+  it('lets a phone change its hub with the password and tells until when', async () => {
+    const service = TestBed.inject(DeviceService);
+    service.devices.update((devices) => [
+      ...devices,
+      { id: 'pixel', name: 'Pixel', kind: 'phone', removable: true },
+    ]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const pixel = () => element().querySelectorAll('li')[2];
+    expect(pixel().textContent).toContain("keeps this hub's address and recording locked");
+    // Only a phone keeps its hub locked.
+    expect(element().querySelectorAll('li')[1].querySelector('.release')).toBeNull();
+
+    pixel().querySelector<HTMLButtonElement>('.release button')!.click();
+
+    const change = http.expectOne('/api/phones/pixel/release');
+    expect(change.request.method).toBe('POST');
+    expect(change.request.body).toEqual({ password: 'correct horse' });
+    change.flush(null, { status: 204, statusText: 'No Content' });
+    const until = new Date(2026, 9, 25, 21, 5);
+    http
+      .expectOne((r) => r.method === 'GET' && r.url === '/api/devices')
+      .flush({
+        devices: [
+          { id: 'local', name: '' },
+          {
+            id: 'pixel',
+            name: 'Pixel',
+            kind: 'phone',
+            removable: true,
+            releasedUntil: until.toISOString(),
+          },
+        ],
+        passwordSet: true,
+      });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(element().querySelectorAll('li')[0].textContent).toContain(
+      'May change its hub or stop recording until 21:05',
+    );
+  });
+
   it("shows this device's own pairing code", async () => {
     http.expectOne('/api/pairing').flush({ code: '7KQM-X2RP' });
     fixture.detectChanges();

@@ -10,6 +10,7 @@ import (
 	"net/netip"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 	"github.com/Programmer-Den/den-watcher/backend/internal/pairing"
@@ -31,6 +32,8 @@ type fakeHub struct {
 	// pushes are the pushes it took.
 	phoneCode string
 	pushes    []hub.Push
+	// released are the phones let change their hub.
+	released []string
 }
 
 func (f *fakeHub) AddPhone(_ context.Context, name, code string) (hub.Device, error) {
@@ -87,6 +90,14 @@ func (f *fakeHub) SetCode(_ context.Context, id, code string) error {
 	}
 	f.codes = append(f.codes, id+"="+code)
 	return nil
+}
+
+func (f *fakeHub) ReleasePhone(id string) (time.Time, error) {
+	if f.err != nil {
+		return time.Time{}, f.err
+	}
+	f.released = append(f.released, id)
+	return time.Now().Add(hub.ReleaseTime), nil
 }
 
 func (f *fakeHub) Suggest(_ context.Context, from netip.Addr) (hub.Suggestion, bool) {
@@ -196,6 +207,30 @@ func TestAddAndChangeThePairingCode(t *testing.T) {
 	refused := send(handler, http.MethodPut, "/api/devices/pi/pairing", `{"code":"AB12-CD35","password":"correct horse"}`)
 	if refused.Code != http.StatusUnprocessableEntity || !strings.Contains(refused.Body.String(), `"problem":"pairingWrong"`) {
 		t.Errorf("a refused code: status = %d, body = %s; want 422 pairingWrong", refused.Code, refused.Body)
+	}
+}
+
+func TestAPhoneIsLetChangeItsHub(t *testing.T) {
+	devices := &fakeHub{}
+	handler := newChangeHandler(devices, &fakePassword{password: "correct horse"})
+
+	release := send(handler, http.MethodPost, "/api/phones/pixel/release", `{"password":"correct horse"}`)
+	wrong := send(handler, http.MethodPost, "/api/phones/pixel/release", `{"password":"wrong"}`)
+
+	if release.Code != http.StatusNoContent {
+		t.Errorf("release = %d, want 204: %s", release.Code, release.Body)
+	}
+	if wrong.Code != http.StatusForbidden {
+		t.Errorf("with a wrong password: status = %d, want 403", wrong.Code)
+	}
+	if got := strings.Join(devices.released, " "); got != "pixel" {
+		t.Errorf("released = %s, want pixel", got)
+	}
+
+	devices.err = &hub.InputError{Problem: hub.ProblemKind, Message: "only a phone keeps its hub locked"}
+	refused := send(handler, http.MethodPost, "/api/phones/nas/release", `{"password":"correct horse"}`)
+	if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), `"problem":"kind"`) {
+		t.Errorf("a device that is no phone: status = %d, body = %s; want 400 kind", refused.Code, refused.Body)
 	}
 }
 

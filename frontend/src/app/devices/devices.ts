@@ -59,6 +59,11 @@ export interface Device {
    */
   pairing?: 'needed' | 'wrong';
   /**
+   * Set while a phone may change its hub, as an ISO time: until then. Its app keeps the hub's
+   * address and recording locked otherwise, once the hub took its usage.
+   */
+  releasedUntil?: string;
+  /**
    * Set for a router, which the hub reads itself over the local network, as it runs no
    * den-watcher; it is set in HUB_ROUTERS.
    */
@@ -278,6 +283,14 @@ export class DeviceService {
    */
   addPhone(name: string, code: string, password: string): Observable<Device> {
     return this.http.post<Device>('/api/phones', { name, code, password });
+  }
+
+  /**
+   * Lets a phone change its hub for the next 10 minutes, which its app is told the next time it
+   * sends its usage.
+   */
+  releasePhone(id: string, password: string): Observable<void> {
+    return this.http.post<void>(`/api/phones/${encodeURIComponent(id)}/release`, { password });
   }
 
   /** Changes the pairing code the hub sends a device, one from the hub's .env file too. */
