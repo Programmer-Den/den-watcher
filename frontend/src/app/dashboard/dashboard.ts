@@ -350,6 +350,8 @@ export class Dashboard {
   protected readonly isChecked = computed(() => !!this.devices.selected().checked);
   /** Whether the picked device runs no Den-Watcher, so it tells only some of what a device does. */
   protected readonly readsLess = computed(() => this.isRouter() || this.isChecked());
+  /** Whether the picked device is a phone, whose app cannot read the processor's usage. */
+  private readonly isPhone = computed(() => this.devices.selected().kind === 'phone');
   /**
    * The message above the page while the backend or the picked device does not answer; none while
    * the banner across the page tells that the hub does not answer.
@@ -582,7 +584,7 @@ export class Dashboard {
     const fixed = (kind: keyof typeof CARD_TITLES, category: Category, shows: unknown) =>
       shows ? [{ id: kind, kind, category }] : [];
     return [
-      ...fixed('cpu', 'system', !readsLess || s.cpu.cores > 0),
+      ...fixed('cpu', 'system', (!readsLess && !this.isPhone()) || s.cpu.cores > 0),
       ...fixed('memory', 'system', !readsLess || s.memory.totalBytes > 0),
       ...fixed('disks', 'storage', !readsLess || s.disks.length > 0),
       ...fixed('diskActivity', 'storage', hasDiskActivity(s)),

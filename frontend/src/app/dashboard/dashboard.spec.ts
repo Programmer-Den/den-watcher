@@ -1419,6 +1419,45 @@ describe('Dashboard', () => {
     expect(text()).toContain('WAN');
   });
 
+  it("leaves out the processor of a phone, whose app cannot read it", () => {
+    vi.setSystemTime(new Date('2026-10-02T12:00:00Z'));
+    respond(snapshot);
+    const devices = TestBed.inject(DeviceService);
+    devices.devices.set([
+      { id: 'local', name: '' },
+      { id: 'pixel', name: 'Pixel', kind: 'phone' },
+    ]);
+    devices.selectedId.set('pixel');
+    fixture.detectChanges();
+    vi.advanceTimersByTime(0);
+
+    http.expectOne('/api/metrics?device=pixel').flush({
+      time: '2026-10-02T12:00:00Z',
+      uptimeSeconds: 3600,
+      cpu: { usagePercent: 0, cores: 0 },
+      memory: { totalBytes: 8 * 1024 ** 3, usedBytes: 6 * 1024 ** 3, usedPercent: 75 },
+      temperatures: [{ sensor: 'battery', celsius: 31 }],
+      disks: [],
+      network: [],
+      battery: { percent: 80, pluggedIn: false },
+    } satisfies Snapshot);
+    http.expectOne('/api/availability?device=pixel').flush({
+      kind: 'phone',
+      since: '2026-10-01T12:00:00Z',
+      countedSince: '2026-10-01T12:00:00Z',
+      offlineSeconds: 0,
+      outages: 0,
+    });
+    fixture.detectChanges();
+
+    const titles = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.card h3'),
+      (h) => shown(h).trim(),
+    );
+    expect(titles).not.toContain('CPU');
+    expect(titles).toContain('Memory');
+  });
+
   it('shows how long another device was offline since it was added', () => {
     vi.setSystemTime(new Date('2026-10-02T12:00:00Z'));
     respond(snapshot);

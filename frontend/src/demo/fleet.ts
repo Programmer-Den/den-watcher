@@ -1659,7 +1659,8 @@ const androidPhone: DemoMachine = {
     maker: 'Google',
     model: 'Pixel 8',
   },
-  cores: 9,
+  // The app cannot read the processor's usage, so the phone tells no cores.
+  cores: 0,
   maxClockMHz: 2910,
   memoryBytes: 8 * GB,
   disks: [{ path: '/data', totalBytes: 119 * GB }],
@@ -1667,9 +1668,9 @@ const androidPhone: DemoMachine = {
   extras: wifiAddOn('wlan0'),
   bootedDaysAgo: 6.1,
   values: (t, step) => {
+    // How busy the phone is, which only warms its battery: the app cannot read it.
     const cpu = vary(t, step, 141, 6, 1, 100, [4, 30], [8, 1800]);
     return {
-      cpu,
       memory: vary(t, step, 142, 68, 0, 100, [5, 900]),
       battery: batteryPercent(t + 1500),
       'temperature:battery': 29 + cpu * 0.12,
