@@ -11,6 +11,7 @@ How the code is laid out, how to run it while working on it, and the checks a pu
 | Docker image | `Dockerfile`, `compose.yaml` | Docker Buildx, multi-arch |
 | Linux archive | `linux/` | `install.sh`, systemd unit, settings example |
 | Windows installer | `windows/` | WiX 5 |
+| Android app | `android/` | Gradle (wrapper in `android/`), Kotlin, Android SDK, Java 17; no libraries beyond Android's own |
 | CI | `.github/workflows/`, `ci/` | GitHub Actions |
 
 Backend packages, in `backend/internal/`:
@@ -88,6 +89,7 @@ bash ci/check-demo-covers-addons.sh
 - Linting: `golangci-lint` with the settings in `backend/.golangci.yml`; ESLint in the frontend, which also fails on circular imports
 - Dependencies: `govulncheck` and `npm audit` fail on known vulnerabilities; `go mod tidy -diff` fails when `go.mod` or `go.sum` is out of date
 - Shell scripts: `bash -n` and `shellcheck`
+- Android app: `(cd android && ./gradlew testReleaseUnitTest lintRelease assembleRelease)`, with the Android SDK in `ANDROID_HOME`
 
 ## Releases and builds
 
@@ -97,6 +99,7 @@ bash ci/check-demo-covers-addons.sh
 | `docker.yml` | publishes `ghcr.io/programmer-den/den-watcher:main` on every merge to main, and `X.Y.Z`, `X.Y` and `latest` on release tags (only `X.Y.Z-alpha` on a pre-release tag) |
 | `windows.yml` | the x64 and arm64 MSIs, installs and uninstalls them on Windows; attaches them to releases |
 | `linux.yml` | the Linux archives, tests install, update and uninstall under systemd; attaches them to releases |
+| `android.yml` | the Android app's APK, after its unit tests and Android's lint, on pull requests that change `android/`; attaches it to releases, signed with the release key |
 | `vulnerabilities.yml` | every night, the updates that fix known vulnerabilities on main (`ci/fix-vulnerabilities.sh`), as one pull request; fails when a vulnerability has no fix yet |
 | `demo.yml` | publishes the demo of a release to the root of GitHub Pages on its release tag (not for a release marked as a pre-release, nor for a tag older than the newest release, such as a bugfix 1.0.5 after 1.1.0), and the demo of main to `main/` on every merge to main that changes the frontend; when a pre-release is later made a full release, run it by hand (*Run workflow*) on the tag |
 
@@ -106,6 +109,15 @@ The version counts the pull requests merged since the last release, in order:
 
 - Each feature raises the last number: `1.0.3` becomes `1.0.4`. The tenth feature raises the middle one instead: `1.0.9` becomes `1.1.0`.
 - Each bugfix adds a letter or moves it on: `1.0.4` becomes `1.0.4a`, then `1.0.4b`; after `z` comes `aa`. The next feature drops the letters again.
+
+The Android app is signed with one key for every release, so each APK installs over the one before; a release without it fails. Make it once and keep a copy somewhere safe, as an app signed with another key cannot update it:
+
+```bash
+keytool -genkeypair -keystore release.jks -alias den-watcher -keyalg RSA -keysize 4096 -validity 36500 -dname "CN=Den-Watcher"
+base64 -w0 release.jks
+```
+
+Add the base64 text as the Actions secret `ANDROID_KEYSTORE`, and `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`den-watcher`) and `ANDROID_KEY_PASSWORD` (the same password, unless `keytool` was given another) in the repository's *Settings › Secrets and variables › Actions*. Pull requests and main are signed with the runner's debug key instead, so their APK installs only on a phone without the release. Android counts versions by a number that must grow, which the workflow takes from its run number; the version name is the tag's.
 
 Docker images and the update check use the version as it is. A Windows installer's version may only hold numbers, so its letters become a fourth number: `1.0.4h` is `1.0.4.8` in Windows' list of apps, and still installs over `1.0.4`. Windows Installer compares only the first three numbers, so the installer also remembers the fourth and refuses to install an older bugfix of the same version, such as `1.0.4g`, over a newer one.
 

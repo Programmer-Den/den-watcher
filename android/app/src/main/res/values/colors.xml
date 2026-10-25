@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The orange of the website. -->
+    <color name="accent">#F57C00</color>
+    <color name="icon_background">#F57C00</color>
+</resources>

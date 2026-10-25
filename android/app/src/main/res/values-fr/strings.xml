@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="intro">Envoie l\'utilisation de ce téléphone à votre hub Den-Watcher dès que le téléphone est sur le Wi-Fi de la maison.</string>
+    <string name="code_title">Code d\'appairage</string>
+    <string name="code_hint">Sur la page du hub, ouvrez Appareils, ajoutez un appareil de type Téléphone et saisissez ce code.</string>
+    <string name="address_title">Adresse du hub</string>
+    <string name="address_hint">Telle que la page du hub l\'affiche à l\'ajout du téléphone : son adresse IP ou son nom, et le port.</string>
+    <string name="address_invalid">Saisissez une adresse IP ou un nom, avec un port si besoin, par exemple 192.168.1.20:9393.</string>
+    <string name="address_saved">Enregistré</string>
+    <string name="save">Enregistrer</string>
+    <string name="status_title">Enregistrement</string>
+    <string name="start">Démarrer l\'enregistrement</string>
+    <string name="stop">Arrêter l\'enregistrement</string>
+    <string name="status_recording">Enregistre l\'utilisation et la garde jusqu\'à ce que le hub l\'ait, une semaine au plus.</string>
+    <string name="status_stopped">N\'enregistre pas.</string>
+    <string name="status_last_push">Le hub a reçu l\'utilisation pour la dernière fois le %1$s.</string>
+    <string name="problem_no_address">Saisissez l\'adresse du hub pour envoyer l\'utilisation.</string>
+    <string name="problem_not_home">Pas sur le Wi-Fi : l\'utilisation sera envoyée dès que le téléphone sera sur le Wi-Fi de la maison.</string>
+    <string name="problem_unreachable">Le hub ne répond pas. Le téléphone est-il sur le Wi-Fi de la maison, et l\'adresse est-elle juste ?</string>
+    <string name="problem_not_added">Le hub n\'a aucun téléphone avec ce code d\'appairage. Ajoutez le téléphone dans Appareils du hub avec le code ci-dessus.</string>
+    <string name="problem_refused">Le hub a refusé l\'utilisation. Exécute-t-il Den-Watcher 3.5.0 ou plus récent ?</string>
+    <string name="battery_hint">Certains téléphones arrêtent les apps en arrière-plan pour économiser la batterie. S\'il manque des heures au hub, laissez Den-Watcher fonctionner sans restriction de batterie.</string>
+    <string name="battery">Réglages de la batterie</string>
+    <string name="data_title">Ce qui est envoyé</string>
+    <string name="data_hint">La charge et la température de la batterie, la mémoire et le stockage utilisés, et le trafic Wi-Fi et données mobiles, uniquement au hub de votre réseau. Android ne laisse aucune app lire la charge du processeur.</string>
+    <string name="channel_name">Enregistrement</string>
+    <string name="channel_description">Affichée pendant que l\'app enregistre l\'utilisation, comme Android le demande.</string>
+    <string name="notification_title">Enregistre l\'utilisation de ce téléphone</string>
+</resources>

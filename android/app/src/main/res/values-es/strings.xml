@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="intro">Envía el uso de este móvil a tu hub Den-Watcher en cuanto el móvil está en el Wi-Fi de casa.</string>
+    <string name="code_title">Código de emparejamiento</string>
+    <string name="code_hint">En la página del hub, abre Dispositivos, añade un dispositivo del tipo Móvil e introduce este código.</string>
+    <string name="address_title">Dirección del hub</string>
+    <string name="address_hint">Tal como la muestra la página del hub al añadir el móvil: su dirección IP o nombre, y el puerto.</string>
+    <string name="address_invalid">Introduce una dirección IP o un nombre, con puerto si hace falta, por ejemplo 192.168.1.20:9393.</string>
+    <string name="address_saved">Guardado</string>
+    <string name="save">Guardar</string>
+    <string name="status_title">Registro</string>
+    <string name="start">Iniciar registro</string>
+    <string name="stop">Detener registro</string>
+    <string name="status_recording">Registra el uso y lo guarda hasta que el hub lo tiene, hasta una semana.</string>
+    <string name="status_stopped">No está registrando.</string>
+    <string name="status_last_push">El hub recibió el uso por última vez el %1$s.</string>
+    <string name="problem_no_address">Introduce la dirección del hub para enviar el uso.</string>
+    <string name="problem_not_home">Sin Wi-Fi: el uso se envía en cuanto el móvil está en el Wi-Fi de casa.</string>
+    <string name="problem_unreachable">El hub no responde. ¿Está el móvil en el Wi-Fi de casa y es correcta la dirección?</string>
+    <string name="problem_not_added">El hub no tiene ningún móvil con este código de emparejamiento. Añade el móvil en Dispositivos del hub con el código de arriba.</string>
+    <string name="problem_refused">El hub rechazó el uso. ¿Ejecuta Den-Watcher 3.5.0 o posterior?</string>
+    <string name="battery_hint">Algunos móviles detienen las apps en segundo plano para ahorrar batería. Si al hub le faltan horas, deja que Den-Watcher funcione sin restricciones de batería.</string>
+    <string name="battery">Ajustes de batería</string>
+    <string name="data_title">Qué se envía</string>
+    <string name="data_hint">La carga y la temperatura de la batería, la memoria y el almacenamiento usados, y el tráfico de Wi-Fi y datos móviles, solo al hub de tu red. Android no deja que ninguna app lea lo ocupado que está el procesador.</string>
+    <string name="channel_name">Registro</string>
+    <string name="channel_description">Se muestra mientras la app registra el uso, como pide Android.</string>
+    <string name="notification_title">Registrando el uso de este móvil</string>
+</resources>

@@ -1,0 +1,97 @@
+package den.watcher
+
+import android.content.Context
+import org.json.JSONObject
+
+/** What the app keeps between starts: its pairing code, the hub's address and how the last push went. */
+class Settings(context: Context) {
+    private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+
+    /** The phone's pairing code, made the first time it is asked for. */
+    val code: String
+        @Synchronized get() {
+            val kept = prefs.getString(CODE, null)
+            if (kept != null && PairingCode.isValid(kept)) {
+                return kept
+            }
+            val code = PairingCode.generate()
+            prefs.edit().putString(CODE, code).apply()
+            return code
+        }
+
+    /** The hub's address as it was typed in; empty until it is. */
+    var hubAddress: String
+        get() = prefs.getString(HUB_ADDRESS, "") ?: ""
+        set(value) = prefs.edit().putString(HUB_ADDRESS, value.trim()).apply()
+
+    /** Whether recording was switched on, so it starts again with the phone. */
+    var recording: Boolean
+        get() = prefs.getBoolean(RECORDING, false)
+        set(value) = prefs.edit().putBoolean(RECORDING, value).apply()
+
+    /** When the hub last took a push, in Unix seconds; 0 when it never did. */
+    var lastPush: Long
+        get() = prefs.getLong(LAST_PUSH, 0)
+        set(value) = prefs.edit().putLong(LAST_PUSH, value).apply()
+
+    /** Why the last push failed, or null when it worked or none was tried. */
+    var problem: Problem?
+        get() = prefs.getString(PROBLEM, null)?.let { runCatching { Problem.valueOf(it) }.getOrNull() }
+        set(value) = prefs.edit().putString(PROBLEM, value?.name).apply()
+
+    /** The reading before the newest, whose traffic the speeds are measured from. */
+    var lastReading: Reading?
+        get() = prefs.getString(LAST_READING, null)?.let { runCatching { readingFrom(JSONObject(it)) }.getOrNull() }
+        set(value) = prefs.edit().putString(LAST_READING, value?.let { readingTo(it).toString() }).apply()
+
+    private fun readingTo(r: Reading): JSONObject = JSONObject()
+        .put("time", r.time)
+        .put("uptime", r.uptimeSeconds)
+        .put("traffic", JSONObject().apply { r.traffic.forEach { (name, t) -> put(name, JSONObject().put("received", t.received).put("sent", t.sent)) } })
+
+    private fun readingFrom(o: JSONObject): Reading {
+        val traffic = o.getJSONObject("traffic")
+        return Reading(
+            time = o.getLong("time"),
+            uptimeSeconds = o.getLong("uptime"),
+            batteryPercent = null,
+            pluggedIn = false,
+            batteryCelsius = null,
+            memoryTotalBytes = 0,
+            memoryAvailableBytes = 0,
+            storageTotalBytes = 0,
+            storageFreeBytes = 0,
+            traffic = traffic.keys().asSequence().associateWith {
+                val t = traffic.getJSONObject(it)
+                Traffic(t.getLong("received"), t.getLong("sent"))
+            },
+        )
+    }
+
+    private companion object {
+        const val CODE = "code"
+        const val HUB_ADDRESS = "hubAddress"
+        const val RECORDING = "recording"
+        const val LAST_PUSH = "lastPush"
+        const val PROBLEM = "problem"
+        const val LAST_READING = "lastReading"
+    }
+}
+
+/** Why a push did not reach the hub, as the app tells it. */
+enum class Problem {
+    /** No hub address was typed in, or it is no address. */
+    NO_ADDRESS,
+
+    /** The phone is on no Wi-Fi or other network without a data limit, so it does not try. */
+    NOT_HOME,
+
+    /** The hub did not answer, as when the phone is on another network. */
+    UNREACHABLE,
+
+    /** The hub has no phone with this pairing code: it was not added there, or with another code. */
+    NOT_ADDED,
+
+    /** The hub answered with an error. */
+    REFUSED,
+}

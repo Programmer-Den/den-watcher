@@ -1,0 +1,126 @@
+name: Android app
+
+# Builds the Android app (den-watcher-<version>-android.apk), which sends a
+# phone's usage to the hub, and runs its unit tests and Android's lint. Pull
+# requests and main keep the APK as a workflow artifact; a version tag (v1.2.3
+# or 1.2.3, or a pre-release such as 1.2.3-alpha) also attaches it to that
+# GitHub release. A release is signed with the key in the repository's
+# secrets (ANDROID_KEYSTORE, base64, with ANDROID_KEYSTORE_PASSWORD,
+# ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD), so each version installs over
+# the one before; everything else with the runner's debug key.
+on:
+  pull_request:
+    paths: ['android/**', '.github/workflows/android.yml']
+  push:
+    branches:
+      - main
+    # A release tag, with or without the v: v1.2.3 or 1.2.3, or 1.2.3-alpha.
+    tags:
+      - 'v*.*.*'
+      - '[0-9]*.[0-9]*.[0-9]*'
+    paths-ignore: ['**.md', 'docs/**', 'LICENSE*', '.claude/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  # Only cancel superseded PR runs; let pushes to main and tags finish.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  apk:
+    name: Android app
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # As in the other release workflows: a tag v1.2.3 builds version 1.2.3,
+      # anything else dev-<commit>.
+      - name: Version
+        id: version
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([a-z]*|-[a-z]+(\.?[0-9]+)?)$ ]]; then
+              echo "Tag $GITHUB_REF_NAME is not a release version; use v<major>.<minor>.<patch>, such as v1.2.3, with letters for bugfixes, such as 1.2.3a, or a word and maybe a number after a dash for a pre-release, such as 1.2.3-alpha or 1.2.3-rc1 (the v is optional)." >&2
+              exit 1
+            fi
+          else
+            version="dev-${GITHUB_SHA::7}"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # Only a release needs the key; without it, it would be signed with a
+      # debug key that differs on every runner and could not be updated.
+      - name: Release key
+        if: github.ref_type == 'tag'
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$ANDROID_KEYSTORE" ]]; then
+            echo "The secret ANDROID_KEYSTORE is missing; make a key as docs/setup.md says under Add an Android phone and add it with ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD to the repository's Actions secrets." >&2
+            exit 1
+          fi
+          printf '%s' "$ANDROID_KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      # The runner has the Android SDK and Java 17; the Gradle wrapper fetches
+      # Gradle itself.
+      - name: Test, lint and build
+        working-directory: android
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          ./gradlew --no-daemon --stacktrace testReleaseUnitTest lintRelease assembleRelease \
+            -PappVersion="$VERSION" -PappVersionCode="$GITHUB_RUN_NUMBER"
+          mkdir -p ../dist
+          cp app/build/outputs/apk/release/app-release.apk "../dist/den-watcher-$VERSION-android.apk"
+          ls -l ../dist
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: den-watcher-${{ steps.version.outputs.version }}-android
+          path: dist/*.apk
+          retention-days: 14
+
+  release:
+    name: Attach the APK to the release
+    if: github.ref_type == 'tag'
+    needs: apk
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: den-watcher-${{ needs.apk.outputs.version }}-android
+          path: dist
+
+      # Creates the release for the tag if there is none yet (the other
+      # release workflows may at the same time), then adds the APK.
+      - name: Upload to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            # A pre-release tag, such as 1.2.3-alpha, makes a pre-release.
+            prerelease=()
+            if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+              prerelease=(--prerelease)
+            fi
+            gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes "${prerelease[@]}" || gh release view "$GITHUB_REF_NAME" > /dev/null
+          fi
+          gh release upload "$GITHUB_REF_NAME" dist/*.apk --clobber
