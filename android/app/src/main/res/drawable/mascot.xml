@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The website's favicon, frontend/public/mascot.svg, as a vector. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="32"
+    android:viewportHeight="32">
+    <path
+        android:fillColor="#E37100"
+        android:pathData="M2,8 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0 M20,8 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <path
+        android:fillColor="#FFB787"
+        android:pathData="M4.6,8 a2.4,2.4 0 1,0 4.8,0 a2.4,2.4 0 1,0 -4.8,0 M22.6,8 a2.4,2.4 0 1,0 4.8,0 a2.4,2.4 0 1,0 -4.8,0" />
+    <path
+        android:fillColor="#E37100"
+        android:pathData="M3,18.5 a13,12 0 1,0 26,0 a13,12 0 1,0 -26,0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M5.5,16 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0 M16.5,16 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <path
+        android:pathData="M7.2,17 A3.4,3.4 0 0,1 13.8,17 M18.2,17 A3.4,3.4 0 0,1 24.8,17"
+        android:strokeWidth="1.8"
+        android:strokeColor="#964900" />
+    <path
+        android:pathData="M10.5,17.5 L12.6,13.6 M21.5,17.5 L23.6,13.6"
+        android:strokeWidth="1.9"
+        android:strokeColor="#0D1117"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#0D1117"
+        android:pathData="M9.1,17.5 a1.4,1.4 0 1,0 2.8,0 a1.4,1.4 0 1,0 -2.8,0 M20.1,17.5 a1.4,1.4 0 1,0 2.8,0 a1.4,1.4 0 1,0 -2.8,0" />
+    <path
+        android:fillColor="#FFDCC7"
+        android:pathData="M10.5,25 a5.5,4 0 1,0 11,0 a5.5,4 0 1,0 -11,0" />
+    <path
+        android:fillColor="#311300"
+        android:pathData="M13.6,23.6 a2.4,1.6 0 1,0 4.8,0 a2.4,1.6 0 1,0 -4.8,0" />
+    <path
+        android:pathData="M16,25 V26.6"
+        android:strokeWidth="1.2"
+        android:strokeColor="#311300"
+        android:strokeLineCap="round" />
+</vector>

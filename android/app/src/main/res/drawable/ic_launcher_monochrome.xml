@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The favicon in one colour, in the adaptive icon's safe zone: 1.7 times the viewport, with the bear in the middle. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_notification"
+    android:insetLeft="26.8dp"
+    android:insetTop="25.5dp"
+    android:insetRight="26.8dp"
+    android:insetBottom="28.1dp" />
