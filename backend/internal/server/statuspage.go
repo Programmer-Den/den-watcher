@@ -4,15 +4,14 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-
-	"github.com/Programmer-Den/den-watcher/backend/internal/password"
 )
 
 // StatusPage is the remote status page, a minimal page on a port of its own
 // for outside the local network, whose password is set on this page.
 type StatusPage interface {
 	PasswordSet(ctx context.Context) (bool, error)
-	// ChangePassword sets the password and signs out every visitor.
+	// ChangePassword sets the password and signs out every visitor; a
+	// password too short or too long is password.ErrLength.
 	ChangePassword(ctx context.Context, password string) error
 	// Port is the port the page is reachable on.
 	Port() string
@@ -69,9 +68,7 @@ func (c *deviceChanges) setStatusPassword(page StatusPage) http.HandlerFunc {
 			return
 		}
 		c.change(w, r, request.Password, true, func() (any, error) {
-			if err := password.CheckNew(request.NewPassword); err != nil {
-				return nil, err
-			}
+			// ChangePassword checks the new password's length.
 			if err := page.ChangePassword(r.Context(), request.NewPassword); err != nil {
 				return nil, err
 			}

@@ -190,7 +190,7 @@ export const en = {
   'devicesDialog.statusChange': 'Change password',
   'devicesDialog.statusSaved': 'The password of the status page is set.',
   'devices.problem.wrongPassword': 'The password is wrong.',
-  'devices.problem.passwordLength': 'The password needs at least {count} characters.',
+  'devices.problem.passwordLength': 'The password needs {count} to {max} characters.',
   'devices.problem.name':
     'Give the device a name of up to 64 characters, with at least one letter or digit.',
   'devices.problem.nameTaken': 'Another device already has this name. Pick another one.',

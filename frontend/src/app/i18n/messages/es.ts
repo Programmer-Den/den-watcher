@@ -188,7 +188,7 @@ export const es: Messages = {
   'devicesDialog.statusChange': 'Cambiar contraseña',
   'devicesDialog.statusSaved': 'La contraseña de la página de estado está establecida.',
   'devices.problem.wrongPassword': 'La contraseña no es correcta.',
-  'devices.problem.passwordLength': 'La contraseña necesita al menos {count} caracteres.',
+  'devices.problem.passwordLength': 'La contraseña necesita de {count} a {max} caracteres.',
   'devices.problem.name':
     'Da al dispositivo un nombre de hasta 64 caracteres, con al menos una letra o un número.',
   'devices.problem.nameTaken': 'Otro dispositivo ya tiene este nombre. Elige otro.',
