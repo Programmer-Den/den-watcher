@@ -44,6 +44,7 @@ const EXTRA_CATEGORIES: Record<string, Category> = {
   smart: 'storage',
   'smart-checks': 'storage',
   wifi: 'network',
+  'wifi-networks': 'network',
   bluetooth: 'network',
   ports: 'network',
   clients: 'network',

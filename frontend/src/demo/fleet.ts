@@ -498,12 +498,281 @@ function bluetoothAddOn(devices: BluetoothDevice[]): Extra[] {
   ];
 }
 
+/** A network nearby, as the Wi-Fi add-on gathers its access points; see wifiNetworksGroup(). */
+interface DemoWifiNetwork {
+  /** The id its values start with, from its name, as the add-on makes it. */
+  id: string;
+  ssid: string;
+  /** The frequency of its strongest access point's channel, and the channel's width, in MHz. */
+  mhz: number;
+  width?: number;
+  /** The other bands its access points use. */
+  also?: string[];
+  security: string;
+  /** What else the system tells: Windows the signal in dBm and the Wi-Fi generation, NetworkManager the fastest rate. */
+  dBm?: number;
+  generation?: string;
+  rateMbps?: number;
+  accessPoints?: number;
+}
+
+/** The channel and band of a frequency in MHz, as the add-on names them. */
+function wifiChannel(mhz: number): [number, string] {
+  if (mhz < 2500) return [mhz === 2484 ? 14 : (mhz - 2407) / 5, '2.4 GHz'];
+  if (mhz <= 5925) return [(mhz - 5000) / 5, '5 GHz'];
+  return [mhz === 5935 ? 2 : (mhz - 5950) / 5, '6 GHz'];
+}
+
+/**
+ * The card of the networks nearby the Wi-Fi add-on reports: how many are in range and hidden, the one connected to, and
+ * per network, in a section named after it, its signal, channel, security and details, translated as the add-on does.
+ * The counts and signals come from values() as "extra:wifi-networks/in-range", "/hidden" and "/<id>-signal".
+ */
+function wifiNetworksGroup(networks: DemoWifiNetwork[], connected?: string): Extra {
+  const languages = ['de', 'fr', 'es'] as const;
+  const text = (en: string, texts: Record<string, string> = {}) => ({
+    text: en,
+    texts: Object.fromEntries(languages.map((l) => [l, texts[l] ?? en])),
+  });
+  const items: Extra['items'] = [
+    {
+      id: 'in-range',
+      label: 'Networks in range',
+      labels: { de: 'Netze in Reichweite', fr: 'Réseaux à portée', es: 'Redes al alcance' },
+      unit: 'number',
+      history: true,
+    },
+    {
+      id: 'hidden',
+      label: 'Hidden networks',
+      labels: { de: 'Versteckte Netze', fr: 'Réseaux masqués', es: 'Redes ocultas' },
+      unit: 'number',
+    },
+  ];
+  if (connected) {
+    items.push({
+      id: 'connected',
+      label: 'Connected to',
+      labels: { de: 'Verbunden mit', fr: 'Connecté à', es: 'Conectado a' },
+      unit: 'text',
+      text: connected,
+    });
+  }
+  for (const n of [...networks].sort((a, b) => a.ssid.localeCompare(b.ssid))) {
+    const value = (suffix: string, what: string, whats: Record<string, string>) => ({
+      id: `${n.id}-${suffix}`,
+      label: `${n.ssid}: ${what}`,
+      labels: Object.fromEntries(languages.map((l) => [l, `${n.ssid}: ${whats[l]}`])),
+      section: n.ssid,
+    });
+    const [channel, band] = wifiChannel(n.mhz);
+    const decimal = (bands: string) => bands.replaceAll('2.4', '2,4');
+    const channelParts = [`${channel}`, band, ...(n.width ? [`${n.width} MHz`] : [])].join(' · ');
+    const also = n.also?.join(', ');
+    const details = {
+      en: [] as string[],
+      de: [] as string[],
+      fr: [] as string[],
+      es: [] as string[],
+    };
+    const add = (en: string, de = en, fr = en, es = en) => {
+      details.en.push(en);
+      details.de.push(de);
+      details.fr.push(fr);
+      details.es.push(es);
+    };
+    if (n.dBm !== undefined) add(`${n.dBm} dBm`);
+    if (n.generation) add(n.generation);
+    if (n.rateMbps) {
+      const r = n.rateMbps;
+      add(`up to ${r} Mbit/s`, `bis ${r} Mbit/s`, `jusqu'à ${r} Mbit/s`, `hasta ${r} Mbit/s`);
+    }
+    if (n.accessPoints && n.accessPoints > 1) {
+      const c = n.accessPoints;
+      add(
+        `${c} access points`,
+        `${c} Zugangspunkte`,
+        `${c} points d'accès`,
+        `${c} puntos de acceso`,
+      );
+    }
+    items.push(
+      {
+        ...value('signal', 'signal', { de: 'Signal', fr: 'signal', es: 'señal' }),
+        unit: 'percent',
+        history: true,
+      },
+      {
+        ...value('channel', 'channel', { de: 'Kanal', fr: 'canal', es: 'canal' }),
+        unit: 'text',
+        ...text(
+          also ? `${channelParts} (also ${also})` : channelParts,
+          also
+            ? {
+                de: `${decimal(channelParts)} (auch ${decimal(also)})`,
+                fr: `${decimal(channelParts)} (aussi ${decimal(also)})`,
+                es: `${decimal(channelParts)} (también ${decimal(also)})`,
+              }
+            : { de: decimal(channelParts), fr: decimal(channelParts), es: decimal(channelParts) },
+        ),
+      },
+      {
+        ...value('security', 'security', { de: 'Sicherheit', fr: 'sécurité', es: 'seguridad' }),
+        unit: 'text',
+        ...(n.security === 'Open'
+          ? text('Open', { de: 'Offen', fr: 'Ouvert', es: 'Abierta' })
+          : text(n.security)),
+      },
+    );
+    if (details.en.length > 0) {
+      items.push({
+        ...value('details', 'details', { de: 'Details', fr: 'détails', es: 'detalles' }),
+        unit: 'text',
+        ...text(details.en.join(' · '), {
+          de: details.de.join(' · '),
+          fr: details.fr.join(' · '),
+          es: details.es.join(' · '),
+        }),
+      });
+    }
+  }
+  return {
+    id: 'wifi-networks',
+    title: 'Nearby Wi-Fi networks',
+    titles: {
+      de: 'WLAN-Netze in der Nähe',
+      fr: 'Réseaux Wi-Fi à proximité',
+      es: 'Redes Wi-Fi cercanas',
+    },
+    items,
+  };
+}
+
+/** The networks around the house, as NetworkManager on the hub tells them. */
+const NEARBY_NETWORKS: DemoWifiNetwork[] = [
+  {
+    id: 'den',
+    ssid: 'Den',
+    mhz: 5180,
+    width: 80,
+    also: ['2.4 GHz'],
+    security: 'WPA2/WPA3',
+    rateMbps: 1201,
+    accessPoints: 3,
+  },
+  { id: 'den-guest', ssid: 'Den-Guest', mhz: 2437, width: 20, security: 'WPA2', rateMbps: 144 },
+  {
+    id: 'fritz-box-7590-kl',
+    ssid: 'FRITZ!Box 7590 KL',
+    mhz: 5500,
+    width: 80,
+    also: ['2.4 GHz'],
+    security: 'WPA2',
+    rateMbps: 866,
+    accessPoints: 2,
+  },
+  {
+    id: 'telekom-8c21f0',
+    ssid: 'Telekom-8C21F0',
+    mhz: 6115,
+    width: 160,
+    also: ['2.4 GHz', '5 GHz'],
+    security: 'WPA3',
+    rateMbps: 2402,
+    accessPoints: 3,
+  },
+  {
+    id: 'vodafone-hotspot',
+    ssid: 'Vodafone Hotspot',
+    mhz: 2462,
+    width: 20,
+    security: 'Open',
+    rateMbps: 72,
+  },
+  {
+    id: 'direct-4a-hp-laserjet',
+    ssid: 'DIRECT-4A-HP LaserJet',
+    mhz: 2437,
+    security: 'WPA2',
+    rateMbps: 72,
+  },
+];
+
+/** The same networks as Windows on the laptop tells them, which it is connected to the first of. */
+const LAPTOP_NETWORKS: DemoWifiNetwork[] = [
+  { ...NEARBY_NETWORKS[0], rateMbps: undefined, dBm: -51, generation: 'Wi-Fi 6' },
+  { ...NEARBY_NETWORKS[1], rateMbps: undefined, dBm: -55, generation: 'Wi-Fi 6' },
+  { ...NEARBY_NETWORKS[2], rateMbps: undefined, dBm: -71, generation: 'Wi-Fi 5' },
+  { ...NEARBY_NETWORKS[3], rateMbps: undefined, dBm: -77, generation: 'Wi-Fi 6E' },
+  { ...NEARBY_NETWORKS[4], rateMbps: undefined, dBm: -83, generation: 'Wi-Fi 4' },
+];
+
+/** The signals of the networks nearby the hub, in percent, by id. */
+const HUB_SIGNALS: Record<string, number> = {
+  den: 64,
+  'den-guest': 58,
+  'fritz-box-7590-kl': 34,
+  'telekom-8c21f0': 22,
+  'vodafone-hotspot': 28,
+  'direct-4a-hp-laserjet': 46,
+};
+
+/** The same at the laptop, by the window. */
+const LAPTOP_SIGNALS: Record<string, number> = {
+  den: 98,
+  'den-guest': 90,
+  'fritz-box-7590-kl': 58,
+  'telekom-8c21f0': 46,
+  'vodafone-hotspot': 34,
+};
+
+/**
+ * The values of the networks nearby: how many are in range, the hidden ones, and each one's signal in percent around
+ * base, the neighbours' coming and going. A network that is out of range has no signal, so its chart has a gap.
+ */
+function wifiNetworkValues(
+  t: number,
+  step: number,
+  seed: number,
+  signals: Record<string, number>,
+  hidden: number,
+): Values {
+  const values: Values = {};
+  let inRange = 0;
+  for (const [i, [id, base]] of Object.entries(signals).entries()) {
+    // The weakest dropped out now and then, for about an hour; all are in range now.
+    if (t < openedAt - 3600 && base < 40 && hash(Math.floor(t / 3600), seed + i) < 0.3) continue;
+    values[`extra:wifi-networks/${id}-signal`] = vary(
+      t,
+      step,
+      seed + i,
+      base,
+      1,
+      100,
+      [6, 300],
+      [8, 3600],
+    );
+    inRange++;
+  }
+  values['extra:wifi-networks/in-range'] = inRange;
+  values['extra:wifi-networks/hidden'] = hidden;
+  return values;
+}
+
 /**
  * What the Wi-Fi add-on reports for the interface name: on Linux its name, which is its id too, on Windows the
  * adapter's description, with the interface's GUID as id. Its values come from values() as "extra:wifi/<id>-quality"
- * and "-signal"; only the quality keeps its history, as the signal is below 0.
+ * and "-signal"; only the quality keeps its history, as the signal is below 0. Without a name, as on a hub on a cable,
+ * no interface is connected, so it reports only the networks nearby, when there are any.
  */
-function wifiAddOn(name: string, id = name): Extra[] {
+function wifiAddOn(
+  name?: string,
+  id = name,
+  networks: DemoWifiNetwork[] = [],
+  connected?: string,
+): Extra[] {
+  const nearby = networks.length > 0 ? [wifiNetworksGroup(networks, connected)] : [];
+  if (name === undefined) return nearby;
   // Like the add-on, a name too long for a label of 80 characters is cut so what the value is stays whole.
   const label = (what: string) =>
     name.length + 1 + what.length <= 80
@@ -538,6 +807,7 @@ function wifiAddOn(name: string, id = name): Extra[] {
         },
       ],
     },
+    ...nearby,
   ];
 }
 
@@ -994,6 +1264,8 @@ const piHub: DemoMachine = {
     ...pressureAddOn(),
     ...kernelAddOn(),
     ...memoryAddOn(),
+    // On a cable, so its Wi-Fi only sees the networks nearby.
+    ...wifiAddOn(undefined, undefined, NEARBY_NETWORKS),
     ...bluetoothAddOn([
       ['3f9a61c2', 'JBL Flip 6', 55],
       ['a40c7e19', 'Keychron K3', bluetoothKinds.keyboard],
@@ -1056,6 +1328,7 @@ const piHub: DemoMachine = {
       'extra:bluetooth/connected':
         t >= openedAt - 40 * 60 ? 2 : 1 + Math.round(hash(Math.floor(t / 1800), 140)),
       'extra:ports/count': 4,
+      ...wifiNetworkValues(t, step, 400, HUB_SIGNALS, 2),
       ...processValues(
         cpu,
         { 812: 0.3, 655: 0.18, 1432: 0.12, 610: 0.08, 1: 0.03, 433: 0.02 },
@@ -1178,6 +1451,8 @@ const windowsLaptop: DemoMachine = {
   extras: wifiAddOn(
     'Qualcomm FastConnect 7800 Wi-Fi 7 High Band Simultaneous (HBS) Network Adapter',
     WINDOWS_WIFI,
+    LAPTOP_NETWORKS,
+    'Den',
   ),
   bootedDaysAgo: 2.1,
   values: (t, step) => ({
@@ -1192,6 +1467,7 @@ const windowsLaptop: DemoMachine = {
     'network.send:WLAN': vary(t, step, 48, 60e3, 0, 1e9, [50e3, 30]),
     'gpu:Qualcomm Adreno X1-85 GPU': vary(t, step, 49, 9, 0, 100, [7, 90]),
     ...wifiValues(WINDOWS_WIFI, vary(t, step, 50, -62, -88, -40, [5, 90], [6, 3600]), 'windows'),
+    ...wifiNetworkValues(t, step, 420, LAPTOP_SIGNALS, 1),
   }),
 };
 

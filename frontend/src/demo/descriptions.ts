@@ -76,6 +76,15 @@ export const descriptions: Record<
       es: 'La calidad de la conexión Wi-Fi de cada interfaz inalámbrica, con su nivel de señal.',
     },
   },
+  'wifi-networks': {
+    description:
+      "The Wi-Fi networks this device sees, from the scans its system makes on its own: each one's signal, with its history showing when it was in range, channel, band and security.",
+    descriptions: {
+      de: 'Die WLAN-Netze, die dieses Gerät sieht, aus den Suchläufen, die sein System von sich aus macht: Signal jedes Netzes, dessen Verlauf zeigt, wann es in Reichweite war, Kanal, Band und Sicherheit.',
+      fr: "Les réseaux Wi-Fi que cet appareil voit, d'après les recherches que son système fait de lui-même : le signal de chacun, dont l'historique montre quand il était à portée, son canal, sa bande et sa sécurité.",
+      es: 'Las redes Wi-Fi que ve este dispositivo, según las búsquedas que su sistema hace por sí mismo: la señal de cada una, cuyo historial muestra cuándo estuvo al alcance, su canal, su banda y su seguridad.',
+    },
+  },
   'processes-cpu': {
     description: 'The processes that use the most CPU right now.',
     descriptions: {
