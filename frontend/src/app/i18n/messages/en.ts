@@ -213,6 +213,8 @@ export const en = {
   'devices.problem.pairingWrong':
     "That is not the device's pairing code. Enter the code it shows on its own page under Devices, in its tray icon menu on Windows, or in its log.",
   'devices.problem.pairingNone': 'This device runs no Den-Watcher, so it has no pairing code.',
+  'devices.problem.pairingTaken':
+    'Another phone already has this pairing code. Enter the code this phone shows in its app.',
   'devices.problem.demo': "This is a demo, so devices can't be added, removed or changed.",
   'devices.problem.demoBackup': 'This is a demo, so it has no database to back up.',
   'devices.problem.other': 'The devices could not be changed. Try again.',

@@ -60,6 +60,8 @@ func TestAPhoneIsAddedWithItsCodeAndKept(t *testing.T) {
 		"code taken":      {"Tablet", "7KQM X2RP", ProblemPairingTaken},
 		"name taken":      {"pixel 8", "CCCC-DDDD", ProblemNameTaken},
 		"code not a code": {"Tablet", "7KQM_X2RP", ProblemPairingWrong},
+		"code too short":  {"Tablet", "A", ProblemPairingWrong},
+		"code with O":     {"Tablet", "7KQM-X2RO", ProblemPairingWrong},
 	} {
 		if _, err := h.AddPhone(ctx, test.name, test.code); problemOf(err) != test.problem {
 			t.Errorf("AddPhone() with %s error = %v, want problem %q", name, err, test.problem)
@@ -163,6 +165,9 @@ func TestAPhonesCodeCanBeChanged(t *testing.T) {
 	}
 	if err := h.SetCode(ctx, "pixel", "AAAA-BBBB"); problemOf(err) != ProblemPairingTaken {
 		t.Errorf("SetCode() with the other phone's code error = %v, want problem %q", err, ProblemPairingTaken)
+	}
+	if err := h.SetCode(ctx, "pixel", "AB"); problemOf(err) != ProblemPairingWrong {
+		t.Errorf("SetCode() with a code of 2 characters error = %v, want problem %q", err, ProblemPairingWrong)
 	}
 	if err := h.SetCode(ctx, "pixel", "CCCC-DDDD"); err != nil {
 		t.Fatalf("SetCode() error = %v", err)

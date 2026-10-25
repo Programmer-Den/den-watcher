@@ -40,6 +40,16 @@ func checkCode(code string) (string, error) {
 	return code, nil
 }
 
+// checkPhoneCode returns a phone's pairing code, checked by checkCode, or an
+// InputError when it is not a code as an app shows it, such as 7KQM-X2RP. It
+// is all a phone's pushes are taken with, so a short one could be guessed.
+func checkPhoneCode(code string) error {
+	if code == "" || (len(code) == 8 && pairing.Valid(code[:4]+"-"+code[4:])) {
+		return nil
+	}
+	return &InputError{Problem: ProblemPairingWrong, Message: "a phone's pairing code has 8 letters and digits; give the code the phone shows, such as 7KQM-X2RP"}
+}
+
 // readCode returns the pairing code of device, empty when it has none.
 func readCode(ctx context.Context, db *sql.DB, device string) (string, error) {
 	var code string
@@ -141,6 +151,9 @@ func (r *Remote) Pairing() string {
 func (h *Hub) setPhoneCode(ctx context.Context, remote *Remote, code string) error {
 	if code == "" {
 		return &InputError{Problem: ProblemPairingNeeded, Message: "give the pairing code the phone shows, such as 7KQM-X2RP"}
+	}
+	if err := checkPhoneCode(code); err != nil {
+		return err
 	}
 	if other := h.phoneWith(code); other != nil && other != remote {
 		return &InputError{Problem: ProblemPairingTaken, Message: "another phone has this pairing code; give the code this phone shows"}

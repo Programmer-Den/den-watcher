@@ -215,6 +215,8 @@ export const de: Messages = {
     'Das ist nicht der Kopplungscode des Geräts. Gib den Code ein, den es auf seiner eigenen Seite unter Geräte, im Menü seines Tray-Symbols unter Windows oder in seinem Log zeigt.',
   'devices.problem.pairingNone':
     'Auf diesem Gerät läuft kein Den-Watcher, daher hat es keinen Kopplungscode.',
+  'devices.problem.pairingTaken':
+    'Ein anderes Handy hat diesen Kopplungscode schon. Gib den Code ein, den dieses Handy in seiner App zeigt.',
   'devices.problem.demo':
     'Dies ist eine Demo, darum können keine Geräte hinzugefügt, entfernt oder geändert werden.',
   'devices.problem.demoBackup': 'Dies ist eine Demo, darum gibt es keine Datenbank zum Sichern.',
