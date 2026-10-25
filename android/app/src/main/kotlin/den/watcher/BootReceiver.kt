@@ -12,6 +12,8 @@ class BootReceiver : BroadcastReceiver() {
         }
         if (Settings(context).recording) {
             SyncJob.schedule(context)
+            // Also when Android does not let the service start from here.
+            RecordAlarm.start(context)
             runCatching { RecorderService.start(context) }
         }
     }
