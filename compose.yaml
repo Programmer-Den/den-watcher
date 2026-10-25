@@ -170,8 +170,13 @@ services:
 
   # The Wi-Fi add-on, started with COMPOSE_PROFILES=wifi: reads the link
   # quality and signal of each connected Wi-Fi interface from the host's
-  # /proc/1/net/wireless, which anyone may read, so it runs as the image's
-  # user, like den-watcher, without any capability and without network.
+  # /proc/1/net/wireless, which anyone may read, and the Wi-Fi networks
+  # nearby from NetworkManager through the host's system D-Bus, whose folder
+  # is mounted for it. NetworkManager lets any user read the access points
+  # its own scans found, so it runs as the image's user, like den-watcher,
+  # without any capability and without network: the D-Bus socket is a file,
+  # not a network connection. It starts no scan, and changing a connection
+  # takes an authorization polkit does not give this user.
   wifi:
     <<: *addon
     profiles: [wifi, cub]
@@ -179,9 +184,11 @@ services:
     environment:
       HOST_PROC: /host/proc
       ADDONS_DIR: /addons
+      DBUS_SYSTEM_BUS_ADDRESS: unix:path=/host/run/dbus/system_bus_socket
     volumes:
       - addons:/addons
       - /proc:/host/proc:ro
+      - /run/dbus:/host/run/dbus:ro
 
   # The Bluetooth add-on, started with COMPOSE_PROFILES=bluetooth: reads which
   # Bluetooth devices are connected, with their name, kind or battery, from

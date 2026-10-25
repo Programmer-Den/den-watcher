@@ -178,7 +178,8 @@ answer /api/metrics > /dev/null
 # The pressure add-on reads /proc/pressure, which a kernel without pressure
 # stall information lacks; it then runs but reports nothing. The kernel add-on
 # reads /proc, which every runner has. The Wi-Fi add-on runs too; a runner
-# without Wi-Fi gets a report without values. The ports add-on reads the
+# without Wi-Fi gets a report without values, through the link to the folder
+# its throwaway user writes to. The ports add-on reads the
 # host's socket tables, which every runner has. The Bluetooth add-on runs
 # too; a runner without Bluetooth gets a report without values, through the
 # link to the folder its throwaway user writes to. All seven add-ons are
@@ -195,6 +196,7 @@ for addon in power pressure kernel wifi ports containers bluetooth; do
   ! installed "den-watcher-$addon" || { echo "--addons= left the $addon add-on behind" >&2; exit 1; }
 done
 [[ ! -L /run/den-watcher-addons/bluetooth.json ]] || { echo "--addons= left the Bluetooth add-on behind" >&2; exit 1; }
+[[ ! -L /run/den-watcher-addons/wifi.json ]] || { echo "--addons= left the Wi-Fi add-on behind" >&2; exit 1; }
 
 # --addons=cub installs the Cub edition: the lightweight add-ons, and only those.
 "$folder/install.sh" --addons=cub
