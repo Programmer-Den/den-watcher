@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -17,14 +18,18 @@ import android.widget.TextView
 import android.widget.Toast
 
 /**
- * The app's only screen: the pairing code to enter on the hub, the hub's
- * address, switching recording on or off, and how the last push went.
+ * The app's only screen, in cards as on the website: how recording goes,
+ * with a dot as on the hub's page, the pairing code to enter on the hub,
+ * the hub's address and what is sent.
  */
 class MainActivity : Activity() {
     private lateinit var settings: Settings
     private lateinit var address: EditText
     private lateinit var toggle: Button
+    private lateinit var state: TextView
     private lateinit var status: TextView
+    private lateinit var problemLine: TextView
+    private lateinit var dot: View
     private val handler = Handler(Looper.getMainLooper())
 
     private val refresh = object : Runnable {
@@ -48,7 +53,10 @@ class MainActivity : Activity() {
         toggle = findViewById(R.id.toggle)
         toggle.setOnClickListener { setRecording(!settings.recording) }
 
+        state = findViewById(R.id.state)
         status = findViewById(R.id.status)
+        problemLine = findViewById(R.id.problem)
+        dot = findViewById(R.id.dot)
 
         findViewById<Button>(R.id.battery).setOnClickListener {
             runCatching { startActivity(Intent(ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
@@ -100,7 +108,11 @@ class MainActivity : Activity() {
 
     private fun showStatus() {
         val recording = settings.recording
+        val problem = settings.problem
         toggle.setText(if (recording) R.string.stop else R.string.start)
+        state.setText(if (recording) R.string.state_recording else R.string.state_stopped)
+        val color = getColor(dotColor(recording, problem))
+        dot.backgroundTintList = ColorStateList.valueOf(color)
         val lines = mutableListOf(getString(if (recording) R.string.status_recording else R.string.status_stopped))
         val lastPush = settings.lastPush
         if (lastPush > 0) {
@@ -108,9 +120,22 @@ class MainActivity : Activity() {
             val day = DateFormat.getMediumDateFormat(this).format(java.util.Date(lastPush * 1000))
             lines += getString(R.string.status_last_push, "$day $time")
         }
-        settings.problem?.let { lines += getString(problemText(it)) }
         status.text = lines.joinToString("\n")
+        problemLine.text = problem?.let { getString(problemText(it)) }
+        problemLine.setTextColor(if (recording) color else getColor(R.color.on_surface_variant))
+        problemLine.visibility = if (problem == null) View.GONE else View.VISIBLE
         findViewById<View>(R.id.battery_group).visibility = if (recording) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * Green while the hub takes the usage, amber while the app waits for the
+     * home Wi-Fi or an address, red when the hub does not take it.
+     */
+    private fun dotColor(recording: Boolean, problem: Problem?): Int = when {
+        !recording -> R.color.off
+        problem == null -> R.color.ok
+        problem == Problem.NOT_HOME || problem == Problem.NO_ADDRESS -> R.color.waiting
+        else -> R.color.error
     }
 
     private fun problemText(problem: Problem): Int = when (problem) {

@@ -52,6 +52,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // The screenshot test draws the app's own layouts and strings.
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
     lint {
         warningsAsErrors = false
         abortOnError = true
@@ -62,4 +67,18 @@ dependencies {
     testImplementation(libs.junit)
     // Android's own org.json is only a stub in unit tests.
     testImplementation(libs.json)
+    // Draws the screen for the screenshots of a pull request.
+    testImplementation(libs.robolectric)
+}
+
+// Screenshots are taken only when asked for, with -Pscreenshots=<folder>, as
+// Robolectric first downloads a whole Android for them.
+val screenshots = providers.gradleProperty("screenshots").orNull
+tasks.withType<Test>().configureEach {
+    if (screenshots == null) {
+        filter.excludeTestsMatching("den.watcher.Screenshots")
+    } else {
+        filter.includeTestsMatching("den.watcher.Screenshots")
+        systemProperty("screenshots", file(screenshots).absolutePath)
+    }
 }

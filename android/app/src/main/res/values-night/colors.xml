@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The website's dark theme, from its orange palette. -->
+    <color name="surface">#181210</color>
+    <color name="card">#241E1B</color>
+    <color name="on_surface">#ECE0DA</color>
+    <color name="on_surface_variant">#D8C2B8</color>
+    <color name="primary">#FFB787</color>
+    <color name="on_primary">#502400</color>
+    <color name="outline">#9F8D83</color>
+    <color name="ok">#5CCF6E</color>
+    <color name="waiting">#F2C14E</color>
+    <color name="error">#FF6B5E</color>
+    <color name="off">#8A7D76</color>
+</resources>

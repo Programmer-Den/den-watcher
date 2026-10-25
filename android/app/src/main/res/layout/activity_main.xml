@@ -5,83 +5,148 @@
     android:fitsSystemWindows="true">
 
     <LinearLayout
+        android:id="@+id/content"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:paddingStart="16dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="24dp">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textAppearance="@android:style/TextAppearance.Material.Headline" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/mascot" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/app_name"
+                android:textColor="@color/on_surface"
+                android:textSize="24sp" />
+        </LinearLayout>
 
         <TextView
             style="@style/Hint"
+            android:layout_marginBottom="4dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
             android:text="@string/intro" />
 
-        <TextView
-            style="@style/Heading"
-            android:text="@string/code_title" />
+        <LinearLayout style="@style/Card">
 
-        <TextView
-            android:id="@+id/code"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="monospace"
-            android:textIsSelectable="true"
-            android:textSize="32sp"
-            android:textStyle="bold" />
+            <TextView
+                style="@style/Heading"
+                android:text="@string/status_title" />
 
-        <TextView
-            style="@style/Hint"
-            android:text="@string/code_hint" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-        <TextView
-            style="@style/Heading"
-            android:labelFor="@id/address"
-            android:text="@string/address_title" />
+                <View
+                    android:id="@+id/dot"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:background="@drawable/dot" />
 
-        <EditText
-            android:id="@+id/address"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:autofillHints=""
-            android:hint="@string/address_example"
-            android:importantForAutofill="no"
-            android:inputType="textUri"
-            android:minHeight="48dp" />
+                <TextView
+                    android:id="@+id/state"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:textColor="@color/on_surface"
+                    android:textSize="20sp" />
+            </LinearLayout>
 
-        <TextView
-            style="@style/Hint"
-            android:text="@string/address_hint" />
+            <TextView
+                android:id="@+id/status"
+                style="@style/Hint" />
 
-        <Button
-            android:id="@+id/save"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/save" />
+            <TextView
+                android:id="@+id/problem"
+                style="@style/Hint"
+                android:layout_marginTop="8dp" />
 
-        <TextView
-            style="@style/Heading"
-            android:text="@string/status_title" />
+            <Button
+                android:id="@+id/toggle"
+                style="@style/Button.Filled" />
+        </LinearLayout>
 
-        <TextView
-            android:id="@+id/status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textAppearance="@android:style/TextAppearance.Material.Body1" />
+        <LinearLayout style="@style/Card">
 
-        <Button
-            android:id="@+id/toggle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            <TextView
+                style="@style/Heading"
+                android:text="@string/code_title" />
+
+            <TextView
+                android:id="@+id/code"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.1"
+                android:textColor="@color/primary"
+                android:textIsSelectable="true"
+                android:textSize="34sp"
+                android:textStyle="bold" />
+
+            <TextView
+                style="@style/Hint"
+                android:text="@string/code_hint" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/Card">
+
+            <TextView
+                style="@style/Heading"
+                android:labelFor="@id/address"
+                android:text="@string/address_title" />
+
+            <EditText
+                android:id="@+id/address"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:autofillHints=""
+                android:hint="@string/address_example"
+                android:importantForAutofill="no"
+                android:inputType="textUri"
+                android:minHeight="48dp"
+                android:textColor="@color/on_surface"
+                android:textColorHint="@color/off" />
+
+            <TextView
+                style="@style/Hint"
+                android:text="@string/address_hint" />
+
+            <Button
+                android:id="@+id/save"
+                style="@style/Button.Outlined"
+                android:text="@string/save" />
+        </LinearLayout>
 
         <LinearLayout
             android:id="@+id/battery_group"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
+            style="@style/Card">
+
+            <TextView
+                style="@style/Heading"
+                android:text="@string/battery_title" />
 
             <TextView
                 style="@style/Hint"
@@ -89,18 +154,19 @@
 
             <Button
                 android:id="@+id/battery"
-                style="@android:style/Widget.Material.Button.Borderless.Colored"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                style="@style/Button.Outlined"
                 android:text="@string/battery" />
         </LinearLayout>
 
-        <TextView
-            style="@style/Heading"
-            android:text="@string/data_title" />
+        <LinearLayout style="@style/Card">
 
-        <TextView
-            style="@style/Hint"
-            android:text="@string/data_hint" />
+            <TextView
+                style="@style/Heading"
+                android:text="@string/data_title" />
+
+            <TextView
+                style="@style/Hint"
+                android:text="@string/data_hint" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>
