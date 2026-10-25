@@ -332,8 +332,9 @@ describe('DevicesDialog', () => {
       });
     fixture.detectChanges();
     await fixture.whenStable();
+    // The tests run in American English, with its 12-hour clock.
     expect(element().querySelectorAll('li')[0].textContent).toContain(
-      'May change its hub or stop recording until 21:05',
+      'May change its hub or stop recording until 9:05 PM',
     );
   });
 
