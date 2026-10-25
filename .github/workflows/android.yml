@@ -88,7 +88,12 @@ jobs:
             echo "The secret ANDROID_KEYSTORE is missing; make a key as docs/setup.md says under Add an Android phone and add it with ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD to the repository's Actions secrets." >&2
             exit 1
           fi
-          printf '%s' "$ANDROID_KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+          # The key may be pasted with line breaks, also Windows' \r\n, or as
+          # certutil -encode writes it, between -----BEGIN and -----END lines.
+          if ! printf '%s\n' "$ANDROID_KEYSTORE" | sed '/^-----/d' | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/release.jks"; then
+            echo "The secret ANDROID_KEYSTORE is not base64; paste the text base64 or certutil -encode made of release.jks, as docs/development.md says." >&2
+            exit 1
+          fi
           echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
       # The runner has the Android SDK and Java 17; the Gradle wrapper fetches
