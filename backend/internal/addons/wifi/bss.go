@@ -114,7 +114,7 @@ func fileTime(ft uint64) time.Time {
 	if ft < epoch || ft-epoch > math.MaxInt64/100 {
 		return time.Time{}
 	}
-	return time.Unix(0, 0).Add(time.Duration(ft-epoch) * 100) //nolint:gosec // in range, checked above
+	return time.Unix(0, 0).Add(time.Duration(ft-epoch) * 100)
 }
 
 // signed reads a LONG, such as the RSSI, from the bits of a DWORD.

@@ -4,12 +4,12 @@ import "testing"
 
 // element returns an information element with id and data.
 func element(id byte, data ...byte) []byte {
-	return append([]byte{id, byte(len(data))}, data...)
+	return append([]byte{id, byte(len(data))}, data...) //nolint:gosec // a test's short elements
 }
 
 // rsn returns an RSN element with CCMP and the AKM suites akms.
 func rsn(akms ...byte) []byte {
-	data := []byte{1, 0, 0x00, 0x0f, 0xac, 4, 1, 0, 0x00, 0x0f, 0xac, 4, byte(len(akms)), 0}
+	data := []byte{1, 0, 0x00, 0x0f, 0xac, 4, 1, 0, 0x00, 0x0f, 0xac, 4, byte(len(akms)), 0} //nolint:gosec // a few suites
 	for _, akm := range akms {
 		data = append(data, 0x00, 0x0f, 0xac, akm)
 	}
