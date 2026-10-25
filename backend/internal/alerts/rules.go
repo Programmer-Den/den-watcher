@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // offlineAfter is how long a server must not answer before it is an alert,

@@ -22,9 +22,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/addons"
-	"github.com/Chriszly/den-watcher/backend/internal/addons/pressure"
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/addons"
+	"github.com/Programmer-Den/den-watcher/backend/internal/addons/pressure"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 func main() {

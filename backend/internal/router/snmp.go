@@ -17,7 +17,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/lan"
+	"github.com/Programmer-Den/den-watcher/backend/internal/lan"
 )
 
 const (

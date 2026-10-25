@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/sysfile"
+	"github.com/Programmer-Den/den-watcher/backend/internal/sysfile"
 )
 
 // rapl reads the energy counters of Intel and AMD CPUs (RAPL) under

@@ -40,7 +40,7 @@ docker compose pull
 docker compose up -d
 ```
 
-This runs the published image `ghcr.io/chriszly/den-watcher` for arm64 and amd64; the Pi builds nothing. Open `http://<the Pi's address>:9393` from a phone or PC on the same network.
+This runs the published image `ghcr.io/programmer-den/den-watcher` for arm64 and amd64; the Pi builds nothing. Open `http://<the Pi's address>:9393` from a phone or PC on the same network.
 
 What `compose.yaml` sets up:
 
@@ -87,7 +87,7 @@ Add `?kiosk` to the page's address, such as `http://raspberrypi.local:9393/?kios
 
 ## Or: set up a Linux machine without Docker
 
-Every [release](https://github.com/Chriszly/den-watcher/releases) after 0.1.0 has an archive for Linux: `den-watcher-<version>-linux-arm64.tar.gz` for a Raspberry Pi with a 64-bit system, `-linux-amd64.tar.gz` for a PC. It holds the program, a systemd service and an install script:
+Every [release](https://github.com/Programmer-Den/den-watcher/releases) after 0.1.0 has an archive for Linux: `den-watcher-<version>-linux-arm64.tar.gz` for a Raspberry Pi with a 64-bit system, `-linux-amd64.tar.gz` for a PC. It holds the program, a systemd service and an install script:
 
 ```bash
 tar -xzf den-watcher-<version>-linux-arm64.tar.gz
@@ -122,7 +122,7 @@ Add-ons write what they read to `/run/den-watcher-addons`, which den-watcher sho
 
 ## 2. Add a Windows PC
 
-Docker on Windows would measure its Linux VM, not the PC, so Windows gets an installer. From the [releases page](https://github.com/Chriszly/den-watcher/releases), download `den-watcher-<version>-x64.msi` for most PCs, or `-arm64.msi` for Windows on ARM, and run it. The installers are not code-signed, so SmartScreen warns before it runs.
+Docker on Windows would measure its Linux VM, not the PC, so Windows gets an installer. From the [releases page](https://github.com/Programmer-Den/den-watcher/releases), download `den-watcher-<version>-x64.msi` for most PCs, or `-arm64.msi` for Windows on ARM, and run it. The installers are not code-signed, so SmartScreen warns before it runs.
 
 The setup wizard asks what the PC should do:
 
@@ -398,19 +398,24 @@ docker compose up -d
 
 **Windows:** run the newer installer; it keeps its options.
 
-The history and settings stay in every case. What changed is on the [releases page](https://github.com/Chriszly/den-watcher/releases). When a new version changes the database layout, it keeps a copy of the old file first ([details](database.md#updates-to-the-layout)), except the update to 3.x: it keeps no copy, so download a backup first (**Download backup** in the devices dialog, see [Backups](database.md#backups)).
+The history and settings stay in every case. What changed is on the [releases page](https://github.com/Programmer-Den/den-watcher/releases). When a new version changes the database layout, it keeps a copy of the old file first ([details](database.md#updates-to-the-layout)), except the update to 3.x: it keeps no copy, so download a backup first (**Download backup** in the devices dialog, see [Backups](database.md#backups)).
 
 On a release, the hub checks GitHub once a day for a newer one (an hour after a failed check), without an account, and the page names it with a link. Nothing is downloaded or installed; updating stays your step. Builds of `main` and data-only devices never check. `UPDATE_CHECK=false` turns it off.
 
 **Port change after 0.1.0:** version 0.1.0 and builds before the change listened on 8080. Existing installs keep their port: a Docker install that set `PORT` in `.env`, a Windows install, which remembers the port it was installed with, and a Linux service with `LISTEN_ADDR` in `/etc/den-watcher.env`. A Docker install that never set `PORT` moves to 9393 after `git pull` and `docker compose up -d`; set `PORT=8080` in `.env` to stay on the old port, or update the address on the hub's *Devices* dialog.
 
+**Moved to Programmer-Den:** the repository moved from Chriszly to the Programmer-Den organization. The old addresses of the repository forward to the new one, so `git pull` and the hub's update check keep working. Two things do not forward:
+
+- **Docker:** new images are published as `ghcr.io/programmer-den/den-watcher`. `ghcr.io/chriszly/den-watcher` keeps the versions it has but gets no new ones. `git pull` brings the new name into `compose.yaml`; then run `docker compose up -d`. A `compose.yaml` or setting of your own that names the image needs the new name too.
+- **Demo:** it is at <https://programmer-den.github.io/den-watcher/>; the old address no longer answers.
+
 **Renamed from usage-control after 2.0.7a:** installs of 2.0.7a and older keep their history and settings when they switch to den-watcher. The Docker image under the old name stopped at 3.0.0; the Linux `install.sh` and the Windows installer still take over an old install:
 
-- **Docker:** the image is now `ghcr.io/chriszly/den-watcher`, and the compose service is called `den-watcher`. Images were published as `ghcr.io/chriszly/usage-control` up to and including version 3.0.0 and no longer are, so an old `compose.yaml` stays on 3.0.0. To go on, `git pull` (the old repository address forwards to the new one), then run `docker compose up -d --remove-orphans`, which pulls the new image and replaces the old container. The history stays in the same volume, and the database file keeps its name, `usage-control.db`.
+- **Docker:** the image is now `ghcr.io/programmer-den/den-watcher`, and the compose service is called `den-watcher`. Images were published as `ghcr.io/chriszly/usage-control` up to and including version 3.0.0 and no longer are, so an old `compose.yaml` stays on 3.0.0. To go on, `git pull` (the old repository address forwards to the new one), then run `docker compose up -d --remove-orphans`, which pulls the new image and replaces the old container. The history stays in the same volume, and the database file keeps its name, `usage-control.db`.
 - **Linux service:** `sudo ./install.sh` from the new archive takes over the old install once. It moves `/etc/usage-control.env` to `/etc/den-watcher.env`, `/var/lib/usage-control` to `/var/lib/den-watcher`, and the router password and `systemctl edit` settings too. The installed add-ons are kept, and the old services and programs are removed. From then on it is `sudo systemctl restart den-watcher`.
 - **Windows:** run the new installer over the old one. It replaces the install named Usage Control, and keeps its options, add-ons and history. The services keep their names (`UsageControl`, and `UsageControlSmart` for the smart add-on), and so do the data folder `C:\ProgramData\Usage Control` and the registry key `HKLM\SOFTWARE\Usage Control`.
 - **Hub and devices** can be updated in any order: a hub still reads devices that have not been updated yet, and the other way round.
-- **Demo:** it moved to <https://chriszly.github.io/den-watcher/>.
+- **Demo:** it moved to <https://programmer-den.github.io/den-watcher/>.
 
 Deploying to the maintainer's Pi lives in the private settings repository rpi-deploy-and-update (its *Deploy to Pi* and *Update Pi* buttons); this repository only builds and publishes the image.
 

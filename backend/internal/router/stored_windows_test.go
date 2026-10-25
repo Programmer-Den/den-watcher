@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Chriszly/den-watcher/backend/internal/hub"
+	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 )
 
 func TestDPAPIRoundTrip(t *testing.T) {

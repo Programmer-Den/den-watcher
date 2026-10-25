@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/alerts"
+	"github.com/Programmer-Den/den-watcher/backend/internal/alerts"
 )
 
 // eventsResponse is the body of GET /api/events. Times are Unix seconds.

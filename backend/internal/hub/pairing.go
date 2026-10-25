@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"unicode/utf8"
 
-	"github.com/Chriszly/den-watcher/backend/internal/pairing"
+	"github.com/Programmer-Den/den-watcher/backend/internal/pairing"
 )
 
 // pairingSchema keeps the pairing code of each device that has one, which

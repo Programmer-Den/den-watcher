@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/alerts"
-	"github.com/Chriszly/den-watcher/backend/internal/hub"
-	"github.com/Chriszly/den-watcher/backend/internal/server"
-	"github.com/Chriszly/den-watcher/backend/internal/statuspage"
+	"github.com/Programmer-Den/den-watcher/backend/internal/alerts"
+	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
+	"github.com/Programmer-Den/den-watcher/backend/internal/server"
+	"github.com/Programmer-Den/den-watcher/backend/internal/statuspage"
 )
 
 func TestStatusPageSettings(t *testing.T) {

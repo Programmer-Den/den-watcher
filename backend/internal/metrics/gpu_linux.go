@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Chriszly/den-watcher/backend/internal/sysfile"
+	"github.com/Programmer-Den/den-watcher/backend/internal/sysfile"
 )
 
 // gpuReader reads the GPUs Linux reports usage for without special rights:

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/history"
-	"github.com/Chriszly/den-watcher/backend/internal/hub"
+	"github.com/Programmer-Den/den-watcher/backend/internal/history"
+	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 )
 
 // MinuteSource has the averages a machine keeps of its own usage, one per

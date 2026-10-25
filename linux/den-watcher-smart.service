@@ -4,7 +4,7 @@
 # install.sh puts it in /etc/systemd/system when the add-on is picked.
 [Unit]
 Description=Den-Watcher smart add-on: reads the disks' health (SMART); runs as root with read-only disk access only
-Documentation=https://github.com/Chriszly/den-watcher
+Documentation=https://github.com/Programmer-Den/den-watcher
 PartOf=den-watcher.service
 After=den-watcher.service
 

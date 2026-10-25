@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Chriszly/den-watcher/backend/internal/layout"
+	"github.com/Programmer-Den/den-watcher/backend/internal/layout"
 )
 
 // fakeLayout keeps a layout in memory, refusing one that folds "nothing".

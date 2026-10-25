@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/pairing"
+	"github.com/Programmer-Den/den-watcher/backend/internal/pairing"
 )
 
 // serviceState is what Windows tells about the service.

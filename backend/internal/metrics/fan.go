@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Chriszly/den-watcher/backend/internal/sysfile"
+	"github.com/Programmer-Den/den-watcher/backend/internal/sysfile"
 )
 
 // Fan is the speed of one fan, such as the Raspberry Pi 5's cooling fan.

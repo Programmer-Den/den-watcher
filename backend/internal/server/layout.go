@@ -7,7 +7,7 @@ import (
 	"mime"
 	"net/http"
 
-	"github.com/Chriszly/den-watcher/backend/internal/layout"
+	"github.com/Programmer-Den/den-watcher/backend/internal/layout"
 )
 
 // maxLayoutBytes is the largest body of PUT /api/layout: room for every list

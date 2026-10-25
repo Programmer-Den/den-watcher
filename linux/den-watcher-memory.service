@@ -3,7 +3,7 @@
 # install.sh puts it in /etc/systemd/system when the add-on is picked.
 [Unit]
 Description=Den-Watcher memory add-on: reads memory details from /proc (dirty, slab, shared, page tables, committed, page faults and swapping per second); runs as root without capabilities
-Documentation=https://github.com/Chriszly/den-watcher
+Documentation=https://github.com/Programmer-Den/den-watcher
 PartOf=den-watcher.service
 After=den-watcher.service
 

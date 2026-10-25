@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/password"
+	"github.com/Programmer-Den/den-watcher/backend/internal/password"
 )
 
 // State tells whether a device answers.

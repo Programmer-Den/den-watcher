@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // ErrProgramStuck is what Program.Output returns while a call of the program

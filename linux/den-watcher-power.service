@@ -3,7 +3,7 @@
 # install.sh puts it in /etc/systemd/system when the add-on is picked.
 [Unit]
 Description=Den-Watcher power add-on: reads the power the machine draws (Raspberry Pi 5, Intel and AMD CPUs, NVIDIA GPUs); runs as root without capabilities
-Documentation=https://github.com/Chriszly/den-watcher
+Documentation=https://github.com/Programmer-Den/den-watcher
 PartOf=den-watcher.service
 After=den-watcher.service
 

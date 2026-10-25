@@ -2,7 +2,7 @@
 # it in /etc/systemd/system; settings go in /etc/den-watcher.env.
 [Unit]
 Description=Den-Watcher: shows the usage of this machine on the local network
-Documentation=https://github.com/Chriszly/den-watcher
+Documentation=https://github.com/Programmer-Den/den-watcher
 Wants=network-online.target
 After=network-online.target
 

@@ -14,7 +14,7 @@ import (
 
 	"github.com/shirou/gopsutil/v4/net"
 
-	"github.com/Chriszly/den-watcher/backend/internal/sysfile"
+	"github.com/Programmer-Den/den-watcher/backend/internal/sysfile"
 )
 
 // NetworkInterface is the traffic of one network interface.

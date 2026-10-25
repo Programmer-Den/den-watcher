@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/version"
+	"github.com/Programmer-Den/den-watcher/backend/internal/version"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/sensors"
 )

@@ -4,7 +4,7 @@ import (
 	"cmp"
 	"slices"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // Metric names. Values that exist once per disk, sensor or network interface

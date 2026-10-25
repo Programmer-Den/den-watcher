@@ -1,4 +1,4 @@
-module github.com/Chriszly/den-watcher/backend
+module github.com/Programmer-Den/den-watcher/backend
 
 go 1.27.3
 

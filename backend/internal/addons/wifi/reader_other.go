@@ -6,7 +6,7 @@ import (
 	"context"
 	"path/filepath"
 
-	"github.com/Chriszly/den-watcher/backend/internal/sysfile"
+	"github.com/Programmer-Den/den-watcher/backend/internal/sysfile"
 )
 
 // NewReader returns what reads each connected wireless interface: from the

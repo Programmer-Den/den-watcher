@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/history"
+	"github.com/Programmer-Den/den-watcher/backend/internal/history"
 )
 
 func TestHistoryCSVHasAColumnPerMetricAndARowPerTime(t *testing.T) {

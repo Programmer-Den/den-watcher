@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
-	"github.com/Chriszly/den-watcher/backend/internal/winservice"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/winservice"
 )
 
 // Children are the add-ons the den-watcher service on Windows starts, through

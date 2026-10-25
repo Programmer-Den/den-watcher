@@ -33,14 +33,14 @@ describe('UpdateNotice', () => {
     http.expectOne('/api/update').flush({
       current: '0.1.0',
       latest: '0.2.0',
-      url: 'https://github.com/Chriszly/den-watcher/releases/tag/v0.2.0',
+      url: 'https://github.com/Programmer-Den/den-watcher/releases/tag/v0.2.0',
     });
     fixture.detectChanges();
 
     expect(element().textContent).toContain('Version 0.2.0 is available (this device runs 0.1.0).');
     const link = element().querySelector('a');
     expect(link?.getAttribute('href')).toBe(
-      'https://github.com/Chriszly/den-watcher/releases/tag/v0.2.0',
+      'https://github.com/Programmer-Den/den-watcher/releases/tag/v0.2.0',
     );
     expect(link?.textContent).toContain("What's new");
   });

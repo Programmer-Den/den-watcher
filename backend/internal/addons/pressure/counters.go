@@ -1,6 +1,6 @@
 package pressure
 
-import "github.com/Chriszly/den-watcher/backend/internal/metrics"
+import "github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 
 // Windows keeps no pressure stall information: nothing in it measures how
 // long tasks waited. The Windows reader reports the closest signals its

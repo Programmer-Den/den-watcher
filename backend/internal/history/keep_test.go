@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 func TestKeepKeepsWhatARecorderKeeps(t *testing.T) {

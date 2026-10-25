@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Chriszly/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 const table = `/dev/mmcblk0p2 / ext4 rw,noatime 0 0

@@ -3,8 +3,8 @@ name: Demo page
 # Publishes the demo of the page to GitHub Pages: the real page, built with
 # `npm run build:demo`, with made-up devices instead of a backend. The site is
 # the gh-pages branch, which GitHub Pages serves as it is. A release tag
-# replaces its root (https://chriszly.github.io/den-watcher/) and a change to
-# main replaces main/ (https://chriszly.github.io/den-watcher/main/); each
+# replaces its root (https://programmer-den.github.io/den-watcher/) and a change to
+# main replaces main/ (https://programmer-den.github.io/den-watcher/main/); each
 # leaves the other alone. Pull requests only build the demo, in the CI workflow.
 #
 # Releases run on the tag push, as the other release workflows do, not on the

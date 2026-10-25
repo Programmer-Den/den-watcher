@@ -12,7 +12,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/Chriszly/den-watcher/backend/internal/history"
+	"github.com/Programmer-Den/den-watcher/backend/internal/history"
 )
 
 // addressPattern matches host:port, where the host is a name or IPv4 address

@@ -5,5 +5,5 @@ package version
 // for a build of main, and "dev" for a build that did not set it. Builds set
 // it with
 //
-//	go build -ldflags="-X github.com/Chriszly/den-watcher/backend/internal/version.Version=1.2.3"
+//	go build -ldflags="-X github.com/Programmer-Den/den-watcher/backend/internal/version.Version=1.2.3"
 var Version = "dev"
