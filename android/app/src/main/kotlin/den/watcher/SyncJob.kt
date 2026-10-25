@@ -9,9 +9,9 @@ import android.content.Context
 
 /**
  * Takes a reading and sends what the hub does not have yet about every
- * quarter of an hour, the most often Android runs a job, also while the
- * phone sleeps, so the history has no long gaps and the phone sends it soon
- * after it is back home.
+ * quarter of an hour, also while the phone sleeps deeply, in case Android
+ * stopped the app and with it RecordAlarm, so the history has no long gaps
+ * and the phone sends it soon after it is back home.
  */
 class SyncJob : JobService() {
     override fun onStartJob(params: JobParameters): Boolean {

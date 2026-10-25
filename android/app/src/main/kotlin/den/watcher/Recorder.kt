@@ -6,9 +6,8 @@ import android.net.NetworkCapabilities
 
 /**
  * Takes a reading, keeps its values and sends what the hub does not have
- * yet. The foreground service does this every half minute while the phone
- * is awake, and a job every quarter of an hour while it sleeps, so one
- * reading is taken at a time.
+ * yet. RecordAlarm does this every half minute, and SyncJob every quarter
+ * of an hour, so one reading is taken at a time.
  */
 object Recorder {
     /** The most pushes in a row, enough for a week of minutes. */
