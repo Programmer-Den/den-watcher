@@ -9,33 +9,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.os.Handler
-import android.os.HandlerThread
 import android.os.IBinder
 
 /**
- * Records the phone's usage every half minute and sends it to the hub while
- * the phone is awake, so the hub's page shows it as within reach. Android
- * keeps it running only as a foreground service, with a notification of its
- * own; while the phone sleeps, SyncJob takes over.
+ * Keeps the app running while it records, with a notification of its own,
+ * as Android requires for that, and starts RecordAlarm, which takes a
+ * reading every half minute and sends it to the hub, so the hub's page shows
+ * the phone as within reach.
  */
 class RecorderService : Service() {
-    private lateinit var thread: HandlerThread
-    private lateinit var handler: Handler
-
-    private val tick = object : Runnable {
-        override fun run() {
-            runCatching { Recorder.recordAndPush(this@RecorderService) }
-            handler.postDelayed(this, INTERVAL_MILLIS)
-        }
-    }
-
-    override fun onCreate() {
-        super.onCreate()
-        thread = HandlerThread("recorder").apply { start() }
-        handler = Handler(thread.looper)
-    }
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification = notification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -43,14 +25,12 @@ class RecorderService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
-        handler.removeCallbacks(tick)
-        handler.post(tick)
+        RecordAlarm.start(this)
         return START_STICKY
     }
 
     override fun onDestroy() {
-        handler.removeCallbacks(tick)
-        thread.quitSafely()
+        RecordAlarm.stop(this)
         super.onDestroy()
     }
 
@@ -79,7 +59,6 @@ class RecorderService : Service() {
     }
 
     companion object {
-        private const val INTERVAL_MILLIS = 30_000L
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL = "recording"
 
