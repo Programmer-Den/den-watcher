@@ -7,16 +7,22 @@ import org.json.JSONObject
 class Settings(context: Context) {
     private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
 
-    /** The phone's pairing code, made the first time it is asked for. */
+    /**
+     * The phone's pairing code, made the first time it is asked for. Every
+     * Settings shares one lock for it, so the screen and the recorder never
+     * make two codes at once.
+     */
     val code: String
-        @Synchronized get() {
-            val kept = prefs.getString(CODE, null)
-            if (kept != null && PairingCode.isValid(kept)) {
-                return kept
+        get() {
+            synchronized(codeLock) {
+                val kept = prefs.getString(CODE, null)
+                if (kept != null && PairingCode.isValid(kept)) {
+                    return kept
+                }
+                val code = PairingCode.generate()
+                prefs.edit().putString(CODE, code).apply()
+                return code
             }
-            val code = PairingCode.generate()
-            prefs.edit().putString(CODE, code).apply()
-            return code
         }
 
     /** The hub's address as it was typed in; empty until it is. */
@@ -69,6 +75,8 @@ class Settings(context: Context) {
     }
 
     private companion object {
+        val codeLock = Any()
+
         const val CODE = "code"
         const val HUB_ADDRESS = "hubAddress"
         const val RECORDING = "recording"
