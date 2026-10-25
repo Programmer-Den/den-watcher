@@ -5,11 +5,14 @@
     <string name="code_title">Pairing code</string>
     <string name="code_hint">On the hub\'s page, open Devices, add a device of the kind Phone and enter this code.</string>
     <string name="address_title">Hub\'s address</string>
-    <string name="address_example" translatable="false">192.168.1.20:9393</string>
-    <string name="address_hint">As the hub\'s page shows it when adding the phone: its IP address or name, and the port.</string>
-    <string name="address_invalid">Enter an IP address or name, and maybe a port, such as 192.168.1.20:9393.</string>
+    <string name="address_hint">Tap Scan hub code and point the camera at the code the hub\'s page shows under Devices when you add the phone.</string>
+    <string name="address_none">No hub yet</string>
+    <string name="address_locked">Locked by the hub, so this phone keeps sending to it and recording cannot be stopped. To change that, the hub\'s owner taps Allow changing the hub for this phone under Devices on the hub\'s page.</string>
+    <string name="address_released">The hub allows scanning another hub\'s code or stopping recording until %1$s.</string>
+    <string name="scan">Scan hub code</string>
+    <string name="scan_prompt">Point the camera at the code on the hub\'s page</string>
+    <string name="scan_invalid">This code holds no hub\'s address. Scan the one under Devices on the hub\'s page.</string>
     <string name="address_saved">Saved</string>
-    <string name="save">Save</string>
     <string name="status_title">Status</string>
     <string name="start">Start recording</string>
     <string name="stop">Stop recording</string>
@@ -18,7 +21,7 @@
     <string name="status_recording">Records the usage and keeps it until the hub has it, for up to a week.</string>
     <string name="status_stopped">Start recording to send this phone\'s usage to the hub.</string>
     <string name="status_last_push">The hub last took the usage on %1$s.</string>
-    <string name="problem_no_address">Enter the hub\'s address to send the usage.</string>
+    <string name="problem_no_address">Scan the hub\'s code to send the usage.</string>
     <string name="problem_not_home">Not on Wi-Fi: the usage is sent once the phone is on your home Wi-Fi.</string>
     <string name="problem_unreachable">The hub does not answer. Is the phone on your home Wi-Fi, and is the address right?</string>
     <string name="problem_not_added">The hub has no phone with this pairing code. Add the phone in the hub\'s Devices with the code above.</string>

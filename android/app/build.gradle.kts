@@ -64,6 +64,9 @@ android {
 }
 
 dependencies {
+    // Scans the code on the hub's page that holds its address, with the
+    // camera, without Google Play services.
+    implementation(libs.zxing.embedded)
     testImplementation(libs.junit)
     // Android's own org.json is only a stub in unit tests.
     testImplementation(libs.json)

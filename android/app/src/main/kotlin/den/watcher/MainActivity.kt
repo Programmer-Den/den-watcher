@@ -13,18 +13,22 @@ import android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS
 import android.text.format.DateFormat
 import android.view.View
 import android.widget.Button
-import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import com.google.zxing.integration.android.IntentIntegrator
 
 /**
  * The app's only screen, in cards as on the website: how recording goes,
  * with a dot as on the hub's page, the pairing code to enter on the hub,
- * the hub's address and what is sent.
+ * the hub's address, scanned from the hub's page, and what is sent. Once
+ * the hub took a push, the hub's address and stopping are locked until the
+ * hub allows a change.
  */
 class MainActivity : Activity() {
     private lateinit var settings: Settings
-    private lateinit var address: EditText
+    private lateinit var address: TextView
+    private lateinit var addressHint: TextView
+    private lateinit var scan: Button
     private lateinit var toggle: Button
     private lateinit var state: TextView
     private lateinit var status: TextView
@@ -47,8 +51,9 @@ class MainActivity : Activity() {
         findViewById<TextView>(R.id.code).text = PairingCode.format(settings.code)
 
         address = findViewById(R.id.address)
-        address.setText(settings.hubAddress)
-        findViewById<Button>(R.id.save).setOnClickListener { saveAddress() }
+        addressHint = findViewById(R.id.address_hint)
+        scan = findViewById(R.id.scan)
+        scan.setOnClickListener { scanCode() }
 
         toggle = findViewById(R.id.toggle)
         toggle.setOnClickListener { setRecording(!settings.recording) }
@@ -73,13 +78,45 @@ class MainActivity : Activity() {
         super.onPause()
     }
 
-    private fun saveAddress() {
-        val typed = address.text.toString()
-        if (HubAddress.pushUrl(typed) == null) {
-            address.error = getString(R.string.address_invalid)
+    /** Opens the scanner for the code on the hub's page, unless the hub's address is locked. */
+    private fun scanCode() {
+        if (settings.locked()) {
+            showStatus()
             return
         }
-        settings.hubAddress = typed
+        IntentIntegrator(this)
+            .setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
+            .setPrompt(getString(R.string.scan_prompt))
+            .setBeepEnabled(false)
+            .setOrientationLocked(false)
+            .initiateScan()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        val result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data)
+        if (result == null) {
+            super.onActivityResult(requestCode, resultCode, data)
+            return
+        }
+        // Null when the scan was cancelled.
+        val code = result.contents ?: return
+        val scanned = HubAddress.fromCode(code)
+        if (scanned == null) {
+            Toast.makeText(this, R.string.scan_invalid, Toast.LENGTH_LONG).show()
+            return
+        }
+        // The hub may have locked it while the scanner was open.
+        if (settings.locked()) {
+            showStatus()
+            return
+        }
+        if (scanned != settings.hubAddress) {
+            // Another hub is locked once it takes a push; until then the
+            // address can be scanned again, as when the phone was not added.
+            settings.paired = false
+            settings.releasedUntil = 0
+        }
+        settings.hubAddress = scanned
         Toast.makeText(this, R.string.address_saved, Toast.LENGTH_SHORT).show()
         if (settings.recording) {
             // Tries the new address right away.
@@ -90,6 +127,10 @@ class MainActivity : Activity() {
     }
 
     private fun setRecording(on: Boolean) {
+        if (!on && settings.locked()) {
+            showStatus()
+            return
+        }
         settings.recording = on
         if (on) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -125,6 +166,30 @@ class MainActivity : Activity() {
         problemLine.setTextColor(if (recording) color else getColor(R.color.on_surface_variant))
         problemLine.visibility = if (problem == null) View.GONE else View.VISIBLE
         findViewById<View>(R.id.battery_group).visibility = if (recording) View.VISIBLE else View.GONE
+        showAddress(recording)
+    }
+
+    /** The hub's address, and whether it and stopping are locked or the hub allows a change. */
+    private fun showAddress(recording: Boolean) {
+        val locked = settings.locked()
+        address.text = settings.hubAddress.ifEmpty { getString(R.string.address_none) }
+        val releasedUntil = settings.releasedUntil
+        addressHint.text = when {
+            locked -> getString(R.string.address_locked)
+            settings.paired && releasedUntil > 0 -> {
+                val time = DateFormat.getTimeFormat(this).format(java.util.Date(releasedUntil * 1000))
+                getString(R.string.address_released, time)
+            }
+            else -> getString(R.string.address_hint)
+        }
+        enable(scan, !locked)
+        enable(toggle, !(recording && locked))
+    }
+
+    /** Greys out a button that cannot be used now, as the buttons have no look of their own for that. */
+    private fun enable(button: Button, enabled: Boolean) {
+        button.isEnabled = enabled
+        button.alpha = if (enabled) 1f else DISABLED_ALPHA
     }
 
     /**
@@ -148,5 +213,6 @@ class MainActivity : Activity() {
 
     private companion object {
         const val REFRESH_MILLIS = 5_000L
+        const val DISABLED_ALPHA = 0.38f
     }
 }

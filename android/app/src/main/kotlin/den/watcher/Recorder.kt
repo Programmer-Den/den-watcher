@@ -13,6 +13,12 @@ object Recorder {
     /** The most pushes in a row, enough for a week of minutes. */
     private const val MAX_PUSHES = 100
 
+    /**
+     * How long the hub's address and recording stay unlocked once the hub
+     * allowed it, as long as the hub allows it after its owner's tap.
+     */
+    private const val RELEASE_SECONDS = 10 * 60L
+
     @Synchronized
     fun recordAndPush(context: Context) {
         val app = context.applicationContext
@@ -48,6 +54,10 @@ object Recorder {
                 is Hub.Answer.Taken -> {
                     settings.problem = null
                     settings.lastPush = now
+                    settings.paired = true
+                    if (answer.release) {
+                        settings.releasedUntil = now + RELEASE_SECONDS
+                    }
                     newest = null
                     // Every minute sent is deleted, also one the hub left out, such as
                     // one older than it keeps, so it is not sent again and again.

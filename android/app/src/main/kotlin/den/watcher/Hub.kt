@@ -9,9 +9,12 @@ import java.net.URL
 object Hub {
     private const val TIMEOUT_MILLIS = 10_000
 
-    /** The hub's answer to a push: the phone's time of the newest minute it has. */
+    /**
+     * The hub's answer to a push: the phone's time of the newest minute it
+     * has, and whether the phone may change its hub or stop recording now.
+     */
     sealed interface Answer {
-        data class Taken(val after: Long) : Answer
+        data class Taken(val after: Long, val release: Boolean) : Answer
         data class Failed(val problem: Problem) : Answer
     }
 
@@ -32,7 +35,8 @@ object Hub {
             when (connection.responseCode) {
                 HttpURLConnection.HTTP_OK -> {
                     val answer = connection.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
-                    Answer.Taken(JSONObject(answer).getLong("after"))
+                    val json = JSONObject(answer)
+                    Answer.Taken(json.getLong("after"), json.optBoolean("release"))
                 }
                 HttpURLConnection.HTTP_FORBIDDEN -> Answer.Failed(Problem.NOT_ADDED)
                 else -> Answer.Failed(Problem.REFUSED)

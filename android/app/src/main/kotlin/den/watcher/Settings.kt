@@ -25,10 +25,27 @@ class Settings(context: Context) {
             }
         }
 
-    /** The hub's address as it was typed in; empty until it is. */
+    /** The hub's address as host:port, as scanned from its page; empty until it is. */
     var hubAddress: String
         get() = prefs.getString(HUB_ADDRESS, "") ?: ""
         set(value) = prefs.edit().putString(HUB_ADDRESS, value.trim()).apply()
+
+    /**
+     * Whether the hub at hubAddress took a push. From then on the app keeps
+     * the hub's address and recording locked until the hub allows a change,
+     * so whoever has the phone cannot move it to another hub or stop it.
+     */
+    var paired: Boolean
+        get() = prefs.getBoolean(PAIRED, false)
+        set(value) = prefs.edit().putBoolean(PAIRED, value).apply()
+
+    /** Until when the hub allows a change, in Unix seconds; 0 when it never did. */
+    var releasedUntil: Long
+        get() = prefs.getLong(RELEASED_UNTIL, 0)
+        set(value) = prefs.edit().putLong(RELEASED_UNTIL, value).apply()
+
+    /** Whether changing the hub or stopping recording waits for the hub to allow it, at now. */
+    fun locked(now: Long = System.currentTimeMillis() / 1000): Boolean = paired && now >= releasedUntil
 
     /** Whether recording was switched on, so it starts again with the phone. */
     var recording: Boolean
@@ -80,6 +97,8 @@ class Settings(context: Context) {
         const val CODE = "code"
         const val HUB_ADDRESS = "hubAddress"
         const val RECORDING = "recording"
+        const val PAIRED = "paired"
+        const val RELEASED_UNTIL = "releasedUntil"
         const val LAST_PUSH = "lastPush"
         const val PROBLEM = "problem"
         const val LAST_READING = "lastReading"
@@ -88,7 +107,7 @@ class Settings(context: Context) {
 
 /** Why a push did not reach the hub, as the app tells it. */
 enum class Problem {
-    /** No hub address was typed in, or it is no address. */
+    /** No hub address was scanned, or it is no address. */
     NO_ADDRESS,
 
     /** The phone is on no Wi-Fi or other network without a data limit, so it does not try. */

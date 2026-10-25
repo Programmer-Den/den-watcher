@@ -3,7 +3,7 @@ package den.watcher
 import java.net.URI
 import java.net.URISyntaxException
 
-/** The hub's address as it was typed in the app. */
+/** The hub's address, as scanned from the code on the hub's page. */
 object HubAddress {
     /** The port den-watcher listens on unless it was set up otherwise. */
     const val DEFAULT_PORT = 9393
@@ -36,5 +36,19 @@ object HubAddress {
             return null
         }
         return "http://$host:$port$PUSH_PATH"
+    }
+
+    /**
+     * Returns the address in a code scanned from the hub's page, which holds
+     * the page's address, such as http://192.168.1.20:9393/, as the app keeps
+     * it: 192.168.1.20:9393. Returns null for a code that holds no such
+     * address, such as one of a shop's web page.
+     */
+    fun fromCode(code: String): String? {
+        val text = code.trim()
+        if (!text.startsWith("http://", ignoreCase = true)) {
+            return null
+        }
+        return pushUrl(text)?.removePrefix("http://")?.removeSuffix(PUSH_PATH)
     }
 }
