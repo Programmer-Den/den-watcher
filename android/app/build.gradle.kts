@@ -2,8 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
-// The release workflow passes the version of the tag and the number of the
-// run, which grows with every build, as Android needs for an update.
+// The release workflow passes the version of the tag and a version code made
+// from it, which grows with every release, as Android needs for an update.
 val appVersion = providers.gradleProperty("appVersion").getOrElse("dev")
 val appVersionCode = providers.gradleProperty("appVersionCode").getOrElse("1").toInt()
 
