@@ -189,7 +189,10 @@ describe('DevicesDialog', () => {
     fixture.detectChanges();
     expect(input('address')).toBeNull();
     // The tests open the page on localhost, a name the phone cannot reach.
-    expect(element().textContent).toContain("enter this hub's address on the network in the app");
+    expect(element().textContent).toContain(
+      "which this dialog shows when the page is opened by the hub's address on the network",
+    );
+    expect(element().querySelector('svg.hub-code')).toBeNull();
     await type('name', 'Pixel');
     expect(button('Add').disabled).toBe(true);
     await type('code', '7KQM-X2RP');

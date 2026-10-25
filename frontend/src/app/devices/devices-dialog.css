@@ -134,6 +134,15 @@ form.pairing button {
   margin: 0;
 }
 
+/* The code a phone's app scans, large enough for a phone held a little away from the screen. */
+.hub-code {
+  width: 11rem;
+  height: 11rem;
+  margin: 0 0 0.75rem;
+  border-radius: 0.5rem;
+  shape-rendering: crispEdges;
+}
+
 /* This device's own code, large enough to read off and type in elsewhere. */
 .own-code {
   font: var(--mat-sys-title-large);

@@ -167,9 +167,10 @@ export const es: Messages = {
     'Se muestra en la página del dispositivo en Dispositivos, en el menú de su icono de la bandeja o en su registro.',
   'devicesDialog.phoneCodeHint': 'Se muestra en la app Den-Watcher del móvil.',
   'devicesDialog.phoneHint':
-    'Instala la app Den-Watcher en el móvil, introduce aquí el código de emparejamiento que muestra y, en la app, la dirección de este hub: {address}. El móvil envía su uso cuando está en esta red; mientras está fuera o en reposo, simplemente no está en uso.',
+    'Instala la app Den-Watcher en el móvil e introduce aquí el código de emparejamiento que muestra. Luego toca Escanear código del hub en la app y apunta el móvil a este código, que contiene la dirección de este hub: {address}. El móvil envía su uso cuando está en esta red; mientras está fuera o en reposo, simplemente no está en uso.',
   'devicesDialog.phoneHintOnHub':
-    'Instala la app Den-Watcher en el móvil, introduce aquí el código de emparejamiento que muestra y, en la app, la dirección de este hub en la red con el puerto {port}, por ejemplo 192.168.1.20:{port}. El móvil envía su uso cuando está en esta red; mientras está fuera o en reposo, simplemente no está en uso.',
+    'Instala la app Den-Watcher en el móvil e introduce aquí el código de emparejamiento que muestra. La app toma la dirección de este hub de un código que escanea, que este diálogo muestra cuando la página se abre desde otro dispositivo con la dirección del hub en la red y el puerto {port}, por ejemplo 192.168.1.20:{port}. El móvil envía su uso cuando está en esta red; mientras está fuera o en reposo, simplemente no está en uso.',
+  'devicesDialog.hubCode': 'Código QR con la dirección de este hub, {address}',
   'devicesDialog.pairingNeeded':
     'Espera su código de emparejamiento; hasta entonces solo se registra su disponibilidad.',
   'devicesDialog.pairingWrong':

@@ -165,9 +165,10 @@ export const fr: Messages = {
     "Affiché sur la page de l'appareil sous Appareils, dans le menu de son icône de la barre des tâches ou dans son journal.",
   'devicesDialog.phoneCodeHint': "Affiché dans l'app Den-Watcher du téléphone.",
   'devicesDialog.phoneHint':
-    "Installez l'app Den-Watcher sur le téléphone et saisissez ici le code d'appairage qu'elle affiche, puis l'adresse de ce hub dans l'app : {address}. Le téléphone envoie son utilisation dès qu'il est sur ce réseau ; tant qu'il est absent ou en veille, il n'est simplement pas utilisé.",
+    "Installez l'app Den-Watcher sur le téléphone et saisissez ici le code d'appairage qu'elle affiche. Touchez ensuite Scanner le code du hub dans l'app et visez ce code, qui contient l'adresse de ce hub : {address}. Le téléphone envoie son utilisation dès qu'il est sur ce réseau ; tant qu'il est absent ou en veille, il n'est simplement pas utilisé.",
   'devicesDialog.phoneHintOnHub':
-    "Installez l'app Den-Watcher sur le téléphone et saisissez ici le code d'appairage qu'elle affiche, puis, dans l'app, l'adresse de ce hub sur le réseau avec le port {port}, par exemple 192.168.1.20:{port}. Le téléphone envoie son utilisation dès qu'il est sur ce réseau ; tant qu'il est absent ou en veille, il n'est simplement pas utilisé.",
+    "Installez l'app Den-Watcher sur le téléphone et saisissez ici le code d'appairage qu'elle affiche. L'app prend l'adresse de ce hub dans un code qu'elle scanne, que cette fenêtre affiche quand la page est ouverte depuis un autre appareil par l'adresse du hub sur le réseau avec le port {port}, par exemple 192.168.1.20:{port}. Le téléphone envoie son utilisation dès qu'il est sur ce réseau ; tant qu'il est absent ou en veille, il n'est simplement pas utilisé.",
+  'devicesDialog.hubCode': "Code QR avec l'adresse de ce hub, {address}",
   'devicesDialog.pairingNeeded':
     "Attend son code d'appairage ; d'ici là, seule sa disponibilité est suivie.",
   'devicesDialog.pairingWrong':
