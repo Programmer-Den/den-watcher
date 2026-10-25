@@ -11,7 +11,7 @@ How the code is laid out, how to run it while working on it, and the checks a pu
 | Docker image | `Dockerfile`, `compose.yaml` | Docker Buildx, multi-arch |
 | Linux archive | `linux/` | `install.sh`, systemd unit, settings example |
 | Windows installer | `windows/` | WiX 5 |
-| Android app | `android/` | Gradle (wrapper in `android/`), Kotlin, Android SDK, Java 17; no libraries beyond Android's own |
+| Android app | `android/` | Gradle (wrapper in `android/`), Kotlin, Android SDK, Java 17; no libraries beyond Android's own (Robolectric only in the screenshot test) |
 | CI | `.github/workflows/`, `ci/` | GitHub Actions |
 
 Backend packages, in `backend/internal/`:
@@ -89,7 +89,7 @@ bash ci/check-demo-covers-addons.sh
 - Linting: `golangci-lint` with the settings in `backend/.golangci.yml`; ESLint in the frontend, which also fails on circular imports
 - Dependencies: `govulncheck` and `npm audit` fail on known vulnerabilities; `go mod tidy -diff` fails when `go.mod` or `go.sum` is out of date
 - Shell scripts: `bash -n` and `shellcheck`
-- Android app: `(cd android && ./gradlew testReleaseUnitTest lintRelease assembleRelease)`, with the Android SDK in `ANDROID_HOME`
+- Android app: `(cd android && ./gradlew testReleaseUnitTest lintRelease assembleRelease)`, with the Android SDK in `ANDROID_HOME`; `./gradlew testReleaseUnitTest -Pscreenshots=$PWD/shots` draws the app's screen in a few states, light and dark, into PNGs there
 
 ## Releases and builds
 
@@ -99,7 +99,7 @@ bash ci/check-demo-covers-addons.sh
 | `docker.yml` | publishes `ghcr.io/programmer-den/den-watcher:main` on every merge to main, and `X.Y.Z`, `X.Y` and `latest` on release tags (only `X.Y.Z-alpha` on a pre-release tag) |
 | `windows.yml` | the x64 and arm64 MSIs, installs and uninstalls them on Windows; attaches them to releases |
 | `linux.yml` | the Linux archives, tests install, update and uninstall under systemd; attaches them to releases |
-| `android.yml` | the Android app's APK, after its unit tests and Android's lint, on pull requests that change `android/`; attaches it to releases, signed with the release key |
+| `android.yml` | the Android app's APK, after its unit tests and Android's lint, on pull requests that change `android/`; attaches it to releases, signed with the release key. For a pull request from this repository it also pushes screenshots of the app to the branch `pr-screenshots-<number>`, under `android/` |
 | `vulnerabilities.yml` | every night, the updates that fix known vulnerabilities on main (`ci/fix-vulnerabilities.sh`), as one pull request; fails when a vulnerability has no fix yet |
 | `demo.yml` | publishes the demo of a release to the root of GitHub Pages on its release tag (not for a release marked as a pre-release, nor for a tag older than the newest release, such as a bugfix 1.0.5 after 1.1.0), and the demo of main to `main/` on every merge to main that changes the frontend; when a pre-release is later made a full release, run it by hand (*Run workflow*) on the tag |
 

@@ -35,6 +35,7 @@ jobs:
     name: Android app
     runs-on: ubuntu-latest
     outputs:
+      app: ${{ steps.changes.outputs.app }}
       version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -147,6 +148,63 @@ jobs:
           name: den-watcher-${{ steps.version.outputs.version }}-android
           path: dist/*.apk
           retention-days: 14
+
+  # Draws the app's screen in a few states, light and dark, with Robolectric
+  # (app/src/test/kotlin/den/watcher/Screenshots.kt) and pushes the PNGs to
+  # the branch pr-screenshots-<number>, under android/, where a comment on the
+  # pull request can show them. Only for pull requests from this repository
+  # that change the app, as one from a fork may not push.
+  screenshots:
+    name: Screenshots of the app
+    needs: apk
+    if: github.event_name == 'pull_request' && needs.apk.outputs.app == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Draw the screen
+        working-directory: android
+        run: |
+          set -euo pipefail
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          ./gradlew --no-daemon --stacktrace testReleaseUnitTest -Pscreenshots="$RUNNER_TEMP/screenshots"
+          ls -l "$RUNNER_TEMP/screenshots"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-screenshots
+          path: ${{ runner.temp }}/screenshots/*.png
+          retention-days: 14
+
+      # On top of what the branch has, as screenshots of the website may be
+      # there too.
+      - name: Push to pr-screenshots-<number>
+        env:
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          branch="pr-screenshots-$PR"
+          shots="$RUNNER_TEMP/shots"
+          if git fetch -q --depth=1 origin "$branch"; then
+            git worktree add -q -B "$branch" "$shots" FETCH_HEAD
+          else
+            git worktree add -q --orphan -b "$branch" "$shots"
+          fi
+          rm -rf "$shots/android"
+          mkdir -p "$shots/android"
+          cp "$RUNNER_TEMP"/screenshots/*.png "$shots/android/"
+          cd "$shots"
+          git add -A android
+          if git diff --cached --quiet; then
+            echo "The screenshots did not change."
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Screenshots of the Android app for #$PR"
+          git push -q origin "$branch"
+          echo "Pushed to $branch: https://github.com/$GITHUB_REPOSITORY/tree/$branch/android"
 
   release:
     name: Attach the APK to the release

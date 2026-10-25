@@ -4,4 +4,17 @@
     <color name="accent">#F57C00</color>
     <!-- The background of the website's maskable icon. -->
     <color name="icon_background">#FFF8F5</color>
+
+    <!-- The website's light theme, from its orange palette; values-night has the dark one. -->
+    <color name="surface">#FFF8F5</color>
+    <color name="card">#FCEAE1</color>
+    <color name="on_surface">#221A15</color>
+    <color name="on_surface_variant">#52443C</color>
+    <color name="primary">#964900</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="outline">#85736A</color>
+    <color name="ok">#2E7D32</color>
+    <color name="waiting">#B26A00</color>
+    <color name="error">#BA1A1A</color>
+    <color name="off">#9C8C84</color>
 </resources>

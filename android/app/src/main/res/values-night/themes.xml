@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.DenWatcher" parent="android:Theme.Material.NoActionBar">
-        <item name="android:colorAccent">@color/accent</item>
-        <item name="android:colorPrimary">@color/accent</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:colorAccent">@color/primary</item>
+        <item name="android:colorPrimary">@color/primary</item>
+        <item name="android:colorControlNormal">@color/outline</item>
+        <item name="android:textColorPrimary">@color/on_surface</item>
+        <item name="android:textColorSecondary">@color/on_surface_variant</item>
+        <item name="android:windowBackground">@color/surface</item>
+        <item name="android:statusBarColor">@color/surface</item>
+        <item name="android:navigationBarColor">@color/surface</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>
