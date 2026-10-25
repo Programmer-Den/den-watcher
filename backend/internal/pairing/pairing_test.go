@@ -148,3 +148,21 @@ func TestAnUpdatedDevicePairsAFewHubsWithoutTheCode(t *testing.T) {
 		t.Fatalf("Allow() of that hub with the code = %v, want Paired", got)
 	}
 }
+
+func TestTheEmptyHubIDIsNeverPaired(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	p := open(t, db, true)
+	for _, code := range []string{"", p.Code()} {
+		if got := p.Allow(ctx, "", code); got != Needed {
+			t.Fatalf("Allow() of the empty hub id with the code %q right after the update = %v, want Needed", code, got)
+		}
+	}
+	// One that an earlier version stored is forgotten at the next start.
+	if _, err := db.Exec(`INSERT INTO pairing_hubs (hub, paired) VALUES ('', 0)`); err != nil {
+		t.Fatalf("store the empty hub id: %v", err)
+	}
+	if got := open(t, db, true).Allow(ctx, "", ""); got != Needed {
+		t.Fatalf("Allow() of a stored empty hub id after a restart = %v, want Needed", got)
+	}
+}

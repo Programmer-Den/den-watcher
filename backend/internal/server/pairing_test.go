@@ -159,3 +159,20 @@ func TestAHubIDThatIsNoHubIDGetsNoUsageWithoutTheCode(t *testing.T) {
 		t.Errorf("GET /api/metrics with a hub id that is none = %d, %q; want 403, needed", rec.Code, rec.Header().Get(pairing.ProblemHeader))
 	}
 }
+
+func TestARequestWithoutAHubIDIsNotPairedByTheCode(t *testing.T) {
+	p := &fakePairing{code: "7KQM-X2RP", paired: map[string]bool{}}
+	handler := NewDataOnly(fakeCollector{}, nil, p, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/metrics", nil)
+	req.RemoteAddr = "192.168.1.20:5000"
+	req.Host = "192.168.1.9:9393"
+	req.Header.Set(pairing.CodeHeader, "7KQM-X2RP")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden || rec.Header().Get(pairing.ProblemHeader) != "needed" {
+		t.Errorf("GET /api/metrics with the code but without a hub id = %d, %q; want 403, needed", rec.Code, rec.Header().Get(pairing.ProblemHeader))
+	}
+	if len(p.paired) != 0 {
+		t.Errorf("paired after a request without a hub id = %v, want none", p.paired)
+	}
+}
