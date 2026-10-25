@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
 }
 
 // The release workflow passes the version of the tag and the number of the
@@ -35,6 +34,10 @@ android {
         }
     }
 
+    // Unit tests run for the tested build type only; the workflow tests the
+    // release, as it ships.
+    testBuildType = "release"
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -52,12 +55,6 @@ android {
     lint {
         warningsAsErrors = false
         abortOnError = true
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
