@@ -1419,7 +1419,7 @@ describe('Dashboard', () => {
     expect(text()).toContain('WAN');
   });
 
-  it("leaves out the processor of a phone, whose app cannot read it", () => {
+  it('leaves out the processor of a phone, whose app cannot read it', () => {
     vi.setSystemTime(new Date('2026-10-02T12:00:00Z'));
     respond(snapshot);
     const devices = TestBed.inject(DeviceService);
