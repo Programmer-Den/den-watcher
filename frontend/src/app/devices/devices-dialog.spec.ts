@@ -100,6 +100,18 @@ describe('DevicesDialog', () => {
     expect(formKind('PC / laptop').getAttribute('aria-pressed')).toBe('true');
     expect(element().textContent).toContain('Filled in with the device this page is open on.');
 
+    formKind('Phone').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(formKind('Phone').getAttribute('aria-pressed')).toBe('true');
+    expect(element().textContent).not.toContain('Filled in with the device');
+    formKind('PC / laptop').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(element().textContent).toContain('Filled in with the device this page is open on.');
+
     await type('address', '192.168.1.48:9393');
     expect(element().textContent).not.toContain('Filled in with the device');
   });

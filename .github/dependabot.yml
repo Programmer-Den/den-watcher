@@ -35,6 +35,12 @@ updates:
           - "@angular-devkit/*"
           - "angular-eslint"
 
+  - package-ecosystem: gradle
+    directory: /android
+    labels: [dependencies, tracking]
+    schedule:
+      interval: weekly
+
   - package-ecosystem: docker
     directory: /
     labels: [dependencies, install]

@@ -133,9 +133,9 @@ export class DevicesDialog {
   private readonly changeStarted = new Subject<void>();
   /** The device the page is open on, as the hub suggested it. */
   private readonly suggestion = signal<Suggestion | null>(null);
-  /** Whether the form holds the suggested device. */
+  /** Whether the form holds the suggested device, which is never a phone. */
   protected readonly suggested = computed(
-    () => this.suggestion()?.address === this.address().trim(),
+    () => !this.addsPhone() && this.suggestion()?.address === this.address().trim(),
   );
 
   constructor() {

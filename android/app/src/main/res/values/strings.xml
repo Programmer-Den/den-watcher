@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Den-Watcher</string>
+    <string name="intro">Sends this phone\'s usage to your Den-Watcher hub whenever the phone is on your home Wi-Fi.</string>
+    <string name="code_title">Pairing code</string>
+    <string name="code_hint">On the hub\'s page, open Devices, add a device of the kind Phone and enter this code.</string>
+    <string name="address_title">Hub\'s address</string>
+    <string name="address_example" translatable="false">192.168.1.20:9393</string>
+    <string name="address_hint">As the hub\'s page shows it when adding the phone: its IP address or name, and the port.</string>
+    <string name="address_invalid">Enter an IP address or name, and maybe a port, such as 192.168.1.20:9393.</string>
+    <string name="address_saved">Saved</string>
+    <string name="save">Save</string>
+    <string name="status_title">Recording</string>
+    <string name="start">Start recording</string>
+    <string name="stop">Stop recording</string>
+    <string name="status_recording">Records the usage and keeps it until the hub has it, for up to a week.</string>
+    <string name="status_stopped">Not recording.</string>
+    <string name="status_last_push">The hub last took the usage on %1$s.</string>
+    <string name="problem_no_address">Enter the hub\'s address to send the usage.</string>
+    <string name="problem_not_home">Not on Wi-Fi: the usage is sent once the phone is on your home Wi-Fi.</string>
+    <string name="problem_unreachable">The hub does not answer. Is the phone on your home Wi-Fi, and is the address right?</string>
+    <string name="problem_not_added">The hub has no phone with this pairing code. Add the phone in the hub\'s Devices with the code above.</string>
+    <string name="problem_refused">The hub refused the usage. Is it running Den-Watcher 3.5.0 or newer?</string>
+    <string name="battery_hint">Some phones stop apps in the background to save battery. If the hub misses hours, let Den-Watcher run without battery restrictions.</string>
+    <string name="battery">Battery settings</string>
+    <string name="data_title">What is sent</string>
+    <string name="data_hint">The battery\'s charge and temperature, memory and storage used, and the traffic of Wi-Fi and mobile data, only to the hub on your network. Android lets no app read how busy the processor is.</string>
+    <string name="channel_name">Recording</string>
+    <string name="channel_description">Shown while the app records the usage, as Android asks for.</string>
+    <string name="notification_title">Recording this phone\'s usage</string>
+</resources>

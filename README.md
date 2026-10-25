@@ -1,11 +1,11 @@
 # Den-Watcher
 
-A small website that shows the usage of the hardware it runs on: CPU, memory, disks, network, temperatures, GPU, battery and more, live and as charts over time. It runs on a Raspberry Pi or any Linux machine with Docker or as a service, and on Windows PCs with an installer. One device, the hub, can collect from the others on the network and show them all on one page.
+A small website that shows the usage of the hardware it runs on: CPU, memory, disks, network, temperatures, GPU, battery and more, live and as charts over time. It runs on a Raspberry Pi or any Linux machine with Docker or as a service, on Windows PCs with an installer, and Android phones send theirs with an app. One device, the hub, can collect from the others on the network and show them all on one page.
 
 - **Lightweight:** one Go binary serves the page and the API, reads the machine only when asked (every 5 seconds, every 2 while a page is open), and keeps its history in a single SQLite file
 - **Local only:** answers only the local network (all but the optional status page), needs no account and no cloud; the only call outside is an optional daily check for a newer release
 - **Read-only:** it only reads hardware data and runs without privileges, in a read-only container or as an unprivileged service
-- **Several devices:** a hub polls each device every 5 seconds and keeps all history; Windows PCs only report to it, and a compare page shows all devices side by side, as a table that sorts by any value and as charts with a line per device
+- **Several devices:** a hub polls each device every 5 seconds and keeps all history; Windows PCs only report to it, Android phones send what they recorded whenever they are back on the home Wi-Fi, and a compare page shows all devices side by side, as a table that sorts by any value and as charts with a line per device
 - **Your router too:** the hub reads its internet traffic over UPnP, every port over SNMP, a FRITZ!Box's line and clients, and an ASUS router's CPU, memory, Wi-Fi and clients with its login. Read from the router over the local network only. No data is sent to any server; everything stays on your own devices, and a router password is stored encrypted where the system allows it.
 - **Alerts on the page:** a full disk, hot or busy device, failing disk or server that stops answering shows as a red sign on the page and in the browser tab's title and icon, with a log of past alerts and, where the browser allows, its notifications; nothing is sent anywhere. A disk that fills up steadily tells in about how many days it is full
 - **Grafana if you like:** with `PROMETHEUS=true`, the hub serves the usage of every device at `/metrics` for Prometheus on your network

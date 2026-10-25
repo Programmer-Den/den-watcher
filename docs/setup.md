@@ -8,6 +8,7 @@ This page walks through a typical setup: a Raspberry Pi as the hub that shows ev
 - [2. Add a Windows PC](#2-add-a-windows-pc)
 - [3. Add another Linux machine](#3-add-another-linux-machine)
 - [4. Add the devices on the hub](#4-add-the-devices-on-the-hub)
+  - [Add an Android phone](#add-an-android-phone)
 - [5. Show the router](#5-show-the-router)
 - [6. Check other things on the network](#6-check-other-things-on-the-network)
 - [Run from source](#run-from-source)
@@ -228,7 +229,7 @@ Pick what each device is:
 
 - *Server / IoT* for a device that should run all the time, such as a NAS or a Pi. When it does not answer, that is an outage, and its card is called *Availability*.
 - *PC / laptop* for a device that is switched off when it is not used. The time it is off is not an outage: its card is called *Usage* and shows how much of the time it was on, and its button gets a grey dot instead of a red one while it is off.
-- *Phone* for an Android phone running the Den-Watcher app. It has no address, as the phone sends its usage to the hub itself whenever it is on the home Wi-Fi, so the dialog asks only for the name and the pairing code the app shows, and tells the hub's address to enter in the app. The time it is away or asleep is not an outage, as for a PC. A phone stays a phone, so the list offers no other kind for it, and its page has no *CPU* card, as Android lets no app read the processor's usage.
+- *Phone* for an Android phone running the Den-Watcher app (see [Add an Android phone](#add-an-android-phone)). It has no address, as the phone sends its usage to the hub itself whenever it is on the home Wi-Fi, so the dialog asks only for the name and the pairing code the app shows, and tells the hub's address to enter in the app. The time it is away or asleep is not an outage, as for a PC. A phone stays a phone, so the list offers no other kind for it, and its page has no *CPU* card, as Android lets no app read the processor's usage.
 
 The kind can be changed later in the list, for devices from `HUB_DEVICES` too; that asks for the password as well. Devices added before there were kinds, and the ones in `HUB_DEVICES`, are servers until changed.
 
@@ -254,6 +255,19 @@ HUB_DEVICES=Living room Pi=192.168.1.20:9393,Office PC=192.168.1.30:9393
 Give the devices fixed addresses, for example with an address reservation in the router, since the hub reaches them by the address it was given. A host name works too, as long as it resolves to an address on the local network. The device must then answer to that name: a `.local` name always works, and so does its hostname outside Docker; inside Docker the hostname is the container's, so the machine's bare hostname, like any other name, needs the device's `ALLOWED_HOSTS` (see [Open the page by name](#open-the-page-by-name)). Adding a device by a name it does not answer to says so in the dialog.
 
 Buttons above the dashboard switch between the devices. A dot on each shows whether it answers (green) or not (red, with the time it stopped answering on hover). `DEVICE_NAME` sets how the page names the hub itself (default *Host Hub*).
+
+### Add an Android phone
+
+An Android phone, version 8.0 or newer, is tracked with the Den-Watcher app. The app records the battery's charge and temperature, the memory and storage used, and the traffic of Wi-Fi and mobile data, twice a minute while the phone is awake and about every 15 minutes while it sleeps. Android lets no app read how busy the processor is, so a phone has no *CPU* card. The app keeps what it recorded for up to a week and sends it to the hub whenever the phone is on a network without a data limit, such as the home Wi-Fi, so the hub has the phone's history for the time it was away too. The phone sends nothing over mobile data and nothing anywhere but the hub's address. While the phone is away or asleep, the hub counts that as time it was not in use, as for a PC that is switched off, and raises no alerts.
+
+1. Download `den-watcher-<version>-android.apk` from a [release](https://github.com/Programmer-Den/den-watcher/releases) on the phone and open it. Android asks once to allow installing apps from the browser or file manager.
+2. Open the app. It shows the phone's pairing code, such as `7KQM-X2RP`.
+3. On the hub's page, open *Devices*, pick *Phone*, enter a name and the code, and click *Add*. The dialog shows the hub's address, such as `192.168.1.20:9393`.
+4. In the app, enter that address and tap *Save*. Recording starts, with a notification that Android requires for an app that keeps running. Within half a minute the phone shows on the hub's page.
+
+Recording starts again by itself when the phone restarts. *Stop recording* in the app stops it. Some phone makers stop apps in the background to save battery; if the hub misses hours, tap *Battery settings* in the app and let Den-Watcher run without restrictions. An app that was installed anew has a new code: remove the phone in the *Devices* list with *Keep its history* ticked, and add it again under the same name with the new code.
+
+Before you put the app on a phone someone else uses, read [Intended use](../README.md#intended-use): the times the phone was at home and in use tell a lot about that person.
 
 ## 5. Show the router
 

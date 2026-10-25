@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="intro">Schickt die Nutzung dieses Handys an deinen Den-Watcher-Hub, sobald das Handy in deinem WLAN zu Hause ist.</string>
+    <string name="code_title">Kopplungscode</string>
+    <string name="code_hint">Öffne auf der Seite des Hubs Geräte, füge ein Gerät der Art Handy hinzu und gib diesen Code ein.</string>
+    <string name="address_title">Adresse des Hubs</string>
+    <string name="address_hint">Wie die Seite des Hubs sie beim Hinzufügen des Handys zeigt: IP-Adresse oder Name und Port.</string>
+    <string name="address_invalid">Gib eine IP-Adresse oder einen Namen ein, gern mit Port, etwa 192.168.1.20:9393.</string>
+    <string name="address_saved">Gespeichert</string>
+    <string name="save">Speichern</string>
+    <string name="status_title">Aufzeichnung</string>
+    <string name="start">Aufzeichnung starten</string>
+    <string name="stop">Aufzeichnung beenden</string>
+    <string name="status_recording">Zeichnet die Nutzung auf und behält sie, bis der Hub sie hat, bis zu einer Woche.</string>
+    <string name="status_stopped">Zeichnet nicht auf.</string>
+    <string name="status_last_push">Der Hub hat die Nutzung zuletzt am %1$s bekommen.</string>
+    <string name="problem_no_address">Gib die Adresse des Hubs ein, um die Nutzung zu schicken.</string>
+    <string name="problem_not_home">Nicht im WLAN: Die Nutzung wird geschickt, sobald das Handy in deinem WLAN zu Hause ist.</string>
+    <string name="problem_unreachable">Der Hub antwortet nicht. Ist das Handy in deinem WLAN zu Hause und stimmt die Adresse?</string>
+    <string name="problem_not_added">Der Hub hat kein Handy mit diesem Kopplungscode. Füge das Handy unter Geräte des Hubs mit dem Code oben hinzu.</string>
+    <string name="problem_refused">Der Hub hat die Nutzung abgelehnt. Läuft darauf Den-Watcher 3.5.0 oder neuer?</string>
+    <string name="battery_hint">Manche Handys beenden Apps im Hintergrund, um Akku zu sparen. Fehlen dem Hub Stunden, lass Den-Watcher ohne Akku-Einschränkungen laufen.</string>
+    <string name="battery">Akku-Einstellungen</string>
+    <string name="data_title">Was geschickt wird</string>
+    <string name="data_hint">Ladung und Temperatur des Akkus, belegter Arbeitsspeicher und Speicher und der Datenverkehr über WLAN und mobile Daten, nur an den Hub in deinem Netz. Android lässt keine App lesen, wie ausgelastet der Prozessor ist.</string>
+    <string name="channel_name">Aufzeichnung</string>
+    <string name="channel_description">Wird angezeigt, solange die App die Nutzung aufzeichnet, wie Android es verlangt.</string>
+    <string name="notification_title">Zeichnet die Nutzung dieses Handys auf</string>
+</resources>
