@@ -344,3 +344,72 @@ func TestTheBrowsersLanguageIsPicked(t *testing.T) {
 		}
 	}
 }
+
+func TestAKnownBrowserSignsInWhileManyClientsGuess(t *testing.T) {
+	page, h := newTestPage(t, "correct horse")
+	now := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
+	page.now = func() time.Time { return now }
+
+	w := send(h, http.MethodPost, "https://status.example/login", "198.51.100.7", "", url.Values{"password": {"correct horse"}})
+	var known string
+	for _, c := range w.Result().Cookies() {
+		if c.Name == knownCookie {
+			if !c.Secure || !c.HttpOnly || c.SameSite != http.SameSiteStrictMode {
+				t.Errorf("known cookie %+v, want Secure, HttpOnly and SameSite=Strict", c)
+			}
+			known = c.Value
+		}
+	}
+	if known == "" {
+		t.Fatal("POST /login set no known cookie")
+	}
+
+	for i := range maxWrongAll {
+		from := netip.AddrFrom4([4]byte{203, 0, 113, byte(i)}).String()
+		send(h, http.MethodPost, "/login", from, "", url.Values{"password": {"guess"}})
+	}
+	// From another network, as a phone away from home.
+	login := func(cookie string) int {
+		r := httptest.NewRequest(http.MethodPost, "https://status.example/login", strings.NewReader(url.Values{"password": {"correct horse"}}.Encode()))
+		r.RemoteAddr = "192.0.2.44:40000"
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		if cookie != "" {
+			r.AddCookie(&http.Cookie{Name: knownCookie, Value: cookie}) //nolint:gosec // a cookie the test sends, not one set
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w.Code
+	}
+	if code := login(""); code != http.StatusTooManyRequests {
+		t.Errorf("POST /login of an unknown browser after %d wrong passwords from many clients = %d, want 429", maxWrongAll, code)
+	}
+	if code := login("made-up"); code != http.StatusTooManyRequests {
+		t.Errorf("POST /login with a made-up known cookie = %d, want 429", code)
+	}
+	if code := login(known); code != http.StatusSeeOther {
+		t.Errorf("POST /login of the known browser = %d, want 303", code)
+	}
+}
+
+func TestAFullTableOfClientsIsSweptNowAndThen(t *testing.T) {
+	l := newLimiter()
+	now := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
+	for i := range maxClients {
+		l.allow(netip.AddrFrom4([4]byte{10, byte(i >> 16), byte(i >> 8), byte(i)}), now)
+	}
+	newcomer := netip.MustParseAddr("198.51.100.7")
+	if l.guess(newcomer, now, false) {
+		t.Fatal("guess() of a new client while the table is full = true, want false")
+	}
+	// The table was swept a moment ago, so it is not swept again yet, even
+	// though its clients need not be kept any more.
+	now = now.Add(lockout)
+	l.swept = now.Add(-sweepEvery / 2)
+	if l.guess(newcomer, now, false) {
+		t.Fatal("guess() right after a sweep = true, want false")
+	}
+	now = now.Add(sweepEvery)
+	if !l.guess(newcomer, now, false) {
+		t.Fatal("guess() once the table may be swept again = false, want true")
+	}
+}

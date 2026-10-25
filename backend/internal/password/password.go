@@ -116,7 +116,7 @@ func (p *Password) IsSet(ctx context.Context) (bool, error) {
 // client guessing in parallel gets no more guesses, while others are not
 // held up by its waits.
 func (p *Password) Check(ctx context.Context, from netip.Addr, password string) error {
-	done, err := p.wait(ctx, client(from))
+	done, err := p.wait(ctx, Client(from))
 	if err != nil {
 		return err
 	}
@@ -179,9 +179,9 @@ func (p *Password) wait(ctx context.Context, client netip.Addr) (func(), error) 
 	}
 }
 
-// client is who sent a check from the address from: the address itself, or
-// for IPv6 its /64 network, as a device can pick any address in it.
-func client(from netip.Addr) netip.Addr {
+// Client is who sent a request from the address from: the address itself,
+// or for IPv6 its /64 network, as a device can pick any address in it.
+func Client(from netip.Addr) netip.Addr {
 	from = from.Unmap().WithZone("")
 	if from.Is6() {
 		return netip.PrefixFrom(from, 64).Masked().Addr()
