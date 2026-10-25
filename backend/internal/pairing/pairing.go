@@ -111,6 +111,11 @@ func Open(ctx context.Context, db *sql.DB, existed bool, known []string) (*Pairi
 	case err != nil:
 		return nil, err
 	}
+	// Versions up to 3.0.0w could pair the empty id of a request without a
+	// hub id, which let every such request pass from then on.
+	if _, err := db.ExecContext(ctx, `DELETE FROM pairing_hubs WHERE hub = ''`); err != nil {
+		return nil, err
+	}
 	rows, err := db.QueryContext(ctx, `SELECT hub FROM pairing_hubs`)
 	if err != nil {
 		return nil, err
@@ -168,9 +173,14 @@ func Normalize(code string) string {
 // Allow tells whether the hub with this id may collect from this machine,
 // with the code it sent, empty when it sent none. A hub that sent the right
 // code, or asks while the hubs are known without one, is paired from then
-// on; the latter only maxOpenHubs at most. The code is compared in full, so
-// how long that takes does not tell how much of it was right.
+// on; the latter only maxOpenHubs at most. An empty id is no hub and is
+// never paired, so leaving out the id does not get around the code. The code
+// is compared in full, so how long that takes does not tell how much of it
+// was right.
 func (p *Pairing) Allow(ctx context.Context, hub, code string) Answer {
+	if hub == "" {
+		return Needed
+	}
 	code = Normalize(code)
 	p.mu.Lock()
 	defer p.mu.Unlock()

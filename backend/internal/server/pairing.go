@@ -41,7 +41,13 @@ func pairedOnly(p Pairing, page bool, next http.HandlerFunc) http.HandlerFunc {
 			next(w, r)
 			return
 		}
-		switch p.Allow(r.Context(), id, r.Header.Get(pairing.CodeHeader)) {
+		// A request without a hub id is never paired, not even with the
+		// code, so it cannot pair every such request after it.
+		answer := pairing.Needed
+		if id != "" {
+			answer = p.Allow(r.Context(), id, r.Header.Get(pairing.CodeHeader))
+		}
+		switch answer {
 		case pairing.Paired:
 			next(w, r)
 		case pairing.Wrong:
