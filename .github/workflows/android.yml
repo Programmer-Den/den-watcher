@@ -39,7 +39,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # As in the other release workflows: a tag v1.2.3 builds version 1.2.3,
-      # anything else dev-<commit>.
+      # anything else dev-<commit>. Android installs an update only when its
+      # version code is higher, so a release's code comes from its version,
+      # 1.2.3c as 102030030, and a pre-release's is one less than its
+      # release's; other builds take the run number.
       - name: Version
         id: version
         run: |
@@ -50,10 +53,28 @@ jobs:
               echo "Tag $GITHUB_REF_NAME is not a release version; use v<major>.<minor>.<patch>, such as v1.2.3, with letters for bugfixes, such as 1.2.3a, or a word and maybe a number after a dash for a pre-release, such as 1.2.3-alpha or 1.2.3-rc1 (the v is optional)." >&2
               exit 1
             fi
+            [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)([a-z]*)(-.*)?$ ]]
+            major="${BASH_REMATCH[1]}" minor="${BASH_REMATCH[2]}" patch="${BASH_REMATCH[3]}"
+            letters="${BASH_REMATCH[4]}" pre="${BASH_REMATCH[5]}"
+            # The letters count on as a number: a is 1, z 26, aa 27.
+            fixes=0
+            for ((i = 0; i < ${#letters}; i++)); do
+              fixes=$((fixes * 26 + $(printf '%d' "'${letters:i:1}") - 96))
+            done
+            if ((10#$major > 20 || 10#$minor > 99 || 10#$patch > 99 || fixes > 999)); then
+              echo "Version $version does not fit Android's version code (at most 20.99.99 with 999 bugfixes); change how android.yml counts it." >&2
+              exit 1
+            fi
+            code=$((10#$major * 100000000 + 10#$minor * 1000000 + 10#$patch * 10000 + fixes * 10))
+            if [[ -n "$pre" ]]; then
+              code=$((code - 1))
+            fi
           else
             version="dev-${GITHUB_SHA::7}"
+            code="$GITHUB_RUN_NUMBER"
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
 
       # Only a release needs the key; without it, it would be signed with a
       # debug key that differs on every runner and could not be updated.
@@ -76,6 +97,7 @@ jobs:
         working-directory: android
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -83,7 +105,7 @@ jobs:
           set -euo pipefail
           export JAVA_HOME="$JAVA_HOME_17_X64"
           ./gradlew --no-daemon --stacktrace testReleaseUnitTest lintRelease assembleRelease \
-            -PappVersion="$VERSION" -PappVersionCode="$GITHUB_RUN_NUMBER"
+            -PappVersion="$VERSION" -PappVersionCode="$VERSION_CODE"
           mkdir -p ../dist
           cp app/build/outputs/apk/release/app-release.apk "../dist/den-watcher-$VERSION-android.apk"
           ls -l ../dist
