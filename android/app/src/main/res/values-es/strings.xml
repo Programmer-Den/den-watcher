@@ -35,4 +35,9 @@
     <string name="channel_name">Registro</string>
     <string name="channel_description">Se muestra mientras la app registra el uso, como pide Android.</string>
     <string name="notification_title">Registrando el uso de este móvil</string>
+    <string name="network_title">Hub alcanzado en otra red</string>
+    <string name="network_notice">El hub respondió en %1$s, no en tu red habitual. Si no estás en casa, otro dispositivo puede tener aquí la dirección del hub y recibir el uso de este móvil.</string>
+    <string name="network_usual">También es mi red</string>
+    <string name="network_channel_name">Otras redes</string>
+    <string name="network_channel_description">Cuando el hub responde en una red distinta de la habitual.</string>
 </resources>

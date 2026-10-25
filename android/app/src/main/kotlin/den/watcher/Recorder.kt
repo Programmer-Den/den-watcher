@@ -58,6 +58,9 @@ object Recorder {
                     if (answer.release) {
                         settings.releasedUntil = now + RELEASE_SECONDS
                     }
+                    if (newest != null) {
+                        checkNetwork(context, settings)
+                    }
                     newest = null
                     // Every minute sent is deleted, also one the hub left out, such as
                     // one older than it keeps, so it is not sent again and again.
@@ -68,6 +71,24 @@ object Recorder {
                         return
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Remembers the network the hub was first reached on as the usual one,
+     * and tells the user, once per network, when it is reached on another:
+     * another device may answer at the hub's address there.
+     */
+    private fun checkNetwork(context: Context, settings: Settings) {
+        val network = Networks.current(context) ?: return
+        val usual = settings.usualNetworks
+        when {
+            usual.isEmpty() -> settings.usualNetworks = setOf(network)
+            network in usual -> settings.otherNetwork = null
+            network != settings.otherNetwork -> {
+                settings.otherNetwork = network
+                OtherNetworkNotice.show(context, network)
             }
         }
     }
