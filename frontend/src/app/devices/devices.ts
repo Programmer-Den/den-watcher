@@ -101,6 +101,8 @@ export interface DeviceList {
   devices: Device[];
   /** Whether adding or removing a device asks for the password, or chooses it. */
   passwordSet: boolean;
+  /** The port the page is reachable on from the network, which a phone's app is given. */
+  pagePort?: string;
 }
 
 /**
@@ -199,6 +201,8 @@ export class DeviceService {
   /** Only this device until the list has been read. */
   readonly devices = signal<Device[]>([LOCAL_DEVICE]);
   readonly passwordSet = signal(false);
+  /** The port the page is reachable on from the network; empty until the list is read. */
+  readonly pagePort = signal('');
   /** Whether the list has been read from the backend at least once. */
   readonly loaded = signal(false);
   readonly selectedId = signal(LOCAL_DEVICE.id);
@@ -245,6 +249,7 @@ export class DeviceService {
       tap((list) => {
         this.devices.set(list.devices);
         this.passwordSet.set(list.passwordSet);
+        this.pagePort.set(list.pagePort ?? '');
         this.loaded.set(true);
         if (!list.devices.some((d) => d.id === this.selectedId())) {
           this.selectedId.set(LOCAL_DEVICE.id);

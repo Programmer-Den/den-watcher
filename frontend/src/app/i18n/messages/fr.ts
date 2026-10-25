@@ -166,6 +166,8 @@ export const fr: Messages = {
   'devicesDialog.phoneCodeHint': "Affiché dans l'app Den-Watcher du téléphone.",
   'devicesDialog.phoneHint':
     "Installez l'app Den-Watcher sur le téléphone et saisissez ici le code d'appairage qu'elle affiche, puis l'adresse de ce hub dans l'app : {address}. Le téléphone envoie son utilisation dès qu'il est sur ce réseau ; tant qu'il est absent ou en veille, il n'est simplement pas utilisé.",
+  'devicesDialog.phoneHintOnHub':
+    "Installez l'app Den-Watcher sur le téléphone et saisissez ici le code d'appairage qu'elle affiche, puis, dans l'app, l'adresse de ce hub sur le réseau avec le port {port}, par exemple 192.168.1.20:{port}. Le téléphone envoie son utilisation dès qu'il est sur ce réseau ; tant qu'il est absent ou en veille, il n'est simplement pas utilisé.",
   'devicesDialog.pairingNeeded':
     "Attend son code d'appairage ; d'ici là, seule sa disponibilité est suivie.",
   'devicesDialog.pairingWrong':

@@ -168,6 +168,8 @@ export const de: Messages = {
   'devicesDialog.phoneCodeHint': 'Wird in der Den-Watcher-App des Handys angezeigt.',
   'devicesDialog.phoneHint':
     'Installiere die Den-Watcher-App auf dem Handy, gib hier den Kopplungscode ein, den sie anzeigt, und in der App die Adresse dieses Hubs: {address}. Das Handy schickt seine Nutzung, sobald es in diesem Netz ist; solange es weg ist oder schläft, ist es nur nicht in Benutzung.',
+  'devicesDialog.phoneHintOnHub':
+    'Installiere die Den-Watcher-App auf dem Handy, gib hier den Kopplungscode ein, den sie anzeigt, und in der App die Adresse dieses Hubs im Netz mit dem Port {port}, etwa 192.168.1.20:{port}. Das Handy schickt seine Nutzung, sobald es in diesem Netz ist; solange es weg ist oder schläft, ist es nur nicht in Benutzung.',
   'devicesDialog.pairingNeeded':
     'Wartet auf seinen Kopplungscode; bis dahin wird nur seine Verfügbarkeit erfasst.',
   'devicesDialog.pairingWrong':

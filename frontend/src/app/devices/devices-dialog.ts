@@ -53,6 +53,9 @@ import {
 } from './devices';
 import { PasswordDialog, PasswordDialogData, PasswordDialogResult } from './password-dialog';
 
+/** The port den-watcher listens on unless it was set up otherwise, as the app assumes. */
+const DEFAULT_PORT = 9393;
+
 /**
  * Lists the other devices the hub collects from, adds or removes them and
  * changes what they are used as. Every change asks for the password in a
@@ -106,8 +109,18 @@ export class DevicesDialog {
   protected readonly canAdd = computed(
     () => !!this.name().trim() && !!(this.addsPhone() ? this.code().trim() : this.address().trim()),
   );
-  /** The hub's address as the page was opened with it, which a phone's app is given. */
-  protected readonly hubAddress = this.document.location.host;
+  /**
+   * The hub's address for a phone's app: the name or address the page was opened with and the
+   * port the hub tells, which differs behind a proxy. Empty when the page was opened on the hub
+   * itself, whose own name a phone cannot reach.
+   */
+  protected readonly hubAddress = computed(() =>
+    phoneAddress(this.document.location, this.devices.pagePort()),
+  );
+  /** The port a phone's app is given with the hub's address. */
+  protected readonly hubPort = computed(
+    () => this.devices.pagePort() || this.document.location.port || String(DEFAULT_PORT),
+  );
   protected readonly kindName = kindName;
   /** The remote status page; null until it is read, and when the hub has none. */
   protected readonly statusPage = signal<StatusPage | null>(null);
@@ -351,4 +364,24 @@ function remToPixels(rem: number): number {
 /** Opens the list of devices. */
 export function openDevicesDialog(injector: Injector): void {
   injector.get(MatDialog).open(DevicesDialog, { autoFocus: 'first-tabbable', injector });
+}
+
+/**
+ * The hub's address for a phone's app, from where the page was opened and the port the hub tells:
+ * empty for a name only this machine knows, such as localhost.
+ */
+export function phoneAddress(
+  location: Pick<Location, 'hostname' | 'port'>,
+  pagePort: string,
+): string {
+  const host = location.hostname;
+  if (
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host.startsWith('127.') ||
+    host === '[::1]'
+  ) {
+    return '';
+  }
+  return `${host}:${pagePort || location.port || DEFAULT_PORT}`;
 }

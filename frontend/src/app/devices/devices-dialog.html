@@ -135,7 +135,11 @@
       }
     </div>
     @if (addsPhone()) {
-      <p class="hint">{{ i18n.t('devicesDialog.phoneHint', { address: hubAddress }) }}</p>
+      @if (hubAddress()) {
+        <p class="hint">{{ i18n.t('devicesDialog.phoneHint', { address: hubAddress() }) }}</p>
+      } @else {
+        <p class="hint">{{ i18n.t('devicesDialog.phoneHintOnHub', { port: hubPort() }) }}</p>
+      }
     } @else {
       <p class="hint">{{ i18n.t('devicesDialog.kindHint') }}</p>
     }

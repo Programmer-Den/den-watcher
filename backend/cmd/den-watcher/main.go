@@ -450,6 +450,7 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 		Hub:       others,
 		Password:  devicesPassword,
 		Retention: retention,
+		PagePort:  pagePort,
 		Files:     web.Files(),
 		Update:    func() update.Status { return update.Status{Current: version.Version} },
 

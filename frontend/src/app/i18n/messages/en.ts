@@ -170,6 +170,8 @@ export const en = {
   'devicesDialog.phoneCodeHint': "Shown in the phone's Den-Watcher app.",
   'devicesDialog.phoneHint':
     "Install the Den-Watcher app on the phone and enter the pairing code it shows here, then enter this hub's address in the app: {address}. The phone sends its usage whenever it is on this network; while it is away or asleep, it is just not in use.",
+  'devicesDialog.phoneHintOnHub':
+    "Install the Den-Watcher app on the phone and enter the pairing code it shows here, then enter this hub's address on the network in the app, with the port {port}, such as 192.168.1.20:{port}. The phone sends its usage whenever it is on this network; while it is away or asleep, it is just not in use.",
   'devicesDialog.pairingNeeded':
     'Waits for its pairing code; until then only its availability is kept.',
   'devicesDialog.pairingWrong':
