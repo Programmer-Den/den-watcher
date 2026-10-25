@@ -82,6 +82,8 @@ jobs:
         if: github.ref_type == 'tag'
         env:
           ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           set -euo pipefail
           if [[ -z "$ANDROID_KEYSTORE" ]]; then
@@ -92,6 +94,11 @@ jobs:
           # certutil -encode writes it, between -----BEGIN and -----END lines.
           if ! printf '%s\n' "$ANDROID_KEYSTORE" | sed '/^-----/d' | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/release.jks"; then
             echo "The secret ANDROID_KEYSTORE is not base64; paste the text base64 or certutil -encode made of release.jks, as docs/development.md says." >&2
+            exit 1
+          fi
+          # Say which secret is wrong here instead of failing deep in Gradle.
+          if ! keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass:env ANDROID_KEYSTORE_PASSWORD -alias "$ANDROID_KEY_ALIAS" > /dev/null; then
+            echo "release.jks from ANDROID_KEYSTORE does not open with ANDROID_KEYSTORE_PASSWORD or has no key named ANDROID_KEY_ALIAS; set the three secrets from the same key." >&2
             exit 1
           fi
           echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
