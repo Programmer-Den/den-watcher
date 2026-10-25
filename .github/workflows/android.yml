@@ -7,10 +7,11 @@ name: Android app
 # GitHub release. A release is signed with the key in the repository's
 # secrets (ANDROID_KEYSTORE, base64, with ANDROID_KEYSTORE_PASSWORD,
 # ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD), so each version installs over
-# the one before; everything else with the runner's debug key.
+# the one before; everything else with the runner's debug key. The check runs
+# on every pull request, so it can be a required check, but only builds the app
+# when the pull request changes android/ or this workflow.
 on:
   pull_request:
-    paths: ['android/**', '.github/workflows/android.yml']
   push:
     branches:
       - main
@@ -37,6 +38,22 @@ jobs:
       version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # A pull request is checked out as a merge commit; its first parent
+          # is the base branch, so the PR's changes are the diff to HEAD^1.
+          fetch-depth: 2
+
+      - name: Does this change the app
+        id: changes
+        run: |
+          set -euo pipefail
+          app=true
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]] &&
+            ! git diff --name-only HEAD^1 HEAD | grep -qE '^(android/|\.github/workflows/android\.yml$)'; then
+            app=false
+            echo "This pull request does not change the Android app; nothing to build."
+          fi
+          echo "app=$app" >> "$GITHUB_OUTPUT"
 
       # As in the other release workflows: a tag v1.2.3 builds version 1.2.3,
       # anything else dev-<commit>. Android installs an update only when its
@@ -45,6 +62,7 @@ jobs:
       # release's; other builds take the run number.
       - name: Version
         id: version
+        if: steps.changes.outputs.app == 'true'
         run: |
           set -euo pipefail
           if [[ "$GITHUB_REF_TYPE" == tag ]]; then
@@ -106,6 +124,7 @@ jobs:
       # The runner has the Android SDK and Java 17; the Gradle wrapper fetches
       # Gradle itself.
       - name: Test, lint and build
+        if: steps.changes.outputs.app == 'true'
         working-directory: android
         env:
           VERSION: ${{ steps.version.outputs.version }}
@@ -123,6 +142,7 @@ jobs:
           ls -l ../dist
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.changes.outputs.app == 'true'
         with:
           name: den-watcher-${{ steps.version.outputs.version }}-android
           path: dist/*.apk
