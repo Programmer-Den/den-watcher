@@ -6,16 +6,26 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/netip"
 	"sync"
 	"time"
+
+	"github.com/Programmer-Den/den-watcher/backend/internal/password"
 )
 
-// maxConnections is how many connections the page holds open at once; more
-// are closed right away.
-const maxConnections = 64
+const (
+	// maxConnections is how many connections the page holds open at once;
+	// more are closed right away.
+	maxConnections = 64
+	// maxClientConnections is how many of them one client may hold, so one
+	// client cannot take them all and keep everyone else out. A browser
+	// opens up to 6 to a site.
+	maxClientConnections = 8
+)
 
 // Listen listens on addr for the page, over TLS with certs, with at most
-// maxConnections connections open at once.
+// maxConnections connections open at once, and maxClientConnections of
+// one client.
 func Listen(addr string, certs *Certificates) (net.Listener, error) {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -25,7 +35,7 @@ func Listen(addr string, certs *Certificates) (net.Listener, error) {
 		MinVersion:     tls.VersionTLS12,
 		GetCertificate: certs.GetCertificate,
 	}
-	return tls.NewListener(&limitListener{Listener: listener, open: make(chan struct{}, maxConnections)}, config), nil
+	return tls.NewListener(newLimitListener(listener), config), nil
 }
 
 // NewServer returns the server for the page, with short time limits, as
@@ -44,11 +54,21 @@ func NewServer(page *Page) *http.Server {
 	}
 }
 
-// limitListener closes a new connection right away while cap(open) are
-// open, so a flood of connections cannot hold up the program.
+// limitListener closes a new connection right away while maxConnections
+// are open, or maxClientConnections of the client it comes from, so a flood
+// of connections cannot hold up the program, and one client cannot hold
+// every connection.
 type limitListener struct {
 	net.Listener
-	open chan struct{}
+
+	mu sync.Mutex
+	// open counts the open connections, and clients those of each client.
+	open    int
+	clients map[netip.Addr]int
+}
+
+func newLimitListener(listener net.Listener) *limitListener {
+	return &limitListener{Listener: listener, clients: map[netip.Addr]int{}}
 }
 
 func (l *limitListener) Accept() (net.Conn, error) {
@@ -57,13 +77,45 @@ func (l *limitListener) Accept() (net.Conn, error) {
 		if err != nil {
 			return nil, err
 		}
-		select {
-		case l.open <- struct{}{}:
-			return &limitConn{Conn: conn, release: func() { <-l.open }}, nil
-		default:
+		client := connClient(conn)
+		if !l.take(client) {
 			_ = conn.Close()
+			continue
 		}
+		return &limitConn{Conn: conn, release: func() { l.release(client) }}, nil
 	}
+}
+
+// take counts a new connection of client, and reports false, counting
+// nothing, when it may not be open.
+func (l *limitListener) take(client netip.Addr) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.open >= maxConnections || l.clients[client] >= maxClientConnections {
+		return false
+	}
+	l.open++
+	l.clients[client]++
+	return true
+}
+
+func (l *limitListener) release(client netip.Addr) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.open--
+	if l.clients[client]--; l.clients[client] <= 0 {
+		delete(l.clients, client)
+	}
+}
+
+// connClient is the client a connection comes from, as password.Client
+// counts them; the zero address when it cannot be told.
+func connClient(conn net.Conn) netip.Addr {
+	addrPort, err := netip.ParseAddrPort(conn.RemoteAddr().String())
+	if err != nil {
+		return netip.Addr{}
+	}
+	return password.Client(addrPort.Addr())
 }
 
 type limitConn struct {

@@ -57,6 +57,15 @@ const (
 	sessionCookie = "status_session"
 	// sessionLife is how long a visitor stays signed in.
 	sessionLife = 30 * 24 * time.Hour
+	// knownCookie names the cookie that marks a known browser, one that
+	// signed in before, which wrong passwords from other clients do not
+	// keep from signing in again.
+	knownCookie = "status_known"
+	// knownLife is how long a browser stays known after it last signed in.
+	knownLife = 365 * 24 * time.Hour
+	// maxKnown is how many browsers are known at most; a new one past it
+	// takes the place of the one that would be forgotten first.
+	maxKnown = 100
 	// maxSessions is how many visitors may be signed in at once; signing in
 	// past it ends the session that would end first.
 	maxSessions = 100
@@ -72,11 +81,15 @@ type Page struct {
 	// now is time.Now, but for the tests.
 	now func() time.Time
 
-	// mu guards sessions.
+	// mu guards sessions and known.
 	mu sync.Mutex
 	// sessions are the signed-in visitors: when each session ends, by the
 	// SHA-256 of its cookie, so the cookies themselves are not kept.
 	sessions map[[sha256.Size]byte]time.Time
+	// known are the known browsers, when each is forgotten, by the SHA-256
+	// of its cookie. They are kept until the program stops, as the
+	// sessions are.
+	known map[[sha256.Size]byte]time.Time
 }
 
 // New returns the page, which shows devices once password is given.
@@ -87,6 +100,7 @@ func New(devices func() []Device, password Password) *Page {
 		limits:   newLimiter(),
 		now:      time.Now,
 		sessions: map[[sha256.Size]byte]time.Time{},
+		known:    map[[sha256.Size]byte]time.Time{},
 	}
 }
 
@@ -165,7 +179,7 @@ func (p *Page) login(w http.ResponseWriter, r *http.Request) {
 	}
 	client := clientOf(r)
 	now := p.now()
-	if !p.limits.guess(client, now) {
+	if !p.limits.guess(client, now, p.knownBrowser(r)) {
 		w.Header().Set("Retry-After", retryAfter(lockout))
 		p.render(w, http.StatusTooManyRequests, loginView(text, text.TooMany, true))
 		return
@@ -202,6 +216,19 @@ func (p *Page) login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	})
+	if known, err := p.rememberBrowser(r, now); err != nil {
+		slog.Error("remember a browser on the status page", "error", err)
+	} else {
+		http.SetCookie(w, &http.Cookie{
+			Name:     knownCookie,
+			Value:    known,
+			Path:     "/",
+			MaxAge:   int(knownLife / time.Second),
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		})
+	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -274,6 +301,63 @@ func (p *Page) signedIn(r *http.Request) bool {
 		return false
 	}
 	return ok
+}
+
+// knownBrowser reports whether the request carries the cookie of a known
+// browser that has not been forgotten.
+func (p *Page) knownBrowser(r *http.Request) bool {
+	cookie, err := r.Cookie(knownCookie)
+	if err != nil {
+		return false
+	}
+	key := sha256.Sum256([]byte(cookie.Value))
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	forgotten, ok := p.known[key]
+	return ok && p.now().Before(forgotten)
+}
+
+// rememberBrowser keeps the browser that sent r, which just signed in, known
+// for knownLife after now, and returns the cookie that marks it: the one it
+// sent when it is known already, or a new one.
+func (p *Page) rememberBrowser(r *http.Request, now time.Time) (string, error) {
+	token := ""
+	if cookie, err := r.Cookie(knownCookie); err == nil {
+		p.mu.Lock()
+		_, ok := p.known[sha256.Sum256([]byte(cookie.Value))]
+		p.mu.Unlock()
+		if ok {
+			token = cookie.Value
+		}
+	}
+	if token == "" {
+		random := make([]byte, 32)
+		if _, err := rand.Read(random); err != nil {
+			return "", err
+		}
+		token = base64.RawURLEncoding.EncodeToString(random)
+	}
+	key := sha256.Sum256([]byte(token))
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for k, forgotten := range p.known {
+		if !now.Before(forgotten) {
+			delete(p.known, k)
+		}
+	}
+	if _, ok := p.known[key]; !ok && len(p.known) >= maxKnown {
+		var first [sha256.Size]byte
+		var firstForgotten time.Time
+		for k, forgotten := range p.known {
+			if firstForgotten.IsZero() || forgotten.Before(firstForgotten) {
+				first, firstForgotten = k, forgotten
+			}
+		}
+		delete(p.known, first)
+	}
+	p.known[key] = now.Add(knownLife)
+	return token, nil
 }
 
 // render writes the page from view.

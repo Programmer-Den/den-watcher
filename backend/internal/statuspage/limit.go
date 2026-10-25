@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/Programmer-Den/den-watcher/backend/internal/password"
 )
 
 const (
@@ -17,13 +19,18 @@ const (
 	lockout = 15 * time.Minute
 	// maxWrongAll is how many wrong passwords all clients together may send
 	// within allWindow, so many addresses guessing together get no more
-	// guesses. Once it is reached, nobody can sign in until the window
-	// ends; visitors who are signed in already keep seeing the page.
+	// guesses. Once it is reached, only a known browser, one that signed in
+	// before, can sign in until the window ends, so guessing cannot keep the
+	// owner out; visitors who are signed in already keep seeing the page.
 	maxWrongAll = 50
 	allWindow   = time.Hour
 	// maxClients is how many clients are kept track of. Past it, new
 	// clients may still ask, but not guess.
 	maxClients = 10_000
+	// sweepEvery is how often a full table of clients is swept of those
+	// that need not be kept any more, so a client that is new while it is
+	// full does not walk the whole table each time.
+	sweepEvery = time.Minute
 )
 
 // limiter keeps track of how often each client asks and guesses.
@@ -34,6 +41,8 @@ type limiter struct {
 	// started, and allWrong how many were sent since.
 	allStart time.Time
 	allWrong int
+	// swept is when the full table of clients was last swept.
+	swept time.Time
 }
 
 type clientLimits struct {
@@ -71,14 +80,16 @@ func (l *limiter) allow(addr netip.Addr, now time.Time) bool {
 // counts it as wrong until refund or succeeded says otherwise. Counting it
 // before it is checked keeps a client that sends many passwords at once from
 // getting more guesses than maxWrong, as each is counted before the next
-// asks.
-func (l *limiter) guess(addr netip.Addr, now time.Time) bool {
+// asks. A known browser, one that signed in before, is not held up by the
+// wrong passwords of all clients together, so they cannot keep its owner
+// out, but still by its own.
+func (l *limiter) guess(addr netip.Addr, now time.Time, known bool) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if now.Sub(l.allStart) >= allWindow {
 		l.allStart, l.allWrong = now, 0
 	}
-	if l.allWrong >= maxWrongAll {
+	if l.allWrong >= maxWrongAll && !known {
 		return false
 	}
 	c := l.client(addr, now)
@@ -103,7 +114,7 @@ func (l *limiter) refund(addr netip.Addr) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.allWrong = max(l.allWrong-1, 0)
-	if c := l.clients[clientKey(addr)]; c != nil {
+	if c := l.clients[password.Client(addr)]; c != nil {
 		c.wrong = max(c.wrong-1, 0)
 	}
 }
@@ -114,7 +125,7 @@ func (l *limiter) succeeded(addr netip.Addr) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.allWrong = max(l.allWrong-1, 0)
-	if c := l.clients[clientKey(addr)]; c != nil {
+	if c := l.clients[password.Client(addr)]; c != nil {
 		c.wrong = 0
 	}
 }
@@ -122,33 +133,24 @@ func (l *limiter) succeeded(addr netip.Addr) {
 // client returns what is kept of the client at addr, keeping track of it
 // from now on; nil when too many clients are kept track of already.
 func (l *limiter) client(addr netip.Addr, now time.Time) *clientLimits {
-	key := clientKey(addr)
+	key := password.Client(addr)
 	if c := l.clients[key]; c != nil {
 		return c
 	}
-	if len(l.clients) >= maxClients {
+	if len(l.clients) >= maxClients && now.Sub(l.swept) >= sweepEvery {
+		l.swept = now
 		for k, c := range l.clients {
 			if now.Sub(c.minute) >= time.Minute && now.Sub(c.lastWrong) >= lockout {
 				delete(l.clients, k)
 			}
 		}
-		if len(l.clients) >= maxClients {
-			return nil
-		}
+	}
+	if len(l.clients) >= maxClients {
+		return nil
 	}
 	c := &clientLimits{minute: now}
 	l.clients[key] = c
 	return c
-}
-
-// clientKey is who sent a request from addr: the address itself, or for
-// IPv6 its /64 network, as a device can pick any address in it.
-func clientKey(addr netip.Addr) netip.Addr {
-	addr = addr.Unmap().WithZone("")
-	if addr.Is6() {
-		return netip.PrefixFrom(addr, 64).Masked().Addr()
-	}
-	return addr
 }
 
 // retryAfter is d as the seconds of a Retry-After header.

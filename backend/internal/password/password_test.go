@@ -166,7 +166,7 @@ func TestGuessesInParallelGetOneAnswerASecond(t *testing.T) {
 
 func TestACancelledWaitLeavesNoClientBehind(t *testing.T) {
 	p := openTestPassword(t)
-	done, err := p.wait(context.Background(), client(office))
+	done, err := p.wait(context.Background(), Client(office))
 	if err != nil {
 		t.Fatalf("wait() error = %v", err)
 	}
@@ -195,8 +195,8 @@ func TestClientsAreAddressesOrIPv6Networks(t *testing.T) {
 		"2001:db8:1:2:bbbb::9": "2001:db8:1:2::",
 		"fe80::1%eth0":         "fe80::",
 	} {
-		if got := client(netip.MustParseAddr(from)); got.String() != want {
-			t.Errorf("client(%s) = %s, want %s", from, got, want)
+		if got := Client(netip.MustParseAddr(from)); got.String() != want {
+			t.Errorf("Client(%s) = %s, want %s", from, got, want)
 		}
 	}
 }
