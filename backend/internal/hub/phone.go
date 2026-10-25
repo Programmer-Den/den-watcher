@@ -106,6 +106,9 @@ func (h *Hub) AddPhone(ctx context.Context, name, code string) (Device, error) {
 	if code == "" {
 		return Device{}, &InputError{Problem: ProblemPairingNeeded, Message: "give the pairing code the phone shows, such as 7KQM-X2RP"}
 	}
+	if err := checkPhoneCode(code); err != nil {
+		return Device{}, err
+	}
 	device := Device{ID: id, Name: name, Phone: true}
 	if err := h.waitRemoved(ctx, device.ID, removingWait); err != nil {
 		return Device{}, err

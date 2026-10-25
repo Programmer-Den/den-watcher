@@ -215,6 +215,8 @@ export const es: Messages = {
     'Ese no es el código de emparejamiento del dispositivo. Introduce el código que muestra en su propia página en Dispositivos, en el menú de su icono de la bandeja en Windows o en su registro.',
   'devices.problem.pairingNone':
     'En este dispositivo no se ejecuta Den-Watcher, así que no tiene código de emparejamiento.',
+  'devices.problem.pairingTaken':
+    'Otro móvil ya tiene este código de emparejamiento. Introduce el código que este móvil muestra en su aplicación.',
   'devices.problem.demo':
     'Esto es una demo, así que no se pueden añadir, quitar ni cambiar dispositivos.',
   'devices.problem.demoBackup': 'Esto es una demo, así que no hay base de datos que copiar.',

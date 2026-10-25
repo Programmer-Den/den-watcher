@@ -213,6 +213,8 @@ export const fr: Messages = {
     "Ce n'est pas le code d'appairage de l'appareil. Saisissez le code qu'il affiche sur sa propre page sous Appareils, dans le menu de son icône de la barre des tâches sous Windows ou dans son journal.",
   'devices.problem.pairingNone':
     "Cet appareil n'exécute pas Den-Watcher, il n'a donc pas de code d'appairage.",
+  'devices.problem.pairingTaken':
+    "Un autre téléphone a déjà ce code d'appairage. Saisissez le code que ce téléphone affiche dans son application.",
   'devices.problem.demo':
     'Ceci est une démo : les appareils ne peuvent être ni ajoutés, ni supprimés, ni modifiés.',
   'devices.problem.demoBackup':

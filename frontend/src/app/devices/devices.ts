@@ -385,6 +385,7 @@ const KNOWN_PROBLEMS = [
   'pairingNeeded',
   'pairingWrong',
   'pairingNone',
+  'pairingTaken',
   // Only the demo on GitHub Pages refuses every change with this, and a backup with demoBackup.
   'demo',
   'demoBackup',
