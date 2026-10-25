@@ -2,5 +2,6 @@
 <resources>
     <!-- The orange of the website. -->
     <color name="accent">#F57C00</color>
-    <color name="icon_background">#F57C00</color>
+    <!-- The background of the website's maskable icon. -->
+    <color name="icon_background">#FFF8F5</color>
 </resources>

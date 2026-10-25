@@ -1,20 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The favicon in one colour, for the notification and themed icons: the
+     bear with its eyes and muzzle cut out. Ears and head are drawn clockwise,
+     eyes and muzzle the other way round, so the non-zero fill leaves those open. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
+    android:viewportWidth="32"
+    android:viewportHeight="32">
     <path
-        android:pathData="M4,16 A8,8 0 0,1 20,16"
-        android:strokeWidth="2.5"
-        android:strokeColor="#FFFFFF"
-        android:strokeLineCap="round" />
+        android:fillColor="#FFFFFF"
+        android:pathData="M2,8 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0 Z M20,8 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0 Z M3,18.5 a13,12 0 1,1 26,0 a13,12 0 1,1 -26,0 Z M5.5,16 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0 Z M16.5,16 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0 Z M10.5,25 a5.5,4 0 1,0 11,0 a5.5,4 0 1,0 -11,0 Z" />
     <path
-        android:pathData="M12,16 L16.5,10.5"
-        android:strokeWidth="2"
+        android:pathData="M10.5,17.5 L12.6,13.6 M21.5,17.5 L23.6,13.6"
+        android:strokeWidth="1.9"
         android:strokeColor="#FFFFFF"
         android:strokeLineCap="round" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M10,16 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0" />
+        android:pathData="M9.1,17.5 a1.4,1.4 0 1,0 2.8,0 a1.4,1.4 0 1,0 -2.8,0 M20.1,17.5 a1.4,1.4 0 1,0 2.8,0 a1.4,1.4 0 1,0 -2.8,0 M13.6,23.6 a2.4,1.6 0 1,0 4.8,0 a2.4,1.6 0 1,0 -4.8,0" />
 </vector>
