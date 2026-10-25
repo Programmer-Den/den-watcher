@@ -94,6 +94,10 @@ type Site struct {
 	// Update tells the running version and whether a newer release exists;
 	// nil leaves out GET /api/update.
 	Update func() update.Status
+	// PagePort is the port the page is reachable on from the network, from
+	// PUBLIC_PORT or LISTEN_ADDR, which a phone's app is given with the
+	// hub's address.
+	PagePort string
 	// AllowedHosts are names besides its own that this machine answers to,
 	// from ALLOWED_HOSTS; see knownHosts.
 	AllowedHosts []string
@@ -235,12 +239,15 @@ type devicesResponse struct {
 	// PasswordSet tells whether adding or removing a device asks for the
 	// password, or chooses it.
 	PasswordSet bool `json:"passwordSet"`
+	// PagePort is the port the page is reachable on from the network, which
+	// can differ from the one the browser shows, as behind a proxy.
+	PagePort string `json:"pagePort,omitempty"`
 }
 
 // devicesHandler serves GET /api/devices: the devices the site shows.
 func devicesHandler(site Site) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		response := devicesResponse{Devices: site.Devices.List()}
+		response := devicesResponse{Devices: site.Devices.List(), PagePort: site.PagePort}
 		if site.Password != nil {
 			set, err := site.Password.IsSet(r.Context())
 			if err != nil {

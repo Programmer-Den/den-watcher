@@ -168,6 +168,8 @@ export const es: Messages = {
   'devicesDialog.phoneCodeHint': 'Se muestra en la app Den-Watcher del móvil.',
   'devicesDialog.phoneHint':
     'Instala la app Den-Watcher en el móvil, introduce aquí el código de emparejamiento que muestra y, en la app, la dirección de este hub: {address}. El móvil envía su uso cuando está en esta red; mientras está fuera o en reposo, simplemente no está en uso.',
+  'devicesDialog.phoneHintOnHub':
+    'Instala la app Den-Watcher en el móvil, introduce aquí el código de emparejamiento que muestra y, en la app, la dirección de este hub en la red con el puerto {port}, por ejemplo 192.168.1.20:{port}. El móvil envía su uso cuando está en esta red; mientras está fuera o en reposo, simplemente no está en uso.',
   'devicesDialog.pairingNeeded':
     'Espera su código de emparejamiento; hasta entonces solo se registra su disponibilidad.',
   'devicesDialog.pairingWrong':

@@ -201,6 +201,7 @@ function deviceList(now: number): DeviceList {
       return active.length > 0 ? { ...m.device, alerts: active } : m.device;
     }),
     passwordSet: true,
+    pagePort: '9393',
   };
 }
 

@@ -4,7 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { of } from 'rxjs';
 
-import { DevicesDialog } from './devices-dialog';
+import { DevicesDialog, phoneAddress } from './devices-dialog';
 import { DeviceService, Suggestion } from './devices';
 import { PasswordDialogResult } from './password-dialog';
 
@@ -188,7 +188,8 @@ describe('DevicesDialog', () => {
     formKind('Phone').click();
     fixture.detectChanges();
     expect(input('address')).toBeNull();
-    expect(element().textContent).toContain("enter this hub's address in the app");
+    // The tests open the page on localhost, a name the phone cannot reach.
+    expect(element().textContent).toContain("enter this hub's address on the network in the app");
     await type('name', 'Pixel');
     expect(button('Add').disabled).toBe(true);
     await type('code', '7KQM-X2RP');
@@ -644,5 +645,20 @@ describe('DevicesDialog', () => {
 
     expect(element().querySelector('.fold')).toBeNull();
     expect(list().textContent).toContain('No other devices yet.');
+  });
+});
+
+describe('phoneAddress', () => {
+  it('gives the phone the name the page was opened with and the port the hub tells', () => {
+    expect(phoneAddress({ hostname: '192.168.1.20', port: '' }, '9393')).toBe('192.168.1.20:9393');
+    expect(phoneAddress({ hostname: 'den.lan', port: '443' }, '8080')).toBe('den.lan:8080');
+    expect(phoneAddress({ hostname: 'den.lan', port: '9000' }, '')).toBe('den.lan:9000');
+    expect(phoneAddress({ hostname: 'den.lan', port: '' }, '')).toBe('den.lan:9393');
+  });
+
+  it('gives none for a name only the hub itself knows', () => {
+    for (const hostname of ['localhost', 'hub.localhost', '127.0.0.1', '[::1]']) {
+      expect(phoneAddress({ hostname, port: '9393' }, '9393')).toBe('');
+    }
   });
 });

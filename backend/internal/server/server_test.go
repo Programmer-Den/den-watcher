@@ -165,6 +165,20 @@ func TestListsDevices(t *testing.T) {
 	}
 }
 
+func TestListsThePagePortForAPhone(t *testing.T) {
+	handler := New(Site{Devices: DeviceList([]Device{{ID: "local"}}), Files: site, PagePort: "8080"})
+
+	rec := get(handler, "/api/devices", "192.168.1.20:5000")
+
+	var got devicesResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.PagePort != "8080" {
+		t.Errorf("pagePort = %q, want %q", got.PagePort, "8080")
+	}
+}
+
 // fakeAlertLog is a log of alerts, or fails while err is set.
 type fakeAlertLog struct {
 	list []alerts.Alert
