@@ -26,13 +26,14 @@ class RecordAlarm : BroadcastReceiver() {
         val lock = app.getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "den.watcher:record")
         lock.acquire(LOCK_MILLIS)
-        val pending = goAsync()
+        // Not with goAsync: a phone back after a week sends up to a hundred
+        // pushes, longer than Android waits for a receiver before it ends
+        // the app. The service's notification keeps the app running instead.
         worker.execute {
             try {
                 runCatching { Recorder.recordAndPush(app) }
             } finally {
                 if (lock.isHeld) lock.release()
-                pending.finish()
             }
         }
     }
@@ -40,8 +41,8 @@ class RecordAlarm : BroadcastReceiver() {
     companion object {
         private const val INTERVAL_MILLIS = 30_000L
 
-        /** Longer than the most a reading and its pushes should take. */
-        private const val LOCK_MILLIS = 60_000L
+        /** Longer than a reading and a week of pushes should take. */
+        private const val LOCK_MILLIS = 10 * 60_000L
 
         private val worker = Executors.newSingleThreadExecutor()
 
