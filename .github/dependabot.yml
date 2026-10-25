@@ -37,7 +37,7 @@ updates:
 
   - package-ecosystem: gradle
     directory: /android
-    labels: [dependencies, tracking]
+    labels: [dependencies, android-tracking]
     schedule:
       interval: weekly
 

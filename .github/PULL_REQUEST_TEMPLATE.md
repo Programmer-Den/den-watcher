@@ -6,7 +6,7 @@
 Type of change: add labels instead, at least one of each type. The type is the
 first word of the label's description (.github/labels.json):
 - Change: feature, bugfix, documentation, maintenance, dependencies
-- Area: ui, hub, tracking, alerts, storage, server, install, repo
+- Area: ui, hub, linux-tracking, windows-tracking, android-tracking, alerts, storage, server, install, repo
 -->
 
 ## Checklist
