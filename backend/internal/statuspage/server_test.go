@@ -1,6 +1,7 @@
 package statuspage
 
 import (
+	"errors"
 	"io"
 	"net"
 	"testing"
@@ -46,7 +47,7 @@ func TestOneClientCannotHoldEveryConnection(t *testing.T) {
 	// The one past the limit is closed: reading from it ends at once.
 	last := dialed[maxClientConnections]
 	_ = last.SetReadDeadline(time.Now().Add(5 * time.Second))
-	if _, err := last.Read(make([]byte, 1)); err != io.EOF {
+	if _, err := last.Read(make([]byte, 1)); !errors.Is(err, io.EOF) {
 		t.Errorf("read from connection %d of one client = %v, want EOF: closed", maxClientConnections+1, err)
 	}
 
