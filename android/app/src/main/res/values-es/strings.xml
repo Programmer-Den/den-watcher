@@ -20,6 +20,8 @@
     <string name="status_recording">Registra el uso y lo guarda hasta que el hub lo tiene, hasta una semana.</string>
     <string name="status_stopped">Inicia el registro para enviar el uso de este móvil al hub.</string>
     <string name="status_last_push">El hub recibió el uso por última vez el %1$s.</string>
+    <string name="open_hub">Abrir la página del hub</string>
+    <string name="no_browser">No hay navegador para abrir la página.</string>
     <string name="problem_no_address">Escanea el código del hub para enviar el uso.</string>
     <string name="problem_not_home">Sin Wi-Fi: el uso se envía en cuanto el móvil está en el Wi-Fi de casa.</string>
     <string name="problem_unreachable">El hub no responde. ¿Está el móvil en el Wi-Fi de casa y es correcta la dirección?</string>

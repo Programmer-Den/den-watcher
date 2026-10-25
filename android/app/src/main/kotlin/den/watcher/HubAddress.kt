@@ -17,7 +17,13 @@ object HubAddress {
      * Returns null for anything else, such as an https:// address, which
      * den-watcher does not offer, or one with a path.
      */
-    fun pushUrl(typed: String): String? {
+    fun pushUrl(typed: String): String? = origin(typed)?.let { it + PUSH_PATH }
+
+    /** Returns the hub's page for the saved address, or null as pushUrl does. */
+    fun pageUrl(typed: String): String? = origin(typed)?.let { "$it/" }
+
+    /** http://host:port for an address, or null. */
+    private fun origin(typed: String): String? {
         var address = typed.trim().trimEnd('/')
         if (address.startsWith("http://", ignoreCase = true)) {
             address = address.substring("http://".length)
@@ -35,7 +41,7 @@ object HubAddress {
         if (port !in 1..65535) {
             return null
         }
-        return "http://$host:$port$PUSH_PATH"
+        return "http://$host:$port"
     }
 
     /**

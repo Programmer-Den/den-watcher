@@ -21,6 +21,8 @@
     <string name="status_recording">Records the usage and keeps it until the hub has it, for up to a week.</string>
     <string name="status_stopped">Start recording to send this phone\'s usage to the hub.</string>
     <string name="status_last_push">The hub last took the usage on %1$s.</string>
+    <string name="open_hub">Open the hub\'s page</string>
+    <string name="no_browser">No browser to open the page.</string>
     <string name="problem_no_address">Scan the hub\'s code to send the usage.</string>
     <string name="problem_not_home">Not on Wi-Fi: the usage is sent once the phone is on your home Wi-Fi.</string>
     <string name="problem_unreachable">The hub does not answer. Is the phone on your home Wi-Fi, and is the address right?</string>

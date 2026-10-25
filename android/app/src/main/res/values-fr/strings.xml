@@ -20,6 +20,8 @@
     <string name="status_recording">Enregistre l\'utilisation et la garde jusqu\'à ce que le hub l\'ait, une semaine au plus.</string>
     <string name="status_stopped">Démarrez l\'enregistrement pour envoyer l\'utilisation de ce téléphone au hub.</string>
     <string name="status_last_push">Le hub a reçu l\'utilisation pour la dernière fois le %1$s.</string>
+    <string name="open_hub">Ouvrir la page du hub</string>
+    <string name="no_browser">Aucun navigateur pour ouvrir la page.</string>
     <string name="problem_no_address">Scannez le code du hub pour envoyer l\'utilisation.</string>
     <string name="problem_not_home">Pas sur le Wi-Fi : l\'utilisation sera envoyée dès que le téléphone sera sur le Wi-Fi de la maison.</string>
     <string name="problem_unreachable">Le hub ne répond pas. Le téléphone est-il sur le Wi-Fi de la maison, et l\'adresse est-elle juste ?</string>

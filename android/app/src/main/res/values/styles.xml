@@ -50,4 +50,17 @@
         <item name="android:background">@drawable/button_outlined</item>
         <item name="android:textColor">@color/primary</item>
     </style>
+
+    <!-- A link-like button, flush with the card's text. -->
+    <style name="Button.Text">
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:layout_marginStart">-12dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:background">@drawable/button_text</item>
+        <item name="android:drawableEnd">@drawable/ic_open</item>
+        <item name="android:drawablePadding">8dp</item>
+        <item name="android:drawableTint">@color/primary</item>
+        <item name="android:textColor">@color/primary</item>
+    </style>
 </resources>

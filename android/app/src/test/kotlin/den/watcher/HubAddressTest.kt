@@ -14,6 +14,14 @@ class HubAddressTest {
     }
 
     @Test
+    fun opensTheHubsPage() {
+        assertEquals("http://192.168.1.20:9393/", HubAddress.pageUrl("192.168.1.20"))
+        assertEquals("http://raspberrypi.local:8080/", HubAddress.pageUrl("http://raspberrypi.local:8080/"))
+        assertNull(HubAddress.pageUrl(""))
+        assertNull(HubAddress.pageUrl("pi:9393/devices"))
+    }
+
+    @Test
     fun refusesWhatIsNoAddress() {
         assertNull(HubAddress.pushUrl(""))
         assertNull(HubAddress.pushUrl("https://pi:9393"))
