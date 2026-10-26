@@ -582,6 +582,10 @@ func (d hubDevices) List() []server.Device {
 		if unreachable && !since.IsZero() {
 			unreachableSince = &since
 		}
+		var releasedUntil *time.Time
+		if until := remote.ReleasedUntil(); !until.IsZero() {
+			releasedUntil = &until
+		}
 		devices = append(devices, server.Device{
 			ID:               remote.ID,
 			Name:             remote.Name,
@@ -592,6 +596,7 @@ func (d hubDevices) List() []server.Device {
 			UnreachableSince: unreachableSince,
 			Refused:          remote.Refused(),
 			Pairing:          remote.Pairing(),
+			ReleasedUntil:    releasedUntil,
 			Router:           remote.Router(),
 			Checked:          remote.Checked,
 			Alerts:           d.alerts.Active(remote.ID),

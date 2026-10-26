@@ -48,11 +48,19 @@ type Push struct {
 	Extras map[string]history.ExtraInfo `json:"extras,omitempty"`
 }
 
+// ReleaseTime is how long a phone may change its hub once the hub's owner
+// allowed it (see ReleasePhone).
+const ReleaseTime = 10 * time.Minute
+
 // PushAnswer is the answer to a push.
 type PushAnswer struct {
 	// After is the phone's time of the newest minute the hub has: the phone
 	// may delete it and the ones before.
 	After int64 `json:"after"`
+	// Release is set while the phone may change its hub. Its app keeps the
+	// hub's address and recording locked once the hub took a push, until a
+	// push is answered with it.
+	Release bool `json:"release,omitempty"`
 }
 
 // ErrUnknownPhone is a push with a code no phone added on the hub has.
@@ -69,6 +77,9 @@ type phone struct {
 	mu       sync.Mutex
 	latest   metrics.Snapshot
 	latestAt time.Time
+	// releasedUntil is until when the phone may change its hub; zero when
+	// it was never allowed.
+	releasedUntil time.Time
 
 	// pushing makes the pushes of one phone store their minutes one at a
 	// time, as each goes on from where the one before stopped.
@@ -189,7 +200,48 @@ func (p *phone) receive(ctx context.Context, push Push, now time.Time) (PushAnsw
 		p.mu.Unlock()
 	}
 	after, err := p.minutes.receive(ctx, MinutesAnswer{Now: push.Now, Minutes: push.Minutes, Extras: push.Extras}, now)
-	return PushAnswer{After: after}, err
+	return PushAnswer{After: after, Release: !p.released(now).IsZero()}, err
+}
+
+// ReleasePhone lets the phone with the id change its hub for ReleaseTime,
+// which its app is told in the answers to its pushes, and returns until when.
+// Problems with the device are InputErrors.
+func (h *Hub) ReleasePhone(id string) (time.Time, error) {
+	h.mu.Lock()
+	remote := h.find(id)
+	h.mu.Unlock()
+	if remote == nil {
+		return time.Time{}, &InputError{Problem: ProblemNotFound, Message: "there is no device with this id"}
+	}
+	if remote.phone == nil {
+		return time.Time{}, &InputError{Problem: ProblemKind, Message: "only a phone keeps its hub locked; other devices are added to another hub there"}
+	}
+	now := time.Now()
+	remote.phone.mu.Lock()
+	remote.phone.releasedUntil = now.Add(ReleaseTime)
+	remote.phone.mu.Unlock()
+	slog.Info("let a phone change its hub", "name", remote.Name, "for", ReleaseTime)
+	return remote.phone.released(now), nil
+}
+
+// ReleasedUntil is until when the phone may change its hub; zero for any
+// other device and once that time is over.
+func (r *Remote) ReleasedUntil() time.Time {
+	if r.phone == nil {
+		return time.Time{}
+	}
+	return r.phone.released(time.Now())
+}
+
+// released is until when the phone may change its hub, seen at now; zero
+// once that is over.
+func (p *phone) released(now time.Time) time.Time {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !now.Before(p.releasedUntil) {
+		return time.Time{}
+	}
+	return p.releasedUntil
 }
 
 // receive stores the minutes a phone pushed, as fetch stores the ones it

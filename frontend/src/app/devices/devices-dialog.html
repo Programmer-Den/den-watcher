@@ -54,6 +54,25 @@
         } @else {
           <span class="fixed hint">{{ i18n.t('devicesDialog.fixed') }}</span>
         }
+        @if (device.kind === 'phone' && device.removable) {
+          <div class="release">
+            <p class="hint">
+              @if (releasedUntil(device); as until) {
+                {{ i18n.t('devicesDialog.releasedUntil', { time: until }) }}
+              } @else {
+                {{ i18n.t('devicesDialog.hubLocked') }}
+              }
+            </p>
+            <button
+              mat-stroked-button
+              type="button"
+              [disabled]="busy()"
+              (click)="releasePhone(device)"
+            >
+              {{ i18n.t('devicesDialog.release') }}
+            </button>
+          </div>
+        }
         @if (device.pairing) {
           <form class="pairing" (ngSubmit)="setCode(device)">
             <p class="hint">

@@ -84,6 +84,15 @@ describe('PasswordDialog', () => {
     expect(confirmButton().textContent?.trim()).toBe('Change');
   });
 
+  it('asks for the password to let a phone change its hub', async () => {
+    await open({ action: 'release', deviceName: 'Pixel', passwordSet: true });
+
+    expect(element().textContent).toContain(
+      'Let Pixel change its hub or stop recording for the next 10 minutes?',
+    );
+    expect(confirmButton().textContent?.trim()).toBe('Allow');
+  });
+
   it('asks for the password to download a backup and says what the file holds', async () => {
     await open({ action: 'backup', deviceName: '', passwordSet: true });
 

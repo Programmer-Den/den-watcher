@@ -155,6 +155,56 @@ func TestAPushWithTooManyMinutesIsRefused(t *testing.T) {
 	}
 }
 
+func TestAReleasedPhoneIsToldItMayChangeItsHub(t *testing.T) {
+	ctx := context.Background()
+	h := openTestHub(t, openTestStore(t), []Device{{ID: "nas", Name: "NAS", Address: "192.0.2.7:9393"}})
+	if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+		t.Fatalf("AddPhone() error = %v", err)
+	}
+	var remote *Remote
+	for _, r := range h.Remotes() {
+		if r.ID == "pixel" {
+			remote = r
+		}
+	}
+	push := Push{Now: time.Now().Unix()}
+	if answer, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil || answer.Release {
+		t.Errorf("Receive() before the release = %+v, %v; want no release", answer, err)
+	}
+	if until := remote.ReleasedUntil(); !until.IsZero() {
+		t.Errorf("ReleasedUntil() before the release = %v, want zero", until)
+	}
+
+	before := time.Now()
+	until, err := h.ReleasePhone("pixel")
+	if err != nil {
+		t.Fatalf("ReleasePhone() error = %v", err)
+	}
+	if until.Before(before.Add(ReleaseTime)) || until.After(time.Now().Add(ReleaseTime)) {
+		t.Errorf("ReleasePhone() = %v, want %v from now", until, ReleaseTime)
+	}
+	if got := remote.ReleasedUntil(); !got.Equal(until) {
+		t.Errorf("ReleasedUntil() = %v, want %v", got, until)
+	}
+	// Every push in the time is told, as the phone may miss an answer.
+	for range 2 {
+		if answer, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil || !answer.Release {
+			t.Errorf("Receive() after the release = %+v, %v; want the release", answer, err)
+		}
+	}
+	// Once the time is over, the phone is told no more.
+	if answer, err := remote.phone.receive(ctx, push, until); err != nil || answer.Release {
+		t.Errorf("receive() at the end of the release = %+v, %v; want none", answer, err)
+	}
+
+	if _, err := h.ReleasePhone("nas"); problemOf(err) != ProblemKind {
+		t.Errorf("ReleasePhone(nas) error = %v, want problem %q: only a phone keeps its hub locked", err, ProblemKind)
+	}
+	if _, err := h.ReleasePhone("tablet"); problemOf(err) != ProblemNotFound {
+		t.Errorf("ReleasePhone(tablet) error = %v, want problem %q", err, ProblemNotFound)
+	}
+}
+
 func TestAPhonesCodeCanBeChanged(t *testing.T) {
 	ctx := context.Background()
 	h := openTestHub(t, openTestStore(t), nil)

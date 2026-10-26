@@ -173,6 +173,9 @@ export const fr: Messages = {
   'devicesDialog.pairingWrong':
     "Ce code d'appairage n'est pas celui de cet appareil ; d'ici là, seule sa disponibilité est suivie.",
   'devicesDialog.setCode': 'Enregistrer le code',
+  'devicesDialog.hubLocked': "Son appli verrouille l'adresse de ce hub et l'enregistrement.",
+  'devicesDialog.releasedUntil': "Peut changer de hub ou arrêter l'enregistrement jusqu'à {time}.",
+  'devicesDialog.release': 'Autoriser le changement de hub',
   'devicesDialog.ownCodeTitle': "Code d'appairage de cet appareil",
   'devicesDialog.ownCodeHint':
     "Un hub demande ce code quand cet appareil y est ajouté ; sans lui, le hub ne suit que si l'appareil répond.",
@@ -241,6 +244,9 @@ export const fr: Messages = {
   'passwordDialog.confirmRemove': 'Retirer',
   'passwordDialog.kind': 'Passer {device} en {kind} ?',
   'passwordDialog.confirmKind': 'Modifier',
+  'passwordDialog.release':
+    "Laisser {device} changer de hub ou arrêter l'enregistrement pendant les 10 prochaines minutes ?",
+  'passwordDialog.confirmRelease': 'Autoriser',
   'passwordDialog.pairing': "Donner à {device} le nouveau code d'appairage ?",
   'passwordDialog.confirmBackup': 'Télécharger',
   'passwordDialog.backupHint':

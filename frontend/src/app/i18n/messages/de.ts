@@ -175,6 +175,9 @@ export const de: Messages = {
   'devicesDialog.pairingWrong':
     'Der Kopplungscode ist nicht der dieses Geräts; bis dahin wird nur seine Verfügbarkeit erfasst.',
   'devicesDialog.setCode': 'Code speichern',
+  'devicesDialog.hubLocked': 'Die App sperrt die Adresse dieses Hubs und die Aufzeichnung.',
+  'devicesDialog.releasedUntil': 'Darf bis {time} den Hub wechseln oder die Aufzeichnung beenden.',
+  'devicesDialog.release': 'Hubwechsel erlauben',
   'devicesDialog.ownCodeTitle': 'Kopplungscode dieses Geräts',
   'devicesDialog.ownCodeHint':
     'Ein Hub fragt nach diesem Code, wenn dieses Gerät dort hinzugefügt wird; ohne ihn erfasst der Hub nur, ob das Gerät antwortet.',
@@ -242,6 +245,9 @@ export const de: Messages = {
   'passwordDialog.confirmRemove': 'Entfernen',
   'passwordDialog.kind': '{device} zu {kind} ändern?',
   'passwordDialog.confirmKind': 'Ändern',
+  'passwordDialog.release':
+    '{device} in den nächsten 10 Minuten den Hub wechseln oder die Aufzeichnung beenden lassen?',
+  'passwordDialog.confirmRelease': 'Erlauben',
   'passwordDialog.pairing': '{device} den neuen Kopplungscode geben?',
   'passwordDialog.confirmBackup': 'Herunterladen',
   'passwordDialog.backupHint':

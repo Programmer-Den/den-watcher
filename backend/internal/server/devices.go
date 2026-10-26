@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/netip"
 	"sync"
+	"time"
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 	"github.com/Programmer-Den/den-watcher/backend/internal/password"
@@ -33,6 +34,9 @@ type Hub interface {
 	SetKind(ctx context.Context, id string, kind hub.Kind) error
 	// SetCode changes the pairing code sent to a device.
 	SetCode(ctx context.Context, id, code string) error
+	// ReleasePhone lets a phone change its hub for a while, and returns
+	// until when.
+	ReleasePhone(id string) (time.Time, error)
 	// Suggest returns the device at from, the address of a visitor, to offer
 	// adding it; false when there is none to offer, as for the machine's own
 	// addresses.
@@ -108,6 +112,10 @@ type kindRequest struct {
 	Password string `json:"password"`
 }
 
+type passwordRequest struct {
+	Password string `json:"password"`
+}
+
 type removeRequest struct {
 	Password    string `json:"password"`
 	KeepHistory bool   `json:"keepHistory"`
@@ -165,6 +173,19 @@ func (c *deviceChanges) setCode(w http.ResponseWriter, r *http.Request) {
 	}
 	c.change(w, r, request.Password, true, func() (any, error) {
 		return nil, c.hub.SetCode(r.Context(), r.PathValue("id"), request.Code)
+	})
+}
+
+// releasePhone serves POST /api/phones/{id}/release: lets the phone change
+// its hub for a while, which its app is told with its next push.
+func (c *deviceChanges) releasePhone(w http.ResponseWriter, r *http.Request) {
+	var request passwordRequest
+	if !readJSON(w, r, &request) {
+		return
+	}
+	c.change(w, r, request.Password, true, func() (any, error) {
+		_, err := c.hub.ReleasePhone(r.PathValue("id"))
+		return nil, err
 	})
 }
 

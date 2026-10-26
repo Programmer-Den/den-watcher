@@ -52,6 +52,9 @@ type Device struct {
 	// until it is given the device's pairing code: "needed" while the hub
 	// has none for it, "wrong" while the one it has is another.
 	Pairing string `json:"pairing,omitempty"`
+	// ReleasedUntil is set while a phone may change its hub, which its app
+	// keeps locked otherwise.
+	ReleasedUntil *time.Time `json:"releasedUntil,omitempty"`
 	// Router is set for a router, which the hub reads itself, as it runs
 	// no den-watcher.
 	Router bool `json:"router,omitempty"`
@@ -162,6 +165,7 @@ func New(site Site) http.Handler {
 		mux.HandleFunc("PUT /api/devices/{id}/kind", changes.setKind)
 		mux.HandleFunc("PUT /api/devices/{id}/pairing", changes.setCode)
 		mux.HandleFunc("POST /api/phones", changes.addPhone)
+		mux.HandleFunc("POST /api/phones/{id}/release", changes.releasePhone)
 		mux.HandleFunc("POST "+hub.PhoneMinutesPath, pushHandler(site.Hub))
 		if site.Backups != nil {
 			mux.HandleFunc("POST /api/backup", changes.backup)
