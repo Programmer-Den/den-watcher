@@ -519,9 +519,9 @@ export function wifiChanges(history: WiFiHistory): WiFiChange[] {
       .map((ap) => ap.box),
   );
   // The securities of the access points the devices were connected to, as the alert compares.
-  const homeSecurities = homeAPs
-    .filter((ap) => ap.security && ap.seenBy.some((s) => s.points.some((p) => p.connected)))
-    .map((ap) => ap.security);
+  const homeSecurities = homeAPs.flatMap((ap) =>
+    ap.security && ap.seenBy.some((s) => s.points.some((p) => p.connected)) ? [ap.security] : [],
+  );
   const changes: WiFiChange[] = [];
   for (const [ssid, aps] of named) {
     if (home && foldSSID(ssid) === foldSSID(home)) {
@@ -531,10 +531,11 @@ export function wifiChanges(history: WiFiHistory): WiFiChange[] {
       }
       for (const radios of boxes.values()) {
         const first = radios.reduce((a, b) => (b.firstSeen < a.firstSeen ? b : a));
+        const security = first.security;
         const other =
-          !!first.security &&
+          !!security &&
           homeSecurities.length > 0 &&
-          !homeSecurities.some((security) => sharesSecurity(first.security, security));
+          !homeSecurities.some((own) => sharesSecurity(security, own));
         if (other || (ssid === home && first.firstSeen > start)) {
           changes.push({
             kind: other ? 'lookalike' : 'newAccessPoint',
