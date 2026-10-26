@@ -163,6 +163,98 @@
           <p class="detail">{{ i18n.t('wifi.noHome') }}</p>
         }
       }
+      @case ('channels') {
+        <p class="detail">{{ i18n.t('wifi.channelsIntro') }}</p>
+        @for (use of bands(); track use.band) {
+          <div class="band" [class.stale]="connection.lost()">
+            <h3>{{ band(use.band) }}</h3>
+            <div class="bars" role="list">
+              @for (c of use.channels; track c.channel) {
+                <div
+                  class="bar"
+                  role="listitem"
+                  [class.home]="c.home"
+                  [class.suggested]="c.channel === use.suggested"
+                  [title]="routers(c.channel, c.routers)"
+                >
+                  <span class="count">{{ c.routers || '' }}</span>
+                  <span class="fill" [style.height.%]="(c.routers / mostRouters(use)) * 100"></span>
+                  <span class="number">{{ c.channel }}</span>
+                </div>
+              }
+            </div>
+            @if (suggestion(use); as text) {
+              <p class="hint">{{ text }}</p>
+            }
+          </div>
+        } @empty {
+          <p class="detail">{{ i18n.t('wifi.noNetworks') }}</p>
+        }
+        <p class="legend hint">
+          <span class="key home">{{ i18n.t('wifi.homeNetwork') }}</span>
+          <span class="key suggested">{{ i18n.t('wifi.leastCrowded') }}</span>
+        </p>
+      }
+      @case ('where') {
+        <p class="detail">{{ i18n.t('wifi.whereIntro') }}</p>
+        @for (group of places().groups; track $index) {
+          <p class="together">{{ together(group) }}</p>
+        } @empty {
+          <p class="together hint">{{ i18n.t('wifi.apart') }}</p>
+        }
+        <div class="table" [class.stale]="connection.lost()">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">{{ i18n.t('compare.device') }}</th>
+                @for (device of columns(); track device.id) {
+                  <th scope="col" class="signal">{{ name(device.id) }}</th>
+                }
+                <th scope="col" class="strip-head">{{ i18n.t('wifi.sameSpot') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (spot of places().spots; track spot.device) {
+                <tr>
+                  <th scope="row">
+                    <button
+                      type="button"
+                      class="device"
+                      [title]="i18n.t('compare.open')"
+                      (click)="devices.show(spot.device)"
+                    >
+                      {{ name(spot.device) }}
+                    </button>
+                  </th>
+                  @for (other of columns(); track other.id) {
+                    <td class="signal">
+                      @if (other.id !== spot.device && alike(spot.device, other.id); as percent) {
+                        <span class="level" [attr.data-level]="alikeLevel(percent)">
+                          {{ percent | number: '1.0-0' : i18n.language() }} %
+                        </span>
+                      } @else {
+                        <span class="hint">–</span>
+                      }
+                    </td>
+                  }
+                  <td>
+                    <span class="strip" role="img" [attr.aria-label]="i18n.t('wifi.sameSpot')">
+                      @for (value of spot.steps; track $index) {
+                        <span
+                          class="step"
+                          [attr.data-level]="value === undefined ? 'off' : alikeLevel(value)"
+                          [title]="spotTitle(spot.steps.length - 1 - $index, value)"
+                        ></span>
+                      }
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="hint legend">{{ i18n.t('wifi.spotLegend') }}</p>
+      }
     }
   </section>
 }

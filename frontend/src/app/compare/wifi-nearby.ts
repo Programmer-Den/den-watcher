@@ -10,12 +10,17 @@ import { MessageKey } from '../i18n/messages/en';
 import { MetricsService, nowSeconds } from '../metrics/metrics';
 import { PageVisibility } from '../page-visibility';
 import {
+  BandChannels,
   HomeRow,
   NetworkBox,
+  TOGETHER,
   WiFiHistory,
+  channelUse,
   homeNetwork,
   homeRows,
   networkRows,
+  places,
+  sameSpot,
   signalLevel,
   wifiBand,
   wifiChannel,
@@ -23,11 +28,13 @@ import {
 } from './wifi';
 
 /** The views of what the devices' Wi-Fi sees. */
-export type WifiView = 'who' | 'home';
+export type WifiView = 'who' | 'home' | 'channels' | 'where';
 
 const VIEWS: { id: WifiView; label: MessageKey }[] = [
   { id: 'who', label: 'wifi.whoSeesWhat' },
   { id: 'home', label: 'wifi.homeNetwork' },
+  { id: 'channels', label: 'wifi.channels' },
+  { id: 'where', label: 'wifi.where' },
 ];
 
 /** How far back the views look: a day, in hourly steps. */
@@ -38,8 +45,9 @@ const REFRESH_MS = 5 * 60_000;
 
 /**
  * Compares the Wi-Fi networks the devices with the Wi-Fi add-on see: which device hears which
- * network how well, and how well each one hears the network they are connected to, through which
- * of its access points. Shown only once a device has the add-on.
+ * network how well, how well each one hears the network they are connected to, through which of
+ * its access points, how crowded the channels are, and which devices hear the networks alike, as
+ * those are probably in one place. Shown only once a device has the add-on.
  */
 @Component({
   selector: 'app-wifi-nearby',
@@ -93,6 +101,24 @@ export class WifiNearby {
           this.columns().map((d) => d.id),
         )
       : [];
+  });
+
+  protected readonly bands = computed((): BandChannels[] => {
+    const history = this.history();
+    return history ? channelUse(history) : [];
+  });
+
+  /** How alike the devices hear the networks, the groups probably together, and each one's day. */
+  protected readonly places = computed(() => {
+    const history = this.history();
+    const ids = this.columns().map((d) => d.id);
+    if (!history) {
+      return { likeness: new Map<string, number>(), groups: [], spots: [] };
+    }
+    return {
+      ...places(history, ids),
+      spots: ids.map((device) => ({ device, steps: sameSpot(history, device) })),
+    };
   });
 
   constructor() {
@@ -162,5 +188,58 @@ export class WifiNearby {
       return `${when}: ${this.i18n.t('wifi.notInRange')}`;
     }
     return `${when}: ${Math.round(value)} %`;
+  }
+
+  /** The most routers on one channel of a band, which the bars are drawn against. */
+  protected mostRouters(band: BandChannels): number {
+    return Math.max(1, ...band.channels.map((c) => c.routers));
+  }
+
+  protected routers(channel: number, count: number): string {
+    const routers = this.i18n.plural(count, 'wifi.routers.one', 'wifi.routers.other');
+    return `${this.i18n.t('wifi.channel')} ${channel}: ${routers}`;
+  }
+
+  /** What the page suggests for the home network in a band, or nothing without a suggestion. */
+  protected suggestion(band: BandChannels): string {
+    const network = this.home();
+    if (band.suggested === undefined || !network) {
+      return '';
+    }
+    const params = { network, channel: band.suggested };
+    return band.channels.some((c) => c.home && c.channel === band.suggested)
+      ? this.i18n.t('wifi.suggestStay', params)
+      : this.i18n.t('wifi.suggestMove', params);
+  }
+
+  /** How alike two devices hear the networks, in percent, whichever of them comes first. */
+  protected alike(a: string, b: string): number | undefined {
+    const likeness = this.places().likeness;
+    return likeness.get(`${a}\n${b}`) ?? likeness.get(`${b}\n${a}`);
+  }
+
+  /** How alike is shown: as one place from TOGETHER on, and less and less so below. */
+  protected alikeLevel(percent: number): string {
+    if (percent >= TOGETHER) {
+      return 'great';
+    }
+    return percent >= 60 ? 'fair' : 'poor';
+  }
+
+  /** The names of a group of devices as a list in the page's language, such as "A and B". */
+  protected together(group: string[]): string {
+    const list = new Intl.ListFormat(this.i18n.language(), { type: 'conjunction' });
+    return this.i18n.t('wifi.together', { devices: list.format(group.map((d) => this.name(d))) });
+  }
+
+  /** What a step of a device's day stands for: how long ago, and how alike to now it heard. */
+  protected spotTitle(hoursAgo: number, value: number | undefined): string {
+    const when =
+      hoursAgo === 0
+        ? this.i18n.t('wifi.thisHour')
+        : this.i18n.plural(hoursAgo, 'wifi.hoursAgo.one', 'wifi.hoursAgo.other');
+    return value === undefined
+      ? `${when}: ${this.i18n.t('wifi.notRead')}`
+      : `${when}: ${this.i18n.t('wifi.likeNow', { percent: Math.round(value) })}`;
   }
 }

@@ -165,6 +165,14 @@ function read(device: string, hoursAgo: number): boolean {
   return true;
 }
 
+/**
+ * Where a device is in the hour hoursAgo, as the device whose spot it hears the networks from:
+ * the Windows laptop was carried to the garden shed six to eight hours ago.
+ */
+function spot(device: string, hoursAgo: number): string {
+  return device === LAPTOP && hoursAgo >= 6 && hoursAgo <= 8 ? SHED : device;
+}
+
 /** What GET /api/wifi answers in the demo, from `from` to `to` in Unix seconds, as a hub keeps it. */
 export function demoWifi(from: number, to: number): WiFiHistory {
   const step = Math.max(1, Math.ceil((to - from) / 200 / 3600)) * 3600;
@@ -176,9 +184,11 @@ export function demoWifi(from: number, to: number): WiFiHistory {
   }
   const hoursAgo = (t: number) => Math.round((now - t) / 3600);
   const accessPoints: WiFiAccessPoint[] = RADIOS.map((radio, r) => {
-    const seenBy = Object.entries(radio.signals).flatMap(([device, base], d) => {
+    const seenBy = devices.flatMap((device, d) => {
       const points = times.flatMap((time): WiFiPoint[] => {
-        if (!read(device, hoursAgo(time))) return [];
+        const at = spot(device, hoursAgo(time));
+        const base = radio.signals[at];
+        if (base === undefined || !read(device, hoursAgo(time))) return [];
         const seed = r * 31 + d * 7;
         // A weak network drops out now and then.
         if (base < 30 && drift(time, 7200, seed + 500) > 0.6) return [];
@@ -188,7 +198,7 @@ export function demoWifi(from: number, to: number): WiFiHistory {
           {
             time,
             seen,
-            connected: radio.connected?.includes(device) ? seen : undefined,
+            connected: radio.connected?.includes(at) ? seen : undefined,
             signalPercent: signal,
             minPercent: Math.max(1, signal - 5),
             maxPercent: Math.min(100, signal + 5),
