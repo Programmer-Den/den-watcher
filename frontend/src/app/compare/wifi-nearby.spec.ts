@@ -159,6 +159,14 @@ describe('WifiNearby', () => {
     ]);
   });
 
+  it('shows what changed in the networks', () => {
+    answer();
+    show(4);
+    expect(rows()).toEqual([
+      ['This hour', 'New network Vodafone Hotspot on channel 36.', 'Laptop'],
+    ]);
+  });
+
   it('shows how alike the devices hear the networks', () => {
     answer();
     const element = show(3);

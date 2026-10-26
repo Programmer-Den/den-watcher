@@ -35,6 +35,8 @@ export interface WiFiPoint {
   minPercent: number;
   maxPercent: number;
   signalDBm?: number;
+  /** The frequency it sent on in the step, the highest where it changed within it. */
+  frequencyMHz?: number;
 }
 
 /** How good a signal is, for its color: from 75 %, 55 %, 35 % and 20 % on, and below. */
@@ -419,5 +421,149 @@ export function sameSpot(history: WiFiHistory, device: string): (number | undefi
   );
   return stepTimes(history).map((t) =>
     read.has(t) ? (likeness(now, signalsOf(history, device, t)) ?? 100) : undefined,
+  );
+}
+
+/** What can change in the networks nearby. */
+export type WiFiChangeKind = 'lookalike' | 'newAccessPoint' | 'channel' | 'appeared' | 'gone';
+
+/** A change in the networks nearby. */
+export interface WiFiChange {
+  kind: WiFiChangeKind;
+  /** The start of the step it happened in: for one that is gone, the step it was seen in last. */
+  time: number;
+  ssid: string;
+  /** The devices that saw it then, the one that heard it strongest first. */
+  devices: string[];
+  security?: string;
+  frequencyMHz?: number;
+  /** For a change of channel, the frequency before. */
+  fromMHz?: number;
+}
+
+/** A network name as lookalikes are compared: without case, spaces, hyphens and underscores. */
+export function foldSSID(ssid: string): string {
+  return ssid.toLowerCase().replace(/[ _-]/g, '');
+}
+
+/** Whether two securities, such as "WPA2/WPA3" and "WPA2", have a kind in common. */
+function sharesSecurity(a: string, b: string): boolean {
+  const kinds = b.split('/');
+  return a.split('/').some((kind) => kinds.includes(kind));
+}
+
+/** The devices that saw access points in the step at time, or at all without one, strongest first. */
+function seers(aps: WiFiAccessPoint[], time?: number): string[] {
+  const strongest = new Map<string, number>();
+  for (const ap of aps) {
+    for (const s of ap.seenBy) {
+      for (const p of s.points) {
+        if (time === undefined || p.time === time) {
+          strongest.set(s.device, Math.max(strongest.get(s.device) ?? 0, p.signalPercent));
+        }
+      }
+    }
+  }
+  return [...strongest].sort((a, b) => b[1] - a[1]).map(([device]) => device);
+}
+
+/** The order changes of one step are told in: the most serious first. */
+const CHANGE_ORDER: WiFiChangeKind[] = [
+  'lookalike',
+  'newAccessPoint',
+  'channel',
+  'appeared',
+  'gone',
+];
+
+/**
+ * What changed in the networks nearby over the history, newest first:
+ * - a router not of the home network (none of the devices was connected to it) that sends a
+ *   network named like it (see foldSSID): with no kind of security in common, a lookalike, which
+ *   may be a copy set up to catch passwords, else, under the very name, a new access point of it;
+ * - a router of the home network that moved to another channel;
+ * - a network that appeared after the first step, and one no device saw lately (see recentSince).
+ * Hidden networks are left out, as their name is not known.
+ */
+export function wifiChanges(history: WiFiHistory): WiFiChange[] {
+  const start = stepTimes(history)[0];
+  const since = recentSince(history);
+  const home = homeNetwork(history);
+  const named = new Map<string, WiFiAccessPoint[]>();
+  for (const ap of history.accessPoints) {
+    if (ap.ssid) named.set(ap.ssid, [...(named.get(ap.ssid) ?? []), ap]);
+  }
+  const homeAPs = (home && named.get(home)) || [];
+  const homeBoxes = new Set(
+    homeAPs
+      .filter((ap) => ap.seenBy.some((s) => s.points.some((p) => p.connected)))
+      .map((ap) => ap.box),
+  );
+  const homeSecurity = homeAPs.find((ap) => homeBoxes.has(ap.box))?.security;
+  const changes: WiFiChange[] = [];
+  for (const [ssid, aps] of named) {
+    if (home && foldSSID(ssid) === foldSSID(home)) {
+      const boxes = new Map<string, WiFiAccessPoint[]>();
+      for (const ap of aps.filter((ap) => !homeBoxes.has(ap.box))) {
+        boxes.set(ap.box, [...(boxes.get(ap.box) ?? []), ap]);
+      }
+      for (const radios of boxes.values()) {
+        const first = radios.reduce((a, b) => (b.firstSeen < a.firstSeen ? b : a));
+        const other =
+          !!first.security && !!homeSecurity && !sharesSecurity(first.security, homeSecurity);
+        if (other || (ssid === home && first.firstSeen > start)) {
+          changes.push({
+            kind: other ? 'lookalike' : 'newAccessPoint',
+            time: first.firstSeen,
+            ssid,
+            devices: seers(radios),
+            security: first.security,
+            frequencyMHz: first.frequencyMHz,
+          });
+        }
+      }
+      continue;
+    }
+    const first = aps.reduce((a, b) => (b.firstSeen < a.firstSeen ? b : a));
+    const last = Math.max(...aps.map((ap) => ap.lastSeen));
+    if (first.firstSeen > start) {
+      changes.push({
+        kind: 'appeared',
+        time: first.firstSeen,
+        ssid,
+        devices: seers(aps, first.firstSeen),
+        security: first.security,
+        frequencyMHz: first.frequencyMHz,
+      });
+    }
+    if (last < since) {
+      changes.push({ kind: 'gone', time: last, ssid, devices: seers(aps, last) });
+    }
+  }
+  for (const ap of homeAPs.filter((ap) => homeBoxes.has(ap.box))) {
+    const frequencies = new Map<number, number>();
+    for (const s of ap.seenBy) {
+      for (const p of s.points) {
+        if (p.frequencyMHz)
+          frequencies.set(p.time, Math.max(frequencies.get(p.time) ?? 0, p.frequencyMHz));
+      }
+    }
+    let before: number | undefined;
+    for (const [time, mhz] of [...frequencies].sort((a, b) => a[0] - b[0])) {
+      if (before !== undefined && mhz !== before) {
+        changes.push({
+          kind: 'channel',
+          time,
+          ssid: ap.ssid!,
+          devices: seers([ap], time),
+          frequencyMHz: mhz,
+          fromMHz: before,
+        });
+      }
+      before = mhz;
+    }
+  }
+  return changes.sort(
+    (a, b) => b.time - a.time || CHANGE_ORDER.indexOf(a.kind) - CHANGE_ORDER.indexOf(b.kind),
   );
 }

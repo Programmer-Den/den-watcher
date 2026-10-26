@@ -284,6 +284,10 @@ type WiFiPoint struct {
 	MinPercent    float64  `json:"minPercent"`
 	MaxPercent    float64  `json:"maxPercent"`
 	SignalDBm     *float64 `json:"signalDBm,omitempty"`
+	// FrequencyMHz is the frequency it sent on in the step, the highest
+	// where it changed within it, so a router that moves to another
+	// channel shows when.
+	FrequencyMHz int `json:"frequencyMHz,omitempty"`
 }
 
 // WiFi returns what the devices' Wi-Fi saw from from up to (not including)
@@ -341,7 +345,7 @@ func (s *Store) WiFi(ctx context.Context, from, to time.Time, step time.Duration
 
 	rows, err = s.db.QueryContext(ctx, `
 		SELECT ap, device, time / ?1 * ?1 AS step, SUM(seen), SUM(connected), SUM(signal_sum),
-			MIN(signal_min), MAX(signal_max), SUM(dbm_sum), SUM(dbm_count) FROM wifi_hours
+			MIN(signal_min), MAX(signal_max), SUM(dbm_sum), SUM(dbm_count), MAX(frequency) FROM wifi_hours
 		WHERE time >= ?2 AND time < ?3 GROUP BY ap, device, step ORDER BY ap, device, step`, stepSeconds, first, last)
 	if err != nil {
 		return WiFiHistory{}, err
@@ -351,7 +355,7 @@ func (s *Store) WiFi(ctx context.Context, from, to time.Time, step time.Duration
 		var p WiFiPoint
 		var signalSum, dBmSum float64
 		var dBmCount int64
-		if err := rows.Scan(&id, &device, &p.Time, &p.Seen, &p.Connected, &signalSum, &p.MinPercent, &p.MaxPercent, &dBmSum, &dBmCount); err != nil {
+		if err := rows.Scan(&id, &device, &p.Time, &p.Seen, &p.Connected, &signalSum, &p.MinPercent, &p.MaxPercent, &dBmSum, &dBmCount, &p.FrequencyMHz); err != nil {
 			return err
 		}
 		i, ok := index[id]

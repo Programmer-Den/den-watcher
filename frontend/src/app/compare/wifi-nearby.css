@@ -236,3 +236,24 @@ h3 {
   margin: 0 0 0.75rem;
   font: var(--mat-sys-title-small);
 }
+
+/* A change is told in a sentence, with what it may mean under it, so it wraps. */
+.changes .what {
+  min-width: 18rem;
+  white-space: normal;
+}
+
+.more {
+  display: block;
+  margin-top: 0.125rem;
+  font: var(--mat-sys-body-small);
+}
+
+.badge.warning {
+  border-color: var(--mat-sys-error);
+  color: var(--mat-sys-error);
+}
+
+.changes tbody th {
+  vertical-align: top;
+}

@@ -513,6 +513,28 @@ export const en = {
   'wifi.sameSpot': 'At this spot, last 24 hours',
   'wifi.likeNow': '{percent} % like now',
   'wifi.spotLegend': 'Green: where it is now; red: somewhere else; gaps: off or away.',
+  'wifi.changes': 'Changes',
+  'wifi.changesIntro':
+    'What changed in the networks the devices hear over the last day, newest first.',
+  'wifi.when': 'When',
+  'wifi.what': 'What',
+  'wifi.warning': 'warning',
+  'wifi.allDevices': 'all {count}',
+  'wifi.noChanges': 'Nothing changed in the last day.',
+  'wifi.change.lookalike':
+    'A second {network} appeared, secured with {security}, on channel {channel}.',
+  'wifi.change.lookalikeOpen':
+    'A second {network} appeared, open, without a password, on channel {channel}.',
+  'wifi.change.lookalikeDetail':
+    'Your routers send {network} with other security. It may be a copy set up to catch passwords.',
+  'wifi.change.newAccessPoint': 'A new access point of {network} appeared on channel {channel}.',
+  'wifi.change.newAccessPointDetail':
+    'Secured like your network: a new router of yours, or a copy that knows the password.',
+  'wifi.change.channel': '{network} on {band} moved from channel {from} to channel {channel}.',
+  'wifi.change.channelDetail':
+    'The devices saw it at the same time, so the router did it, likely by its automatic channel choice.',
+  'wifi.change.appeared': 'New network {network} on channel {channel}.',
+  'wifi.change.gone': '{network} was seen for the last time.',
   'system.model': 'Model',
   'system.os': 'Operating system',
   'system.kernel': 'Kernel',

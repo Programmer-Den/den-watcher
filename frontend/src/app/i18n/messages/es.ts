@@ -519,6 +519,29 @@ export const es: Messages = {
   'wifi.sameSpot': 'En este sitio, últimas 24 horas',
   'wifi.likeNow': '{percent} % como ahora',
   'wifi.spotLegend': 'Verde: donde está ahora; rojo: en otro sitio; huecos: apagado o fuera.',
+  'wifi.changes': 'Cambios',
+  'wifi.changesIntro':
+    'Qué cambió en las redes que oyen los dispositivos en el último día, lo más reciente primero.',
+  'wifi.when': 'Cuándo',
+  'wifi.what': 'Qué',
+  'wifi.warning': 'aviso',
+  'wifi.allDevices': 'los {count}',
+  'wifi.noChanges': 'Nada cambió en el último día.',
+  'wifi.change.lookalike':
+    'Apareció una segunda {network}, protegida con {security}, en el canal {channel}.',
+  'wifi.change.lookalikeOpen':
+    'Apareció una segunda {network}, abierta, sin contraseña, en el canal {channel}.',
+  'wifi.change.lookalikeDetail':
+    'Tus routers emiten {network} con otra seguridad. Puede ser una copia hecha para robar contraseñas.',
+  'wifi.change.newAccessPoint':
+    'Apareció un nuevo punto de acceso de {network} en el canal {channel}.',
+  'wifi.change.newAccessPointDetail':
+    'Protegido como tu red: un router nuevo tuyo, o una copia que conoce la contraseña.',
+  'wifi.change.channel': '{network} en {band} pasó del canal {from} al canal {channel}.',
+  'wifi.change.channelDetail':
+    'Los dispositivos lo vieron a la vez, así que fue el router, seguramente por su elección automática de canal.',
+  'wifi.change.appeared': 'Nueva red {network} en el canal {channel}.',
+  'wifi.change.gone': '{network} se vio por última vez.',
   'system.model': 'Modelo',
   'system.os': 'Sistema operativo',
   'system.kernel': 'Kernel',
