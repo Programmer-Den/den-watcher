@@ -2,22 +2,23 @@ package hub
 
 import (
 	"context"
+	"net"
 	"slices"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/history"
-
 	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // fakeMesh is a main router that reports the nodes it is given, each of
 // which answers.
 type fakeMesh struct {
-	mu    sync.Mutex
-	nodes []MeshNode
-	fresh bool
+	mu     sync.Mutex
+	nodes  []MeshNode
+	radios []string
+	fresh  bool
 }
 
 func (f *fakeMesh) MeshNodes() ([]MeshNode, bool) {
@@ -28,6 +29,10 @@ func (f *fakeMesh) MeshNodes() ([]MeshNode, bool) {
 
 func (f *fakeMesh) Node(key string) Usage {
 	return nodeUsage(key)
+}
+
+func (f *fakeMesh) Radios() []string {
+	return f.radios
 }
 
 // nodeUsage reads a node, which tells its key.
@@ -103,6 +108,35 @@ func TestTheNodesOfAMeshAreDevices(t *testing.T) {
 	var kept int
 	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(*) FROM hub_kept WHERE device = 'main-router-aimesh'`).Scan(&kept); err != nil || kept != 1 {
 		t.Errorf("the node that left is kept %d times, %v", kept, err)
+	}
+}
+
+func TestTheAccessPointsOfAMeshAreNamedAfterItsDevices(t *testing.T) {
+	ctx := context.Background()
+	mesh := &fakeMesh{fresh: true, radios: []string{"AA:00:00:00:00:21", "not an address"}, nodes: []MeshNode{
+		{Key: "AA:00:00:00:00:02", Name: "Living room", Radios: []string{"AA:11:22:33:44:12", "AA:11:22:33:44:15"}},
+	}}
+	router := meshRouter(t, mesh)
+	h := openTestHub(t, openTestStore(t), []Device{router})
+	// A node without a device yet has no access points named after it.
+	boxes, err := h.RouterBoxes(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	own, _ := net.ParseMAC("AA:00:00:00:00:21")
+	if len(boxes) != 1 || boxes[metrics.AccessPointID(own, true)] != router.ID {
+		t.Errorf("boxes before the node is a device %v", boxes)
+	}
+	if err := h.syncMesh(ctx, router, map[string]time.Time{}, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if boxes, err = h.RouterBoxes(ctx); err != nil {
+		t.Fatal(err)
+	}
+	// Both radios of the node are one box.
+	node, _ := net.ParseMAC("AA:11:22:33:44:15")
+	if len(boxes) != 2 || boxes[metrics.AccessPointID(node, true)] != "living-room" {
+		t.Errorf("boxes %v", boxes)
 	}
 }
 

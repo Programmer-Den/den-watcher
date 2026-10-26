@@ -3,9 +3,13 @@ package hub
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log/slog"
+	"net"
 	"strings"
 	"time"
+
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 // MeshNode is a router that a main router reports as part of its mesh,
@@ -19,6 +23,8 @@ type MeshNode struct {
 	Name string
 	// Address is the node's IP address, shown with the device.
 	Address string
+	// Radios are the hardware addresses of the node's access points.
+	Radios []string
 }
 
 // Mesh is a main router that reports the other routers of its mesh.
@@ -29,6 +35,9 @@ type Mesh interface {
 	// Node returns the reader of the node with key, which fails while the
 	// main router does not report it online.
 	Node(key string) Usage
+	// Radios returns the hardware addresses of the main router's own access
+	// points.
+	Radios() []string
 }
 
 // meshSchema keeps the nodes of each mesh the hub shows as devices, so they
@@ -239,4 +248,40 @@ func (h *Hub) nodeTaken(id string) bool {
 	var taken bool
 	err := h.store.DB().QueryRowContext(h.ctx, `SELECT EXISTS (SELECT 1 FROM hub_mesh_nodes WHERE device = ?1) OR EXISTS (SELECT 1 FROM hub_devices WHERE id = ?1)`, id).Scan(&taken)
 	return err != nil || taken
+}
+
+// RouterBoxes maps the box of each access point of the meshes (see
+// metrics.AccessPointID) to the device it is part of: the main router's
+// own to the main router, and a node's to the node's device, so the page
+// can name the access points of the home network after them.
+func (h *Hub) RouterBoxes(ctx context.Context) (map[string]string, error) {
+	boxes := map[string]string{}
+	add := func(device string, radios []string) {
+		for _, radio := range radios {
+			if address, err := net.ParseMAC(radio); err == nil {
+				if box := metrics.AccessPointID(address, true); box != "" {
+					boxes[box] = device
+				}
+			}
+		}
+	}
+	for _, router := range h.Remotes() {
+		if router.Mesh == nil {
+			continue
+		}
+		add(router.ID, router.Mesh.Radios())
+		nodes, _ := router.Mesh.MeshNodes()
+		for _, node := range nodes {
+			var device string
+			err := h.store.DB().QueryRowContext(ctx, `SELECT device FROM hub_mesh_nodes WHERE router = ? AND node = ?`, router.ID, node.Key).Scan(&device)
+			if errors.Is(err, sql.ErrNoRows) {
+				continue
+			}
+			if err != nil {
+				return nil, err
+			}
+			add(device, node.Radios)
+		}
+	}
+	return boxes, nil
 }

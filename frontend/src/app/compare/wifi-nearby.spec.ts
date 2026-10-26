@@ -34,8 +34,11 @@ describe('WifiNearby', () => {
     vi.useRealTimers();
   });
 
-  /** Answers the read with the hub and the laptop seeing two radios of Den and a neighbour. */
-  function answer(): void {
+  /**
+   * Answers the read with the hub and the laptop seeing two radios of Den and a neighbour, and the
+   * routers that are devices.
+   */
+  function answer(routers?: Record<string, string>): void {
     const request = http.expectOne((r) => r.url === '/api/wifi');
     const to = Number(request.request.params.get('to'));
     const hour = Math.floor(to / HOUR) * HOUR;
@@ -80,6 +83,7 @@ describe('WifiNearby', () => {
         ap('a2', 'Den', { local: 58 }, [], 2437),
         ap('n1', 'Vodafone Hotspot', { laptop: 34 }),
       ],
+      routers,
     };
     request.flush(answer);
     fixture.detectChanges();
@@ -121,6 +125,15 @@ describe('WifiNearby', () => {
     expect(rows().map((r) => r.slice(0, 5))).toEqual([
       ['Hub', 'Access point 1 · near Laptop', '5 GHz', '64 %', '–'],
       ['Laptop', 'Access point 1 · near Laptop · connected', '5 GHz', '98 %', '–'],
+    ]);
+  });
+
+  it('names an access point after the device it is', () => {
+    answer({ b1: 'nas' });
+    show(1);
+    expect(rows().map((r) => r.slice(0, 2))).toEqual([
+      ['Hub', 'NAS'],
+      ['Laptop', 'NAS · connected'],
     ]);
   });
 

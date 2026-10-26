@@ -151,6 +151,13 @@ describe('networkBoxes', () => {
       { box: 'b2', number: 2, nearest: 'pc' },
     ]);
   });
+
+  it('tells which router is a device', () => {
+    const h = { ...history([ap('a1', 'b1', 'Den', { pc: 70 })]), routers: { b1: 'node' } };
+    expect(networkBoxes(h, 'Den')).toEqual([
+      { box: 'b1', number: 1, nearest: 'pc', router: 'node' },
+    ]);
+  });
 });
 
 describe('homeRows', () => {

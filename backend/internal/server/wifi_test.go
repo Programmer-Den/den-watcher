@@ -22,9 +22,16 @@ func (f *fakeWiFi) WiFi(_ context.Context, from, to time.Time, step time.Duratio
 	return history.WiFiHistory{StepSeconds: 3600, Devices: []history.WiFiDevice{}, AccessPoints: []history.WiFiAccessPoint{{ID: "0000000000aa", SSID: "Den"}}}, nil
 }
 
+// fakeRouters tells that one box is a device.
+type fakeRouters struct{}
+
+func (fakeRouters) RouterBoxes(context.Context) (map[string]string, error) {
+	return map[string]string{"0000000000bb": "living-room"}, nil
+}
+
 func TestServesWhatTheWiFiSawWithinTheRetention(t *testing.T) {
 	source := &fakeWiFi{}
-	handler := New(Site{Devices: DeviceList(device(fakeCollector{}, nil)), Files: site, WiFi: source, Retention: 7 * 24 * time.Hour})
+	handler := New(Site{Devices: DeviceList(device(fakeCollector{}, nil)), Files: site, WiFi: source, Routers: fakeRouters{}, Retention: 7 * 24 * time.Hour})
 	now := time.Now()
 	rec := get(handler, "/api/wifi?from=0&to="+strconv.FormatInt(now.Unix(), 10), "192.168.1.20:5000")
 	if rec.Code != http.StatusOK {
@@ -34,7 +41,7 @@ func TestServesWhatTheWiFiSawWithinTheRetention(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
-	if len(got.AccessPoints) != 1 || got.AccessPoints[0].SSID != "Den" || got.StepSeconds != 3600 {
+	if len(got.AccessPoints) != 1 || got.AccessPoints[0].SSID != "Den" || got.StepSeconds != 3600 || got.Routers["0000000000bb"] != "living-room" {
 		t.Errorf("body = %+v", got)
 	}
 	if want := now.Add(-7 * 24 * time.Hour).Unix(); got.From < want-5 || source.from.Unix() != got.From {
