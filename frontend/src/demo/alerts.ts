@@ -64,6 +64,16 @@ function earlierAlerts(t: number): Alert[] {
   const at = (hoursAgo: number) => new Date((t - hoursAgo * 3600) * 1000).toISOString();
   return [
     {
+      id: 4,
+      device: 'windows-laptop',
+      deviceName: 'Windows laptop',
+      kind: 'wifi-lookalike',
+      subject: 'Den',
+      level: 'warning',
+      started: at(5.4),
+      ended: at(4.7),
+    },
+    {
       id: 3,
       device: 'windows-server',
       deviceName: 'Windows Server',

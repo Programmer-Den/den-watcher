@@ -2,8 +2,10 @@ package alerts
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
@@ -105,6 +107,7 @@ func conditions(ctx context.Context, target Target, now time.Time, levels map[st
 		list = append(list, a)
 	}
 	list = append(list, smartFailures(base, s.Extras)...)
+	list = append(list, lookalikes(base, s.WiFiNearby)...)
 	return list, true
 }
 
@@ -125,4 +128,57 @@ func smartFailures(base Alert, extras []metrics.Extra) []Alert {
 		}
 	}
 	return list
+}
+
+// lookalikes returns a warning for each network the device is connected to
+// that a router of its own sends nearby with other security: it may be a copy
+// set up to catch the passwords of the devices that join it. Names are
+// compared without case, spaces, hyphens and underscores. Security counts as
+// other only when the two have no kind in common, so a mesh router that
+// offers WPA2 next to one with WPA2/WPA3 is none, and an access point whose
+// security is unknown is left out.
+func lookalikes(base Alert, nearby *metrics.NearbyWiFi) []Alert {
+	if nearby == nil {
+		return nil
+	}
+	var list []Alert
+	for _, home := range nearby.AccessPoints {
+		if !home.Connected || home.SSID == "" || home.Security == "" {
+			continue
+		}
+		for _, other := range nearby.AccessPoints {
+			if other.Box == home.Box || other.Security == "" || foldSSID(other.SSID) != foldSSID(home.SSID) {
+				continue
+			}
+			if sharesSecurity(other.Security, home.Security) {
+				continue
+			}
+			a := base
+			a.Kind, a.Subject, a.Level = KindWiFiLookalike, home.SSID, Warning
+			list = append(list, a)
+			break
+		}
+	}
+	return list
+}
+
+// foldSSID returns a network name as lookalikes compares it.
+func foldSSID(ssid string) string {
+	return strings.Map(func(r rune) rune {
+		if r == ' ' || r == '-' || r == '_' {
+			return -1
+		}
+		return unicode.ToLower(r)
+	}, ssid)
+}
+
+// sharesSecurity reports whether two securities, such as "WPA2/WPA3" and
+// "WPA2", have a kind in common.
+func sharesSecurity(a, b string) bool {
+	for _, kind := range strings.Split(a, "/") {
+		if slices.Contains(strings.Split(b, "/"), kind) {
+			return true
+		}
+	}
+	return false
 }

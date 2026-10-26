@@ -384,6 +384,8 @@ export const de: Messages = {
   'alerts.kind.temperature': '{subject} hat {value}',
   'alerts.kind.throttling': 'Stromversorgung oder Kühlung: {subject}',
   'alerts.kind.smart': 'SMART-Prüfung von {subject} nicht bestanden',
+  'alerts.kind.wifi-lookalike':
+    'In der Nähe ist ein Netzwerk, das wie {subject} heißt, aber anders gesichert ist',
   'alerts.kind.other': 'Etwas braucht Aufmerksamkeit',
   'alerts.level.warning': 'Warnung',
   'alerts.level.alert': 'Alarm',
