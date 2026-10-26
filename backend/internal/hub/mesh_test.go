@@ -208,3 +208,69 @@ func TestTheNodesOfARouterDroppedFromTheSettingsAreForgotten(t *testing.T) {
 		t.Errorf("%d nodes kept, %v", nodes, err)
 	}
 }
+
+func TestANodeNamedLikeADeviceFromTheSettingsComesBackUnderANameOfItsOwn(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	mesh := &fakeMesh{fresh: true, nodes: []MeshNode{{Key: "AA:00:00:00:00:02", Name: "Living room", Address: "192.168.1.2"}}}
+	router := meshRouter(t, mesh)
+	h, stop := stoppedHub(t, store, []Device{router})
+	if err := h.syncMesh(ctx, router, map[string]time.Time{}, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	stop()
+
+	// HUB_CHECKS now has a device of that name.
+	check, err := NewCheck("Living room", "192.168.1.50", &fakeRouter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	router = meshRouter(t, mesh)
+	h2, _ := stoppedHub(t, store, []Device{router, check})
+	missing := map[string]time.Time{}
+	now := time.Now()
+	if err := h2.syncMesh(ctx, router, missing, now); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := names(h2), []string{"Main router", "Living room", "Living room (AiMesh)"}; !slices.Equal(got, want) {
+		t.Fatalf("devices %q, want %q", got, want)
+	}
+
+	// When the node leaves the mesh, the check stays.
+	mesh.mu.Lock()
+	mesh.nodes = nil
+	mesh.mu.Unlock()
+	for _, at := range []time.Time{now.Add(time.Minute), now.Add(time.Minute + meshGone)} {
+		if err := h2.syncMesh(ctx, router, missing, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got, want := names(h2), []string{"Main router", "Living room"}; !slices.Equal(got, want) {
+		t.Fatalf("devices %q, want %q", got, want)
+	}
+	if node := h2.find("living-room"); !node.Checked || node.Address != "192.168.1.50" {
+		t.Errorf("the check is %+v", node.Device)
+	}
+}
+
+func TestANodeKeepsItsNewAddressFromTheNextStart(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	mesh := &fakeMesh{fresh: true, nodes: []MeshNode{{Key: "AA:00:00:00:00:02", Name: "Living room", Address: "192.168.1.2"}}}
+	router := meshRouter(t, mesh)
+	h, stop := stoppedHub(t, store, []Device{router})
+	if err := h.syncMesh(ctx, router, map[string]time.Time{}, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	mesh.mu.Lock()
+	mesh.nodes[0].Address = "192.168.1.7"
+	mesh.mu.Unlock()
+	if err := h.syncMesh(ctx, router, map[string]time.Time{}, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	stop()
+	h2, _ := stoppedHub(t, store, []Device{meshRouter(t, &fakeMesh{})})
+	if node := h2.find("living-room"); node == nil || node.Address != "192.168.1.7" {
+		t.Errorf("after a restart the node is %+v, want it at its new address", node)
+	}
+}

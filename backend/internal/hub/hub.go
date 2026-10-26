@@ -219,7 +219,12 @@ func newHub(ctx context.Context, store *history.Store, fixed []Device, complete 
 	}
 	for _, device := range nodes {
 		if h.find(device.ID) != nil {
+			// The node is forgotten, so that leaving the mesh does not remove
+			// the other device, and comes back under a name of its own.
 			slog.Warn("a node of a router's mesh has the same name as a device in HUB_DEVICES, HUB_ROUTERS or HUB_CHECKS; using that one", "name", device.Name)
+			if _, err := store.DB().ExecContext(ctx, `DELETE FROM hub_mesh_nodes WHERE device = ?`, device.ID); err != nil {
+				return nil, err
+			}
 			continue
 		}
 		h.start(device, true, nil)
