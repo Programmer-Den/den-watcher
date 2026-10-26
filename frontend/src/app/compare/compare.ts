@@ -22,6 +22,7 @@ import { PageVisibility } from '../page-visibility';
 import { devicePoints } from '../history/history';
 import { Range, refreshIntervalMs } from '../history/history-store';
 import { ChartLine, ChartUnit, LineChart } from '../history/line-chart';
+import { WifiNearby } from './wifi-nearby';
 
 /** A column of the table the rows can be sorted by, largest first. */
 export type Column = 'cpu' | 'memory' | 'disk' | 'temperature' | 'network' | 'uptime' | 'alerts';
@@ -161,11 +162,12 @@ interface Histories {
 
 /**
  * Compares the devices: their main values now side by side in a table that sorts by any column,
- * and charts of the CPU, memory, fullest disk and hottest sensor with a line per device.
+ * charts of the CPU, memory, fullest disk and hottest sensor with a line per device, and the Wi-Fi
+ * networks the devices see.
  */
 @Component({
   selector: 'app-compare',
-  imports: [AlertIcon, BytesPipe, DecimalPipe, EvenColumns, LineChart, StatusDot],
+  imports: [AlertIcon, BytesPipe, DecimalPipe, EvenColumns, LineChart, StatusDot, WifiNearby],
   templateUrl: './compare.html',
   styleUrl: './compare.css',
 })

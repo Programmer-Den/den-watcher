@@ -22,6 +22,7 @@ import { DEMO_BUILD, demoVersion } from './demo-build';
 import { alertLog, fleetAlerts } from './alerts';
 import { demoEvents } from './events';
 import { DemoMachine, FLEET, extraInfoOf, offlineSince, snapshotOf } from './fleet';
+import { demoWifi } from './wifi';
 
 /** How many days of history the demo hub keeps; more than 30 shows the "All" range. */
 export const DEMO_RETENTION_DAYS = 90;
@@ -92,6 +93,11 @@ export class DemoBackend implements HttpBackend {
           ]),
         ),
       );
+    }
+    if (request.method === 'GET' && url.pathname === '/api/wifi') {
+      const to = Math.min(Number(url.searchParams.get('to')), Math.floor(now) + 1);
+      const from = Math.max(Number(url.searchParams.get('from')), to - DEMO_RETENTION_DAYS * 86400);
+      return respond(request, demoWifi(from, to));
     }
     if (request.method === 'GET' && url.pathname === '/api/devices/suggestion') {
       return respond(request, DEMO_SUGGESTION);

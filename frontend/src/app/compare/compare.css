@@ -1,5 +1,10 @@
-section + section {
+section + section,
+app-wifi-nearby + section {
   margin-top: 2rem;
+}
+
+app-wifi-nearby {
+  display: block;
 }
 
 h2 {

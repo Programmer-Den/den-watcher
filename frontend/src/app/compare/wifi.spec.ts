@@ -1,0 +1,181 @@
+import {
+  WiFiAccessPoint,
+  WiFiHistory,
+  homeNetwork,
+  homeRows,
+  networkBoxes,
+  networkRows,
+  signalLevel,
+  wifiBand,
+  wifiChannel,
+  wifiDevices,
+} from './wifi';
+
+const HOUR = 3600;
+/** The start of the newest hour of the histories below. */
+const NOW = 1000 * HOUR;
+
+/** An access point seen by the devices with the signals given, by device, in the newest hour. */
+function ap(
+  id: string,
+  box: string,
+  ssid: string | undefined,
+  signals: Record<string, number>,
+  extra: Partial<WiFiAccessPoint> = {},
+  connected: string[] = [],
+): WiFiAccessPoint {
+  return {
+    id,
+    box,
+    ssid,
+    frequencyMHz: 5180,
+    security: 'WPA2',
+    firstSeen: NOW - 2 * HOUR,
+    lastSeen: NOW,
+    seenBy: Object.entries(signals).map(([device, signalPercent]) => ({
+      device,
+      points: [
+        {
+          time: NOW,
+          seen: 10,
+          connected: connected.includes(device) ? 10 : undefined,
+          signalPercent,
+          minPercent: signalPercent,
+          maxPercent: signalPercent,
+        },
+      ],
+    })),
+    ...extra,
+  };
+}
+
+function history(accessPoints: WiFiAccessPoint[]): WiFiHistory {
+  const devices = ['hub', 'laptop', 'pc'].map((device) => ({
+    device,
+    steps: [
+      { time: NOW - HOUR, readings: device === 'pc' ? 0 : 12 },
+      { time: NOW, readings: 12 },
+    ],
+  }));
+  return { from: NOW - HOUR, to: NOW + 600, stepSeconds: HOUR, devices, accessPoints };
+}
+
+describe('signalLevel', () => {
+  it('rates a signal in five steps', () => {
+    expect([90, 75, 60, 40, 25, 10].map(signalLevel)).toEqual([
+      'great',
+      'great',
+      'good',
+      'fair',
+      'weak',
+      'poor',
+    ]);
+  });
+});
+
+describe('wifiChannel and wifiBand', () => {
+  it('follow from the frequency', () => {
+    expect([2412, 2484, 5180, 5955, 6115].map(wifiChannel)).toEqual([1, 14, 36, 1, 33]);
+    expect([2437, 5500, 6115, 60000].map(wifiBand)).toEqual([2.4, 5, 6, undefined]);
+  });
+});
+
+describe('homeNetwork', () => {
+  it('is the name the devices were connected to most', () => {
+    const h = history([
+      ap('a1', 'b1', 'Den', { hub: 60, laptop: 90 }, {}, ['hub', 'laptop']),
+      ap('g1', 'b1', 'Den-Guest', { pc: 50 }, {}, ['pc']),
+    ]);
+    expect(homeNetwork(h)).toBe('Den');
+    expect(homeNetwork(history([ap('a1', 'b1', 'Den', { hub: 60 })]))).toBeUndefined();
+  });
+});
+
+describe('networkRows', () => {
+  it("puts the home network first, then those more devices see, each with its devices' strongest signal", () => {
+    const rows = networkRows(
+      history([
+        ap('n1', 'nb', 'Neighbour', { hub: 30, laptop: 20, pc: 25 }, { security: 'Open' }),
+        ap('a1', 'b1', 'Den', { hub: 60 }, { frequencyMHz: 2437 }, ['hub']),
+        ap('a2', 'b1', 'Den', { hub: 40, laptop: 95 }),
+        ap('h1', 'hb', undefined, { hub: 80 }),
+        ap('p1', 'pb', 'Printer', { laptop: 45 }),
+      ]),
+    );
+    expect(rows.map((r) => [r.ssid, r.home, [...r.signals]])).toEqual([
+      [
+        'Den',
+        true,
+        [
+          ['hub', 60],
+          ['laptop', 95],
+        ],
+      ],
+      [
+        'Neighbour',
+        false,
+        [
+          ['hub', 30],
+          ['laptop', 20],
+          ['pc', 25],
+        ],
+      ],
+      ['Printer', false, [['laptop', 45]]],
+    ]);
+    // The channel and security of the strongest access point.
+    expect(rows[0].frequencyMHz).toBe(5180);
+    expect(rows[1].security).toBe('Open');
+  });
+
+  it('leaves out what no device has seen lately', () => {
+    const old = ap('o1', 'ob', 'Gone', { hub: 50 });
+    old.seenBy[0].points[0].time = NOW - 5 * HOUR;
+    expect(networkRows(history([old]))).toEqual([]);
+  });
+});
+
+describe('networkBoxes', () => {
+  it('numbers the routers of a network by when they were first seen, with the device nearest each', () => {
+    const h = history([
+      ap('a1', 'b2', 'Den', { pc: 70 }, { firstSeen: NOW - HOUR }),
+      ap('a2', 'b1', 'Den', { hub: 50, laptop: 80 }),
+      ap('a3', 'b1', 'Den', { hub: 65 }, { frequencyMHz: 2437 }),
+    ]);
+    expect(networkBoxes(h, 'Den')).toEqual([
+      { box: 'b1', number: 1, nearest: 'laptop' },
+      { box: 'b2', number: 2, nearest: 'pc' },
+    ]);
+  });
+});
+
+describe('homeRows', () => {
+  it('takes the access point a device is connected to, else the one it hears best, with its last day', () => {
+    const h = history([
+      ap('a1', 'b1', 'Den', { hub: 50, laptop: 40 }, {}, ['laptop']),
+      ap('a2', 'b2', 'Den', { hub: 70, laptop: 80 }),
+      ap('n1', 'nb', 'Neighbour', { pc: 90 }),
+    ]);
+    const rows = homeRows(h, 'Den', ['hub', 'laptop', 'pc', 'gone']);
+    expect(
+      rows.map((r) => [r.device, r.accessPoint?.id, r.box?.number, r.signalPercent, r.connected]),
+    ).toEqual([
+      ['hub', 'a2', 2, 70, false],
+      ['laptop', 'a1', 1, 40, true],
+      ['pc', undefined, undefined, undefined, false],
+    ]);
+    // The hour before, the hub was read but did not see Den, and the PC was not read at all.
+    expect(rows.map((r) => r.steps)).toEqual([
+      [null, 70],
+      [null, 80],
+      [undefined, null],
+    ]);
+  });
+});
+
+describe('wifiDevices', () => {
+  it('keeps the devices whose Wi-Fi was read, in the order given', () => {
+    const h = history([]);
+    h.devices.push({ device: 'off', steps: [{ time: NOW, readings: 0 }] });
+    expect(wifiDevices(h, ['pc', 'off', 'other', 'hub'])).toEqual(['pc', 'hub']);
+  });
+});
