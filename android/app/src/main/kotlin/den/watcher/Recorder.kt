@@ -13,12 +13,6 @@ object Recorder {
     /** The most pushes in a row, enough for a week of minutes. */
     private const val MAX_PUSHES = 100
 
-    /**
-     * How long the hub's address and recording stay unlocked once the hub
-     * allowed it, as long as the hub allows it after its owner's tap.
-     */
-    private const val RELEASE_SECONDS = 10 * 60L
-
     @Synchronized
     fun recordAndPush(context: Context) {
         val app = context.applicationContext
@@ -46,7 +40,8 @@ object Recorder {
         repeat(MAX_PUSHES) {
             val now = System.currentTimeMillis() / 1000
             val minutes = Push.fit(store.minutes(now))
-            when (val answer = Hub.push(url, settings.code, Push.body(now, newest, minutes))) {
+            val needKey = settings.hubKey.isEmpty()
+            when (val answer = Hub.push(url, settings.code, Push.body(now, newest, minutes, needKey))) {
                 is Hub.Answer.Failed -> {
                     settings.problem = answer.problem
                     return
@@ -55,8 +50,15 @@ object Recorder {
                     settings.problem = null
                     settings.lastPush = now
                     settings.paired = true
-                    if (answer.release) {
-                        settings.releasedUntil = now + RELEASE_SECONDS
+                    // A key is taken only while the app has none, so another
+                    // server at the hub's address cannot give its own.
+                    if (needKey && Release.isKey(answer.key)) {
+                        settings.hubKey = answer.key
+                    }
+                    if (answer.releaseSeconds > 0 &&
+                        Release.proves(settings.hubKey, now, answer.releaseSeconds, answer.releaseProof)
+                    ) {
+                        settings.releasedUntil = now + minOf(answer.releaseSeconds, Release.MAX_SECONDS)
                     }
                     if (newest != null) {
                         checkNetwork(context, settings)

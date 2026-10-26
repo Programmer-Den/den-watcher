@@ -3,6 +3,7 @@ package hub
 import (
 	"context"
 	"crypto/subtle"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -46,6 +47,9 @@ type Push struct {
 	Minutes []history.Minute `json:"minutes"`
 	// Extras describes the extras among the minutes, as in a MinutesAnswer.
 	Extras map[string]history.ExtraInfo `json:"extras,omitempty"`
+	// NeedKey is set by an app that has no key of the hub yet, which the
+	// answer then gives it.
+	NeedKey bool `json:"needKey,omitempty"`
 }
 
 // ReleaseTime is how long a phone may change its hub once the hub's owner
@@ -59,8 +63,17 @@ type PushAnswer struct {
 	After int64 `json:"after"`
 	// Release is set while the phone may change its hub. Its app keeps the
 	// hub's address and recording locked once the hub took a push, until a
-	// push is answered with it.
+	// push is answered with it and a ReleaseProof it checks with its key.
 	Release bool `json:"release,omitempty"`
+	// ReleaseSeconds is how much longer the phone may change its hub, which
+	// the app counts on its own clock.
+	ReleaseSeconds int64 `json:"releaseSeconds,omitempty"`
+	// ReleaseProof proves the release with the phone's key, for the push's
+	// Now and ReleaseSeconds (see releaseProof).
+	ReleaseProof string `json:"releaseProof,omitempty"`
+	// Key is the phone's key in hex, given when the push asked for it (see
+	// Push.NeedKey). The app takes it only while it has none.
+	Key string `json:"key,omitempty"`
 }
 
 // ErrUnknownPhone is a push with a code no phone added on the hub has.
@@ -178,12 +191,24 @@ func (h *Hub) Receive(ctx context.Context, code string, push Push) (PushAnswer, 
 	if remote == nil {
 		return PushAnswer{}, ErrUnknownPhone
 	}
-	return remote.phone.receive(ctx, push, time.Now())
+	key := phoneKey(h.phoneSecret, pairing.Normalize(code))
+	answer, err := remote.phone.receive(ctx, push, time.Now(), key)
+	if err == nil && push.NeedKey {
+		give, err := giveKey(context.WithoutCancel(ctx), h.store.DB(), key)
+		if err != nil {
+			return PushAnswer{}, err
+		}
+		if give {
+			answer.Key = hex.EncodeToString(key)
+		}
+	}
+	return answer, err
 }
 
 // receive keeps the reading of a push, received at now, and stores its
-// minutes, unless the phone was removed since it was found.
-func (p *phone) receive(ctx context.Context, push Push, now time.Time) (PushAnswer, error) {
+// minutes, unless the phone was removed since it was found. key is the
+// phone's key, which proves a release.
+func (p *phone) receive(ctx context.Context, push Push, now time.Time, key []byte) (PushAnswer, error) {
 	p.pushing.Lock()
 	defer p.pushing.Unlock()
 	// Its minutes would outlast its deleted history.
@@ -200,7 +225,14 @@ func (p *phone) receive(ctx context.Context, push Push, now time.Time) (PushAnsw
 		p.mu.Unlock()
 	}
 	after, err := p.minutes.receive(ctx, MinutesAnswer{Now: push.Now, Minutes: push.Minutes, Extras: push.Extras}, now)
-	return PushAnswer{After: after, Release: !p.released(now).IsZero()}, err
+	answer := PushAnswer{After: after}
+	if until := p.released(now); !until.IsZero() {
+		// Rounded up, so the last moments are not lost to the rounding.
+		answer.Release = true
+		answer.ReleaseSeconds = int64((until.Sub(now) + time.Second - 1) / time.Second)
+		answer.ReleaseProof = releaseProof(key, push.Now, answer.ReleaseSeconds)
+	}
+	return answer, err
 }
 
 // ReleasePhone lets the phone with the id change its hub for ReleaseTime,
@@ -215,6 +247,9 @@ func (h *Hub) ReleasePhone(id string) (time.Time, error) {
 	}
 	if remote.phone == nil {
 		return time.Time{}, &InputError{Problem: ProblemKind, Message: "only a phone keeps its hub locked; other devices are added to another hub there"}
+	}
+	if err := regiveKey(h.ctx, h.store.DB(), phoneKey(h.phoneSecret, remote.Agent.pairingCode())); err != nil {
+		return time.Time{}, err
 	}
 	now := time.Now()
 	remote.phone.mu.Lock()

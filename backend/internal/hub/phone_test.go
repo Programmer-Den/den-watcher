@@ -2,6 +2,7 @@ package hub
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"slices"
 	"testing"
@@ -193,8 +194,20 @@ func TestAReleasedPhoneIsToldItMayChangeItsHub(t *testing.T) {
 		}
 	}
 	// Once the time is over, the phone is told no more.
-	if answer, err := remote.phone.receive(ctx, push, until); err != nil || answer.Release {
+	if answer, err := remote.phone.receive(ctx, push, until, nil); err != nil || answer.Release {
 		t.Errorf("receive() at the end of the release = %+v, %v; want none", answer, err)
+	}
+
+	// The release comes with the seconds left and a proof of the phone's
+	// key for this push.
+	answer, err := h.Receive(ctx, "7KQM-X2RP", push)
+	key := phoneKey(h.phoneSecret, "7KQMX2RP")
+	if err != nil || answer.ReleaseSeconds <= 0 || answer.ReleaseSeconds > int64(ReleaseTime/time.Second) ||
+		answer.ReleaseProof != releaseProof(key, push.Now, answer.ReleaseSeconds) {
+		t.Errorf("Receive() after the release = %+v, %v; want the seconds left and their proof", answer, err)
+	}
+	if answer.ReleaseProof == releaseProof(key, push.Now+1, answer.ReleaseSeconds) {
+		t.Error("the proof is the same for another push")
 	}
 
 	if _, err := h.ReleasePhone("nas"); problemOf(err) != ProblemKind {
@@ -261,10 +274,52 @@ func TestNoPushIsTakenWithoutACodeOrAfterTheRemoval(t *testing.T) {
 		t.Fatalf("waitRemoved() error = %v", err)
 	}
 	push := Push{Now: time.Now().Unix(), Minutes: []history.Minute{memoryMinute(time.Now().Add(-time.Minute), 40)}}
-	if _, err := remote.phone.receive(ctx, push, time.Now()); !errors.Is(err, ErrUnknownPhone) {
+	if _, err := remote.phone.receive(ctx, push, time.Now(), nil); !errors.Is(err, ErrUnknownPhone) {
 		t.Errorf("receive() after the removal error = %v, want %v", err, ErrUnknownPhone)
 	}
 	if got := pushedMinutes(t, store, "pixel"); len(got) != 0 {
 		t.Errorf("minutes of the removed phone = %v, want none", got)
+	}
+}
+
+func TestAPhoneIsGivenItsKeyOnce(t *testing.T) {
+	ctx := context.Background()
+	h := openTestHub(t, openTestStore(t), nil)
+	if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+		t.Fatalf("AddPhone() error = %v", err)
+	}
+	want := hex.EncodeToString(phoneKey(h.phoneSecret, "7KQMX2RP"))
+	push := Push{Now: time.Now().Unix(), NeedKey: true}
+	if answer, err := h.Receive(ctx, "7kqm x2rp", push); err != nil || answer.Key != want {
+		t.Fatalf("the first push asking for the key = %+v, %v; want the key", answer, err)
+	}
+	// Whoever has the phone sees its code, and could ask with it.
+	if answer, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil || answer.Key != "" {
+		t.Errorf("a second push asking for the key = %+v, %v; want none", answer, err)
+	}
+	if answer, err := h.Receive(ctx, "7KQM-X2RP", Push{Now: time.Now().Unix()}); err != nil || answer.Key != "" {
+		t.Errorf("a push not asking for the key = %+v, %v; want none", answer, err)
+	}
+	// Once its owner allows a change, the phone may get it again, as when the
+	// answer that gave it was lost.
+	if _, err := h.ReleasePhone("pixel"); err != nil {
+		t.Fatalf("ReleasePhone() error = %v", err)
+	}
+	if answer, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil || answer.Key != want {
+		t.Errorf("a push asking for the key after the release = %+v, %v; want the key", answer, err)
+	}
+	if other := phoneKey(h.phoneSecret, "AAAABBBB"); hex.EncodeToString(other) == want {
+		t.Error("two phones have the same key")
+	}
+}
+
+func TestReleaseProofMatchesTheApp(t *testing.T) {
+	key := make([]byte, 32)
+	for i := range key {
+		key[i] = byte(i)
+	}
+	// The same as in the app's ReleaseTest.
+	if got, want := releaseProof(key, 1_700_000_000, 600), "8631e5128a994884b4c4b87819685519a205cbe96828ac878a5662eb799b1660"; got != want {
+		t.Errorf("releaseProof() = %s, want %s", got, want)
 	}
 }

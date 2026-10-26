@@ -41,6 +41,8 @@ Every device with a website keeps its history in one SQLite file. A hub keeps th
 | `hub_pairing_codes` | per other device that was given one on the hub: `device`, `code`, the pairing code the hub sends it, or the one a phone sends the hub | as long as the device is collected from, or kept with its history |
 | `hub_watched` | per other device, since when the hub collects from it | as long as the device is collected from, or kept with its history |
 | `hub_outages` | per other device, every time it did not answer: `started`, `ended` (Unix milliseconds) | as long as the device is collected from, or kept with its history |
+| `hub_phone_secret` | the secret the hub makes each phone's key from (see [Phones](architecture.md#phones)); made at random once | for good |
+| `hub_phone_keys_given` | `key_hash`, a SHA-256 of each phone key the hub gave, as it gives each only once; deleted when the phone is allowed to change its hub | for good |
 | `hub_id` | the hub's own id, which it sends to every device, so a device that keeps its minutes for the hub tells it apart from other hubs; made at random once | for good |
 | `hub_mesh_nodes` | per node of a router's mesh (an ASUS AiMesh) that the hub shows as a device: `router` (the main router's device id), `node` (the node's hardware address), `device`, `name` and `address`, so the node keeps its device and name across restarts | as long as the main router is in `HUB_ROUTERS` and lists the node, or until the node was missing from its list for an hour |
 | `hub_device_kinds` | per other device that is a PC or laptop or a phone: `device`, `kind` (`pc` or `phone`); a device without a row is a server or IoT device | as long as the device is collected from, or kept with its history |
