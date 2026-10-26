@@ -179,22 +179,36 @@ class MainActivity : Activity() {
         val locked = settings.locked()
         address.text = settings.hubAddress.ifEmpty { getString(R.string.address_none) }
         val releasedUntil = settings.releasedUntil
+        val released = !locked && settings.paired && releasedUntil > 0
         addressHint.text = when {
             locked -> getString(R.string.address_locked)
-            settings.paired && releasedUntil > 0 -> {
+            released -> {
                 val time = DateFormat.getTimeFormat(this).format(java.util.Date(releasedUntil * 1000))
                 getString(R.string.address_released, time)
             }
             else -> getString(R.string.address_hint)
         }
-        enable(scan, !locked)
-        enable(toggle, !(recording && locked))
-    }
-
-    /** Greys out a button that cannot be used now, as the buttons have no look of their own for that. */
-    private fun enable(button: Button, enabled: Boolean) {
-        button.isEnabled = enabled
-        button.alpha = if (enabled) 1f else DISABLED_ALPHA
+        address.setCompoundDrawablesRelativeWithIntrinsicBounds(
+            when {
+                locked -> R.drawable.ic_lock
+                released -> R.drawable.ic_lock_open
+                else -> 0
+            },
+            0,
+            0,
+            0,
+        )
+        addressHint.setTextColor(getColor(if (released) R.color.waiting else R.color.on_surface_variant))
+        // Scanning is the first thing to do without a hub, and of no use while the hub locks it.
+        scan.visibility = if (locked) View.GONE else View.VISIBLE
+        if (settings.hubAddress.isEmpty()) {
+            scan.setBackgroundResource(R.drawable.button_filled)
+            scan.setTextColor(getColorStateList(R.color.button_filled_text))
+        } else {
+            scan.setBackgroundResource(R.drawable.button_outlined)
+            scan.setTextColor(getColorStateList(R.color.button_outlined_text))
+        }
+        toggle.isEnabled = !(recording && locked)
     }
 
     /** Opens the hub's page in the browser, at the address that was saved. */
@@ -228,6 +242,5 @@ class MainActivity : Activity() {
 
     private companion object {
         const val REFRESH_MILLIS = 5_000L
-        const val DISABLED_ALPHA = 0.38f
     }
 }

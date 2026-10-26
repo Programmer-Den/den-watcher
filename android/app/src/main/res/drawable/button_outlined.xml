@@ -5,7 +5,7 @@
         <shape>
             <stroke
                 android:width="1dp"
-                android:color="@color/outline" />
+                android:color="@color/button_outlined_stroke" />
             <corners android:radius="24dp" />
         </shape>
     </item>
