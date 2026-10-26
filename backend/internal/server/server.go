@@ -20,6 +20,7 @@ import (
 	"github.com/Programmer-Den/den-watcher/backend/internal/lan"
 	"github.com/Programmer-Den/den-watcher/backend/internal/layout"
 	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/places"
 	"github.com/Programmer-Den/den-watcher/backend/internal/update"
 )
 
@@ -112,6 +113,9 @@ type Site struct {
 	// Layout keeps how the page is arranged; nil leaves out GET and PUT
 	// /api/layout.
 	Layout LayoutStore
+	// Places keeps the places named on the page; nil leaves out GET and PUT
+	// /api/wifi/places.
+	Places PlaceStore
 	// Prometheus adds GET /metrics, the usage of every device for
 	// Prometheus, from PROMETHEUS.
 	Prometheus bool
@@ -141,6 +145,13 @@ type Site struct {
 type LayoutStore interface {
 	Read(ctx context.Context) (layout.Layout, error)
 	Write(ctx context.Context, l layout.Layout) error
+}
+
+// PlaceStore keeps the places named on the page, for every browser that
+// opens it. Places that are not valid are refused with a *places.InputError.
+type PlaceStore interface {
+	Read(ctx context.Context) ([]places.Place, error)
+	Write(ctx context.Context, named []places.Place) error
 }
 
 // AlertLog tells the newest alerts of every device.
@@ -211,6 +222,10 @@ func New(site Site) http.Handler {
 	if site.Layout != nil {
 		mux.HandleFunc("GET /api/layout", readLayout(site.Layout))
 		mux.HandleFunc("PUT /api/layout", writeLayout(site.Layout))
+	}
+	if site.Places != nil {
+		mux.HandleFunc("GET /api/wifi/places", readPlaces(site.Places))
+		mux.HandleFunc("PUT /api/wifi/places", writePlaces(site.Places))
 	}
 	if site.Update != nil {
 		mux.HandleFunc("GET /api/update", func(w http.ResponseWriter, _ *http.Request) {

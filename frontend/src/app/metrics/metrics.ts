@@ -1,9 +1,9 @@
 import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 import { Alert } from '../alerts/alert';
-import { WiFiHistory } from '../compare/wifi';
+import { WiFiHistory, WiFiPlace } from '../compare/wifi';
 import { LOCAL_DEVICE } from '../devices/devices';
 import { Extra, ExtraInfo } from './extras';
 import { System } from './system';
@@ -254,6 +254,18 @@ export class MetricsService {
   /** What the Wi-Fi of every device saw nearby from `from` to `to`, both Unix seconds. */
   wifi(from: number, to: number): Observable<WiFiHistory> {
     return this.http.get<WiFiHistory>('/api/wifi', { params: { from, to } });
+  }
+
+  /** The places named on the page, by what a device's Wi-Fi hears there. */
+  wifiPlaces(): Observable<WiFiPlace[]> {
+    return this.http
+      .get<{ places: WiFiPlace[] | null }>('/api/wifi/places')
+      .pipe(map((answer) => answer.places ?? []));
+  }
+
+  /** Keeps the places named on the page, in place of the ones before. */
+  saveWifiPlaces(places: WiFiPlace[]): Observable<unknown> {
+    return this.http.put('/api/wifi/places', { places });
   }
 
   /** What happened to a device from `from` to `to`, both Unix seconds. */

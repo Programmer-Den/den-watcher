@@ -520,6 +520,21 @@ export const fr: Messages = {
   'wifi.likeNow': '{percent} % comme maintenant',
   'wifi.spotLegend':
     'Vert : là où il est maintenant ; rouge : ailleurs ; vides : éteint ou absent.',
+  'wifi.places': 'Lieux',
+  'wifi.placesIntro':
+    "Où chaque appareil était au cours du dernier jour, d'après les réseaux qu'il captait : à un lieu que vous avez nommé, ou sinon à la maison, près du routeur qu'il captait le mieux. Nommez le lieu où se trouve un appareil, comme Travail ou la cuisine, et la page le retrouve chaque fois qu'un appareil y capte la même chose. L'application du téléphone garde ce qu'elle capte en déplacement et l'envoie une fois à la maison.",
+  'wifi.placeNow': 'Maintenant',
+  'wifi.placeName': 'Nom de ce lieu',
+  'wifi.placeNameHint': 'Travail, Cuisine, Salle de sport',
+  'wifi.savePlace': 'Enregistrer',
+  'wifi.namePlace': 'Nommer ce lieu',
+  'wifi.atHome': 'Maison · {room}',
+  'wifi.somewhereElse': 'Ailleurs',
+  'wifi.placesFailed': "Impossible d'enregistrer les lieux. Réessayez.",
+  'wifi.namedPlaces': 'Lieux nommés',
+  'wifi.removePlace': 'Supprimer {place}',
+  'wifi.remove': 'Supprimer',
+  'wifi.noPlaces': "Aucun lieu nommé pour l'instant.",
   'wifi.changes': 'Changements',
   'wifi.changesIntro':
     "Ce qui a changé dans les réseaux que les appareils entendent au cours du dernier jour, le plus récent d'abord.",

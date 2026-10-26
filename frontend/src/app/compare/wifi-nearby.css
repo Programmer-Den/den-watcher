@@ -257,3 +257,97 @@ h3 {
 .changes tbody th {
   vertical-align: top;
 }
+
+/*
+ * The places a device was at, each in its own color, in tones that read on the page's background
+ * in light and dark mode; somewhere not named is grey, and a step the device was off stays empty.
+ */
+[data-spot='0'] {
+  --spot: light-dark(#1f6fb2, #4a9ad8);
+}
+[data-spot='1'] {
+  --spot: light-dark(#8a4fb5, #ad7ad6);
+}
+[data-spot='2'] {
+  --spot: light-dark(#1b7f6e, #35a892);
+}
+[data-spot='3'] {
+  --spot: light-dark(#b0640d, #d08a34);
+}
+[data-spot='4'] {
+  --spot: light-dark(#b23a6a, #d4688f);
+}
+[data-spot='5'] {
+  --spot: light-dark(#4f7a1f, #7aa646);
+}
+[data-spot='6'] {
+  --spot: light-dark(#5a5fc0, #8a8ee0);
+}
+[data-spot='7'] {
+  --spot: light-dark(#8c6a1a, #b8963f);
+}
+[data-spot='unknown'] {
+  --spot: var(--mat-sys-outline);
+}
+
+.step[data-spot] {
+  background: var(--spot, transparent);
+}
+
+.step[data-spot='off'] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--mat-sys-outline-variant);
+  opacity: 0.4;
+}
+
+.spot {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-left: 0.25rem solid var(--spot, transparent);
+  border-radius: var(--mat-sys-corner-small);
+  background: color-mix(in srgb, var(--spot, transparent) 22%, transparent);
+  color: var(--mat-sys-on-surface);
+}
+
+.spot[data-spot='off'] {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.places .now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 14rem;
+}
+
+.name-place {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.failed {
+  margin: 0.75rem 0 0;
+  color: var(--mat-sys-error);
+}
+
+.named-title {
+  margin-top: 1.5rem;
+}
+
+.named {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.named li {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}

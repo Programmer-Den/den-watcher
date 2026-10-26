@@ -592,3 +592,100 @@ export function wifiChanges(history: WiFiHistory): WiFiChange[] {
     (a, b) => b.time - a.time || CHANGE_ORDER.indexOf(a.kind) - CHANGE_ORDER.indexOf(b.kind),
   );
 }
+
+/** A place named on the page, as GET and PUT /api/wifi/places carry it. */
+export interface WiFiPlace {
+  name: string;
+  /** What a device heard there: the signal in percent of each access point, by its id. */
+  signals: Record<string, number>;
+}
+
+/** The most access points a place keeps, as the hub takes them: the strongest. */
+export const PLACE_SIGNALS = 64;
+
+/**
+ * Where a device was: at a named place, or else at home near a router of the home network, or
+ * neither of them (an empty object), as somewhere not named yet.
+ */
+export interface Whereabout {
+  place?: string;
+  /** The box of the router of the home network it heard best. */
+  box?: string;
+}
+
+/**
+ * Where a device was by the signals it heard: the named place it heard most alike to, from
+ * TOGETHER on, else near the router of the home network it heard best.
+ */
+function whereaboutOf(
+  history: WiFiHistory,
+  signals: Map<string, number>,
+  named: WiFiPlace[],
+  home: string | undefined,
+): Whereabout {
+  let best: { place: string; alike: number } | undefined;
+  for (const place of named) {
+    const alike = likeness(signals, new Map(Object.entries(place.signals)));
+    if (alike !== undefined && alike >= TOGETHER && (!best || alike > best.alike)) {
+      best = { place: place.name, alike };
+    }
+  }
+  if (best) return { place: best.place };
+  let router: { box: string; signal: number } | undefined;
+  for (const ap of history.accessPoints) {
+    const signal = signals.get(ap.id);
+    if (home && ap.ssid === home && signal !== undefined && (!router || signal > router.signal)) {
+      router = { box: ap.box, signal };
+    }
+  }
+  return router ? { box: router.box } : {};
+}
+
+/** Where a device is now, or undefined when its Wi-Fi was not read lately (see recentSince). */
+export function whereNow(
+  history: WiFiHistory,
+  device: string,
+  named: WiFiPlace[],
+): Whereabout | undefined {
+  const since = recentSince(history);
+  const steps = history.devices.find((d) => d.device === device)?.steps ?? [];
+  if (!steps.some((s) => s.readings > 0 && s.time >= since)) return undefined;
+  return whereaboutOf(history, signalsOf(history, device), named, homeNetwork(history));
+}
+
+/**
+ * Where a device was in each step of the history, oldest first, undefined where its Wi-Fi was not
+ * read, as it was off.
+ */
+export function timeline(
+  history: WiFiHistory,
+  device: string,
+  named: WiFiPlace[],
+): (Whereabout | undefined)[] {
+  const home = homeNetwork(history);
+  const read = new Set(
+    history.devices
+      .find((d) => d.device === device)
+      ?.steps.filter((s) => s.readings > 0)
+      .map((s) => s.time),
+  );
+  return stepTimes(history).map((t) =>
+    read.has(t) ? whereaboutOf(history, signalsOf(history, device, t), named, home) : undefined,
+  );
+}
+
+/**
+ * What a device hears now, to name the place it is at: the PLACE_SIGNALS strongest access points,
+ * rounded to a tenth of a percent, or undefined when it hears none.
+ */
+export function placeSignals(
+  history: WiFiHistory,
+  device: string,
+): Record<string, number> | undefined {
+  const strongest = [...signalsOf(history, device)]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, PLACE_SIGNALS);
+  return strongest.length > 0
+    ? Object.fromEntries(strongest.map(([id, signal]) => [id, Math.round(signal * 10) / 10]))
+    : undefined;
+}

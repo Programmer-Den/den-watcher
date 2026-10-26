@@ -174,7 +174,7 @@ describe('WifiNearby', () => {
 
   it('shows what changed in the networks', () => {
     answer();
-    show(4);
+    show(5);
     expect(rows()).toEqual([
       ['This hour', 'New network Vodafone Hotspot on channel 36.', 'Laptop'],
     ]);
@@ -193,5 +193,70 @@ describe('WifiNearby', () => {
     const steps = element.querySelectorAll('tbody tr:first-child .step');
     expect(steps[steps.length - 1].getAttribute('title')).toBe('This hour: 100 % like now');
     expect(steps[steps.length - 2].getAttribute('title')).toBe('1 hour ago: off or away');
+  });
+
+  it('shows where each device is, and names the place one is at', () => {
+    answer();
+    const element = show(4);
+    http
+      .expectOne((r) => r.url === '/api/wifi/places' && r.method === 'GET')
+      .flush({ places: [{ name: 'Work', signals: { n1: 34, a1: 98 } }] });
+    fixture.detectChanges();
+    expect(rows().map((r) => r.slice(0, 2))).toEqual([
+      ['Hub', 'Home · Access point 1 Name this place'],
+      ['Laptop', 'Work'],
+    ]);
+    const steps = element.querySelectorAll('tbody tr:last-child .step');
+    expect(steps[steps.length - 1].getAttribute('title')).toBe('This hour: Work');
+    expect(steps[steps.length - 2].getAttribute('title')).toBe('1 hour ago: off or away');
+
+    element.querySelector<HTMLButtonElement>('tbody tr:first-child .now button')!.click();
+    fixture.detectChanges();
+    vi.advanceTimersByTime(0);
+    const input = element.querySelector<HTMLInputElement>('.name-place input')!;
+    input.value = ' Desk ';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    element.querySelector('.name-place')!.dispatchEvent(new Event('submit'));
+    const put = http.expectOne((r) => r.url === '/api/wifi/places' && r.method === 'PUT');
+    expect(put.request.body).toEqual({
+      places: [
+        { name: 'Work', signals: { n1: 34, a1: 98 } },
+        { name: 'Desk', signals: { a1: 64, a2: 58 } },
+      ],
+    });
+    put.flush(null);
+    fixture.detectChanges();
+    expect(rows().map((r) => r.slice(0, 2))).toEqual([
+      ['Hub', 'Desk'],
+      ['Laptop', 'Work'],
+    ]);
+  });
+
+  it('removes a named place, and tells when the places could not be saved', () => {
+    answer();
+    const element = show(4);
+    http
+      .expectOne((r) => r.url === '/api/wifi/places')
+      .flush({ places: [{ name: 'Work', signals: { n1: 34, a1: 98 } }] });
+    fixture.detectChanges();
+    element.querySelector<HTMLButtonElement>('.named button')!.click();
+    http
+      .expectOne((r) => r.url === '/api/wifi/places' && r.method === 'PUT')
+      .flush('no', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+    expect(element.querySelector('.failed')!.textContent!.trim()).toBe(
+      'Could not save the places. Try again.',
+    );
+    expect(element.querySelector('.named li')!.textContent).toContain('Work');
+
+    element.querySelector<HTMLButtonElement>('.named button')!.click();
+    http.expectOne((r) => r.url === '/api/wifi/places' && r.method === 'PUT').flush(null);
+    fixture.detectChanges();
+    expect(element.querySelector('.named li')!.textContent!.trim()).toBe('No places named yet.');
+    expect(rows().map((r) => r.slice(0, 2))).toEqual([
+      ['Hub', 'Home · Access point 1 Name this place'],
+      ['Laptop', 'Home · Access point 1 Name this place'],
+    ]);
   });
 });

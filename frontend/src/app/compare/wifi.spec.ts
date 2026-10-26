@@ -7,9 +7,12 @@ import {
   networkBoxes,
   networkRows,
   likeness,
+  placeSignals,
   places,
   sameSpot,
   signalLevel,
+  timeline,
+  whereNow,
   wifiBand,
   wifiChanges,
   wifiChannel,
@@ -262,6 +265,58 @@ describe('sameSpot', () => {
     const h = history([a1]);
     expect(sameSpot(h, 'laptop')).toEqual([40, 100]);
     expect(sameSpot(h, 'pc')).toEqual([undefined, 100]);
+  });
+});
+
+describe('timeline', () => {
+  /** The hub connected to Den near its second router, and the laptop at work an hour ago. */
+  function day(): WiFiHistory {
+    const office = ap('o1', 'ob', 'Office', {});
+    office.seenBy = [
+      {
+        device: 'laptop',
+        points: [{ time: NOW - HOUR, seen: 10, signalPercent: 70, minPercent: 70, maxPercent: 70 }],
+      },
+    ];
+    return history([
+      ap('a1', 'b1', 'Den', { laptop: 90, hub: 40 }, {}, ['hub']),
+      ap('a2', 'b2', 'Den', { hub: 90 }),
+      office,
+    ]);
+  }
+
+  it('tells the named place a device heard alike, else the router at home it heard best', () => {
+    const named = [{ name: 'Work', signals: { o1: 72 } }];
+    expect(timeline(day(), 'laptop', named)).toEqual([{ place: 'Work' }, { box: 'b1' }]);
+    // The hub heard nothing an hour ago, and the pc was not read then.
+    expect(timeline(day(), 'hub', named)).toEqual([{}, { box: 'b2' }]);
+    expect(timeline(day(), 'pc', named)).toEqual([undefined, {}]);
+  });
+
+  it('takes a room named at home over the router', () => {
+    const named = [
+      { name: 'Work', signals: { o1: 72 } },
+      { name: 'Desk', signals: { a1: 88 } },
+    ];
+    expect(whereNow(day(), 'laptop', named)).toEqual({ place: 'Desk' });
+    expect(whereNow(day(), 'hub', named)).toEqual({ box: 'b2' });
+  });
+
+  it('tells nothing of a device whose Wi-Fi was not read lately', () => {
+    const h = day();
+    h.devices = h.devices.map((d) => (d.device === 'pc' ? { ...d, steps: [] } : d));
+    expect(whereNow(h, 'pc', [])).toBeUndefined();
+  });
+});
+
+describe('placeSignals', () => {
+  it('keeps what a device hears now, strongest first, to a tenth', () => {
+    const h = history([ap('a1', 'b1', 'Den', { hub: 40.04 }), ap('a2', 'b2', 'Den', { hub: 90 })]);
+    expect(Object.entries(placeSignals(h, 'hub')!)).toEqual([
+      ['a2', 90],
+      ['a1', 40],
+    ]);
+    expect(placeSignals(h, 'pc')).toBeUndefined();
   });
 });
 
