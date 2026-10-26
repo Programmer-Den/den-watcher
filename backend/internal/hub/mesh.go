@@ -158,17 +158,18 @@ func (h *Hub) syncMesh(ctx context.Context, router Device, missing map[string]ti
 		return nil
 	}
 	stored := map[string]string{}
-	rows, err := h.store.DB().QueryContext(ctx, `SELECT node, device FROM hub_mesh_nodes WHERE router = ?`, router.ID)
+	addresses := map[string]string{}
+	rows, err := h.store.DB().QueryContext(ctx, `SELECT node, device, address FROM hub_mesh_nodes WHERE router = ?`, router.ID)
 	if err != nil {
 		return err
 	}
 	for rows.Next() {
-		var key, device string
-		if err := rows.Scan(&key, &device); err != nil {
+		var key, device, address string
+		if err := rows.Scan(&key, &device, &address); err != nil {
 			_ = rows.Close()
 			return err
 		}
-		stored[key] = device
+		stored[key], addresses[key] = device, address
 	}
 	if err := rows.Close(); err != nil {
 		return err
@@ -178,6 +179,14 @@ func (h *Hub) syncMesh(ctx context.Context, router Device, missing map[string]ti
 		listed[node.Key] = true
 		if device, ok := stored[node.Key]; ok {
 			delete(missing, device)
+			// A node that got another address keeps it from the next start;
+			// its name stays, as the device's id and history go with it.
+			if node.Address != "" && node.Address != addresses[node.Key] {
+				if _, err := h.store.DB().ExecContext(ctx, `UPDATE hub_mesh_nodes SET address = ? WHERE router = ? AND node = ?`,
+					node.Address, router.ID, node.Key); err != nil {
+					return err
+				}
+			}
 			continue
 		}
 		device, ok := h.nodeDevice(router, node)
