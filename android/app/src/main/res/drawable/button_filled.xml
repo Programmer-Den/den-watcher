@@ -3,7 +3,7 @@
     android:color="#33FFFFFF">
     <item>
         <shape>
-            <solid android:color="@color/primary" />
+            <solid android:color="@color/button_filled_background" />
             <corners android:radius="24dp" />
         </shape>
     </item>

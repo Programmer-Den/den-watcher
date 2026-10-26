@@ -43,12 +43,12 @@
 
     <style name="Button.Filled">
         <item name="android:background">@drawable/button_filled</item>
-        <item name="android:textColor">@color/on_primary</item>
+        <item name="android:textColor">@color/button_filled_text</item>
     </style>
 
     <style name="Button.Outlined">
         <item name="android:background">@drawable/button_outlined</item>
-        <item name="android:textColor">@color/primary</item>
+        <item name="android:textColor">@color/button_outlined_text</item>
     </style>
 
     <!-- A link-like button, flush with the card's text. -->
