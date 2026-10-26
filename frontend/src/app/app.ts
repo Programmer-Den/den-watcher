@@ -12,6 +12,8 @@ import { DeviceService, deviceName } from './devices/devices';
 import { ManageButton } from './devices/manage-button';
 import { Home } from './home/home';
 import { I18n } from './i18n/i18n';
+import { InstallService } from './install/install';
+import { InstallButton } from './install/install-button';
 import { KioskAlerts } from './kiosk/kiosk-alerts';
 import { KioskMode } from './kiosk/kiosk';
 import { LanguageSwitcher } from './language/language-switcher';
@@ -30,6 +32,7 @@ import { UpdateNotice } from './update/update-notice';
     Dashboard,
     DevicePicker,
     Home,
+    InstallButton,
     KioskAlerts,
     LanguageSwitcher,
     ManageButton,
@@ -57,6 +60,8 @@ export class App {
     // They tell about alerts in the tab's title and favicon and in the browser's notifications.
     inject(AlertTab);
     inject(AlertNotifications);
+    // It starts the service worker, also on a wall display, which then opens while the hub is down.
+    inject(InstallService);
     this.kiosk.cycle.pipe(takeUntilDestroyed()).subscribe();
   }
 }

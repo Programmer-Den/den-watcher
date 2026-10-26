@@ -53,6 +53,7 @@ func device(collector metrics.Source, reader HistoryReader) []Device {
 var site = fstest.MapFS{
 	"index.html":           {Data: []byte("page")},
 	"main.js":              {Data: []byte("script")},
+	"sw.js":                {Data: []byte("service worker")},
 	"main-7EIQR62F.js":     {Data: []byte("hashed script")},
 	"flags/de.svg":         {Data: []byte("flag")},
 	"manifest.webmanifest": {Data: []byte(`{"name":"Den-Watcher"}`)},
@@ -319,6 +320,7 @@ func TestServesWebsite(t *testing.T) {
 		{"/", "page", "no-cache"},
 		{"/main-7EIQR62F.js", "hashed script", "public, max-age=31536000, immutable"},
 		{"/main.js", "script", "public, max-age=3600"},
+		{"/sw.js", "service worker", "no-cache"},
 		{"/flags/de.svg", "flag", "public, max-age=3600"},
 	}
 	for _, tt := range tests {

@@ -78,9 +78,11 @@ ALLOWED_HOSTS=raspberrypi,pi.fritz.box
 
 Other names are refused with `421 Misdirected Request` ([why](architecture.md#local-network-only)). List the names alone, with a port at most: an entry such as `http://pi.lan` is left out, and the log warns about it by name.
 
-### Add the page to a phone's home screen
+### Install the page as an app
 
-The page can be put on the home screen of a phone or tablet, with its name and the bear as the icon: *Add to Home screen* in Chrome's menu on Android, *Share › Add to Home Screen* in Safari on iOS. It then opens in a window of its own, without the browser's address bar. This works over plain http on the local network; a full *Install* prompt and working offline would need https, which den-watcher does not offer, so the page has no service worker. Open it by a name or address that stays the same, as the icon keeps the address it was added with.
+The page can be put on the home screen of a phone or tablet, with its name and the bear as the icon: *Add to Home screen* in Chrome's menu on Android, *Share › Add to Home Screen* in Safari on iOS. It then opens in a window of its own, without the browser's address bar. This works over plain http on the local network. Open it by a name or address that stays the same, as the icon keeps the address it was added with.
+
+Opened over https, such as behind a reverse proxy with a certificate the browser trusts, or on `localhost`, the page is a full Progressive Web App: its service worker (`sw.js`) starts, Chrome and Edge offer to install it, on a PC too, and the header gets an install button (an arrow into a tray) while the browser offers that. The installed app opens the page from the last visit while the hub cannot be reached, says that the hub is not answering, and catches up once it answers again; the values themselves are never kept offline. Browsers start a service worker only for such a page, so over plain http at the device's address the page has none and no install button. To try it over http, list the page's address in Chrome under `chrome://flags/#unsafely-treat-insecure-origin-as-secure`.
 
 ### Show the page on a wall display
 

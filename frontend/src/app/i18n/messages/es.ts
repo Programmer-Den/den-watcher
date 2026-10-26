@@ -4,6 +4,7 @@ import { Messages } from './en';
 export const es: Messages = {
   'app.switchToLight': 'Cambiar al modo claro',
   'app.switchToDark': 'Cambiar al modo oscuro',
+  'app.install': 'Instalar como aplicación',
   'connection.lost': '{hub} no responde',
   'connection.notLive':
     'Desde el {since}, nada en esta página está en directo, porque los valores de todos los dispositivos pasan por {hub}. La página sigue intentándolo y se actualiza en cuanto {hub} vuelva a responder.',
