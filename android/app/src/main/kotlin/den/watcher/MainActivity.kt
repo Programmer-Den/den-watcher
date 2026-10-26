@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -34,6 +35,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var problemLine: TextView
     private lateinit var dot: View
+    private lateinit var openHub: Button
     private val handler = Handler(Looper.getMainLooper())
 
     private val refresh = object : Runnable {
@@ -62,6 +64,8 @@ class MainActivity : Activity() {
         status = findViewById(R.id.status)
         problemLine = findViewById(R.id.problem)
         dot = findViewById(R.id.dot)
+        openHub = findViewById(R.id.open_hub)
+        openHub.setOnClickListener { openHubPage() }
 
         findViewById<Button>(R.id.battery).setOnClickListener {
             runCatching { startActivity(Intent(ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
@@ -167,6 +171,7 @@ class MainActivity : Activity() {
         problemLine.visibility = if (problem == null) View.GONE else View.VISIBLE
         findViewById<View>(R.id.battery_group).visibility = if (recording) View.VISIBLE else View.GONE
         showAddress(recording)
+        openHub.visibility = if (HubAddress.pageUrl(settings.hubAddress) == null) View.GONE else View.VISIBLE
     }
 
     /** The hub's address, and whether it and stopping are locked or the hub allows a change. */
@@ -190,6 +195,16 @@ class MainActivity : Activity() {
     private fun enable(button: Button, enabled: Boolean) {
         button.isEnabled = enabled
         button.alpha = if (enabled) 1f else DISABLED_ALPHA
+    }
+
+    /** Opens the hub's page in the browser, at the address that was saved. */
+    private fun openHubPage() {
+        val url = HubAddress.pageUrl(settings.hubAddress) ?: return
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (_: android.content.ActivityNotFoundException) {
+            Toast.makeText(this, R.string.no_browser, Toast.LENGTH_SHORT).show()
+        }
     }
 
     /**

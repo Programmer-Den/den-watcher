@@ -20,6 +20,8 @@
     <string name="status_recording">Zeichnet die Nutzung auf und behält sie, bis der Hub sie hat, bis zu einer Woche.</string>
     <string name="status_stopped">Starte die Aufzeichnung, um die Nutzung dieses Handys an den Hub zu schicken.</string>
     <string name="status_last_push">Der Hub hat die Nutzung zuletzt am %1$s bekommen.</string>
+    <string name="open_hub">Seite des Hubs öffnen</string>
+    <string name="no_browser">Kein Browser, um die Seite zu öffnen.</string>
     <string name="problem_no_address">Scanne den Code des Hubs, um die Nutzung zu schicken.</string>
     <string name="problem_not_home">Nicht im WLAN: Die Nutzung wird geschickt, sobald das Handy in deinem WLAN zu Hause ist.</string>
     <string name="problem_unreachable">Der Hub antwortet nicht. Ist das Handy in deinem WLAN zu Hause und stimmt die Adresse?</string>

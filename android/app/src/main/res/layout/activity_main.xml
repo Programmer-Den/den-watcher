@@ -85,6 +85,11 @@
             <Button
                 android:id="@+id/toggle"
                 style="@style/Button.Filled" />
+
+            <Button
+                android:id="@+id/open_hub"
+                style="@style/Button.Text"
+                android:text="@string/open_hub" />
         </LinearLayout>
 
         <LinearLayout style="@style/Card">
