@@ -28,4 +28,12 @@ class PushTest {
         assertFalse(body.has("snapshot"))
         assertEquals(60, body.getJSONArray("minutes").getJSONObject(1).getLong("time"))
     }
+
+    @Test
+    fun sendsTheScansOnlyWhenThereAreSome() {
+        assertFalse(Push.body(600, null, emptyList()).has("wifi"))
+        val scan = Scan(540, emptyList()).json()
+        val body = Push.body(600, null, emptyList(), scans = listOf(scan))
+        assertEquals(540, body.getJSONArray("wifi").getJSONObject(0).getLong("time"))
+    }
 }

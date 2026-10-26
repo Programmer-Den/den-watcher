@@ -9,6 +9,13 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- The Wi-Fi networks nearby, which Android gives only with the location
+         permission, all the time for the scans while the app is in the
+         background; the user allows them on the app's screen, or not. -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <!-- The camera scans the code with the hub's address; the scanner asks for it. -->
     <uses-feature
@@ -45,7 +52,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Records the phone's own battery, memory, storage and traffic and sends them to the user's Den-Watcher hub on the home network." />
+                android:value="Records the phone's own battery, memory, storage, traffic and, when allowed, the Wi-Fi networks nearby, and sends them to the user's Den-Watcher hub on the home network." />
         </service>
 
         <service

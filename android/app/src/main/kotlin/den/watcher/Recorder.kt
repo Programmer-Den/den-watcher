@@ -5,9 +5,9 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 
 /**
- * Takes a reading, keeps its values and sends what the hub does not have
- * yet. RecordAlarm does this every half minute, and SyncJob every quarter
- * of an hour, so one reading is taken at a time.
+ * Takes a reading, keeps its values and the networks nearby, and sends what
+ * the hub does not have yet. RecordAlarm does this every half minute, and
+ * SyncJob every quarter of an hour, so one reading is taken at a time.
  */
 object Recorder {
     /** The most pushes in a row, enough for a week of minutes. */
@@ -22,6 +22,12 @@ object Recorder {
         settings.lastReading = reading
         Store(app).use { store ->
             store.add(reading.time, reading.values(rates))
+            // A scan is kept once, when Android scanned again since, also
+            // after the clock went back.
+            Nearby.read(app, reading.time)?.takeIf { it.time > settings.lastScan || settings.lastScan > reading.time }?.let {
+                store.addScan(it)
+                settings.lastScan = it.time
+            }
             push(app, settings, store, reading.snapshot(rates, Sampler.device(app)))
         }
     }
@@ -40,8 +46,9 @@ object Recorder {
         repeat(MAX_PUSHES) {
             val now = System.currentTimeMillis() / 1000
             val minutes = Push.fit(store.minutes(now))
+            val scans = store.scans()
             val needKey = settings.hubKey.isEmpty()
-            when (val answer = Hub.push(url, settings.code, Push.body(now, newest, minutes, needKey))) {
+            when (val answer = Hub.push(url, settings.code, Push.body(now, newest, minutes, needKey, scans))) {
                 is Hub.Answer.Failed -> {
                     settings.problem = answer.problem
                     return
@@ -69,7 +76,12 @@ object Recorder {
                     if (minutes.isNotEmpty()) {
                         store.deleteUpTo(maxOf(answer.after, minutes.last().time))
                     }
-                    if (minutes.size < Push.MAX_MINUTES && minutes.sumOf { it.values.size } < Push.MAX_VALUES) {
+                    // A hub that takes no scans answers none; they are kept for a week.
+                    if (answer.wifiAfter > 0) {
+                        store.deleteScansUpTo(answer.wifiAfter)
+                    }
+                    val moreScans = scans.size == Push.MAX_SCANS && answer.wifiAfter > 0
+                    if (minutes.size < Push.MAX_MINUTES && minutes.sumOf { it.values.size } < Push.MAX_VALUES && !moreScans) {
                         return
                     }
                 }

@@ -32,7 +32,7 @@
     <string name="battery_hint">Some phones stop apps in the background to save battery. If the hub misses hours, let Den-Watcher run without battery restrictions.</string>
     <string name="battery">Battery settings</string>
     <string name="data_title">What is sent</string>
-    <string name="data_hint">The battery\'s charge and temperature, memory and storage used, and the traffic of Wi-Fi and mobile data, only to the hub on your network. Android lets no app read how busy the processor is.</string>
+    <string name="data_hint">The battery\'s charge and temperature, memory and storage used, the traffic of Wi-Fi and mobile data and, if you allow it, the Wi-Fi networks nearby, only to the hub on your network. Android lets no app read how busy the processor is.</string>
     <string name="channel_name">Recording</string>
     <string name="channel_description">Shown while the app records the usage, as Android asks for.</string>
     <string name="notification_title">Recording this phone\'s usage</string>
@@ -41,4 +41,12 @@
     <string name="network_usual">It\'s my network too</string>
     <string name="network_channel_name">Other networks</string>
     <string name="network_channel_description">When the hub answers on a network other than the usual one.</string>
+    <string name="nearby_title">Wi-Fi networks nearby</string>
+    <string name="nearby_hint">With them the hub can tell where this phone was: which room at home, and places you name, such as Work. Android gives them only with the location permission; the app never reads your position and starts no scan, it only reads the networks Android saw. They are kept until the phone is home again.</string>
+    <string name="nearby_off">Not read.</string>
+    <string name="nearby_open">Read only while the app is open. Allow it all the time to also read them while the phone is in your pocket.</string>
+    <string name="nearby_always">Read all the time, also while the phone is away.</string>
+    <string name="nearby_allow">Allow</string>
+    <string name="nearby_allow_always">Allow all the time</string>
+    <string name="nearby_settings">App settings</string>
 </resources>

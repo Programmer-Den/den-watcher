@@ -156,6 +156,59 @@ func TestAPushWithTooManyMinutesIsRefused(t *testing.T) {
 	}
 }
 
+func TestThePhonesScansCountAtTheirOwnTime(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	h := openTestHub(t, store, nil)
+	if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+		t.Fatalf("AddPhone() error = %v", err)
+	}
+	// The phone's clock is an hour behind; it kept a scan from three hours
+	// ago, while it was away, one from now and one from before the
+	// retention, sent out of order.
+	now := time.Now()
+	phoneNow := now.Add(-time.Hour)
+	ap := metrics.NearbyAccessPoint{ID: "0000000000aa", Box: "0000000000bb", SSID: "Office", SignalPercent: 60}
+	push := Push{Now: phoneNow.Unix(), WiFi: []PhoneScan{
+		{Time: phoneNow.Unix(), AccessPoints: []metrics.NearbyAccessPoint{ap}},
+		{Time: phoneNow.Add(-3 * time.Hour).Unix(), AccessPoints: []metrics.NearbyAccessPoint{ap, {ID: "bad"}}},
+		{Time: phoneNow.Add(-60 * 24 * time.Hour).Unix(), AccessPoints: []metrics.NearbyAccessPoint{ap}},
+	}}
+	answer, err := h.Receive(ctx, "7KQM-X2RP", push)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if answer.WiFiAfter != phoneNow.Unix() {
+		t.Errorf("WiFiAfter = %d, want the phone's time of its newest scan %d", answer.WiFiAfter, phoneNow.Unix())
+	}
+	// The same push again counts nothing twice.
+	if _, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Flush(ctx); err != nil {
+		t.Fatal(err)
+	}
+	seen, err := store.WiFi(ctx, now.Add(-5*time.Hour), now.Add(time.Minute), time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(seen.AccessPoints) != 1 || len(seen.AccessPoints[0].SeenBy) != 1 || seen.AccessPoints[0].SeenBy[0].Device != "pixel" {
+		t.Fatalf("access points %+v, want the one the phone saw", seen.AccessPoints)
+	}
+	hours := map[int64]int64{}
+	for _, point := range seen.AccessPoints[0].SeenBy[0].Points {
+		hours[point.Time] += point.Seen
+	}
+	want := map[int64]int64{now.Add(-3 * time.Hour).Truncate(time.Hour).Unix(): 1, now.Truncate(time.Hour).Unix(): 1}
+	if len(hours) != 2 || hours[now.Add(-3*time.Hour).Truncate(time.Hour).Unix()] != 1 || hours[now.Truncate(time.Hour).Unix()] != 1 {
+		t.Errorf("seen by hour %v, want %v: each scan once, at the hub's time", hours, want)
+	}
+
+	if _, err := h.Receive(ctx, "7KQM-X2RP", Push{Now: phoneNow.Unix(), WiFi: make([]PhoneScan, ScansPerPush+1)}); !errors.Is(err, ErrPushTooLarge) {
+		t.Errorf("Receive() with %d scans error = %v, want %v", ScansPerPush+1, err, ErrPushTooLarge)
+	}
+}
+
 func TestAReleasedPhoneIsToldItMayChangeItsHub(t *testing.T) {
 	ctx := context.Background()
 	h := openTestHub(t, openTestStore(t), []Device{{ID: "nas", Name: "NAS", Address: "192.0.2.7:9393"}})

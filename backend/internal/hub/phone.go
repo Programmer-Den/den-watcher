@@ -1,12 +1,14 @@
 package hub
 
 import (
+	"cmp"
 	"context"
 	"crypto/subtle"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -50,7 +52,21 @@ type Push struct {
 	// NeedKey is set by an app that has no key of the hub yet, which the
 	// answer then gives it.
 	NeedKey bool `json:"needKey,omitempty"`
+	// WiFi are the scans of the Wi-Fi networks nearby the phone kept, oldest
+	// first, at most ScansPerPush of them, also from while it was away, so
+	// the hub can tell where it was.
+	WiFi []PhoneScan `json:"wifi,omitempty"`
 }
+
+// PhoneScan is what a phone's Wi-Fi saw nearby at Time, Unix seconds on the
+// phone's clock.
+type PhoneScan struct {
+	Time         int64                       `json:"time"`
+	AccessPoints []metrics.NearbyAccessPoint `json:"accessPoints"`
+}
+
+// ScansPerPush is how many scans one push may have.
+const ScansPerPush = 30
 
 // ReleaseTime is how long a phone may change its hub once the hub's owner
 // allowed it (see ReleasePhone).
@@ -74,6 +90,9 @@ type PushAnswer struct {
 	// Key is the phone's key in hex, given when the push asked for it (see
 	// Push.NeedKey). The app takes it only while it has none.
 	Key string `json:"key,omitempty"`
+	// WiFiAfter is the phone's time of the newest scan the hub has: the
+	// phone may delete it and the ones before.
+	WiFiAfter int64 `json:"wifiAfter,omitempty"`
 }
 
 // ErrUnknownPhone is a push with a code no phone added on the hub has.
@@ -81,7 +100,7 @@ var ErrUnknownPhone = errors.New("no phone added on the hub has this pairing cod
 
 // ErrPushTooLarge is a push with more minutes or values than one push may
 // have.
-var ErrPushTooLarge = fmt.Errorf("a push may have at most %d minutes and %d values; send the rest in another push", MinutesPerAnswer, ValuesPerAnswer)
+var ErrPushTooLarge = fmt.Errorf("a push may have at most %d minutes, %d values and %d scans; send the rest in another push", MinutesPerAnswer, ValuesPerAnswer, ScansPerPush)
 
 // phone keeps what a phone pushed: its newest reading, which the hub's
 // recorder of it reads as it reads a router, and up to which minute it has
@@ -101,6 +120,9 @@ type phone struct {
 	// gone is set, under pushing, once the phone was removed, so a push
 	// that found it before stores nothing after its data was deleted.
 	gone bool
+	// wifiAfter is the phone's time of the newest scan counted, under
+	// pushing.
+	wifiAfter int64
 }
 
 // Collect returns the phone's newest reading, or ErrUnreachable when it has
@@ -182,7 +204,7 @@ func (h *Hub) Receive(ctx context.Context, code string, push Push) (PushAnswer, 
 	for _, minute := range push.Minutes {
 		values += len(minute.Values)
 	}
-	if len(push.Minutes) > MinutesPerAnswer || values > ValuesPerAnswer && len(push.Minutes) > 1 {
+	if len(push.Minutes) > MinutesPerAnswer || values > ValuesPerAnswer && len(push.Minutes) > 1 || len(push.WiFi) > ScansPerPush {
 		return PushAnswer{}, ErrPushTooLarge
 	}
 	h.mu.Lock()
@@ -226,6 +248,9 @@ func (p *phone) receive(ctx context.Context, push Push, now time.Time, key []byt
 	}
 	after, err := p.minutes.receive(ctx, MinutesAnswer{Now: push.Now, Minutes: push.Minutes, Extras: push.Extras}, now)
 	answer := PushAnswer{After: after}
+	if err == nil {
+		answer.WiFiAfter = p.receiveWiFi(push, now)
+	}
 	if until := p.released(now); !until.IsZero() {
 		// Rounded up, so the last moments are not lost to the rounding.
 		answer.Release = true
@@ -233,6 +258,33 @@ func (p *phone) receive(ctx context.Context, push Push, now time.Time, key []byt
 		answer.ReleaseProof = releaseProof(key, push.Now, answer.ReleaseSeconds)
 	}
 	return answer, err
+}
+
+// receiveWiFi counts the scans of a push the hub does not have yet into the
+// Wi-Fi history, at their time on the hub's clock, as the minutes are moved
+// (see fetcher.receive), and returns the phone's time of the newest scan it
+// has. A scan older than the retention or from the future is left out, but
+// counts as had, so the phone deletes it. The caller holds pushing.
+func (p *phone) receiveWiFi(push Push, now time.Time) int64 {
+	f := p.minutes
+	if p.wifiAfter > push.Now {
+		// The phone's clock went back.
+		p.wifiAfter = 0
+	}
+	scans := slices.Clone(push.WiFi)
+	slices.SortStableFunc(scans, func(a, b PhoneScan) int { return cmp.Compare(a.Time, b.Time) })
+	for _, scan := range scans {
+		if scan.Time <= p.wifiAfter {
+			continue
+		}
+		p.wifiAfter = scan.Time
+		at := time.Unix(scan.Time+f.offset, 0)
+		if at.After(now.Add(maxClockJitter)) || f.retention > 0 && at.Before(now.Add(-f.retention)) {
+			continue
+		}
+		f.store.AddWiFi(f.device, at, metrics.CleanNearbyWiFi(&metrics.NearbyWiFi{AccessPoints: scan.AccessPoints}))
+	}
+	return p.wifiAfter
 }
 
 // ReleasePhone lets the phone with the id change its hub for ReleaseTime,
