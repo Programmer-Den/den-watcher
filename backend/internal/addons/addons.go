@@ -48,19 +48,34 @@ func Due(last, now time.Time, interval time.Duration) bool {
 // does not jump when the wall clock is set.
 type Read func(ctx context.Context, now time.Time) []metrics.Extra
 
+// ReadReport returns an add-on's report at now, as Read does its extras, for
+// an add-on that reports more than extras. The report's Time and Own are set
+// by the caller.
+type ReadReport func(ctx context.Context, now time.Time) metrics.AddOnReport
+
+// report returns the report of the extras read returns.
+func (read Read) report(ctx context.Context, now time.Time) metrics.AddOnReport {
+	return metrics.AddOnReport{Extras: read(ctx, now)}
+}
+
 // Main runs the add-on name, which reads with newRead: as the Windows service
 // service when the service manager starts it, and everywhere else until it is
 // interrupted. It writes ADDONS_DIR/<name>.json every Interval and exits the
 // program when it fails. newRead is called once, when the add-on starts.
 func Main(name, service string, newRead func() Read) {
+	MainReport(name, service, func() ReadReport { return newRead().report })
+}
+
+// MainReport is Main for an add-on that reads its whole report with newRead.
+func MainReport(name, service string, newRead func() ReadReport) {
 	read := sync.OnceValue(newRead)
-	serve := func(ctx context.Context) error { return Serve(ctx, name, read()) }
+	start := func(ctx context.Context) error { return serve(ctx, name, read()) }
 	// A service has no console, so its warnings go to the event log too.
 	winservice.LogWarnings(service)
-	ranAsService, err := winservice.Run(service, serve, nil)
+	ranAsService, err := winservice.Run(service, start, nil)
 	if !ranAsService && err == nil {
 		ctx, stop := signal.NotifyContext(context.Background(), stopSignals()...)
-		err = serve(ctx)
+		err = start(ctx)
 		stop()
 	}
 	if err != nil {
@@ -90,6 +105,11 @@ func stopSignals() []os.Signal {
 // service manager can start it again; a write that fails later is logged and
 // tried again at the next interval.
 func Serve(ctx context.Context, name string, read Read) error {
+	return serve(ctx, name, read.report)
+}
+
+// serve is Serve for an add-on that reads its whole report.
+func serve(ctx context.Context, name string, read ReadReport) error {
 	dir := os.Getenv("ADDONS_DIR")
 	if dir == "" {
 		dir = DefaultDir()
@@ -120,7 +140,7 @@ func DefaultDir() string {
 // run writes a report, with what the add-on itself uses, every interval
 // until ctx is done. A failed write is
 // logged once and tried again at the next interval.
-func run(ctx context.Context, read Read, file string, interval time.Duration) {
+func run(ctx context.Context, read ReadReport, file string, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	var own metrics.OwnReader
@@ -128,7 +148,9 @@ func run(ctx context.Context, read Read, file string, interval time.Duration) {
 	for {
 		// time.Now, not time.Now().UTC(), which drops the monotonic reading.
 		now := time.Now()
-		err := writeReport(file, metrics.AddOnReport{Time: now.UTC(), Extras: read(ctx, now), Own: own.Read(ctx, now)})
+		report := read(ctx, now)
+		report.Time, report.Own = now.UTC(), own.Read(ctx, now)
+		err := writeReport(file, report)
 		switch {
 		case err != nil && !failing:
 			slog.Error("write the add-on's report", "file", file, "error", err)

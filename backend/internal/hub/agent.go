@@ -210,6 +210,7 @@ func (a *Agent) ask(ctx context.Context) (metrics.Snapshot, error) {
 	// are cut down to what is safe for that first; its version too, which
 	// the events log keeps.
 	snapshot.Extras = metrics.CleanExtras(snapshot.Extras, a.maxEntries)
+	snapshot.WiFiNearby = metrics.CleanNearbyWiFi(snapshot.WiFiNearby)
 	snapshot.System = metrics.CleanSystem(snapshot.System)
 	snapshot.Version = metrics.CleanText(snapshot.Version)
 	return snapshot, nil

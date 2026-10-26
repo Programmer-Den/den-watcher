@@ -908,7 +908,7 @@ func (h *Hub) start(device Device, fixed bool, own []netip.Addr) {
 		kind:     kind,
 		phone:    pushed,
 	}
-	recorder := &history.Recorder{Store: h.store, Recent: recent, Device: device.ID, Collector: watched, MaxEntries: h.historyEntries}
+	recorder := &history.Recorder{Store: h.store, Recent: recent, Device: device.ID, Collector: watched, MaxEntries: h.historyEntries, WiFi: h.store}
 	// A router or check keeps no minutes to fetch; the hub stores the
 	// average of its own readings.
 	switch {

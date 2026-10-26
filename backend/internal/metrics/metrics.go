@@ -50,6 +50,9 @@ type Snapshot struct {
 	// Extras are values beyond the fields above, described well enough that
 	// a hub can show them without knowing them; see Extra.
 	Extras []Extra `json:"extras,omitempty"`
+	// WiFiNearby is what the machine's Wi-Fi sees nearby, each access point
+	// on its own, for a hub to compare; only reported with the Wi-Fi add-on.
+	WiFiNearby *NearbyWiFi `json:"wifiNearby,omitempty"`
 	// System is what the machine is, read once at start. Devices running a
 	// version from before it was reported leave it out.
 	System *System `json:"system,omitempty"`
@@ -206,6 +209,7 @@ func (c *Collector) Collect(ctx context.Context) (Snapshot, error) {
 		Battery:      c.batteries.read(),
 		Fans:         readFans(c.fans),
 		Extras:       c.readExtras(ctx, now),
+		WiFiNearby:   c.AddOns.WiFi(now),
 		System:       c.system,
 	}, nil
 }

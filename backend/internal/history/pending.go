@@ -3,6 +3,7 @@ package history
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -210,10 +211,12 @@ func (s *Store) SetFlushInterval(interval time.Duration) {
 // done; Close writes the last. Failures are logged, and the minutes stay for
 // the next flush.
 func (s *Store) RunFlusher(ctx context.Context) {
-	if s.flushEvery <= 0 {
-		return
+	// Minutes written at once still leave what the Wi-Fi saw to flush.
+	every := s.flushEvery
+	if every <= 0 {
+		every = wifiFlushEvery
 	}
-	tick := time.NewTicker(s.flushEvery)
+	tick := time.NewTicker(every)
 	defer tick.Stop()
 	for {
 		select {
@@ -227,10 +230,15 @@ func (s *Store) RunFlusher(ctx context.Context) {
 	}
 }
 
-// Flush writes the minutes that wait.
+// Flush writes the minutes that wait, and what the devices' Wi-Fi saw.
 func (s *Store) Flush(ctx context.Context) error {
 	s.flushing.Lock()
 	defer s.flushing.Unlock()
+	return errors.Join(s.flushMinutes(ctx), s.flushWiFi(ctx))
+}
+
+// flushMinutes writes the minutes that wait. The caller holds flushing.
+func (s *Store) flushMinutes(ctx context.Context) error {
 	taken := s.pend.take()
 	if len(taken) == 0 {
 		s.pend.done(nil)

@@ -427,7 +427,7 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 	}
 
 	recent := &history.Recent{}
-	recorder := &history.Recorder{Store: store, Recent: recent, Collector: sampler.Reusing(reuseFor), Device: history.LocalDevice, MaxEntries: historyEntries}
+	recorder := &history.Recorder{Store: store, Recent: recent, Collector: sampler.Reusing(reuseFor), Device: history.LocalDevice, MaxEntries: historyEntries, WiFi: store}
 	pruner := &history.Pruner{Store: store, Retention: retention}
 	var recording sync.WaitGroup
 	recording.Go(func() { recorder.Run(ctx) })
@@ -459,6 +459,7 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 		Layout:  pageLayout,
 		Backups: store,
 		Events:  happenings,
+		WiFi:    store,
 	}
 	if checker := update.NewChecker(version.Version); checker != nil && checkUpdates {
 		site.Update = checker.Status

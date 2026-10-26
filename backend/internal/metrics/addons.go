@@ -24,6 +24,9 @@ type AddOnReport struct {
 	// Own is what the add-on itself uses of the machine, which the collector
 	// adds to its own; an add-on that does not report it is not counted.
 	Own *OwnUsage `json:"own,omitempty"`
+	// WiFi is what the machine's Wi-Fi sees nearby, which only the Wi-Fi
+	// add-on reports.
+	WiFi *NearbyWiFi `json:"wifi,omitempty"`
 }
 
 const (
@@ -106,6 +109,23 @@ func (a *AddOns) Own(now time.Time) []OwnUsage {
 		}
 	}
 	return usages
+}
+
+// WiFi returns what the machine's Wi-Fi sees nearby, from the first report
+// the last Read kept that has it, cut down like another device's by
+// CleanNearbyWiFi; nil when none has.
+func (a *AddOns) WiFi(now time.Time) *NearbyWiFi {
+	if a == nil {
+		return nil
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, file := range slices.Sorted(maps.Keys(a.files)) {
+		if f := a.files[file]; f.fresh(now) && f.report.WiFi != nil {
+			return CleanNearbyWiFi(f.report.WiFi)
+		}
+	}
+	return nil
 }
 
 // fresh reports whether the report was read and is not older than

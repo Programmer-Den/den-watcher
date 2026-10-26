@@ -118,6 +118,9 @@ type Site struct {
 	// Events are the reboots and updates of each device; nil leaves out GET
 	// /api/events, which also needs Alerts.
 	Events EventLog
+	// WiFi is what the devices' Wi-Fi saw nearby; nil leaves out GET
+	// /api/wifi.
+	WiFi WiFiSource
 	// Pairing is the code a hub must be given to collect from this machine,
 	// which GET /api/pairing shows; nil lets every hub collect and leaves
 	// out GET /api/pairing.
@@ -194,6 +197,9 @@ func New(site Site) http.Handler {
 		mux.HandleFunc("GET /api/events", forDevice(site.Devices, func(d Device) http.HandlerFunc {
 			return eventsHandler(d, site.Alerts, site.Events, site.Retention)
 		}))
+	}
+	if site.WiFi != nil {
+		mux.HandleFunc("GET /api/wifi", wifiHandler(site.WiFi, site.Retention))
 	}
 	if site.Layout != nil {
 		mux.HandleFunc("GET /api/layout", readLayout(site.Layout))
