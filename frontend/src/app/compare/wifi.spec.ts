@@ -297,10 +297,11 @@ describe('timeline', () => {
   it('takes a room named at home over the router', () => {
     const named: WiFiPlace[] = [
       { name: 'Work', signals: { o1: 72 } },
-      { name: 'Desk', signals: { a1: 88 } },
+      { name: 'Desk', signals: { a2: 88, a1: 42 } },
     ];
-    expect(whereNow(day(), 'laptop', named)).toEqual({ place: 'Desk' });
-    expect(whereNow(day(), 'hub', named)).toEqual({ box: 'b2' });
+    expect(whereNow(day(), 'hub', named)).toEqual({ place: 'Desk' });
+    // Now is the last two hours, so the laptop hears the office too, unlike at the desk or work.
+    expect(whereNow(day(), 'laptop', named)).toEqual({ box: 'b1' });
   });
 
   it('tells nothing of a device whose Wi-Fi was not read lately', () => {

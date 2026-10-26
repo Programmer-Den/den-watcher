@@ -195,7 +195,7 @@ describe('WifiNearby', () => {
     expect(steps[steps.length - 2].getAttribute('title')).toBe('1 hour ago: off or away');
   });
 
-  it('shows where each device is, and names the place one is at', () => {
+  it('shows where each device is, and names the place one is at', async () => {
     answer();
     const element = show(4);
     http
@@ -212,7 +212,8 @@ describe('WifiNearby', () => {
 
     element.querySelector<HTMLButtonElement>('tbody tr:first-child .now button')!.click();
     fixture.detectChanges();
-    vi.advanceTimersByTime(0);
+    // The form takes the field in a microtask, and only then what is typed into it.
+    await Promise.resolve();
     const input = element.querySelector<HTMLInputElement>('.name-place input')!;
     input.value = ' Desk ';
     input.dispatchEvent(new Event('input'));
