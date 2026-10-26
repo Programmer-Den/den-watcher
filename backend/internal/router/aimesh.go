@@ -80,6 +80,15 @@ func (a *ASUSReader) MeshNodes() ([]MeshNode, time.Time) {
 	return slices.Clone(a.nodes), a.nodesAt
 }
 
+// Radios returns the hardware addresses of the main router's own access
+// points in upper case, as its AiMesh list last told them; none for a
+// router without AiMesh.
+func (a *ASUSReader) Radios() []string {
+	a.nodesMu.Lock()
+	defer a.nodesMu.Unlock()
+	return slices.Clone(a.radios)
+}
+
 // readMesh asks the router for its AiMesh nodes and keeps them, with the
 // clients counted on each from clients, the get_clientlist of the same
 // reading. A router that does not answer it keeps the nodes from before,
@@ -93,7 +102,7 @@ func (a *ASUSReader) readMesh(ctx context.Context, clients map[string]json.RawMe
 	if json.Unmarshal(trailingComma.ReplaceAll(data, []byte("$1")), &values) != nil {
 		return
 	}
-	nodes, err := parseMesh(values["get_cfg_clientlist"], a.base)
+	nodes, radios, err := parseMesh(values["get_cfg_clientlist"], a.base)
 	if err != nil {
 		return
 	}
@@ -102,36 +111,40 @@ func (a *ASUSReader) readMesh(ctx context.Context, clients map[string]json.RawMe
 		nodes[i].Clients = counts[nodes[i].MAC]
 	}
 	a.nodesMu.Lock()
-	a.nodes, a.nodesAt = nodes, now
+	a.nodes, a.radios, a.nodesAt = nodes, radios, now
 	a.nodesMu.Unlock()
 }
 
 // parseMesh reads the nodes of get_cfg_clientlist, which some firmware
-// wraps in a list of its own, leaving out the main router itself: the node
-// of level 0, or at the address base is read at.
-func parseMesh(raw json.RawMessage, base string) ([]MeshNode, error) {
+// wraps in a list of its own, leaving out the main router itself, the node
+// of level 0 or at the address base is read at, of which it returns only
+// the hardware addresses of its access points.
+func parseMesh(raw json.RawMessage, base string) (nodes []MeshNode, radios []string, err error) {
 	var list []json.RawMessage
 	if err := json.Unmarshal(raw, &list); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if len(list) == 1 && strings.HasPrefix(strings.TrimSpace(string(list[0])), "[") {
 		if err := json.Unmarshal(list[0], &list); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 	host := strings.TrimPrefix(base, "http://")
 	if h, _, ok := strings.Cut(host, ":"); ok && !strings.HasPrefix(host, "[") {
 		host = h
 	}
-	var nodes []MeshNode
 	for _, raw := range list {
 		var n asusNode
-		if json.Unmarshal(raw, &n) != nil || n.MAC == "" || n.Level == "0" || n.IP == host {
+		if json.Unmarshal(raw, &n) != nil || n.MAC == "" {
+			continue
+		}
+		if n.Level == "0" || n.IP == host {
+			radios = n.node().Radios
 			continue
 		}
 		nodes = append(nodes, n.node())
 	}
-	return nodes, nil
+	return nodes, radios, nil
 }
 
 // node turns a node of get_cfg_clientlist into a MeshNode.

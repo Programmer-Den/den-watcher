@@ -60,11 +60,13 @@ type ASUSReader struct {
 	traffic     map[string]*[2]counter
 	uptime      uint64
 	uptimeRead  bool
-	// nodesMu guards nodes, the other routers of the router's AiMesh, as
-	// read at nodesAt (see readMesh), on its own, so the nodes' readers do
+	// nodesMu guards nodes, the other routers of the router's AiMesh, and
+	// radios, the hardware addresses of the main router's own access points,
+	// as read at nodesAt (see readMesh), on its own, so the nodes' readers do
 	// not wait for a reading of the main router.
 	nodesMu sync.Mutex
 	nodes   []MeshNode
+	radios  []string
 	nodesAt time.Time
 }
 

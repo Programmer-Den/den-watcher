@@ -309,7 +309,8 @@ func TestASUSReadsTheAiMeshNodes(t *testing.T) {
 	// The main router lists itself too, at level 0; its client list tells
 	// which node each client is on.
 	router.mesh = `{"get_cfg_clientlist":[[
-		{"alias":"Main","model_name":"RT-AX88U","ip":"` + host + `","mac":"aa:00:00:00:00:01","online":"1","level":"0"},
+		{"alias":"Main","model_name":"RT-AX88U","ip":"` + host + `","mac":"aa:00:00:00:00:01","online":"1","level":"0",
+		 "ap2g":"aa:00:00:00:00:21","ap5g":"aa:00:00:00:00:25"},
 		{"alias":"Living room","model_name":"RT-AX58U","ui_model_name":"RT-AX3000","fwver":"3.0.0.4.388_24243","ip":"192.168.1.2","mac":"aa:00:00:00:00:02","online":"1","level":"1",
 		 "ap2g":"aa:00:00:00:00:12","ap5g":"aa:00:00:00:00:15","pap5g":"AA:00:00:00:00:05","rssi5g":"-58","pap2g":"","rssi2g":""},
 		{"alias":"","model_name":"RP-AX56","ip":"192.168.1.3","mac":"aa:00:00:00:00:03","online":"1","level":"1"},
@@ -330,6 +331,9 @@ func TestASUSReadsTheAiMeshNodes(t *testing.T) {
 		living.Backhaul != "5 GHz" || living.BackhaulDBm == nil || *living.BackhaulDBm != -58 || living.Clients != 1 ||
 		!slices.Equal(living.Radios, []string{"AA:00:00:00:00:12", "AA:00:00:00:00:15"}) {
 		t.Errorf("living room %+v", living)
+	}
+	if radios := reader.Radios(); !slices.Equal(radios, []string{"AA:00:00:00:00:21", "AA:00:00:00:00:25"}) {
+		t.Errorf("radios of the main router %v", radios)
 	}
 	// Without a name, a node is named by its model; one without a Wi-Fi
 	// link is on a cable.

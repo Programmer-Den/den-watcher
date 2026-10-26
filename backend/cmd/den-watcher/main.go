@@ -460,6 +460,7 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 		Backups: store,
 		Events:  happenings,
 		WiFi:    store,
+		Routers: others,
 	}
 	if checker := update.NewChecker(version.Version); checker != nil && checkUpdates {
 		site.Update = checker.Status
@@ -713,13 +714,17 @@ func (m asusMesh) MeshNodes() ([]hub.MeshNode, bool) {
 	nodes, at := m.reader.MeshNodes()
 	list := make([]hub.MeshNode, 0, len(nodes))
 	for _, node := range nodes {
-		list = append(list, hub.MeshNode{Key: node.MAC, Name: node.Name, Address: node.IP})
+		list = append(list, hub.MeshNode{Key: node.MAC, Name: node.Name, Address: node.IP, Radios: node.Radios})
 	}
 	return list, !at.IsZero() && time.Since(at) < meshFresh
 }
 
 func (m asusMesh) Node(key string) hub.Usage {
 	return m.reader.Node(key)
+}
+
+func (m asusMesh) Radios() []string {
+	return m.reader.Radios()
 }
 
 // checkDevices returns the things in HUB_CHECKS as devices, each checked

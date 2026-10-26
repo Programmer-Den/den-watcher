@@ -124,6 +124,9 @@ type Site struct {
 	// WiFi is what the devices' Wi-Fi saw nearby; nil leaves out GET
 	// /api/wifi.
 	WiFi WiFiSource
+	// Routers tells which device each router seen on the Wi-Fi is, for GET
+	// /api/wifi; nil tells none.
+	Routers RouterBoxes
 	// Pairing is the code a hub must be given to collect from this machine,
 	// which GET /api/pairing shows; nil lets every hub collect and leaves
 	// out GET /api/pairing.
@@ -203,7 +206,7 @@ func New(site Site) http.Handler {
 		}))
 	}
 	if site.WiFi != nil {
-		mux.HandleFunc("GET /api/wifi", wifiHandler(site.WiFi, site.Retention))
+		mux.HandleFunc("GET /api/wifi", wifiHandler(site.WiFi, site.Routers, site.Retention))
 	}
 	if site.Layout != nil {
 		mux.HandleFunc("GET /api/layout", readLayout(site.Layout))

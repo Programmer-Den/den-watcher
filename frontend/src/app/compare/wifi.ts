@@ -6,6 +6,8 @@ export interface WiFiHistory {
   /** The devices whose Wi-Fi was read, with how many readings had it in each step. */
   devices: { device: string; steps: { time: number; readings: number }[] }[];
   accessPoints: WiFiAccessPoint[];
+  /** The device id of each box that is a device, such as a node of a mesh the hub shows as one. */
+  routers?: Record<string, string>;
 }
 
 /** One access point (one radio of a router) any device saw, as it was last seen. */
@@ -168,6 +170,8 @@ export interface NetworkBox {
   number: number;
   /** The device that hears it best now, if any does. */
   nearest?: string;
+  /** The device it is, if the hub shows it as one. */
+  router?: string;
 }
 
 export function networkBoxes(history: WiFiHistory, ssid: string): NetworkBox[] {
@@ -188,7 +192,12 @@ export function networkBoxes(history: WiFiHistory, ssid: string): NetworkBox[] {
   }
   return [...boxes]
     .sort(([a, x], [b, y]) => x.firstSeen - y.firstSeen || a.localeCompare(b))
-    .map(([box, { nearest }], i) => ({ box, number: i + 1, nearest }));
+    .map(([box, { nearest }], i) => ({
+      box,
+      number: i + 1,
+      nearest,
+      router: history.routers?.[box],
+    }));
 }
 
 /** How well one device hears the home network. */

@@ -173,10 +173,16 @@ export class WifiNearby {
     return security === 'Open' ? this.i18n.t('wifi.open') : (security ?? '');
   }
 
-  /** How an access point of the home network is named: by number, and the device nearest it. */
+  /**
+   * How an access point of the home network is named: as the device it is, or else by number and
+   * the device nearest it.
+   */
   protected accessPointName(box?: NetworkBox): string {
     if (!box) {
       return '';
+    }
+    if (box.router) {
+      return this.name(box.router);
     }
     const name = this.i18n.t('wifi.accessPoint', { number: box.number });
     return box.nearest

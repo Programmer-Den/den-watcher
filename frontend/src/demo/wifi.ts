@@ -278,5 +278,8 @@ export function demoWifi(from: number, to: number): WiFiHistory {
         .map((time) => ({ time, readings: READINGS * (step / 3600) })),
     })),
     accessPoints,
+    // The hub shows the main router of the AiMesh and one of its nodes as devices; the third
+    // router is no node of it, so it is only numbered.
+    routers: { '5d0e1f2a3b4c': 'home-router', '6e1f2a3b4c5d': 'living-room' },
   };
 }
