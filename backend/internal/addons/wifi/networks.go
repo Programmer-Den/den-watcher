@@ -4,11 +4,11 @@ import (
 	"cmp"
 	"fmt"
 	"hash/crc32"
+	"net"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
@@ -181,7 +181,7 @@ func networksOf(aps []AccessPoint) ([]*network, int) {
 	var networks []*network
 	hidden := 0
 	for _, ap := range aps {
-		ssid := cleanSSID(ap.SSID)
+		ssid := metrics.CleanSSID(ap.SSID)
 		if ssid == "" {
 			hidden++
 			continue
@@ -206,19 +206,6 @@ func networksOf(aps []AccessPoint) ([]*network, int) {
 		n.connected = n.connected || ap.Connected
 	}
 	return networks, hidden
-}
-
-// cleanSSID returns an SSID fit to show: valid UTF-8, without control
-// characters and the spaces around it. An SSID is up to 32 bytes of anything.
-func cleanSSID(ssid string) string {
-	ssid = strings.ToValidUTF8(ssid, "�")
-	ssid = strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) {
-			return -1
-		}
-		return r
-	}, ssid)
-	return strings.TrimSpace(ssid)
 }
 
 // NetworkExtras returns the nearby networks as the group of extras the
@@ -428,4 +415,39 @@ func networkID(ssid string, used map[string]bool) string {
 	}
 	used[id] = true
 	return id
+}
+
+// Nearby returns each access point on its own, for a hub to compare what its
+// devices see (see metrics.NearbyWiFi), leaving out those whose hardware
+// address cannot be read. A machine without Wi-Fi, or one whose system
+// cannot be asked, reports nothing.
+func Nearby(aps []AccessPoint) *metrics.NearbyWiFi {
+	if aps == nil {
+		return nil
+	}
+	nearby := &metrics.NearbyWiFi{AccessPoints: []metrics.NearbyAccessPoint{}}
+	for _, ap := range aps {
+		address, err := net.ParseMAC(ap.BSSID)
+		if err != nil || len(address) != 6 {
+			continue
+		}
+		security, _ := ap.Security.Text()
+		n := metrics.NearbyAccessPoint{
+			ID:            metrics.AccessPointID(address, false),
+			Box:           metrics.AccessPointID(address, true),
+			SSID:          metrics.CleanSSID(ap.SSID),
+			SignalPercent: ap.SignalPercent,
+			FrequencyMHz:  ap.FrequencyMHz,
+			WidthMHz:      ap.WidthMHz,
+			Security:      security,
+			Generation:    ap.Generation,
+			MaxRateMbps:   ap.MaxRateMbps,
+			Connected:     ap.Connected,
+		}
+		if ap.HasDBm {
+			n.SignalDBm = new(ap.SignalDBm)
+		}
+		nearby.AccessPoints = append(nearby.AccessPoints, n)
+	}
+	return metrics.CleanNearbyWiFi(nearby)
 }

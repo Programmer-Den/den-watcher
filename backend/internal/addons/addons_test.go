@@ -149,7 +149,7 @@ func TestRunLogsAFailedWriteOnceAndWhenItWorksAgain(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() {
-		run(ctx, read, file, time.Millisecond)
+		run(ctx, Read(read).report, file, time.Millisecond)
 		close(done)
 	}()
 	defer func() {

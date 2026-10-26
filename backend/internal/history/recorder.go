@@ -35,6 +35,11 @@ type Saver interface {
 	Add(ctx context.Context, device string, at time.Time, values map[string]float64) error
 }
 
+// WiFiSaver keeps what a device's Wi-Fi sees nearby: a Store.
+type WiFiSaver interface {
+	AddWiFi(device string, at time.Time, nearby *metrics.NearbyWiFi)
+}
+
 // Recorder reads the machine's usage every RecentInterval into Recent, and
 // every SampleInterval stores the average of those readings in Store. A
 // Pruner deletes what is older than the retention.
@@ -54,6 +59,9 @@ type Recorder struct {
 	// too old to keep them, or one whose minutes cannot be fetched now or do
 	// not have that minute yet, whose average is then stored as before.
 	Fetch func(ctx context.Context, minute time.Time) bool
+	// WiFi, when set, keeps what the device's Wi-Fi sees nearby at each
+	// reading, for comparing what the devices see.
+	WiFi WiFiSaver
 
 	// failing is set while readings fail, so an unreachable device is logged
 	// once and not every few seconds.
@@ -222,6 +230,9 @@ func (r *Recorder) read(ctx context.Context) {
 		}
 	}
 	r.Recent.Add(snapshot.Time, v)
+	if r.WiFi != nil {
+		r.WiFi.AddWiFi(r.Device, snapshot.Time, snapshot.WiFiNearby)
+	}
 }
 
 // hubMeasuredOf returns the values among averages that the hub measures

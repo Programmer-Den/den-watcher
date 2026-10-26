@@ -55,6 +55,9 @@ type Store struct {
 	// brokenInfo has a brokenInfoKey for each description of an extra that
 	// could not be read and was logged.
 	brokenInfo sync.Map
+	// wifi is what the devices' Wi-Fi saw that is not written yet (see
+	// AddWiFi).
+	wifi wifiPending
 }
 
 // Series is the values of one metric over time.
@@ -79,7 +82,7 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	if _, err := db.ExecContext(ctx, schema+extraSchema); err != nil {
+	if _, err := db.ExecContext(ctx, schema+extraSchema+wifiSchema); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
@@ -242,7 +245,15 @@ func (s *Store) DeleteBefore(ctx context.Context, t time.Time) (int64, error) {
 	if err := s.deleteUnusedExtraInfo(ctx, t); err != nil {
 		return deleted, err
 	}
-	s.shrinkLog(ctx, deleted+hourly)
+	wifi, err := s.deleteChunks(ctx, "wifi_hours", "device, time, ap", `time < ?`, t.Truncate(time.Hour).Unix())
+	if err != nil {
+		return deleted, err
+	}
+	scans, err := s.deleteChunks(ctx, "wifi_scans", "device, time", `time < ?`, t.Truncate(time.Hour).Unix())
+	if err != nil {
+		return deleted, err
+	}
+	s.shrinkLog(ctx, deleted+hourly+wifi+scans)
 	return deleted, nil
 }
 
@@ -263,6 +274,13 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 		return err
 	}
 	if _, err := s.db.ExecContext(ctx, `DELETE FROM extra_info WHERE device = ?`, device); err != nil {
+		return err
+	}
+	s.wifi.forget(device)
+	if _, err := s.deleteChunks(ctx, "wifi_hours", "device, time, ap", `device = ?`, device); err != nil {
+		return err
+	}
+	if _, err := s.deleteChunks(ctx, "wifi_scans", "device, time", `device = ?`, device); err != nil {
 		return err
 	}
 	s.brokenInfo.Range(func(key, _ any) bool {
@@ -306,8 +324,8 @@ func (s *Store) devices(ctx context.Context) ([]string, error) {
 	}
 }
 
-// deleteChunks deletes the rows of table, history_minutes or samples_hourly,
-// whose primary key is keys, that match where, deleteChunkRows at a time, each chunk in a transaction of its
+// deleteChunks deletes the rows of table, such as history_minutes or
+// samples_hourly, whose primary key is keys, that match where, deleteChunkRows at a time, each chunk in a transaction of its
 // own, and returns how many it deleted. One DELETE of millions of rows would
 // hold the database's write lock for minutes, so storing would fail
 // meanwhile, and grow the write-ahead log by as much as it deletes.

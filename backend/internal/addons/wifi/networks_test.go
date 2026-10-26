@@ -204,3 +204,28 @@ func TestNetworkIDsStayApart(t *testing.T) {
 		t.Errorf("the id of a name changed from %q to %q", emoji, again)
 	}
 }
+
+func TestNearbyReportsEachAccessPoint(t *testing.T) {
+	got := Nearby([]AccessPoint{
+		{
+			SSID: "Den", BSSID: "aa:bb:cc:dd:ee:ff", SignalPercent: 70, SignalDBm: -55, HasDBm: true, FrequencyMHz: 5180, WidthMHz: 80,
+			Security: Security{Privacy: true, WPA2: true, WPA3: true}, Generation: 6, Connected: true,
+		},
+		{SSID: "Den", BSSID: "aa:bb:cc:dd:ee:fb", SignalPercent: 60, FrequencyMHz: 2437},
+		{SSID: "broken", BSSID: "not a mac", SignalPercent: 60},
+	})
+	if len(got.AccessPoints) != 2 {
+		t.Fatalf("Nearby() = %+v, want both access points with an address", got.AccessPoints)
+	}
+	first := got.AccessPoints[0]
+	if first.ID != "17226b1f68ae" || first.Box != "74c108fcc2a3" || first.Security != "WPA2/WPA3" || !first.Connected ||
+		first.SignalDBm == nil || *first.SignalDBm != -55 || first.FrequencyMHz != 5180 || first.Generation != 6 {
+		t.Errorf("Nearby()[0] = %+v", first)
+	}
+	if second := got.AccessPoints[1]; second.Box != first.Box || second.SignalDBm != nil || second.Security != "Open" {
+		t.Errorf("Nearby()[1] = %+v, want the same box, no dBm and an open network", second)
+	}
+	if Nearby(nil) != nil {
+		t.Error("Nearby(nil) should be nil on a machine without Wi-Fi")
+	}
+}
