@@ -114,30 +114,25 @@
 
             <TextView
                 style="@style/Heading"
-                android:labelFor="@id/address"
                 android:text="@string/address_title" />
 
-            <EditText
+            <TextView
                 android:id="@+id/address"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:autofillHints=""
-                android:hint="@string/address_example"
-                android:importantForAutofill="no"
-                android:inputType="textUri"
-                android:minHeight="48dp"
+                android:layout_marginTop="8dp"
                 android:textColor="@color/on_surface"
-                android:textColorHint="@color/off" />
+                android:textIsSelectable="true"
+                android:textSize="20sp" />
 
             <TextView
-                style="@style/Hint"
-                android:text="@string/address_hint" />
+                android:id="@+id/address_hint"
+                style="@style/Hint" />
 
             <Button
-                android:id="@+id/save"
+                android:id="@+id/scan"
                 style="@style/Button.Outlined"
-                android:text="@string/save" />
+                android:text="@string/scan" />
         </LinearLayout>
 
         <LinearLayout

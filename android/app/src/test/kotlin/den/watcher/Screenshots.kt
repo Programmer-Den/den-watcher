@@ -58,6 +58,23 @@ class Screenshots {
         lastPush = LAST_PUSH
     }
 
+    @Test
+    fun locked() = shot("6-locked") {
+        hubAddress = "192.168.1.20:9393"
+        recording = true
+        lastPush = LAST_PUSH
+        paired = true
+    }
+
+    @Test
+    fun released() = shot("7-released") {
+        hubAddress = "192.168.1.20:9393"
+        recording = true
+        lastPush = LAST_PUSH
+        paired = true
+        releasedUntil = RELEASED_UNTIL
+    }
+
     /** Saves the screen with settings as set, as <name>-light.png and <name>-dark.png. */
     private fun shot(name: String, language: String? = null, set: Settings.() -> Unit) {
         folder.mkdirs()
@@ -90,5 +107,8 @@ class Screenshots {
     private companion object {
         /** A fixed time for the last push, so the screenshots stay the same. */
         const val LAST_PUSH = 1_793_000_000L
+
+        /** A time the hub allows a change until, far enough ahead that the screenshot shows it. */
+        const val RELEASED_UNTIL = 4_102_444_800L
     }
 }

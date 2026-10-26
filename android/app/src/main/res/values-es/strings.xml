@@ -4,10 +4,14 @@
     <string name="code_title">Código de emparejamiento</string>
     <string name="code_hint">En la página del hub, abre Dispositivos, añade un dispositivo del tipo Móvil e introduce este código.</string>
     <string name="address_title">Dirección del hub</string>
-    <string name="address_hint">Tal como la muestra la página del hub al añadir el móvil: su dirección IP o nombre, y el puerto.</string>
-    <string name="address_invalid">Introduce una dirección IP o un nombre, con puerto si hace falta, por ejemplo 192.168.1.20:9393.</string>
+    <string name="address_hint">Toca Escanear código del hub y apunta la cámara al código que la página del hub muestra en Dispositivos al añadir el móvil.</string>
+    <string name="address_none">Aún no hay hub</string>
+    <string name="address_locked">Bloqueado por el hub: este móvil sigue enviándole su uso y la grabación no se puede detener. Para cambiarlo, el propietario del hub toca Permitir cambiar de hub para este móvil en Dispositivos, en la página del hub.</string>
+    <string name="address_released">El hub permite escanear el código de otro hub o detener la grabación hasta las %1$s.</string>
+    <string name="scan">Escanear código del hub</string>
+    <string name="scan_prompt">Apunta la cámara al código de la página del hub</string>
+    <string name="scan_invalid">Este código no contiene la dirección de un hub. Escanea el de Dispositivos, en la página del hub.</string>
     <string name="address_saved">Guardado</string>
-    <string name="save">Guardar</string>
     <string name="status_title">Estado</string>
     <string name="start">Iniciar registro</string>
     <string name="stop">Detener registro</string>
@@ -16,7 +20,7 @@
     <string name="status_recording">Registra el uso y lo guarda hasta que el hub lo tiene, hasta una semana.</string>
     <string name="status_stopped">Inicia el registro para enviar el uso de este móvil al hub.</string>
     <string name="status_last_push">El hub recibió el uso por última vez el %1$s.</string>
-    <string name="problem_no_address">Introduce la dirección del hub para enviar el uso.</string>
+    <string name="problem_no_address">Escanea el código del hub para enviar el uso.</string>
     <string name="problem_not_home">Sin Wi-Fi: el uso se envía en cuanto el móvil está en el Wi-Fi de casa.</string>
     <string name="problem_unreachable">El hub no responde. ¿Está el móvil en el Wi-Fi de casa y es correcta la dirección?</string>
     <string name="problem_not_added">El hub no tiene ningún móvil con este código de emparejamiento. Añade el móvil en Dispositivos del hub con el código de arriba.</string>

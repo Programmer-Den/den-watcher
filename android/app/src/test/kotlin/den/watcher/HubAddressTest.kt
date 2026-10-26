@@ -22,4 +22,20 @@ class HubAddressTest {
         assertNull(HubAddress.pushUrl("pi:99999"))
         assertNull(HubAddress.pushUrl("my pi"))
     }
+
+    @Test
+    fun takesTheAddressFromTheHubsCode() {
+        assertEquals("192.168.1.20:9393", HubAddress.fromCode("http://192.168.1.20:9393/"))
+        assertEquals("raspberrypi.local:8080", HubAddress.fromCode(" HTTP://raspberrypi.local:8080 "))
+        assertEquals("pi:9393", HubAddress.fromCode("http://pi"))
+    }
+
+    @Test
+    fun refusesACodeWithoutAHubsAddress() {
+        // A code holds the page's address, so text without http:// is no hub's.
+        assertNull(HubAddress.fromCode("192.168.1.20:9393"))
+        assertNull(HubAddress.fromCode("https://shop.example/offer"))
+        assertNull(HubAddress.fromCode("http://shop.example/offer"))
+        assertNull(HubAddress.fromCode("WIFI:S:Home;T:WPA;P:secret;;"))
+    }
 }

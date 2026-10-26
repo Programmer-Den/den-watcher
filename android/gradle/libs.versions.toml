@@ -4,11 +4,13 @@ kotlin = "2.4.21"
 junit = "4.13.2"
 json = "20260814"
 robolectric = "4.14.1"
+zxing-embedded = "4.3.0"
 
 [libraries]
 junit = { module = "junit:junit", version.ref = "junit" }
 json = { module = "org.json:json", version.ref = "json" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+zxing-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxing-embedded" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

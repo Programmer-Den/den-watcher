@@ -4,10 +4,14 @@
     <string name="code_title">Code d\'appairage</string>
     <string name="code_hint">Sur la page du hub, ouvrez Appareils, ajoutez un appareil de type Téléphone et saisissez ce code.</string>
     <string name="address_title">Adresse du hub</string>
-    <string name="address_hint">Telle que la page du hub l\'affiche à l\'ajout du téléphone : son adresse IP ou son nom, et le port.</string>
-    <string name="address_invalid">Saisissez une adresse IP ou un nom, avec un port si besoin, par exemple 192.168.1.20:9393.</string>
+    <string name="address_hint">Touchez Scanner le code du hub et visez avec l\'appareil photo le code que la page du hub affiche dans Appareils quand vous ajoutez le téléphone.</string>
+    <string name="address_none">Pas encore de hub</string>
+    <string name="address_locked">Verrouillé par le hub : ce téléphone continue de lui envoyer son utilisation et l\'enregistrement ne peut pas être arrêté. Pour changer cela, le propriétaire du hub touche Autoriser le changement de hub pour ce téléphone dans Appareils sur la page du hub.</string>
+    <string name="address_released">Le hub permet de scanner le code d\'un autre hub ou d\'arrêter l\'enregistrement jusqu\'à %1$s.</string>
+    <string name="scan">Scanner le code du hub</string>
+    <string name="scan_prompt">Visez le code sur la page du hub</string>
+    <string name="scan_invalid">Ce code ne contient pas l\'adresse d\'un hub. Scannez celui de la page du hub, dans Appareils.</string>
     <string name="address_saved">Enregistré</string>
-    <string name="save">Enregistrer</string>
     <string name="status_title">État</string>
     <string name="start">Démarrer l\'enregistrement</string>
     <string name="stop">Arrêter l\'enregistrement</string>
@@ -16,7 +20,7 @@
     <string name="status_recording">Enregistre l\'utilisation et la garde jusqu\'à ce que le hub l\'ait, une semaine au plus.</string>
     <string name="status_stopped">Démarrez l\'enregistrement pour envoyer l\'utilisation de ce téléphone au hub.</string>
     <string name="status_last_push">Le hub a reçu l\'utilisation pour la dernière fois le %1$s.</string>
-    <string name="problem_no_address">Saisissez l\'adresse du hub pour envoyer l\'utilisation.</string>
+    <string name="problem_no_address">Scannez le code du hub pour envoyer l\'utilisation.</string>
     <string name="problem_not_home">Pas sur le Wi-Fi : l\'utilisation sera envoyée dès que le téléphone sera sur le Wi-Fi de la maison.</string>
     <string name="problem_unreachable">Le hub ne répond pas. Le téléphone est-il sur le Wi-Fi de la maison, et l\'adresse est-elle juste ?</string>
     <string name="problem_not_added">Le hub n\'a aucun téléphone avec ce code d\'appairage. Ajoutez le téléphone dans Appareils du hub avec le code ci-dessus.</string>

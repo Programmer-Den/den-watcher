@@ -4,10 +4,14 @@
     <string name="code_title">Kopplungscode</string>
     <string name="code_hint">Öffne auf der Seite des Hubs Geräte, füge ein Gerät der Art Handy hinzu und gib diesen Code ein.</string>
     <string name="address_title">Adresse des Hubs</string>
-    <string name="address_hint">Wie die Seite des Hubs sie beim Hinzufügen des Handys zeigt: IP-Adresse oder Name und Port.</string>
-    <string name="address_invalid">Gib eine IP-Adresse oder einen Namen ein, gern mit Port, etwa 192.168.1.20:9393.</string>
+    <string name="address_hint">Tippe auf Hub-Code scannen und richte die Kamera auf den Code, den die Seite des Hubs unter Geräte beim Hinzufügen des Handys zeigt.</string>
+    <string name="address_none">Noch kein Hub</string>
+    <string name="address_locked">Vom Hub gesperrt: Dieses Handy schickt weiter an ihn, und die Aufzeichnung lässt sich nicht beenden. Um das zu ändern, tippt der Besitzer des Hubs auf dessen Seite unter Geräte bei diesem Handy auf Hubwechsel erlauben.</string>
+    <string name="address_released">Der Hub erlaubt bis %1$s, den Code eines anderen Hubs zu scannen oder die Aufzeichnung zu beenden.</string>
+    <string name="scan">Hub-Code scannen</string>
+    <string name="scan_prompt">Richte die Kamera auf den Code auf der Seite des Hubs</string>
+    <string name="scan_invalid">Dieser Code enthält keine Adresse eines Hubs. Scanne den unter Geräte auf der Seite des Hubs.</string>
     <string name="address_saved">Gespeichert</string>
-    <string name="save">Speichern</string>
     <string name="status_title">Status</string>
     <string name="start">Aufzeichnung starten</string>
     <string name="stop">Aufzeichnung beenden</string>
@@ -16,7 +20,7 @@
     <string name="status_recording">Zeichnet die Nutzung auf und behält sie, bis der Hub sie hat, bis zu einer Woche.</string>
     <string name="status_stopped">Starte die Aufzeichnung, um die Nutzung dieses Handys an den Hub zu schicken.</string>
     <string name="status_last_push">Der Hub hat die Nutzung zuletzt am %1$s bekommen.</string>
-    <string name="problem_no_address">Gib die Adresse des Hubs ein, um die Nutzung zu schicken.</string>
+    <string name="problem_no_address">Scanne den Code des Hubs, um die Nutzung zu schicken.</string>
     <string name="problem_not_home">Nicht im WLAN: Die Nutzung wird geschickt, sobald das Handy in deinem WLAN zu Hause ist.</string>
     <string name="problem_unreachable">Der Hub antwortet nicht. Ist das Handy in deinem WLAN zu Hause und stimmt die Adresse?</string>
     <string name="problem_not_added">Der Hub hat kein Handy mit diesem Kopplungscode. Füge das Handy unter Geräte des Hubs mit dem Code oben hinzu.</string>
