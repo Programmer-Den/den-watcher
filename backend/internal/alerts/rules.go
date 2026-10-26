@@ -172,11 +172,26 @@ func foldSSID(ssid string) string {
 	}, ssid)
 }
 
+// securityKinds returns the kinds of a security: "WPA2/WPA3" is WPA2 and
+// WPA3, and "WPA2/WPA3 Enterprise", where Enterprise is written once for all
+// of them, is WPA2 Enterprise and WPA3 Enterprise.
+func securityKinds(security string) []string {
+	base, enterprise := strings.CutSuffix(security, " Enterprise")
+	kinds := strings.Split(base, "/")
+	if enterprise {
+		for i := range kinds {
+			kinds[i] += " Enterprise"
+		}
+	}
+	return kinds
+}
+
 // sharesSecurity reports whether two securities, such as "WPA2/WPA3" and
 // "WPA2", have a kind in common.
 func sharesSecurity(a, b string) bool {
-	for _, kind := range strings.Split(a, "/") {
-		if slices.Contains(strings.Split(b, "/"), kind) {
+	kinds := securityKinds(b)
+	for _, kind := range securityKinds(a) {
+		if slices.Contains(kinds, kind) {
 			return true
 		}
 	}

@@ -332,4 +332,28 @@ describe('wifiChanges', () => {
     h.from = NOW - 3 * HOUR;
     expect(wifiChanges(h).map((c) => [c.kind, c.ssid])).toEqual([['newAccessPoint', 'Den']]);
   });
+
+  it('counts Enterprise for every kind of a security', () => {
+    const h = history([
+      heard('a1', 'b1', 'Office', [3, 2, 1, 0], { security: 'WPA2/WPA3 Enterprise' }, [], true),
+      heard('a2', 'b2', 'Office', [1, 0], { security: 'WPA2 Enterprise' }),
+      heard('a3', 'b3', 'Office', [1, 0], { security: 'WPA2' }),
+    ]);
+    h.from = NOW - 3 * HOUR;
+    expect(wifiChanges(h).map((c) => [c.kind, c.security])).toEqual([
+      ['newAccessPoint', 'WPA2 Enterprise'],
+      ['lookalike', 'WPA2'],
+    ]);
+  });
+
+  it('compares with the security of the access point the devices were connected to', () => {
+    const h = history([
+      // The home router's 6 GHz radio, WPA3 only, which no device was connected to.
+      heard('a0', 'b1', 'Den', [3, 2, 1, 0], { security: 'WPA3' }),
+      heard('a1', 'b1', 'Den', [3, 2, 1, 0], { security: 'WPA2' }, [], true),
+      heard('a2', 'b2', 'Den', [3, 2, 1, 0], { security: 'WPA2' }),
+    ]);
+    h.from = NOW - 3 * HOUR;
+    expect(wifiChanges(h)).toEqual([]);
+  });
 });

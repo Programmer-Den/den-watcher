@@ -455,10 +455,20 @@ export function foldSSID(ssid: string): string {
   return ssid.toLowerCase().replace(/[ _-]/g, '');
 }
 
+/**
+ * The kinds of a security: "WPA2/WPA3" is WPA2 and WPA3, and "WPA2/WPA3 Enterprise", where
+ * Enterprise is written once for all of them, is WPA2 Enterprise and WPA3 Enterprise.
+ */
+function securityKinds(security: string): string[] {
+  const enterprise = security.endsWith(' Enterprise');
+  const kinds = (enterprise ? security.slice(0, -' Enterprise'.length) : security).split('/');
+  return enterprise ? kinds.map((kind) => kind + ' Enterprise') : kinds;
+}
+
 /** Whether two securities, such as "WPA2/WPA3" and "WPA2", have a kind in common. */
 function sharesSecurity(a: string, b: string): boolean {
-  const kinds = b.split('/');
-  return a.split('/').some((kind) => kinds.includes(kind));
+  const kinds = securityKinds(b);
+  return securityKinds(a).some((kind) => kinds.includes(kind));
 }
 
 /** The devices that saw access points in the step at time, or at all without one, strongest first. */
@@ -508,7 +518,10 @@ export function wifiChanges(history: WiFiHistory): WiFiChange[] {
       .filter((ap) => ap.seenBy.some((s) => s.points.some((p) => p.connected)))
       .map((ap) => ap.box),
   );
-  const homeSecurity = homeAPs.find((ap) => homeBoxes.has(ap.box))?.security;
+  // The securities of the access points the devices were connected to, as the alert compares.
+  const homeSecurities = homeAPs
+    .filter((ap) => ap.security && ap.seenBy.some((s) => s.points.some((p) => p.connected)))
+    .map((ap) => ap.security);
   const changes: WiFiChange[] = [];
   for (const [ssid, aps] of named) {
     if (home && foldSSID(ssid) === foldSSID(home)) {
@@ -519,7 +532,9 @@ export function wifiChanges(history: WiFiHistory): WiFiChange[] {
       for (const radios of boxes.values()) {
         const first = radios.reduce((a, b) => (b.firstSeen < a.firstSeen ? b : a));
         const other =
-          !!first.security && !!homeSecurity && !sharesSecurity(first.security, homeSecurity);
+          !!first.security &&
+          homeSecurities.length > 0 &&
+          !homeSecurities.some((security) => sharesSecurity(first.security, security));
         if (other || (ssid === home && first.firstSeen > start)) {
           changes.push({
             kind: other ? 'lookalike' : 'newAccessPoint',

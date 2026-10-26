@@ -494,4 +494,17 @@ func TestLookalikes(t *testing.T) {
 	if got := lookalikes(base, nil); got != nil {
 		t.Errorf("without Wi-Fi: %+v", got)
 	}
+
+	// Enterprise is written once for every kind of a security.
+	office := &metrics.NearbyWiFi{AccessPoints: []metrics.NearbyAccessPoint{
+		{ID: "o1", Box: "o1", SSID: "Office", Security: "WPA2/WPA3 Enterprise", Connected: true},
+		{ID: "o2", Box: "o2", SSID: "Office", Security: "WPA2 Enterprise"},
+	}}
+	if got := lookalikes(base, office); len(got) != 0 {
+		t.Errorf("an older access point of an Enterprise network: %+v", got)
+	}
+	office.AccessPoints = append(office.AccessPoints, metrics.NearbyAccessPoint{ID: "f2", Box: "f2", SSID: "Office", Security: "WPA2"})
+	if got := lookalikes(base, office); len(got) != 1 {
+		t.Errorf("a copy without Enterprise: %+v", got)
+	}
 }
