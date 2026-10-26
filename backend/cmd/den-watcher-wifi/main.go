@@ -2,8 +2,8 @@
 // seconds it reads the link quality and signal of each connected wireless
 // interface, from /proc/net/wireless on Linux and through the Native Wifi API
 // on Windows, and the Wi-Fi networks nearby that the system's own scans
-// found, from NetworkManager over the system D-Bus on Linux and through the
-// Native Wifi API on Windows, and writes them to the add-on folder (see
+// found, every half minute (addons.ProgramInterval), from NetworkManager
+// over the system D-Bus on Linux and through the Native Wifi API on Windows, and writes them to the add-on folder (see
 // package addons), the networks also each access point on its own, for a hub
 // to compare what its devices see. On other systems it reports nothing.
 //
@@ -32,8 +32,16 @@ func main() {
 	addons.MainReport("wifi", "UsageControlWifi", func() addons.ReadReport {
 		read := wifi.NewReader()
 		readNetworks := wifi.NewNetworksReader()
-		return func(ctx context.Context, _ time.Time) metrics.AddOnReport {
-			networks := readNetworks(ctx)
+		// The nearby networks change only with the system's own scans,
+		// which come every few minutes, and asking for them brings back all
+		// of NetworkManager's objects or the whole BSS list, so they are
+		// read every ProgramInterval and the last list is used in between.
+		var networks []wifi.AccessPoint
+		var networksRead time.Time
+		return func(ctx context.Context, now time.Time) metrics.AddOnReport {
+			if addons.Due(networksRead, now, addons.ProgramInterval) {
+				networks, networksRead = readNetworks(ctx), now
+			}
 			return metrics.AddOnReport{
 				Extras: append(wifi.Extras(read(ctx)), wifi.NetworkExtras(networks)...),
 				WiFi:   wifi.Nearby(networks),
