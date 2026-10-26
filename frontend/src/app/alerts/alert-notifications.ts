@@ -12,6 +12,7 @@ import {
 import { readStored, store } from '../browser';
 import { DeviceService } from '../devices/devices';
 import { I18n } from '../i18n/i18n';
+import { SERVICE_WORKERS } from '../install/install';
 import { Alert } from './alert';
 import { AlertService, alertDeviceName, alertText } from './alerts';
 
@@ -51,6 +52,7 @@ export const BROWSER_NOTIFICATIONS = new InjectionToken<BrowserNotifications>(
 export class AlertNotifications {
   private readonly document = inject(DOCUMENT);
   private readonly api = inject(BROWSER_NOTIFICATIONS).api;
+  private readonly workers = inject(SERVICE_WORKERS);
   private readonly alerts = inject(AlertService);
   private readonly devices = inject(DeviceService);
   private readonly i18n = inject(I18n);
@@ -148,9 +150,9 @@ export class AlertNotifications {
     } catch {
       // Some browsers, such as Chrome on Android, show notifications only from a service worker,
       // which runs where the page is opened over https; its sw.js brings the page to the front.
-      this.document.defaultView?.navigator.serviceWorker
-        ?.getRegistration()
-        .then((worker) => worker?.showNotification(title, options))
+      // Right after the first visit it may still be starting, so this waits until it runs.
+      this.workers?.ready
+        .then((worker) => worker.showNotification(title, options))
         .catch(() => undefined);
     }
   }

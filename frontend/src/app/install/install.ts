@@ -7,6 +7,11 @@ export interface InstallPromptEvent extends Event {
   prompt(): Promise<void>;
 }
 
+/** The window, with the offer to install the page that index.html keeps until the app starts. */
+interface OfferWindow extends Window {
+  installOffer?: InstallPromptEvent;
+}
+
 /**
  * The browser's service workers, or null where the page may not use them, and while developing,
  * where the files have no hashed names and change all the time; a token so tests can replace them.
@@ -35,7 +40,7 @@ export class InstallService {
   readonly available = signal(false);
 
   constructor() {
-    const window = inject(DOCUMENT).defaultView;
+    const window = inject(DOCUMENT).defaultView as OfferWindow | null;
     inject(SERVICE_WORKERS)
       ?.register('sw.js')
       .catch(() => {
@@ -51,6 +56,12 @@ export class InstallService {
       this.offer = null;
       this.available.set(false);
     };
+    // The browser may offer it before the app starts, on a slow device or with the page cached.
+    if (window?.installOffer) {
+      this.offer = window.installOffer;
+      this.available.set(true);
+      window.installOffer = undefined;
+    }
     window?.addEventListener('beforeinstallprompt', offered);
     window?.addEventListener('appinstalled', installed);
     inject(DestroyRef).onDestroy(() => {

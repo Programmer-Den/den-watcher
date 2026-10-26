@@ -15,6 +15,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Den-Watcher" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <script>
+      // Keeps the browser's offer to install the page, which may come before the app has started.
+      addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        window.installOffer = event;
+      });
+    </script>
   </head>
   <body>
     <app-root></app-root>

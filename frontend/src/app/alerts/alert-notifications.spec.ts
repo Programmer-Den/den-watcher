@@ -5,6 +5,7 @@ import { MatDialogRef } from '@angular/material/dialog';
 
 import { Device, DeviceService, LOCAL_DEVICE } from '../devices/devices';
 import { I18n, LANGUAGE_STORAGE_KEY } from '../i18n/i18n';
+import { SERVICE_WORKERS } from '../install/install';
 import { Alert } from './alert';
 import {
   AlertNotifications,
@@ -30,6 +31,8 @@ class FakeNotification {
   static permission: NotificationPermission = 'default';
   static answer: NotificationPermission = 'granted';
   static shown: { title: string; body?: string; tag?: string }[] = [];
+  /** Whether only a service worker may show them, as on Chrome on Android. */
+  static workerOnly = false;
   static requestPermission = vi.fn(() => {
     FakeNotification.permission = FakeNotification.answer;
     return Promise.resolve(FakeNotification.answer);
@@ -37,6 +40,9 @@ class FakeNotification {
   onclick: (() => void) | null = null;
 
   constructor(title: string, options: NotificationOptions = {}) {
+    if (FakeNotification.workerOnly) {
+      throw new TypeError('Illegal constructor');
+    }
     FakeNotification.shown.push({ title, body: options.body, tag: options.tag });
   }
 
@@ -48,7 +54,10 @@ class FakeNotification {
 describe('AlertNotifications', () => {
   let devices: DeviceService;
 
-  function setUp(api: typeof FakeNotification | null = FakeNotification): AlertNotifications {
+  function setUp(
+    api: typeof FakeNotification | null = FakeNotification,
+    workers: Partial<ServiceWorkerContainer> | null = null,
+  ): AlertNotifications {
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -57,6 +66,7 @@ describe('AlertNotifications', () => {
           provide: BROWSER_NOTIFICATIONS,
           useValue: { secure: true, api: api as unknown as typeof Notification },
         },
+        { provide: SERVICE_WORKERS, useValue: workers },
       ],
     });
     TestBed.inject(I18n).use('en-GB');
@@ -75,6 +85,7 @@ describe('AlertNotifications', () => {
     FakeNotification.permission = 'default';
     FakeNotification.answer = 'granted';
     FakeNotification.shown = [];
+    FakeNotification.workerOnly = false;
     vi.spyOn(document, 'hasFocus').mockReturnValue(false);
   });
 
@@ -150,6 +161,27 @@ describe('AlertNotifications', () => {
     read([disk, { ...disk, id: 2 }]);
 
     expect(FakeNotification.shown).toEqual([]);
+  });
+
+  it('shows them from the service worker where the page may not show them itself', async () => {
+    FakeNotification.workerOnly = true;
+    const shown: { title: string; body?: string; tag?: string }[] = [];
+    const worker = {
+      showNotification: (title: string, options: NotificationOptions) => {
+        shown.push({ title, body: options.body, tag: options.tag });
+        return Promise.resolve();
+      },
+    } as ServiceWorkerRegistration;
+    const notifications = setUp(FakeNotification, { ready: Promise.resolve(worker) });
+    await notifications.set('started');
+    read([]);
+
+    read([disk]);
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(shown).toEqual([
+      { title: 'NAS', body: 'Warning: Disk / is 91 % full', tag: 'den-watcher-alert-1' },
+    ]);
   });
 
   it('takes the choice made last time in this browser', () => {
