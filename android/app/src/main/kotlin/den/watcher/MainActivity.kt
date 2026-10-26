@@ -126,6 +126,7 @@ class MainActivity : Activity() {
             // address can be scanned again, as when the phone was not added.
             settings.paired = false
             settings.releasedUntil = 0
+            settings.hubKey = ""
             // The network the new hub is first reached on is the usual one.
             settings.usualNetworks = emptySet()
             settings.otherNetwork = null

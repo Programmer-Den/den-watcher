@@ -52,6 +52,8 @@ type Hub struct {
 	pagePort string
 	// id is the hub's own id, which every device is told; see HubIDHeader.
 	id string
+	// phoneSecret is what each phone's key is made from; see phoneKey.
+	phoneSecret []byte
 	// suggester works out which device the page offers to add.
 	suggester suggester
 	// ctx ends every recorder when the program stops.
@@ -162,7 +164,7 @@ func New(ctx context.Context, store *history.Store, fixed []Device, complete boo
 // for tests.
 func newHub(ctx context.Context, store *history.Store, fixed []Device, complete bool, historyEntries int, retention time.Duration, pagePort string, local Usage, allowLoopback bool, forgetters ...Forgetter) (*Hub, error) {
 	h := &Hub{store: store, historyEntries: historyEntries, retention: retention, pagePort: pagePort, suggester: defaultSuggester(), ctx: ctx, local: local, allowLoopback: allowLoopback, forgetters: forgetters}
-	for _, schema := range []string{savedSchema, availabilitySchema, kindSchema, idSchema, pairingSchema, meshSchema} {
+	for _, schema := range []string{savedSchema, availabilitySchema, kindSchema, idSchema, pairingSchema, meshSchema, phoneKeySchema} {
 		if _, err := store.DB().ExecContext(ctx, schema); err != nil {
 			return nil, err
 		}
@@ -172,6 +174,9 @@ func newHub(ctx context.Context, store *history.Store, fixed []Device, complete 
 		return nil, err
 	}
 	h.id = id
+	if h.phoneSecret, err = readPhoneSecret(ctx, store.DB()); err != nil {
+		return nil, err
+	}
 	saved, err := h.saved(ctx)
 	if err != nil {
 		return nil, err

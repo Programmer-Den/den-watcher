@@ -39,6 +39,15 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(PAIRED, false)
         set(value) = prefs.edit().putBoolean(PAIRED, value).apply()
 
+    /**
+     * The phone's key, in hex, that the hub at hubAddress gave it with its
+     * first push and proves an allowed change with (see Release); empty
+     * until then. It is never shown, unlike the pairing code.
+     */
+    var hubKey: String
+        get() = prefs.getString(HUB_KEY, "") ?: ""
+        set(value) = prefs.edit().putString(HUB_KEY, value).apply()
+
     /** Until when the hub allows a change, in Unix seconds; 0 when it never did. */
     var releasedUntil: Long
         get() = prefs.getLong(RELEASED_UNTIL, 0)
@@ -113,6 +122,7 @@ class Settings(context: Context) {
         const val RECORDING = "recording"
         const val PAIRED = "paired"
         const val RELEASED_UNTIL = "releasedUntil"
+        const val HUB_KEY = "hubKey"
         const val LAST_PUSH = "lastPush"
         const val PROBLEM = "problem"
         const val LAST_READING = "lastReading"

@@ -34,9 +34,13 @@ object Push {
         return minutes.take(count)
     }
 
-    /** The body of a push sent at now, with the newest reading when there is one. */
-    fun body(now: Long, snapshot: JSONObject?, minutes: List<Minute>): JSONObject = JSONObject().apply {
+    /**
+     * The body of a push sent at now, with the newest reading when there is
+     * one, asking for the phone's key when needKey is set.
+     */
+    fun body(now: Long, snapshot: JSONObject?, minutes: List<Minute>, needKey: Boolean = false): JSONObject = JSONObject().apply {
         put("now", now)
+        if (needKey) put("needKey", true)
         snapshot?.let { put("snapshot", it) }
         put(
             "minutes",
