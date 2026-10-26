@@ -22,7 +22,8 @@ import (
 )
 
 // ASUSPaths are the only pages of an ASUS router's web interface a reader
-// asks: the login, the values the ASUS app reads, and the temperatures.
+// asks: the login, the values the ASUS app reads (with the nodes of an
+// AiMesh), and the temperatures.
 // None of them changes a setting.
 var ASUSPaths = []string{"/login.cgi", "/appGet.cgi", "/ajax_coretmp.asp"}
 
@@ -59,6 +60,12 @@ type ASUSReader struct {
 	traffic     map[string]*[2]counter
 	uptime      uint64
 	uptimeRead  bool
+	// nodesMu guards nodes, the other routers of the router's AiMesh, as
+	// read at nodesAt (see readMesh), on its own, so the nodes' readers do
+	// not wait for a reading of the main router.
+	nodesMu sync.Mutex
+	nodes   []MeshNode
+	nodesAt time.Time
 }
 
 // NewASUS returns a reader for the ASUS router at address (host or
@@ -81,6 +88,9 @@ func (a *ASUSReader) Collect(ctx context.Context) (metrics.Snapshot, error) {
 		return metrics.Snapshot{}, err
 	}
 	snapshot.Temperatures = a.temperatures(ctx)
+	var clients map[string]json.RawMessage
+	_ = json.Unmarshal(values["get_clientlist"], &clients)
+	a.readMesh(ctx, clients, time.Now())
 	return snapshot, nil
 }
 

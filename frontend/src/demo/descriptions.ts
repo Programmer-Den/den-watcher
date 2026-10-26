@@ -213,6 +213,15 @@ export const descriptions: Record<
       es: 'Cuántos dispositivos están en línea en la red del router, por cable y por Wi-Fi.',
     },
   },
+  'aimesh-node': {
+    description:
+      'What the main router of the AiMesh tells about this node: how it is linked to the mesh, how many devices are connected to it, its model and firmware.',
+    descriptions: {
+      de: 'Was der Hauptrouter des AiMesh über diesen Knoten meldet: wie er mit dem Mesh verbunden ist, wie viele Geräte mit ihm verbunden sind, sein Modell und seine Firmware.',
+      fr: "Ce que le routeur principal de l'AiMesh indique sur ce nœud : comment il est relié au maillage, combien d'appareils y sont connectés, son modèle et son firmware.",
+      es: 'Lo que el router principal del AiMesh indica sobre este nodo: cómo está unido a la malla, cuántos dispositivos están conectados a él, su modelo y su firmware.',
+    },
+  },
   connected: {
     description:
       "The devices online in the router's network right now, each with how it is connected.",

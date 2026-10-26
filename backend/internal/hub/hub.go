@@ -162,7 +162,7 @@ func New(ctx context.Context, store *history.Store, fixed []Device, complete boo
 // for tests.
 func newHub(ctx context.Context, store *history.Store, fixed []Device, complete bool, historyEntries int, retention time.Duration, pagePort string, local Usage, allowLoopback bool, forgetters ...Forgetter) (*Hub, error) {
 	h := &Hub{store: store, historyEntries: historyEntries, retention: retention, pagePort: pagePort, suggester: defaultSuggester(), ctx: ctx, local: local, allowLoopback: allowLoopback, forgetters: forgetters}
-	for _, schema := range []string{savedSchema, availabilitySchema, kindSchema, idSchema, pairingSchema} {
+	for _, schema := range []string{savedSchema, availabilitySchema, kindSchema, idSchema, pairingSchema, meshSchema} {
 		if _, err := store.DB().ExecContext(ctx, schema); err != nil {
 			return nil, err
 		}
@@ -181,7 +181,12 @@ func newHub(ctx context.Context, store *history.Store, fixed []Device, complete 
 	// page, while its history ages out with the retention.
 	// A device removed with its history kept and now in HUB_DEVICES is
 	// collected from again.
-	for _, device := range fixed {
+	// The nodes of a mesh are shown as the routers they are part of.
+	nodes, err := meshDevices(ctx, store.DB(), fixed)
+	if err != nil {
+		return nil, err
+	}
+	for _, device := range slices.Concat(fixed, nodes) {
 		if err := continueKept(ctx, store.DB(), device.ID); err != nil {
 			return nil, err
 		}
@@ -193,10 +198,13 @@ func newHub(ctx context.Context, store *history.Store, fixed []Device, complete 
 	if err != nil {
 		return nil, err
 	}
-	for _, device := range slices.Concat(fixed, saved) {
+	for _, device := range slices.Concat(fixed, nodes, saved) {
 		kept = append(kept, device.ID)
 	}
 	if complete {
+		if err := forgetMeshes(ctx, store.DB(), fixed); err != nil {
+			return nil, err
+		}
 		if err := h.forgetOthers(ctx, kept); err != nil {
 			return nil, err
 		}
@@ -204,6 +212,16 @@ func newHub(ctx context.Context, store *history.Store, fixed []Device, complete 
 		slog.Warn("a setting of the devices to collect from has an error, so no device missing from them is forgotten at this start")
 	}
 	for _, device := range fixed {
+		h.start(device, true, nil)
+		if device.Mesh != nil {
+			h.recording.Go(func() { h.watchMesh(ctx, device) })
+		}
+	}
+	for _, device := range nodes {
+		if h.find(device.ID) != nil {
+			slog.Warn("a node of a router's mesh has the same name as a device in HUB_DEVICES, HUB_ROUTERS or HUB_CHECKS; using that one", "name", device.Name)
+			continue
+		}
 		h.start(device, true, nil)
 	}
 	var own []netip.Addr
@@ -582,7 +600,13 @@ func (h *Hub) Remove(ctx context.Context, id string, keepHistory bool) error {
 	if remote.Fixed {
 		return &InputError{Problem: ProblemFixed, Message: "the device is set in HUB_DEVICES or HUB_ROUTERS; remove it there"}
 	}
+	return h.removeRemote(ctx, remote, keepHistory)
+}
 
+// removeRemote stops collecting from a device and forgets it, as Remove
+// does, a fixed one too. The caller holds mu.
+func (h *Hub) removeRemote(ctx context.Context, remote *Remote, keepHistory bool) error {
+	id := remote.ID
 	// Counted before the database is changed, so a shutdown that times out
 	// meanwhile still waits for the rest of the removal.
 	h.recording.Add(1)

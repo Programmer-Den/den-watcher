@@ -691,10 +691,35 @@ func routerDevices(databasePath string) ([]hub.Device, error) {
 			// SNMPv3 makes its keys from at least 8 characters (RFC 3414).
 			return nil, fmt.Errorf("the SNMPv3 password of the router %q is shorter than 8 characters; run the installer again to enter it", config.Name)
 		}
-		device.Source = router.New(config, password)
+		reader := router.New(config, password)
+		device.Source = reader
+		if asus := router.MeshOf(reader); asus != nil {
+			device.Mesh = asusMesh{asus}
+		}
 		devices = append(devices, device)
 	}
 	return devices, nil
+}
+
+// asusMesh shows the nodes of an ASUS router's AiMesh as devices of the hub.
+type asusMesh struct {
+	reader *router.ASUSReader
+}
+
+// meshFresh is how old the list of nodes may be for the hub to act on it.
+const meshFresh = 2 * time.Minute
+
+func (m asusMesh) MeshNodes() ([]hub.MeshNode, bool) {
+	nodes, at := m.reader.MeshNodes()
+	list := make([]hub.MeshNode, 0, len(nodes))
+	for _, node := range nodes {
+		list = append(list, hub.MeshNode{Key: node.MAC, Name: node.Name, Address: node.IP})
+	}
+	return list, !at.IsZero() && time.Since(at) < meshFresh
+}
+
+func (m asusMesh) Node(key string) hub.Usage {
+	return m.reader.Node(key)
 }
 
 // checkDevices returns the things in HUB_CHECKS as devices, each checked

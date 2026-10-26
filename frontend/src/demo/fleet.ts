@@ -2041,6 +2041,82 @@ const homeRouter: DemoMachine = {
   },
 };
 
+/**
+ * A node of the home router's AiMesh, which the hub shows as a device of its own from what the
+ * main router tells about it: how it is linked to the mesh and how many devices use it.
+ */
+const meshNode: DemoMachine = {
+  device: {
+    id: 'living-room',
+    kind: 'server',
+    name: 'Living room',
+    address: '192.168.1.2',
+    router: true,
+  },
+  os: 'linux',
+  checked: true,
+  cores: 0,
+  maxClockMHz: 0,
+  memoryBytes: 0,
+  disks: [],
+  network: [],
+  extras: [
+    {
+      id: 'aimesh-node',
+      title: 'AiMesh node',
+      titles: { de: 'AiMesh-Knoten', fr: 'Nœud AiMesh', es: 'Nodo AiMesh' },
+      items: [
+        addOnValue('clients', 'number', 'Clients', {
+          de: 'Geräte',
+          fr: 'Appareils',
+          es: 'Dispositivos',
+        }),
+        {
+          id: 'backhaul',
+          label: 'Link to the mesh',
+          labels: { de: 'Verbindung zum Mesh', fr: 'Liaison au maillage', es: 'Enlace a la malla' },
+          unit: 'text',
+          text: 'Wi-Fi 5 GHz',
+          texts: { de: 'WLAN 5 GHz', fr: 'Wi-Fi 5 GHz', es: 'Wi-Fi 5 GHz' },
+        },
+        addOnValue('backhaul-signal', 'number', 'Signal of the link (dBm)', {
+          de: 'Signal der Verbindung (dBm)',
+          fr: 'Signal de la liaison (dBm)',
+          es: 'Señal del enlace (dBm)',
+        }),
+        {
+          id: 'model',
+          label: 'Model',
+          labels: { de: 'Modell', fr: 'Modèle', es: 'Modelo' },
+          unit: 'text',
+          text: 'RT-AX58U',
+        },
+        {
+          id: 'firmware',
+          label: 'Firmware',
+          labels: { de: 'Firmware', fr: 'Firmware', es: 'Firmware' },
+          unit: 'text',
+          text: '3.0.0.4.388_24243',
+        },
+        {
+          id: 'address',
+          label: 'Address',
+          labels: { de: 'Adresse', fr: 'Adresse', es: 'Dirección' },
+          unit: 'text',
+          text: '192.168.1.2',
+        },
+      ],
+    },
+  ],
+  bootedDaysAgo: 0,
+  values: (t, step) => ({
+    'extra:aimesh-node/clients': Math.round(
+      vary(t, step, 161, 3 + workday(t) * 3, 0, 12, [1.5, 3600]),
+    ),
+    'extra:aimesh-node/backhaul-signal': vary(t, step, 162, -58, -75, -40, [3, 1800]),
+  }),
+};
+
 const printer: DemoMachine = {
   device: {
     id: 'printer',
@@ -2206,6 +2282,7 @@ export const FLEET: readonly DemoMachine[] = [
   androidPhone,
   garagePi,
   homeRouter,
+  meshNode,
   printer,
   camera,
 ];
