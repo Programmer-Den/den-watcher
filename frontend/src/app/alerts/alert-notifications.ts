@@ -132,19 +132,26 @@ export class AlertNotifications {
     const body = ended
       ? this.i18n.t('alerts.notify.endedBody', { text })
       : this.i18n.t('alerts.notify.startedBody', { level, text });
+    const title = alertDeviceName(alert, this.devices, this.i18n);
+    const options: NotificationOptions = {
+      body,
+      lang: this.i18n.language(),
+      // One alert has one notification, also over several tabs: its end replaces its start.
+      tag: `den-watcher-alert-${alert.id}`,
+    };
     try {
-      const notification = new this.api!(alertDeviceName(alert, this.devices, this.i18n), {
-        body,
-        lang: this.i18n.language(),
-        // One alert has one notification, also over several tabs: its end replaces its start.
-        tag: `den-watcher-alert-${alert.id}`,
-      });
+      const notification = new this.api!(title, options);
       notification.onclick = () => {
         this.document.defaultView?.focus();
         notification.close();
       };
     } catch {
-      // Some browsers, such as Chrome on Android, show notifications only from a service worker.
+      // Some browsers, such as Chrome on Android, show notifications only from a service worker,
+      // which runs where the page is opened over https; its sw.js brings the page to the front.
+      this.document.defaultView?.navigator.serviceWorker
+        ?.getRegistration()
+        .then((worker) => worker?.showNotification(title, options))
+        .catch(() => undefined);
     }
   }
 

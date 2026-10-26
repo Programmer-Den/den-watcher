@@ -6,6 +6,7 @@
 export const en = {
   'app.switchToLight': 'Switch to light mode',
   'app.switchToDark': 'Switch to dark mode',
+  'app.install': 'Install as an app',
   'connection.lost': '{hub} is not answering',
   'connection.notLive':
     'Since {since}, nothing on this page is live, because the values of all devices come through {hub}. The page keeps trying and catches up as soon as it answers again.',

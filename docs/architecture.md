@@ -61,7 +61,7 @@ What goes over the wire:
 
 | From | To | What | How often |
 | --- | --- | --- | --- |
-| Browser | Hub | the page (`/`, scripts, styles, flags, mascot) | once; hashed files are cached for a year, `index.html` is checked every time |
+| Browser | Hub | the page (`/`, scripts, styles, flags, mascot) | once; hashed files are cached for a year, `index.html` and the service worker `sw.js` are checked every time |
 | Browser | Hub | `GET /api/metrics?device=<id>`: the selected device's current usage | every 2 s |
 | Browser | Hub | `GET /api/devices`: the list of devices, with online state | every 5 s |
 | Browser | Hub | `GET /api/history?device=<id>&from=…&to=…`: chart data | every 5 s for ranges up to 30 min, every minute up to a day, every 5 min beyond |
