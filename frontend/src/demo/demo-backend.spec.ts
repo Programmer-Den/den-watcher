@@ -139,7 +139,7 @@ describe('DemoBackend', () => {
   });
 
   it('shows a check with only how long it took to answer', async () => {
-    const check = FLEET.find((m) => m.checked)!;
+    const check = FLEET.find((m) => m.device.checked)!;
     expect(check.device.checked).toBe(true);
     const s = await firstValueFrom(metrics.current(check.device.id));
     expect(s.network).toEqual([]);
