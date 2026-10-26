@@ -54,6 +54,19 @@ describe('InstallService', () => {
     window.dispatchEvent(new Event('appinstalled'));
     expect(install.available()).toBe(false);
   });
+
+  it('takes the offer index.html kept from before the app started', async () => {
+    const early = offer();
+    const page = window as Window & { installOffer?: InstallPromptEvent };
+    page.installOffer = early;
+
+    const install = TestBed.inject(InstallService);
+
+    expect(install.available()).toBe(true);
+    expect(page.installOffer).toBeUndefined();
+    await install.install();
+    expect(early.prompts).toBe(1);
+  });
 });
 
 describe('InstallButton', () => {

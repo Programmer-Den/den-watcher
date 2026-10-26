@@ -5,9 +5,11 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "postbuild": "node scripts/precache.mjs ../backend/internal/web/files/build",
     "build:demo": "ng build --configuration demo",
+    "postbuild:demo": "node scripts/precache.mjs dist/demo",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test --watch=false",
+    "test": "ng test --watch=false && node --test \"scripts/*.test.mjs\"",
     "lint": "ng lint",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
