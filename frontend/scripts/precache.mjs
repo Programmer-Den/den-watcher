@@ -32,7 +32,9 @@ export function precache(folder) {
   if (!line.test(source)) {
     throw new Error(`${worker} has no line "const BUILD = ...;" to list the files in`);
   }
-  writeFileSync(worker, source.replace(line, () => `const BUILD = ${JSON.stringify(build)};`));
+  const listed = `const BUILD = ${JSON.stringify(build)};`;
+  // The names of the build's files have no $, which replace would read as a pattern.
+  writeFileSync(worker, source.replace(line, listed));
   return build;
 }
 
