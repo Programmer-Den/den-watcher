@@ -167,9 +167,10 @@ export const de: Messages = {
     'Steht auf der Seite des Geräts unter Geräte, im Menü seines Tray-Symbols oder in seinem Log.',
   'devicesDialog.phoneCodeHint': 'Wird in der Den-Watcher-App des Handys angezeigt.',
   'devicesDialog.phoneHint':
-    'Installiere die Den-Watcher-App auf dem Handy, gib hier den Kopplungscode ein, den sie anzeigt, und in der App die Adresse dieses Hubs: {address}. Das Handy schickt seine Nutzung, sobald es in diesem Netz ist; solange es weg ist oder schläft, ist es nur nicht in Benutzung.',
+    'Installiere die Den-Watcher-App auf dem Handy und gib hier den Kopplungscode ein, den sie anzeigt. Tippe dann in der App auf Hub-Code scannen und richte das Handy auf diesen Code, der die Adresse dieses Hubs enthält: {address}. Das Handy schickt seine Nutzung, sobald es in diesem Netz ist; solange es weg ist oder schläft, ist es nur nicht in Benutzung.',
   'devicesDialog.phoneHintOnHub':
-    'Installiere die Den-Watcher-App auf dem Handy, gib hier den Kopplungscode ein, den sie anzeigt, und in der App die Adresse dieses Hubs im Netz mit dem Port {port}, etwa 192.168.1.20:{port}. Das Handy schickt seine Nutzung, sobald es in diesem Netz ist; solange es weg ist oder schläft, ist es nur nicht in Benutzung.',
+    'Installiere die Den-Watcher-App auf dem Handy und gib hier den Kopplungscode ein, den sie anzeigt. Die App übernimmt die Adresse dieses Hubs aus einem Code, den sie scannt. Diesen zeigt der Dialog, wenn die Seite von einem anderen Gerät über die Adresse des Hubs im Netz mit dem Port {port} geöffnet wird, etwa 192.168.1.20:{port}. Das Handy schickt seine Nutzung, sobald es in diesem Netz ist; solange es weg ist oder schläft, ist es nur nicht in Benutzung.',
+  'devicesDialog.hubCode': 'QR-Code mit der Adresse dieses Hubs, {address}',
   'devicesDialog.pairingNeeded':
     'Wartet auf seinen Kopplungscode; bis dahin wird nur seine Verfügbarkeit erfasst.',
   'devicesDialog.pairingWrong':

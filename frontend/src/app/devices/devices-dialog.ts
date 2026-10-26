@@ -53,6 +53,7 @@ import {
   problemMessage,
 } from './devices';
 import { PasswordDialog, PasswordDialogData, PasswordDialogResult } from './password-dialog';
+import { qrPath } from './qr-code';
 
 /** The port den-watcher listens on unless it was set up otherwise, as the app assumes. */
 const DEFAULT_PORT = 9393;
@@ -118,6 +119,14 @@ export class DevicesDialog {
   protected readonly hubAddress = computed(() =>
     phoneAddress(this.document.location, this.devices.pagePort()),
   );
+  /**
+   * The QR code a phone's app scans for the hub's address, as the page's address; null without an
+   * address to give.
+   */
+  protected readonly hubCode = computed(() => {
+    const address = this.hubAddress();
+    return address ? qrPath(`http://${address}/`) : null;
+  });
   /** The port a phone's app is given with the hub's address. */
   protected readonly hubPort = computed(
     () => this.devices.pagePort() || this.document.location.port || String(DEFAULT_PORT),
