@@ -14,11 +14,13 @@ import {
   DEMO_STATUS_PAGE,
   DemoBackend,
   LAYOUT_STORAGE_KEY,
+  PLACES_STORAGE_KEY,
   csvFileName,
   historyCsv,
 } from './demo-backend';
 import { demoVersion } from './demo-build';
 import { FLEET } from './fleet';
+import { DEMO_PLACES, demoWifi } from './wifi';
 
 describe('DemoBackend', () => {
   let metrics: MetricsService;
@@ -41,6 +43,23 @@ describe('DemoBackend', () => {
       expect(await firstValueFrom(http.get('/api/layout'))).toEqual(layout);
     } finally {
       localStorage.removeItem(LAYOUT_STORAGE_KEY);
+    }
+  });
+
+  it('names the office, which the phone heard in the afternoon, and keeps what a visitor names', async () => {
+    try {
+      expect(await firstValueFrom(metrics.wifiPlaces())).toEqual(DEMO_PLACES);
+      const office = demoWifi(0, 2 * 86400).accessPoints.filter((ap) => ap.ssid === 'Office');
+      expect(office.flatMap((ap) => ap.seenBy.map((s) => s.device))).toEqual([
+        'android-phone',
+        'android-phone',
+        'android-phone',
+      ]);
+      const named = [{ name: 'Shed', signals: { '17e3629377a0': 76 } }];
+      await firstValueFrom(metrics.saveWifiPlaces(named));
+      expect(await firstValueFrom(metrics.wifiPlaces())).toEqual(named);
+    } finally {
+      localStorage.removeItem(PLACES_STORAGE_KEY);
     }
   });
 

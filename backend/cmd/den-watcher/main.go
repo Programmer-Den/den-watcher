@@ -97,6 +97,7 @@ import (
 	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 	"github.com/Programmer-Den/den-watcher/backend/internal/pairing"
 	"github.com/Programmer-Den/den-watcher/backend/internal/password"
+	"github.com/Programmer-Den/den-watcher/backend/internal/places"
 	"github.com/Programmer-Den/den-watcher/backend/internal/reach"
 	"github.com/Programmer-Den/den-watcher/backend/internal/router"
 	"github.com/Programmer-Den/den-watcher/backend/internal/server"
@@ -426,6 +427,11 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 		return server.Site{}, nil, err
 	}
 
+	wifiPlaces, err := places.Open(ctx, store.DB())
+	if err != nil {
+		return server.Site{}, nil, err
+	}
+
 	recent := &history.Recent{}
 	recorder := &history.Recorder{Store: store, Recent: recent, Collector: sampler.Reusing(reuseFor), Device: history.LocalDevice, MaxEntries: historyEntries, WiFi: store}
 	pruner := &history.Pruner{Store: store, Retention: retention}
@@ -457,6 +463,7 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 		Minutes: history.Reader{Store: store, Recent: recent, Device: history.LocalDevice},
 		Alerts:  watcher,
 		Layout:  pageLayout,
+		Places:  wifiPlaces,
 		Backups: store,
 		Events:  happenings,
 		WiFi:    store,

@@ -255,6 +255,114 @@
         </div>
         <p class="hint legend">{{ i18n.t('wifi.spotLegend') }}</p>
       }
+      @case ('places') {
+        <p class="detail">{{ i18n.t('wifi.placesIntro') }}</p>
+        <div class="table" [class.stale]="connection.lost()">
+          <table class="places">
+            <thead>
+              <tr>
+                <th scope="col">{{ i18n.t('compare.device') }}</th>
+                <th scope="col">{{ i18n.t('wifi.placeNow') }}</th>
+                <th scope="col" class="strip-head">{{ i18n.t('wifi.lastDay') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of whereabouts().rows; track row.device) {
+                <tr>
+                  <th scope="row">
+                    <button
+                      type="button"
+                      class="device"
+                      [title]="i18n.t('compare.open')"
+                      (click)="devices.show(row.device)"
+                    >
+                      {{ name(row.device) }}
+                    </button>
+                  </th>
+                  <td class="now">
+                    @if (naming() === row.device) {
+                      <form class="name-place" (ngSubmit)="namePlace(row.device)">
+                        <mat-form-field subscriptSizing="dynamic">
+                          <mat-label>{{ i18n.t('wifi.placeName') }}</mat-label>
+                          <input
+                            matInput
+                            name="place"
+                            autocomplete="off"
+                            [placeholder]="i18n.t('wifi.placeNameHint')"
+                            [ngModel]="placeName()"
+                            (ngModelChange)="placeName.set($event)"
+                          />
+                        </mat-form-field>
+                        <button
+                          mat-flat-button
+                          type="submit"
+                          [disabled]="savingPlaces() || !nameFits(placeName())"
+                        >
+                          {{ i18n.t('wifi.savePlace') }}
+                        </button>
+                        <button mat-button type="button" (click)="naming.set(null)">
+                          {{ i18n.t('passwordDialog.cancel') }}
+                        </button>
+                      </form>
+                    } @else {
+                      <span class="spot" [attr.data-spot]="spotColor(row.now)">
+                        {{ spotName(row.now) }}
+                      </span>
+                      @if (row.now && row.now.place === undefined && row.hears) {
+                        <button mat-button type="button" (click)="startNaming(row.device)">
+                          {{ i18n.t('wifi.namePlace') }}
+                        </button>
+                      }
+                    }
+                  </td>
+                  <td>
+                    <span class="strip" role="img" [attr.aria-label]="i18n.t('wifi.lastDay')">
+                      @for (value of row.steps; track $index) {
+                        <span
+                          class="step"
+                          [attr.data-spot]="spotColor(value)"
+                          [title]="placeTitle(row.steps.length - 1 - $index, value)"
+                        ></span>
+                      }
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (placesFailed()) {
+          <p class="failed" role="alert">{{ i18n.t('wifi.placesFailed') }}</p>
+        }
+        @if (legend().length > 0) {
+          <p class="legend">
+            @for (spot of legend(); track $index) {
+              <span class="spot" [attr.data-spot]="spotColor(spot)">{{ spotName(spot) }}</span>
+            }
+          </p>
+        }
+        <h3 class="named-title">{{ i18n.t('wifi.namedPlaces') }}</h3>
+        <ul class="named">
+          @for (place of named(); track place.name) {
+            <li>
+              <span class="spot" [attr.data-spot]="spotColor({ place: place.name })">
+                {{ place.name }}
+              </span>
+              <button
+                mat-button
+                type="button"
+                [disabled]="savingPlaces()"
+                [attr.aria-label]="i18n.t('wifi.removePlace', { place: place.name })"
+                (click)="removePlace(place.name)"
+              >
+                {{ i18n.t('wifi.remove') }}
+              </button>
+            </li>
+          } @empty {
+            <li class="hint">{{ i18n.t('wifi.noPlaces') }}</li>
+          }
+        </ul>
+      }
       @case ('changes') {
         <p class="detail">{{ i18n.t('wifi.changesIntro') }}</p>
         <div class="table" [class.stale]="connection.lost()">

@@ -22,7 +22,7 @@ import { DEMO_BUILD, demoVersion } from './demo-build';
 import { alertLog, fleetAlerts } from './alerts';
 import { demoEvents } from './events';
 import { DemoMachine, FLEET, extraInfoOf, offlineSince, snapshotOf } from './fleet';
-import { demoWifi } from './wifi';
+import { DEMO_PLACES, demoWifi } from './wifi';
 
 /** How many days of history the demo hub keeps; more than 30 shows the "All" range. */
 export const DEMO_RETENTION_DAYS = 90;
@@ -42,6 +42,9 @@ const DEMO_SUGGESTION: Suggestion = {
 
 /** Where the demo keeps the page's layout, which a real hub keeps on the host. */
 export const LAYOUT_STORAGE_KEY = 'demoLayout';
+
+/** Where the demo keeps the places a visitor named, as it keeps the layout. */
+export const PLACES_STORAGE_KEY = 'demoWifiPlaces';
 
 /** How long the made-up devices take to answer, so the page loads like it does on a real hub. */
 const LATENCY_MS = 60;
@@ -110,6 +113,9 @@ export class DemoBackend implements HttpBackend {
     }
     if (url.pathname === '/api/layout') {
       return this.layout(request);
+    }
+    if (url.pathname === '/api/wifi/places') {
+      return this.places(request);
     }
     const release = /^\/api\/phones\/([^/]+)\/release$/.exec(url.pathname);
     if (request.method === 'POST' && release) {
@@ -203,6 +209,24 @@ export class DemoBackend implements HttpBackend {
     } catch {
       // Without storage (a private window, blocked site data) the layout lasts for this visit.
       return fail(request, 500, 'could not keep the layout');
+    }
+  }
+
+  /**
+   * GET and PUT /api/wifi/places, kept in the visitor's browser like the layout, with the demo's
+   * office named until the visitor changes them.
+   */
+  private places(request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> {
+    try {
+      const storage = this.window?.localStorage;
+      if (request.method === 'PUT') {
+        storage?.setItem(PLACES_STORAGE_KEY, JSON.stringify(request.body));
+        return respond(request, null);
+      }
+      const stored = storage?.getItem(PLACES_STORAGE_KEY);
+      return respond(request, stored ? (JSON.parse(stored) as unknown) : { places: DEMO_PLACES });
+    } catch {
+      return fail(request, 500, 'could not keep the places');
     }
   }
 }

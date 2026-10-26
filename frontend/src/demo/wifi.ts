@@ -1,4 +1,4 @@
-import { WiFiAccessPoint, WiFiHistory, WiFiPoint } from '../app/compare/wifi';
+import { WiFiAccessPoint, WiFiHistory, WiFiPlace, WiFiPoint } from '../app/compare/wifi';
 import { drift } from './fleet';
 
 /** One radio of a router near the demo's house, and the signal each device hears it at. */
@@ -25,13 +25,16 @@ const HUB = 'local';
 const LAPTOP = 'windows-laptop';
 const SHED = 'linux-laptop';
 const PHONE = 'android-phone';
+/** Where the phone was while away, as the spot whose networks it heard there. */
+const WORK = 'work';
 
 /**
  * The radios around the house: Den's three mesh routers, each with a 5 GHz and a 2.4 GHz radio
  * (the first also sends Den-Guest), the neighbours' networks, a printer, and two that only one
  * device hears, a camera at the garden shed and a phone's hotspot next to the laptop. Over the day
  * the first router moved its 2.4 GHz radio from channel 1 to 6, a neighbour's network appeared and
- * another one went, and an open copy of Den was near the Windows laptop for an hour.
+ * another one went, and an open copy of Den was near the Windows laptop for an hour. The office's
+ * network is heard only at work, where the phone was in the afternoon.
  */
 const RADIOS: DemoRadio[] = [
   {
@@ -189,6 +192,41 @@ const RADIOS: DemoRadio[] = [
     signals: { [HUB]: 33, [LAPTOP]: 31 },
     until: 14,
   },
+  {
+    id: '7de9c8f9dd01',
+    box: '24def01a2b3c',
+    ssid: 'Office',
+    mhz: 5240,
+    width: 80,
+    security: 'WPA2 Enterprise',
+    generation: 6,
+    signals: { [WORK]: 78 },
+  },
+  {
+    id: '7de9c8f9dd00',
+    box: '24def01a2b3c',
+    ssid: 'Office',
+    mhz: 2412,
+    width: 20,
+    security: 'WPA2 Enterprise',
+    generation: 6,
+    signals: { [WORK]: 61 },
+  },
+  {
+    id: '8efad90aee10',
+    box: '35ef01a2b3c4',
+    ssid: 'Office',
+    mhz: 5500,
+    width: 80,
+    security: 'WPA2 Enterprise',
+    generation: 6,
+    signals: { [WORK]: 44 },
+  },
+];
+
+/** A place named in the demo: the office, as the phone heard it there. */
+export const DEMO_PLACES: WiFiPlace[] = [
+  { name: 'Work', signals: { '7de9c8f9dd01': 77, '7de9c8f9dd00': 62, '8efad90aee10': 45 } },
 ];
 
 /** Devices that tell the signal in dBm too: Windows does, NetworkManager and Android do not here. */
@@ -198,20 +236,22 @@ const DBM: readonly string[] = [LAPTOP];
 const READINGS = 720;
 
 /**
- * Whether a device's Wi-Fi was read in the hour hoursAgo: the phone was away three and four hours
- * ago, and the laptop at the shed switched off overnight.
+ * Whether a device's Wi-Fi was read in the hour hoursAgo: the laptop at the shed switched off
+ * overnight. The phone was away three and four hours ago, but its app kept what it heard and
+ * sent it once home.
  */
 function read(device: string, hoursAgo: number): boolean {
-  if (device === PHONE) return hoursAgo !== 3 && hoursAgo !== 4;
   if (device === SHED) return hoursAgo < 10 || hoursAgo > 17;
   return true;
 }
 
 /**
  * Where a device is in the hour hoursAgo, as the device whose spot it hears the networks from:
- * the Windows laptop was carried to the garden shed six to eight hours ago.
+ * the Windows laptop was carried to the garden shed six to eight hours ago, and the phone was at
+ * work three and four hours ago.
  */
 function spot(device: string, hoursAgo: number): string {
+  if (device === PHONE && (hoursAgo === 3 || hoursAgo === 4)) return WORK;
   return device === LAPTOP && hoursAgo >= 6 && hoursAgo <= 8 ? SHED : device;
 }
 
