@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 // fakeASUSRouter answers like the web interface of an ASUS router: a
@@ -30,6 +31,8 @@ type fakeASUSRouter struct {
 	// mesh answers the hook of the AiMesh nodes; a router without AiMesh
 	// refuses it.
 	mesh string
+	// meshAsks counts how often the hook of the AiMesh nodes was asked.
+	meshAsks int
 }
 
 func newFakeASUSRouter(t *testing.T) *fakeASUSRouter {
@@ -77,6 +80,9 @@ func newFakeASUSRouter(t *testing.T) *fakeASUSRouter {
 				return
 			}
 			_ = r.ParseForm()
+			if r.PostForm.Get("hook") == asusMeshHook {
+				f.meshAsks++
+			}
 			if r.PostForm.Get("hook") == asusMeshHook && f.mesh != "" {
 				_, _ = w.Write([]byte(f.mesh))
 				return
@@ -373,5 +379,41 @@ func TestASUSWithoutAiMeshHasNoNodes(t *testing.T) {
 	}
 	if _, err := reader.Node("AA:00:00:00:00:02").Collect(t.Context()); err == nil {
 		t.Error("a node of a router without AiMesh is read")
+	}
+}
+
+func TestASUSWithoutAiMeshIsAskedForNodesOnlyNowAndThen(t *testing.T) {
+	for name, mesh := range map[string]string{
+		"a firmware without the hook": "",
+		"a router alone in its mesh":  `{"get_cfg_clientlist":[{"alias":"Main","ip":"127.0.0.1","mac":"aa:00:00:00:00:01","level":"0"}]}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			router := newFakeASUSRouter(t)
+			router.mesh = mesh
+			reader := router.reader("right")
+			for range 3 {
+				if _, err := reader.Collect(t.Context()); err != nil {
+					t.Fatal(err)
+				}
+			}
+			router.mu.Lock()
+			asks := router.meshAsks
+			router.mu.Unlock()
+			if asks != 1 {
+				t.Errorf("asked for the nodes %d times in three readings, want once", asks)
+			}
+			_, at := reader.MeshNodes()
+			if fresh := !at.IsZero() && time.Since(at) < meshStale; fresh != (mesh != "") {
+				t.Errorf("the list of nodes is fresh: %v, want it only when the router told it has none", fresh)
+			}
+			reader.mu.Lock()
+			reader.readMesh(t.Context(), nil, time.Now().Add(asusMeshRetry))
+			reader.mu.Unlock()
+			router.mu.Lock()
+			defer router.mu.Unlock()
+			if router.meshAsks != 2 {
+				t.Errorf("asked %d times after asusMeshRetry, want again", router.meshAsks)
+			}
+		})
 	}
 }
