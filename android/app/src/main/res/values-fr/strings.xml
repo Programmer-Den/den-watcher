@@ -31,7 +31,7 @@
     <string name="battery_hint">Certains téléphones arrêtent les apps en arrière-plan pour économiser la batterie. S\'il manque des heures au hub, laissez Den-Watcher fonctionner sans restriction de batterie.</string>
     <string name="battery">Réglages de la batterie</string>
     <string name="data_title">Ce qui est envoyé</string>
-    <string name="data_hint">La charge et la température de la batterie, la mémoire et le stockage utilisés, et le trafic Wi-Fi et données mobiles, uniquement au hub de votre réseau. Android ne laisse aucune app lire la charge du processeur.</string>
+    <string name="data_hint">La charge et la température de la batterie, la mémoire et le stockage utilisés, le trafic Wi-Fi et données mobiles et, si vous l\'autorisez, les réseaux Wi-Fi à proximité, uniquement au hub de votre réseau. Android ne laisse aucune app lire la charge du processeur.</string>
     <string name="channel_name">Enregistrement</string>
     <string name="channel_description">Affichée pendant que l\'app enregistre l\'utilisation, comme Android le demande.</string>
     <string name="notification_title">Enregistre l\'utilisation de ce téléphone</string>
@@ -40,4 +40,12 @@
     <string name="network_usual">C\'est aussi mon réseau</string>
     <string name="network_channel_name">Autres réseaux</string>
     <string name="network_channel_description">Quand le hub répond sur un autre réseau que l\'habituel.</string>
+    <string name="nearby_title">Réseaux Wi-Fi à proximité</string>
+    <string name="nearby_hint">Avec eux, le hub sait où était ce téléphone : dans quelle pièce de la maison, et dans les lieux que vous nommez, comme Travail. Android ne les donne qu\'avec l\'autorisation de localisation ; l\'app ne lit jamais votre position et ne lance aucune recherche, elle lit seulement les réseaux qu\'Android a vus. Ils sont gardés jusqu\'au retour du téléphone à la maison.</string>
+    <string name="nearby_off">Non lus.</string>
+    <string name="nearby_open">Lus seulement quand l\'app est ouverte. Autorisez-les tout le temps pour les lire aussi quand le téléphone est dans votre poche.</string>
+    <string name="nearby_always">Lus tout le temps, même quand le téléphone est ailleurs.</string>
+    <string name="nearby_allow">Autoriser</string>
+    <string name="nearby_allow_always">Toujours autoriser</string>
+    <string name="nearby_settings">Paramètres de l\'app</string>
 </resources>

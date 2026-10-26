@@ -187,6 +187,25 @@
 
             <TextView
                 style="@style/Heading"
+                android:text="@string/nearby_title" />
+
+            <TextView
+                android:id="@+id/nearby_state"
+                style="@style/Hint" />
+
+            <TextView
+                style="@style/Hint"
+                android:text="@string/nearby_hint" />
+
+            <Button
+                android:id="@+id/nearby"
+                style="@style/Button.Outlined" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/Card">
+
+            <TextView
+                style="@style/Heading"
                 android:text="@string/data_title" />
 
             <TextView

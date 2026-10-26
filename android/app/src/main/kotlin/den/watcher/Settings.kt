@@ -85,6 +85,11 @@ class Settings(context: Context) {
         get() = prefs.getString(OTHER_NETWORK, null)
         set(value) = prefs.edit().putString(OTHER_NETWORK, value).apply()
 
+    /** When the newest scan of the networks nearby that was kept was made, in Unix seconds. */
+    var lastScan: Long
+        get() = prefs.getLong(LAST_SCAN, 0)
+        set(value) = prefs.edit().putLong(LAST_SCAN, value).apply()
+
     /** The reading before the newest, whose traffic the speeds are measured from. */
     var lastReading: Reading?
         get() = prefs.getString(LAST_READING, null)?.let { runCatching { readingFrom(JSONObject(it)) }.getOrNull() }
@@ -128,6 +133,7 @@ class Settings(context: Context) {
         const val LAST_READING = "lastReading"
         const val USUAL_NETWORKS = "usualNetworks"
         const val OTHER_NETWORK = "otherNetwork"
+        const val LAST_SCAN = "lastScan"
     }
 }
 

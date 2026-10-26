@@ -12,8 +12,10 @@ object Hub {
     /**
      * The hub's answer to a push: the phone's time of the newest minute it
      * has, for how many more seconds the phone may change its hub or stop
-     * recording (0 when it may not) with the hub's proof of that, and the
-     * phone's key when the push asked for it.
+     * recording (0 when it may not) with the hub's proof of that, the
+     * phone's key when the push asked for it, and the phone's time of the
+     * newest scan of the networks nearby it has (0 for a hub that takes
+     * none).
      */
     sealed interface Answer {
         data class Taken(
@@ -21,6 +23,7 @@ object Hub {
             val releaseSeconds: Long = 0,
             val releaseProof: String = "",
             val key: String = "",
+            val wifiAfter: Long = 0,
         ) : Answer
         data class Failed(val problem: Problem) : Answer
     }
@@ -48,6 +51,7 @@ object Hub {
                         if (json.optBoolean("release")) json.optLong("releaseSeconds") else 0,
                         json.optString("releaseProof"),
                         json.optString("key"),
+                        json.optLong("wifiAfter"),
                     )
                 }
                 HttpURLConnection.HTTP_FORBIDDEN -> Answer.Failed(Problem.NOT_ADDED)

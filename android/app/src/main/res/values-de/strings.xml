@@ -31,7 +31,7 @@
     <string name="battery_hint">Manche Handys beenden Apps im Hintergrund, um Akku zu sparen. Fehlen dem Hub Stunden, lass Den-Watcher ohne Akku-Einschränkungen laufen.</string>
     <string name="battery">Akku-Einstellungen</string>
     <string name="data_title">Was geschickt wird</string>
-    <string name="data_hint">Ladung und Temperatur des Akkus, belegter Arbeitsspeicher und Speicher und der Datenverkehr über WLAN und mobile Daten, nur an den Hub in deinem Netz. Android lässt keine App lesen, wie ausgelastet der Prozessor ist.</string>
+    <string name="data_hint">Ladung und Temperatur des Akkus, belegter Arbeitsspeicher und Speicher, der Datenverkehr über WLAN und mobile Daten und, wenn du es erlaubst, die WLANs in der Nähe, nur an den Hub in deinem Netz. Android lässt keine App lesen, wie ausgelastet der Prozessor ist.</string>
     <string name="channel_name">Aufzeichnung</string>
     <string name="channel_description">Wird angezeigt, solange die App die Nutzung aufzeichnet, wie Android es verlangt.</string>
     <string name="notification_title">Zeichnet die Nutzung dieses Handys auf</string>
@@ -40,4 +40,12 @@
     <string name="network_usual">Das ist auch mein Netz</string>
     <string name="network_channel_name">Andere Netze</string>
     <string name="network_channel_description">Wenn der Hub in einem anderen als dem üblichen Netz antwortet.</string>
+    <string name="nearby_title">WLANs in der Nähe</string>
+    <string name="nearby_hint">Damit sieht der Hub, wo dieses Handy war: in welchem Raum zu Hause und an Orten, die du benennst, etwa Arbeit. Android gibt sie nur mit der Standortberechtigung; die App liest nie deinen Standort und startet keine Suche, sie liest nur die WLANs, die Android gesehen hat. Sie werden aufbewahrt, bis das Handy wieder zu Hause ist.</string>
+    <string name="nearby_off">Werden nicht gelesen.</string>
+    <string name="nearby_open">Werden nur gelesen, solange die App offen ist. Erlaube es immer, damit sie auch gelesen werden, wenn das Handy in der Tasche ist.</string>
+    <string name="nearby_always">Werden immer gelesen, auch wenn das Handy unterwegs ist.</string>
+    <string name="nearby_allow">Erlauben</string>
+    <string name="nearby_allow_always">Immer erlauben</string>
+    <string name="nearby_settings">App-Einstellungen</string>
 </resources>

@@ -1,5 +1,6 @@
 package den.watcher
 
+import android.Manifest
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Looper
@@ -61,6 +62,13 @@ class Screenshots {
     }
 
     @Test
+    fun nearby() = shot("9-nearby", permissions = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)) {
+        hubAddress = "192.168.1.20:9393"
+        recording = true
+        lastPush = LAST_PUSH
+    }
+
+    @Test
     fun german() = shot("5-german", "de") {
         hubAddress = "192.168.1.20:9393"
         recording = true
@@ -84,8 +92,11 @@ class Screenshots {
         releasedUntil = RELEASED_UNTIL
     }
 
-    /** Saves the screen with settings as set, as <name>-light.png and <name>-dark.png. */
-    private fun shot(name: String, language: String? = null, set: Settings.() -> Unit) {
+    /**
+     * Saves the screen with settings as set and the permissions granted, as
+     * <name>-light.png and <name>-dark.png.
+     */
+    private fun shot(name: String, language: String? = null, permissions: Array<String> = emptyArray(), set: Settings.() -> Unit) {
         folder.mkdirs()
         for (mode in listOf("light", "dark")) {
             val qualifiers = listOfNotNull(language, if (mode == "dark") "night" else "notnight")
@@ -93,6 +104,7 @@ class Screenshots {
             val app = RuntimeEnvironment.getApplication()
             app.getSharedPreferences("settings", 0).edit().clear().commit()
             Settings(app).set()
+            shadowOf(app).grantPermissions(*permissions)
             val activity = Robolectric.buildActivity(MainActivity::class.java).setup().get()
             // Runs the status refresh that onResume posts.
             shadowOf(Looper.getMainLooper()).idle()

@@ -77,6 +77,51 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.battery).setOnClickListener {
             runCatching { startActivity(Intent(ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
         }
+
+        findViewById<Button>(R.id.nearby).setOnClickListener { allowNearby() }
+    }
+
+    /**
+     * Asks for the location permission the networks nearby need: first while
+     * the app is open, then all the time, which Android asks for on its own
+     * and, from Android 11 on, only in its settings.
+     */
+    private fun allowNearby() {
+        when {
+            !Nearby.allowed(this) -> requestPermissions(
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                NEARBY_REQUEST,
+            )
+            !Nearby.allowedAlways(this) ->
+                requestPermissions(arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), NEARBY_REQUEST)
+            else -> runCatching {
+                startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        showStatus()
+    }
+
+    /** Whether the networks nearby are read: not, only while the app is open, or all the time. */
+    private fun showNearby() {
+        val always = Nearby.allowedAlways(this)
+        findViewById<TextView>(R.id.nearby_state).setText(
+            when {
+                always -> R.string.nearby_always
+                Nearby.allowed(this) -> R.string.nearby_open
+                else -> R.string.nearby_off
+            },
+        )
+        findViewById<Button>(R.id.nearby).setText(
+            when {
+                always -> R.string.nearby_settings
+                Nearby.allowed(this) -> R.string.nearby_allow_always
+                else -> R.string.nearby_allow
+            },
+        )
     }
 
     override fun onResume() {
@@ -186,6 +231,7 @@ class MainActivity : Activity() {
         findViewById<View>(R.id.network_group).visibility = if (other == null) View.GONE else View.VISIBLE
         other?.let { findViewById<TextView>(R.id.network).text = getString(R.string.network_notice, it) }
         openHub.visibility = if (HubAddress.pageUrl(settings.hubAddress) == null) View.GONE else View.VISIBLE
+        showNearby()
     }
 
     /** The hub's address, and whether it and stopping are locked or the hub allows a change. */
@@ -256,5 +302,6 @@ class MainActivity : Activity() {
 
     private companion object {
         const val REFRESH_MILLIS = 5_000L
+        const val NEARBY_REQUEST = 1
     }
 }

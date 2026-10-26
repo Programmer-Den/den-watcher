@@ -4,14 +4,16 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import org.json.JSONObject
 
 /**
  * Keeps the values of every reading until the hub has them, one row per
- * value, as a data-only device keeps its minutes for the hub. Readings older
- * than KEEP_SECONDS are deleted, so a phone that does not reach the hub for a
- * long time does not fill up.
+ * value, as a data-only device keeps its minutes for the hub, and the scans
+ * of the Wi-Fi networks nearby. Readings and scans older than KEEP_SECONDS
+ * are deleted, so a phone that does not reach the hub for a long time does
+ * not fill up.
  */
-class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 1) {
+class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 2) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
             """
@@ -23,9 +25,52 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 1
             ) WITHOUT ROWID
             """.trimIndent(),
         )
+        createScans(db)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) {
+            createScans(db)
+        }
+    }
+
+    private fun createScans(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE scans (
+                time  INTEGER PRIMARY KEY, -- Unix seconds on the phone's clock
+                scan  TEXT    NOT NULL     -- the scan as the hub takes it, in JSON
+            )
+            """.trimIndent(),
+        )
+    }
+
+    /** Keeps a scan of the networks nearby, and deletes the ones too old to keep. */
+    fun addScan(scan: Scan) {
+        val db = writableDatabase
+        val row = ContentValues().apply {
+            put("time", scan.time)
+            put("scan", scan.json().toString())
+        }
+        db.insertWithOnConflict("scans", null, row, SQLiteDatabase.CONFLICT_REPLACE)
+        db.delete("scans", "time < ?", arrayOf((scan.time - KEEP_SECONDS).toString()))
+    }
+
+    /** The oldest scans the hub does not have yet, at most Push.MAX_SCANS, in JSON. */
+    fun scans(): List<JSONObject> {
+        val scans = mutableListOf<JSONObject>()
+        readableDatabase.rawQuery("SELECT scan FROM scans ORDER BY time LIMIT ?", arrayOf(Push.MAX_SCANS.toString())).use { rows ->
+            while (rows.moveToNext()) {
+                runCatching { JSONObject(rows.getString(0)) }.getOrNull()?.let { scans += it }
+            }
+        }
+        return scans
+    }
+
+    /** Deletes the scan at after and the ones before, which the hub has. */
+    fun deleteScansUpTo(after: Long) {
+        writableDatabase.delete("scans", "time <= ?", arrayOf(after.toString()))
+    }
 
     /** Keeps the values of a reading taken at time, and deletes the ones too old to keep. */
     fun add(time: Long, values: Map<String, Double>) {
