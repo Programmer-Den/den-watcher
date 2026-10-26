@@ -3,14 +3,7 @@ export type AlertLevel = 'warning' | 'alert';
 
 /** What an alert is about; a newer backend may name kinds this page does not know yet. */
 export type AlertKind =
-  | 'offline'
-  | 'disk'
-  | 'memory'
-  | 'cpu'
-  | 'temperature'
-  | 'throttling'
-  | 'smart'
-  | 'wifi-lookalike';
+  'offline' | 'disk' | 'memory' | 'cpu' | 'temperature' | 'throttling' | 'smart' | 'wifi-lookalike';
 
 /** A value of a device that needed attention, as GET /api/devices and GET /api/alerts serve it. */
 export interface Alert {
