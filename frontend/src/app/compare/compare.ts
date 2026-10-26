@@ -228,13 +228,11 @@ export class Compare {
       unit: chart.unit,
       max: chart.max,
       lines: h.devices
-        .map(
-          ({ device, history }): ChartLine => ({
-            label: deviceName(device, this.i18n),
-            points: within(chart.points(history.series, !!device.router), h),
-            place: places.get(device.id),
-          }),
-        )
+        .map(({ device, history }): ChartLine => ({
+          label: deviceName(device, this.i18n),
+          points: within(chart.points(history.series, !!device.router), h),
+          place: places.get(device.id),
+        }))
         .filter((line) => line.points.length > 0),
     })).filter((chart) => chart.lines.length > 0);
   });

@@ -104,10 +104,7 @@ export interface Swap {
 
 /** A condition a Raspberry Pi's firmware reports about its power supply and clock. */
 export type ThrottlingCondition =
-  | 'undervoltage'
-  | 'frequencyCapped'
-  | 'throttled'
-  | 'softTemperatureLimit';
+  'undervoltage' | 'frequencyCapped' | 'throttled' | 'softTemperatureLimit';
 
 /** The conditions that hold now, and those that held at some point since the Pi started. */
 export interface Throttling {
