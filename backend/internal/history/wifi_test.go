@@ -154,3 +154,29 @@ func TestRecorderKeepsWhatTheWiFiSeesOncePerReading(t *testing.T) {
 		t.Errorf("Devices = %+v, want one reading with the Wi-Fi", got.Devices)
 	}
 }
+
+func TestWiFiGivesAnAccessPointAsItWasLastSeen(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	hour := time.Now().Truncate(time.Hour).Add(-3 * time.Hour)
+	moved := nearby(60)
+	moved.AccessPoints[0].FrequencyMHz, moved.AccessPoints[0].Security = 5500, "WPA2/WPA3"
+	store.AddWiFi("a", hour.Add(time.Hour), nearby(60))
+	store.AddWiFi("a", hour.Add(2*time.Hour), moved)
+	// An earlier hour, stored after the later ones.
+	store.AddWiFi("b", hour, nearby(60))
+	if err := store.Flush(ctx); err != nil {
+		t.Fatal(err)
+	}
+	got, err := store.WiFi(ctx, hour, hour.Add(3*time.Hour), time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.AccessPoints) != 1 {
+		t.Fatalf("AccessPoints = %+v, want one", got.AccessPoints)
+	}
+	ap := got.AccessPoints[0]
+	if ap.FrequencyMHz != 5500 || ap.Security != "WPA2/WPA3" || ap.FirstSeen != hour.Unix() || ap.LastSeen != hour.Add(2*time.Hour).Unix() {
+		t.Errorf("AccessPoint = %+v, want it on 5500 MHz with WPA2/WPA3 as last seen, first seen in the first hour", ap)
+	}
+}

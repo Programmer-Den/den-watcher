@@ -322,10 +322,15 @@ func (s *Store) WiFi(ctx context.Context, from, to time.Time, step time.Duration
 		return WiFiHistory{}, err
 	}
 
-	// SQLite takes the other columns from the row with the largest time.
+	// With MAX alone, SQLite takes the other columns from the row with the
+	// largest time; with MIN in the same query, from any row.
 	rows, err = s.db.QueryContext(ctx, `
-		SELECT ap, MAX(time), MIN(time), box, ssid, frequency, width, security, generation FROM wifi_hours
-		WHERE time >= ? AND time < ? GROUP BY ap ORDER BY ap`, first, last)
+		SELECT ap, seen.last, firsts.first, box, ssid, frequency, width, security, generation FROM (
+			SELECT ap, MAX(time) AS last, box, ssid, frequency, width, security, generation FROM wifi_hours
+			WHERE time >= ? AND time < ? GROUP BY ap
+		) AS seen JOIN (
+			SELECT ap, MIN(time) AS first FROM wifi_hours WHERE time >= ? AND time < ? GROUP BY ap
+		) AS firsts USING (ap) ORDER BY ap`, first, last, first, last)
 	if err != nil {
 		return WiFiHistory{}, err
 	}
