@@ -384,6 +384,8 @@ export const es: Messages = {
   'alerts.kind.temperature': '{subject} está a {value}',
   'alerts.kind.throttling': 'Alimentación o refrigeración: {subject}',
   'alerts.kind.smart': 'La comprobación SMART de {subject} falló',
+  'alerts.kind.wifi-lookalike':
+    'Hay cerca una red que se llama como {subject} pero con otra seguridad',
   'alerts.kind.other': 'Algo requiere atención',
   'alerts.level.warning': 'Aviso',
   'alerts.level.alert': 'Alerta',

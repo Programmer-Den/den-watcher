@@ -685,7 +685,7 @@
                         @let group = card.group;
                         <div
                           class="card"
-                          [class.alerting]="card.id === smartCard && alertOn('smart')"
+                          [class.alerting]="extraAlert(card.id)"
                           [appFitLabels]="group.items"
                         >
                           <!-- The cards split off a group take their title from it, and its description stays with its first card. -->
@@ -694,7 +694,7 @@
                               cardHeading;
                               context: {
                                 $implicit: card,
-                                alert: card.id === smartCard ? 'smart' : null,
+                                alert: extraAlerts.get(card.id) ?? null,
                                 infoText:
                                   group.description && !card.split
                                     ? extraText(group.description, group.descriptions)

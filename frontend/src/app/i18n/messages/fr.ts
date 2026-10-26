@@ -383,6 +383,8 @@ export const fr: Messages = {
   'alerts.kind.temperature': '{subject} est à {value}',
   'alerts.kind.throttling': 'Alimentation ou refroidissement : {subject}',
   'alerts.kind.smart': 'Le contrôle SMART de {subject} a échoué',
+  'alerts.kind.wifi-lookalike':
+    'Un réseau nommé comme {subject} mais sécurisé autrement est à proximité',
   'alerts.kind.other': 'Quelque chose demande votre attention',
   'alerts.level.warning': 'Avertissement',
   'alerts.level.alert': 'Alerte',

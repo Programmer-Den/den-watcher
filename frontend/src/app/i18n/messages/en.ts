@@ -380,6 +380,7 @@ export const en = {
   'alerts.kind.temperature': '{subject} is at {value}',
   'alerts.kind.throttling': 'Power supply or cooling: {subject}',
   'alerts.kind.smart': 'The SMART check of {subject} failed',
+  'alerts.kind.wifi-lookalike': 'A network named like {subject} but secured otherwise is nearby',
   'alerts.kind.other': 'Something needs attention',
   'alerts.level.warning': 'Warning',
   'alerts.level.alert': 'Alert',

@@ -469,3 +469,29 @@ func TestACheckDoesNotBringBackADeviceForgottenMeanwhile(t *testing.T) {
 		t.Errorf("active of the device added again = %+v, want its disk", got)
 	}
 }
+
+func TestLookalikes(t *testing.T) {
+	base := Alert{Device: "pi", DeviceName: "Pi"}
+	nearby := &metrics.NearbyWiFi{AccessPoints: []metrics.NearbyAccessPoint{
+		{ID: "a1", Box: "b1", SSID: "Den", Security: "WPA2/WPA3", Connected: true},
+		// A mesh router of its own, and one that offers less: neither is a copy.
+		{ID: "a2", Box: "b2", SSID: "Den", Security: "WPA2/WPA3"},
+		{ID: "a3", Box: "b3", SSID: "Den", Security: "WPA2"},
+		// The guest network of the same router, and a neighbour's.
+		{ID: "a4", Box: "b1", SSID: "Den-Guest", Security: "Open"},
+		{ID: "n1", Box: "n1", SSID: "FRITZ!Box", Security: "Open"},
+		// One whose security is unknown.
+		{ID: "x1", Box: "x1", SSID: "Den"},
+	}}
+	if got := lookalikes(base, nearby); len(got) != 0 {
+		t.Fatalf("without a copy: %+v", got)
+	}
+	nearby.AccessPoints = append(nearby.AccessPoints, metrics.NearbyAccessPoint{ID: "f1", Box: "f1", SSID: "den ", Security: "Open"})
+	got := lookalikes(base, nearby)
+	if len(got) != 1 || got[0].Kind != KindWiFiLookalike || got[0].Subject != "Den" || got[0].Level != Warning || got[0].Device != "pi" {
+		t.Fatalf("with a copy: %+v", got)
+	}
+	if got := lookalikes(base, nil); got != nil {
+		t.Errorf("without Wi-Fi: %+v", got)
+	}
+}

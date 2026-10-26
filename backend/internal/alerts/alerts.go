@@ -50,6 +50,9 @@ const (
 	KindTemperature Kind = "temperature"
 	KindThrottling  Kind = "throttling"
 	KindSMART       Kind = "smart"
+	// KindWiFiLookalike is a network nearby named like the one the device
+	// is connected to but secured otherwise; its subject is that name.
+	KindWiFiLookalike Kind = "wifi-lookalike"
 )
 
 // Alert is a value that needed attention, while it lasts or from the log.

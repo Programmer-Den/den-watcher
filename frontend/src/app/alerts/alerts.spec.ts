@@ -46,6 +46,9 @@ describe('alerts', () => {
     expect(alertText({ ...disk, kind: 'offline', subject: undefined }, i18n)).toBe(
       'Does not answer',
     );
+    expect(
+      alertText({ ...disk, kind: 'wifi-lookalike', subject: 'Den', value: undefined }, i18n),
+    ).toBe('A network named like Den but secured otherwise is nearby');
     expect(alertText({ ...disk, kind: 'fan' as Alert['kind'] }, i18n)).toBe(
       'Something needs attention',
     );

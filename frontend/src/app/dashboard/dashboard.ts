@@ -291,7 +291,15 @@ const ALERT_CARDS: Partial<Record<AlertKind, string>> = {
   temperature: 'temperatures',
   throttling: 'throttling',
   smart: 'extra:smart-checks',
+  'wifi-lookalike': 'extra:wifi-networks',
 };
+
+/** The kind of the alerts shown on the card of an add-on's group, by the card's id. */
+const EXTRA_ALERTS = new Map(
+  Object.entries(ALERT_CARDS)
+    .filter(([, card]) => card.startsWith('extra:'))
+    .map(([kind, card]) => [card, kind as AlertKind]),
+);
 
 /** Why no new values arrived: the backend did not answer, or the device it collects from did not. */
 type Problem = 'backend' | 'device';
@@ -411,7 +419,7 @@ export class Dashboard {
     return new Map(charts.map((chart) => [chart.card, [chart]]));
   });
   /** The card the SMART alerts show on: the one with the group's values, not the ones split off it. */
-  protected readonly smartCard = ALERT_CARDS.smart;
+  protected readonly extraAlerts = EXTRA_ALERTS;
   /** Whether the values show as cards in the categories or on one timeline; the switch above them picks it. */
   protected readonly pageView = inject(PageView);
   /** The category open in the rows view; one at a time, so the page stays short. */
@@ -772,6 +780,12 @@ export class Dashboard {
   /** The level of the picked device's alerts of a kind, for the sign on its card; null for none. */
   protected alertOn(kind: AlertKind): AlertLevel | null {
     return worstLevel(this.deviceAlerts().filter((a) => a.kind === kind));
+  }
+
+  /** The level of the picked device's alerts shown on the card of an add-on's group, if any. */
+  protected extraAlert(cardId: string): AlertLevel | null {
+    const kind = EXTRA_ALERTS.get(cardId);
+    return kind ? this.alertOn(kind) : null;
   }
 
   /** What the alerts of a kind are about, as the tooltip of the sign on its card. */

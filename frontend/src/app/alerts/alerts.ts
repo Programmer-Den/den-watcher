@@ -15,6 +15,7 @@ const KNOWN_KINDS: readonly AlertKind[] = [
   'temperature',
   'throttling',
   'smart',
+  'wifi-lookalike',
 ];
 
 /** The conditions of a Raspberry Pi's power supply and cooling that have a name on the page. */
