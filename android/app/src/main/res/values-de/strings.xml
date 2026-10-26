@@ -35,4 +35,9 @@
     <string name="channel_name">Aufzeichnung</string>
     <string name="channel_description">Wird angezeigt, solange die App die Nutzung aufzeichnet, wie Android es verlangt.</string>
     <string name="notification_title">Zeichnet die Nutzung dieses Handys auf</string>
+    <string name="network_title">Hub in einem anderen Netz erreicht</string>
+    <string name="network_notice">Der Hub hat in %1$s geantwortet, nicht in deinem üblichen Netz. Bist du nicht zu Hause, kann hier ein anderes Gerät die Adresse des Hubs haben und die Nutzung dieses Handys bekommen.</string>
+    <string name="network_usual">Das ist auch mein Netz</string>
+    <string name="network_channel_name">Andere Netze</string>
+    <string name="network_channel_description">Wenn der Hub in einem anderen als dem üblichen Netz antwortet.</string>
 </resources>

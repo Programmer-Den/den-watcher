@@ -62,6 +62,20 @@ class Settings(context: Context) {
         get() = prefs.getString(PROBLEM, null)?.let { runCatching { Problem.valueOf(it) }.getOrNull() }
         set(value) = prefs.edit().putString(PROBLEM, value?.name).apply()
 
+    /**
+     * The networks the hub is usually reached on, as Networks names them: the
+     * first one it is reached on, and the ones confirmed in the app since.
+     * Emptied when another hub address is saved.
+     */
+    var usualNetworks: Set<String>
+        get() = prefs.getStringSet(USUAL_NETWORKS, null)?.toSet() ?: emptySet()
+        set(value) = prefs.edit().putStringSet(USUAL_NETWORKS, value).apply()
+
+    /** The network the hub was last reached on when that was not a usual one, or null. */
+    var otherNetwork: String?
+        get() = prefs.getString(OTHER_NETWORK, null)
+        set(value) = prefs.edit().putString(OTHER_NETWORK, value).apply()
+
     /** The reading before the newest, whose traffic the speeds are measured from. */
     var lastReading: Reading?
         get() = prefs.getString(LAST_READING, null)?.let { runCatching { readingFrom(JSONObject(it)) }.getOrNull() }
@@ -102,6 +116,8 @@ class Settings(context: Context) {
         const val LAST_PUSH = "lastPush"
         const val PROBLEM = "problem"
         const val LAST_READING = "lastReading"
+        const val USUAL_NETWORKS = "usualNetworks"
+        const val OTHER_NETWORK = "otherNetwork"
     }
 }
 

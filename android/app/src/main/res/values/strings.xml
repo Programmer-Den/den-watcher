@@ -36,4 +36,9 @@
     <string name="channel_name">Recording</string>
     <string name="channel_description">Shown while the app records the usage, as Android asks for.</string>
     <string name="notification_title">Recording this phone\'s usage</string>
+    <string name="network_title">Hub reached on another network</string>
+    <string name="network_notice">The hub answered on %1$s, not on your usual network. If you are not at home, another device may have the hub\'s address here and get this phone\'s usage.</string>
+    <string name="network_usual">It\'s my network too</string>
+    <string name="network_channel_name">Other networks</string>
+    <string name="network_channel_description">When the hub answers on a network other than the usual one.</string>
 </resources>

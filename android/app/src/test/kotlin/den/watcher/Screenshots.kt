@@ -52,6 +52,15 @@ class Screenshots {
     }
 
     @Test
+    fun otherNetwork() = shot("8-other-network") {
+        hubAddress = "192.168.1.20:9393"
+        recording = true
+        lastPush = LAST_PUSH
+        usualNetworks = setOf("192.168.1.0/24 via 192.168.1.1")
+        otherNetwork = "10.0.0.0/24 via 10.0.0.1"
+    }
+
+    @Test
     fun german() = shot("5-german", "de") {
         hubAddress = "192.168.1.20:9393"
         recording = true

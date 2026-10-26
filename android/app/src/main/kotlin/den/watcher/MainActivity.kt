@@ -67,6 +67,13 @@ class MainActivity : Activity() {
         openHub = findViewById(R.id.open_hub)
         openHub.setOnClickListener { openHubPage() }
 
+        findViewById<Button>(R.id.network_usual).setOnClickListener {
+            settings.otherNetwork?.let { settings.usualNetworks += it }
+            settings.otherNetwork = null
+            OtherNetworkNotice.hide(this)
+            showStatus()
+        }
+
         findViewById<Button>(R.id.battery).setOnClickListener {
             runCatching { startActivity(Intent(ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
         }
@@ -119,6 +126,9 @@ class MainActivity : Activity() {
             // address can be scanned again, as when the phone was not added.
             settings.paired = false
             settings.releasedUntil = 0
+            // The network the new hub is first reached on is the usual one.
+            settings.usualNetworks = emptySet()
+            settings.otherNetwork = null
         }
         settings.hubAddress = scanned
         Toast.makeText(this, R.string.address_saved, Toast.LENGTH_SHORT).show()
@@ -171,6 +181,9 @@ class MainActivity : Activity() {
         problemLine.visibility = if (problem == null) View.GONE else View.VISIBLE
         findViewById<View>(R.id.battery_group).visibility = if (recording) View.VISIBLE else View.GONE
         showAddress(recording)
+        val other = settings.otherNetwork
+        findViewById<View>(R.id.network_group).visibility = if (other == null) View.GONE else View.VISIBLE
+        other?.let { findViewById<TextView>(R.id.network).text = getString(R.string.network_notice, it) }
         openHub.visibility = if (HubAddress.pageUrl(settings.hubAddress) == null) View.GONE else View.VISIBLE
     }
 

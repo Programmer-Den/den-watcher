@@ -17,4 +17,6 @@
     <color name="waiting">#B26A00</color>
     <color name="error">#BA1A1A</color>
     <color name="off">#9C8C84</color>
+    <color name="warning">#FFF1C2</color>
+    <color name="on_warning">#6D4100</color>
 </resources>

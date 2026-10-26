@@ -45,6 +45,28 @@
             android:paddingEnd="4dp"
             android:text="@string/intro" />
 
+        <LinearLayout
+            android:id="@+id/network_group"
+            style="@style/Card"
+            android:background="@drawable/card_warning">
+
+            <TextView
+                style="@style/Heading"
+                android:text="@string/network_title"
+                android:textColor="@color/on_warning" />
+
+            <TextView
+                android:id="@+id/network"
+                style="@style/Hint"
+                android:textColor="@color/on_warning" />
+
+            <Button
+                android:id="@+id/network_usual"
+                style="@style/Button.Outlined"
+                android:text="@string/network_usual"
+                android:textColor="@color/on_warning" />
+        </LinearLayout>
+
         <LinearLayout style="@style/Card">
 
             <TextView
