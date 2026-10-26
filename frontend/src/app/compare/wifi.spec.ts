@@ -1,6 +1,7 @@
 import {
   WiFiAccessPoint,
   WiFiHistory,
+  WiFiPlace,
   channelUse,
   homeNetwork,
   homeRows,
@@ -294,7 +295,7 @@ describe('timeline', () => {
   });
 
   it('takes a room named at home over the router', () => {
-    const named = [
+    const named: WiFiPlace[] = [
       { name: 'Work', signals: { o1: 72 } },
       { name: 'Desk', signals: { a1: 88 } },
     ];
