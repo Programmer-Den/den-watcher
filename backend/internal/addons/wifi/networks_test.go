@@ -207,8 +207,10 @@ func TestNetworkIDsStayApart(t *testing.T) {
 
 func TestNearbyReportsEachAccessPoint(t *testing.T) {
 	got := Nearby([]AccessPoint{
-		{SSID: "Den", BSSID: "aa:bb:cc:dd:ee:ff", SignalPercent: 70, SignalDBm: -55, HasDBm: true, FrequencyMHz: 5180, WidthMHz: 80,
-			Security: Security{Privacy: true, WPA2: true, WPA3: true}, Generation: 6, Connected: true},
+		{
+			SSID: "Den", BSSID: "aa:bb:cc:dd:ee:ff", SignalPercent: 70, SignalDBm: -55, HasDBm: true, FrequencyMHz: 5180, WidthMHz: 80,
+			Security: Security{Privacy: true, WPA2: true, WPA3: true}, Generation: 6, Connected: true,
+		},
 		{SSID: "Den", BSSID: "aa:bb:cc:dd:ee:fb", SignalPercent: 60, FrequencyMHz: 2437},
 		{SSID: "broken", BSSID: "not a mac", SignalPercent: 60},
 	})
