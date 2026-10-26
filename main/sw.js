@@ -3,39 +3,47 @@
 // hub cannot be reached, and the alerts' notifications show where the browser shows them only
 // from a service worker, such as Chrome on Android.
 //
-// The page itself, index.html, comes from the hub first, so a new version shows at once. The
-// scripts and styles named after their content come from the cache, which is emptied whenever
-// index.html changes. The API is never cached: its values are live, or the page says they are not.
+// It keeps the files of its build, listed in BUILD, when it is installed, and serves them from
+// there. The page itself, index.html, comes from the hub first, so a new version shows at once,
+// and from the cache only while the hub cannot be reached. A new build changes sw.js, so the
+// browser installs it as a new worker, which keeps the new files and then drops the old ones.
+// Nothing else is kept, such as the API or /metrics: their values are live, or the page says
+// they are not.
 'use strict';
 
-const CACHE = 'den-watcher';
-const scope = new URL(self.registration.scope);
-const api = new URL('api/', scope).pathname;
-/** The files the build names after their content, such as main-7EIQR62F.js. */
-const hashed = /\/[a-z0-9]+-[A-Z0-9]{8}\.(js|css)$/;
+// The build's files below the page, the page itself as '', and a version that changes with any
+// of them; scripts/precache.mjs puts them in after each build.
+const BUILD = {"version":"47e8f2f9d959a07d","files":["apple-touch-icon.png","chunk-Bjv7oGX6.js","chunk-BtLR3Pnq.js","chunk-CHXylAz8.js","chunk-DgQat35V.js","chunk-DoFZFomF.js","chunk-x2T1xuwi.js","flags/de.svg","flags/en-GB.svg","flags/en-US.svg","flags/es.svg","flags/fr.svg","icon-192.png","icon-512.png","icon-maskable-512.png","","main-AI52GTF3.js","manifest.webmanifest","mascot.svg","styles-E7IGHT2T.css"]};
 
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+const scope = new URL(self.registration.scope);
+/** Each page its own caches, as the demo has two pages on one site, one inside the other. */
+const prefix = `den-watcher ${scope.pathname} `;
+const CACHE = prefix + BUILD.version;
+const files = new Set(BUILD.files.map((file) => new URL(file, scope).href));
+/** What a reverse proxy in front of the hub answers while the hub is down. */
+const unreachable = new Set([502, 503, 504]);
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(keepBuild().then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(dropOldBuilds().then(() => self.clients.claim()));
+});
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
-  const url = new URL(request.url);
-  if (
-    request.method !== 'GET' ||
-    url.origin !== scope.origin ||
-    !url.pathname.startsWith(scope.pathname) ||
-    url.pathname.startsWith(api)
-  ) {
+  if (request.method !== 'GET') {
     return;
   }
-  const page = url.pathname === scope.pathname || url.pathname === `${scope.pathname}index.html`;
-  if (request.mode === 'navigate' && page) {
-    event.respondWith(openPage(event));
-  } else if (hashed.test(url.pathname)) {
-    event.respondWith(fromCache(event));
-  } else {
-    event.respondWith(fromNetwork(event));
+  const url = new URL(request.url);
+  const href = url.origin + url.pathname;
+  if (request.mode === 'navigate' && (href === scope.href || href === `${scope.href}index.html`)) {
+    event.respondWith(openPage(request));
+  } else if (files.has(href)) {
+    event.respondWith(fromCache(request, href));
   }
+  // Anything else goes to the hub as if there were no service worker.
 });
 
 // A click on an alert's notification brings the page to the front, or opens it.
@@ -49,58 +57,45 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-/** The page from the hub, kept for when the hub cannot be reached; else the page kept last. */
-async function openPage(event) {
-  try {
-    const response = await fetch(event.request);
-    if (response.ok && !response.redirected) {
-      event.waitUntil(keepPage(response.clone()));
-    }
-    return response;
-  } catch (error) {
-    const kept = await caches.match(scope.href);
-    if (kept) {
-      return kept;
-    }
-    throw error;
-  }
-}
-
-/** Keeps the page; a page that changed is a new version, whose scripts have other names. */
-async function keepPage(response) {
+/** Keeps every file of the build, asking the hub, as the browser may hold older copies. */
+async function keepBuild() {
   const cache = await caches.open(CACHE);
-  const text = await response.clone().text();
-  const kept = await cache.match(scope.href);
-  if (!kept || (await kept.text()) !== text) {
-    const keys = await cache.keys();
-    await Promise.all(keys.map((key) => cache.delete(key)));
-  }
-  await cache.put(scope.href, response);
+  await cache.addAll([...files].map((href) => new Request(href, { cache: 'no-cache' })));
 }
 
-/** A file named after its content never changes, so the copy kept is as good as the hub's. */
-async function fromCache(event) {
-  const kept = await caches.match(event.request);
-  if (kept) {
-    return kept;
-  }
-  return fromNetwork(event);
+/** Drops the files of the builds before, once this one is kept. */
+async function dropOldBuilds() {
+  const names = await caches.keys();
+  // 'den-watcher' was the one cache of the first service worker, for every page on the site.
+  const old = names.filter(
+    (name) => name === 'den-watcher' || (name.startsWith(prefix) && name !== CACHE),
+  );
+  await Promise.all(old.map((name) => caches.delete(name)));
 }
 
-/** The file from the hub, kept for when the hub cannot be reached; else the copy kept last. */
-async function fromNetwork(event) {
+/** The page from the hub; the one kept while the hub cannot be reached. */
+async function openPage(request) {
   try {
-    const response = await fetch(event.request);
-    if (response.ok && response.type === 'basic') {
-      const copy = response.clone();
-      event.waitUntil(caches.open(CACHE).then((cache) => cache.put(event.request, copy)));
+    const response = await fetch(request);
+    if (!unreachable.has(response.status)) {
+      return response;
     }
-    return response;
+    return (await kept(scope.href)) ?? response;
   } catch (error) {
-    const kept = await caches.match(event.request);
-    if (kept) {
-      return kept;
+    const page = await kept(scope.href);
+    if (page) {
+      return page;
     }
     throw error;
   }
+}
+
+/** A file of the build as kept; from the hub if it is not, such as one of a newer build. */
+async function fromCache(request, href) {
+  return (await kept(href)) ?? fetch(request);
+}
+
+async function kept(href) {
+  const cache = await caches.open(CACHE);
+  return cache.match(href);
 }
