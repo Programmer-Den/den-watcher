@@ -14,6 +14,7 @@ import {
   HomeRow,
   NetworkBox,
   TOGETHER,
+  WiFiChange,
   WiFiHistory,
   channelUse,
   homeNetwork,
@@ -24,17 +25,19 @@ import {
   signalLevel,
   wifiBand,
   wifiChannel,
+  wifiChanges,
   wifiDevices,
 } from './wifi';
 
 /** The views of what the devices' Wi-Fi sees. */
-export type WifiView = 'who' | 'home' | 'channels' | 'where';
+export type WifiView = 'who' | 'home' | 'channels' | 'where' | 'changes';
 
 const VIEWS: { id: WifiView; label: MessageKey }[] = [
   { id: 'who', label: 'wifi.whoSeesWhat' },
   { id: 'home', label: 'wifi.homeNetwork' },
   { id: 'channels', label: 'wifi.channels' },
   { id: 'where', label: 'wifi.where' },
+  { id: 'changes', label: 'wifi.changes' },
 ];
 
 /** How far back the views look: a day, in hourly steps. */
@@ -47,7 +50,8 @@ const REFRESH_MS = 5 * 60_000;
  * Compares the Wi-Fi networks the devices with the Wi-Fi add-on see: which device hears which
  * network how well, how well each one hears the network they are connected to, through which of
  * its access points, how crowded the channels are, and which devices hear the networks alike, as
- * those are probably in one place. Shown only once a device has the add-on.
+ * those are probably in one place, and what changed, such as a copy of the home network. Shown
+ * only once a device has the add-on.
  */
 @Component({
   selector: 'app-wifi-nearby',
@@ -119,6 +123,11 @@ export class WifiNearby {
       ...places(history, ids),
       spots: ids.map((device) => ({ device, steps: sameSpot(history, device) })),
     };
+  });
+
+  protected readonly changes = computed((): WiFiChange[] => {
+    const history = this.history();
+    return history ? wifiChanges(history) : [];
   });
 
   constructor() {
@@ -241,5 +250,61 @@ export class WifiNearby {
     return value === undefined
       ? `${when}: ${this.i18n.t('wifi.notRead')}`
       : `${when}: ${this.i18n.t('wifi.likeNow', { percent: Math.round(value) })}`;
+  }
+
+  /** When a change happened: this hour, or how many hours ago. */
+  protected changeTime(change: WiFiChange): string {
+    const hoursAgo = Math.max(0, Math.floor((nowSeconds() - change.time) / 3600));
+    return hoursAgo === 0
+      ? this.i18n.t('wifi.thisHour')
+      : this.i18n.plural(hoursAgo, 'wifi.hoursAgo.one', 'wifi.hoursAgo.other');
+  }
+
+  /** What changed, in a sentence. */
+  protected changeText(change: WiFiChange): string {
+    const channel = change.frequencyMHz ? wifiChannel(change.frequencyMHz) : '?';
+    const params = { network: change.ssid, channel, security: change.security ?? '' };
+    switch (change.kind) {
+      case 'lookalike':
+        return change.security === 'Open'
+          ? this.i18n.t('wifi.change.lookalikeOpen', params)
+          : this.i18n.t('wifi.change.lookalike', params);
+      case 'newAccessPoint':
+        return this.i18n.t('wifi.change.newAccessPoint', params);
+      case 'channel':
+        return this.i18n.t('wifi.change.channel', {
+          ...params,
+          band: this.bandOf(change.frequencyMHz),
+          from: change.fromMHz ? wifiChannel(change.fromMHz) : '?',
+        });
+      case 'appeared':
+        return this.i18n.t('wifi.change.appeared', params);
+      case 'gone':
+        return this.i18n.t('wifi.change.gone', params);
+    }
+  }
+
+  /** What a change may mean, under its sentence, or nothing. */
+  protected changeDetail(change: WiFiChange): string {
+    switch (change.kind) {
+      case 'lookalike':
+        return this.i18n.t('wifi.change.lookalikeDetail', { network: change.ssid });
+      case 'newAccessPoint':
+        return this.i18n.t('wifi.change.newAccessPointDetail');
+      case 'channel':
+        return change.devices.length > 1 ? this.i18n.t('wifi.change.channelDetail') : '';
+      default:
+        return '';
+    }
+  }
+
+  /** The devices that saw a change: all of them, or their names. */
+  protected changeSeenBy(change: WiFiChange): string {
+    const total = this.columns().length;
+    if (total > 1 && change.devices.length === total) {
+      return this.i18n.t('wifi.allDevices', { count: total });
+    }
+    const list = new Intl.ListFormat(this.i18n.language(), { type: 'conjunction' });
+    return list.format(change.devices.map((d) => this.name(d)));
   }
 }

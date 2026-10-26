@@ -14,6 +14,11 @@ interface DemoRadio {
   signals: Record<string, number>;
   /** The devices connected to it. */
   connected?: string[];
+  /** The hours ago it was first and last heard, where it was not there all day. */
+  from?: number;
+  until?: number;
+  /** The frequency it sent on before, up to the hour moved hours ago, where it moved. */
+  before?: { mhz: number; moved: number };
 }
 
 const HUB = 'local';
@@ -24,7 +29,9 @@ const PHONE = 'android-phone';
 /**
  * The radios around the house: Den's three mesh routers, each with a 5 GHz and a 2.4 GHz radio
  * (the first also sends Den-Guest), the neighbours' networks, a printer, and two that only one
- * device hears, a camera at the garden shed and a phone's hotspot next to the laptop.
+ * device hears, a camera at the garden shed and a phone's hotspot next to the laptop. Over the day
+ * the first router moved its 2.4 GHz radio from channel 1 to 6, a neighbour's network appeared and
+ * another one went, and an open copy of Den was near the Windows laptop for an hour.
  */
 const RADIOS: DemoRadio[] = [
   {
@@ -48,6 +55,7 @@ const RADIOS: DemoRadio[] = [
     generation: 6,
     signals: { [HUB]: 64, [LAPTOP]: 82, [PHONE]: 76, [SHED]: 18 },
     connected: [HUB],
+    before: { mhz: 2412, moved: 9 },
   },
   {
     id: 'a1c4e2f00b52',
@@ -58,6 +66,7 @@ const RADIOS: DemoRadio[] = [
     security: 'WPA2',
     generation: 6,
     signals: { [HUB]: 58, [LAPTOP]: 90, [PHONE]: 84, [SHED]: 22 },
+    before: { mhz: 2412, moved: 9 },
   },
   {
     id: 'b7e09c3d11a0',
@@ -147,6 +156,39 @@ const RADIOS: DemoRadio[] = [
     security: 'WPA2',
     signals: { [HUB]: 30 },
   },
+  {
+    id: '4ab695c6aad0',
+    box: 'f1acbdcedfe0',
+    ssid: 'Den',
+    mhz: 2462,
+    width: 20,
+    security: 'Open',
+    signals: { [LAPTOP]: 62 },
+    from: 5,
+    until: 5,
+  },
+  {
+    id: '5bc7a6d7bbe0',
+    box: '02bcdef01a2b',
+    ssid: 'o2-WLAN-4F2C',
+    mhz: 2412,
+    width: 20,
+    security: 'WPA2',
+    generation: 5,
+    signals: { [SHED]: 41, [HUB]: 38 },
+    from: 8,
+  },
+  {
+    id: '6cd8b7e8ccf0',
+    box: '13cdef01a2b3',
+    ssid: 'EasyBox-23A1',
+    mhz: 5260,
+    width: 80,
+    security: 'WPA2',
+    generation: 5,
+    signals: { [HUB]: 33, [LAPTOP]: 31 },
+    until: 14,
+  },
 ];
 
 /** Devices that tell the signal in dBm too: Windows does, NetworkManager and Android do not here. */
@@ -188,7 +230,9 @@ export function demoWifi(from: number, to: number): WiFiHistory {
       const points = times.flatMap((time): WiFiPoint[] => {
         const at = spot(device, hoursAgo(time));
         const base = radio.signals[at];
-        if (base === undefined || !read(device, hoursAgo(time))) return [];
+        const ago = hoursAgo(time);
+        if (base === undefined || !read(device, ago)) return [];
+        if (ago > (radio.from ?? Infinity) || ago < (radio.until ?? -Infinity)) return [];
         const seed = r * 31 + d * 7;
         // A weak network drops out now and then.
         if (base < 30 && drift(time, 7200, seed + 500) > 0.6) return [];
@@ -203,6 +247,7 @@ export function demoWifi(from: number, to: number): WiFiHistory {
             minPercent: Math.max(1, signal - 5),
             maxPercent: Math.min(100, signal + 5),
             signalDBm: DBM.includes(device) ? signal / 2 - 100 : undefined,
+            frequencyMHz: radio.before && ago > radio.before.moved ? radio.before.mhz : radio.mhz,
           },
         ];
       });

@@ -255,6 +255,41 @@
         </div>
         <p class="hint legend">{{ i18n.t('wifi.spotLegend') }}</p>
       }
+      @case ('changes') {
+        <p class="detail">{{ i18n.t('wifi.changesIntro') }}</p>
+        <div class="table" [class.stale]="connection.lost()">
+          <table class="changes">
+            <thead>
+              <tr>
+                <th scope="col">{{ i18n.t('wifi.when') }}</th>
+                <th scope="col">{{ i18n.t('wifi.what') }}</th>
+                <th scope="col">{{ i18n.t('wifi.seenBy') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (change of changes(); track $index) {
+                <tr [attr.data-kind]="change.kind">
+                  <th scope="row" class="hint">{{ changeTime(change) }}</th>
+                  <td class="what">
+                    {{ changeText(change) }}
+                    @if (change.kind === 'lookalike') {
+                      <span class="badge warning">{{ i18n.t('wifi.warning') }}</span>
+                    }
+                    @if (changeDetail(change); as detail) {
+                      <span class="hint more">{{ detail }}</span>
+                    }
+                  </td>
+                  <td>{{ changeSeenBy(change) }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="3" class="hint">{{ i18n.t('wifi.noChanges') }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
     }
   </section>
 }

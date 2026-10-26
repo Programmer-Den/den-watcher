@@ -61,8 +61,8 @@ func TestWiFiAddsUpEachHourAcrossFlushes(t *testing.T) {
 	}
 	first := ap.SeenBy[0].Points[0]
 	if first.Seen != 3 || first.Connected != 3 || first.SignalPercent != 70 || first.MinPercent != 60 || first.MaxPercent != 80 ||
-		first.SignalDBm == nil || *first.SignalDBm != -40 {
-		t.Errorf("a's first hour = %+v, want seen 3 times at 70%% on average from 60 to 80, -40 dBm", first)
+		first.SignalDBm == nil || *first.SignalDBm != -40 || first.FrequencyMHz != 5180 {
+		t.Errorf("a's first hour = %+v, want seen 3 times at 70%% on average from 60 to 80, -40 dBm, on 5180 MHz", first)
 	}
 	other := got.AccessPoints[1].SeenBy[0].Points[0]
 	if other.Seen != 2 || other.Connected != 0 || other.SignalPercent != 40 {

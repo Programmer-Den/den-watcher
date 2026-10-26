@@ -518,6 +518,30 @@ export const de: Messages = {
   'wifi.sameSpot': 'An diesem Ort, letzte 24 Stunden',
   'wifi.likeNow': '{percent} % wie jetzt',
   'wifi.spotLegend': 'Grün: wo es jetzt ist; rot: woanders; Lücken: aus oder weg.',
+  'wifi.changes': 'Änderungen',
+  'wifi.changesIntro':
+    'Was sich an den Netzwerken, die die Geräte hören, im letzten Tag geändert hat, das Neueste zuerst.',
+  'wifi.when': 'Wann',
+  'wifi.what': 'Was',
+  'wifi.warning': 'Warnung',
+  'wifi.allDevices': 'alle {count}',
+  'wifi.noChanges': 'Im letzten Tag hat sich nichts geändert.',
+  'wifi.change.lookalike':
+    'Ein zweites {network} ist aufgetaucht, gesichert mit {security}, auf Kanal {channel}.',
+  'wifi.change.lookalikeOpen':
+    'Ein zweites {network} ist aufgetaucht, offen, ohne Passwort, auf Kanal {channel}.',
+  'wifi.change.lookalikeDetail':
+    'Deine Router senden {network} anders gesichert. Es kann eine Kopie sein, die Passwörter abfangen soll.',
+  'wifi.change.newAccessPoint':
+    'Ein neuer Zugangspunkt von {network} ist auf Kanal {channel} aufgetaucht.',
+  'wifi.change.newAccessPointDetail':
+    'Gesichert wie dein Netzwerk: ein neuer Router von dir oder eine Kopie, die das Passwort kennt.',
+  'wifi.change.channel':
+    '{network} auf {band} ist von Kanal {from} auf Kanal {channel} gewechselt.',
+  'wifi.change.channelDetail':
+    'Die Geräte haben es zur selben Zeit gesehen, also war es der Router, wohl durch seine automatische Kanalwahl.',
+  'wifi.change.appeared': 'Neues Netzwerk {network} auf Kanal {channel}.',
+  'wifi.change.gone': '{network} wurde zum letzten Mal gesehen.',
   'system.model': 'Modell',
   'system.os': 'Betriebssystem',
   'system.kernel': 'Kernel',

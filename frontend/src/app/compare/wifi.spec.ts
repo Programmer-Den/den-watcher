@@ -11,6 +11,7 @@ import {
   sameSpot,
   signalLevel,
   wifiBand,
+  wifiChanges,
   wifiChannel,
   wifiDevices,
 } from './wifi';
@@ -254,5 +255,74 @@ describe('sameSpot', () => {
     const h = history([a1]);
     expect(sameSpot(h, 'laptop')).toEqual([40, 100]);
     expect(sameSpot(h, 'pc')).toEqual([undefined, 100]);
+  });
+});
+
+describe('wifiChanges', () => {
+  /** An access point heard by the hub in the steps hoursAgo given, at 50 % on mhz. */
+  function heard(
+    id: string,
+    box: string,
+    ssid: string,
+    hours: number[],
+    extra: Partial<WiFiAccessPoint> = {},
+    frequencies: number[] = [],
+    connected = false,
+  ): WiFiAccessPoint {
+    const times = hours.map((h) => NOW - h * HOUR);
+    return {
+      id,
+      box,
+      ssid,
+      frequencyMHz: 2437,
+      security: 'WPA2/WPA3',
+      firstSeen: Math.min(...times),
+      lastSeen: Math.max(...times),
+      seenBy: [
+        {
+          device: 'hub',
+          points: times.map((time, i) => ({
+            time,
+            seen: 10,
+            connected: connected ? 10 : undefined,
+            signalPercent: 50,
+            minPercent: 50,
+            maxPercent: 50,
+            frequencyMHz: frequencies[i],
+          })),
+        },
+      ],
+      ...extra,
+    };
+  }
+
+  it('finds copies of the home network, new and gone networks and a router that moved, newest first', () => {
+    const h = history([
+      heard('a1', 'b1', 'Den', [3, 2, 1, 0], {}, [2412, 2412, 2437, 2437], true),
+      // Another router of Den with WPA2 only, there all along: not new and no copy.
+      heard('a2', 'b2', 'Den', [3, 2, 1, 0], { security: 'WPA2' }),
+      heard('c1', 'cb', 'den ', [2], { security: 'Open' }),
+      heard('n1', 'nb', 'Neighbour', [1, 0]),
+      heard('g1', 'gb', 'Gone', [3, 2]),
+      heard('o1', 'ob', 'Old', [3, 2, 1, 0]),
+    ]);
+    h.from = NOW - 3 * HOUR;
+    expect(wifiChanges(h).map((c) => [c.kind, c.ssid, (NOW - c.time) / HOUR])).toEqual([
+      ['channel', 'Den', 1],
+      ['appeared', 'Neighbour', 1],
+      ['lookalike', 'den ', 2],
+      ['gone', 'Gone', 2],
+    ]);
+    const moved = wifiChanges(h).find((c) => c.kind === 'channel')!;
+    expect([moved.fromMHz, moved.frequencyMHz, moved.devices]).toEqual([2412, 2437, ['hub']]);
+  });
+
+  it('tells a new router under the very name with the same security as a new access point', () => {
+    const h = history([
+      heard('a1', 'b1', 'Den', [3, 2, 1, 0], {}, [], true),
+      heard('a2', 'b2', 'Den', [1, 0], { security: 'WPA3' }),
+    ]);
+    h.from = NOW - 3 * HOUR;
+    expect(wifiChanges(h).map((c) => [c.kind, c.ssid])).toEqual([['newAccessPoint', 'Den']]);
   });
 });
