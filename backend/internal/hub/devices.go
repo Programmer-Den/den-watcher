@@ -44,6 +44,10 @@ type Device struct {
 	// Phone is set for a phone, which has no Address: it sends the hub its
 	// usage (see AddPhone). Source then reads what it sent last.
 	Phone bool
+	// Mesh is set for a router that reports the other routers of its mesh,
+	// such as the main router of an ASUS AiMesh: the hub shows each of them
+	// as a device of its own (see watchMesh).
+	Mesh Mesh
 }
 
 // ParseDevices reads the devices from a comma-separated list of entries such

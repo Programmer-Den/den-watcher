@@ -27,6 +27,9 @@ type fakeASUSRouter struct {
 	token     string
 	appGet    string
 	coretmp   string
+	// mesh answers the hook of the AiMesh nodes; a router without AiMesh
+	// refuses it.
+	mesh string
 }
 
 func newFakeASUSRouter(t *testing.T) *fakeASUSRouter {
@@ -74,6 +77,10 @@ func newFakeASUSRouter(t *testing.T) *fakeASUSRouter {
 				return
 			}
 			_ = r.ParseForm()
+			if r.PostForm.Get("hook") == asusMeshHook && f.mesh != "" {
+				_, _ = w.Write([]byte(f.mesh))
+				return
+			}
 			if r.PostForm.Get("hook") != asusHooks {
 				http.Error(w, "unknown hook", http.StatusBadRequest)
 				return
@@ -290,5 +297,77 @@ func TestASUSInterfaceNames(t *testing.T) {
 		if got := asusInterfaceName(name); got != want {
 			t.Errorf("%s: got %q, want %q", name, got, want)
 		}
+	}
+}
+
+func TestASUSReadsTheAiMeshNodes(t *testing.T) {
+	router := newFakeASUSRouter(t)
+	reader := router.reader("right")
+	host := strings.TrimPrefix(router.server.URL, "http://")
+	host = host[:strings.LastIndex(host, ":")]
+	router.mu.Lock()
+	// The main router lists itself too, at level 0; its client list tells
+	// which node each client is on.
+	router.mesh = `{"get_cfg_clientlist":[[
+		{"alias":"Main","model_name":"RT-AX88U","ip":"` + host + `","mac":"aa:00:00:00:00:01","online":"1","level":"0"},
+		{"alias":"Living room","model_name":"RT-AX58U","ui_model_name":"RT-AX3000","fwver":"3.0.0.4.388_24243","ip":"192.168.1.2","mac":"aa:00:00:00:00:02","online":"1","level":"1",
+		 "ap2g":"aa:00:00:00:00:12","ap5g":"aa:00:00:00:00:15","pap5g":"AA:00:00:00:00:05","rssi5g":"-58","pap2g":"","rssi2g":""},
+		{"alias":"","model_name":"RP-AX56","ip":"192.168.1.3","mac":"aa:00:00:00:00:03","online":"1","level":"1"},
+		{"alias":"Garden","model_name":"RT-AX58U","ip":"192.168.1.4","mac":"aa:00:00:00:00:04","online":"0","level":"2"},
+	]]}`
+	router.appGet = strings.Replace(router.appGet, `"name":"DESKTOP-1","nickName":"Laptop"`, `"name":"DESKTOP-1","nickName":"Laptop","amesh_isRe":"1","amesh_papMac":"AA:00:00:00:00:02"`, 1)
+	router.mu.Unlock()
+
+	if _, err := reader.Collect(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	nodes, at := reader.MeshNodes()
+	if at.IsZero() || len(nodes) != 3 {
+		t.Fatalf("nodes %+v at %v, want the three besides the main router", nodes, at)
+	}
+	living := nodes[0]
+	if living.MAC != "AA:00:00:00:00:02" || living.Name != "Living room" || living.Model != "RT-AX3000" || !living.Online ||
+		living.Backhaul != "5 GHz" || living.BackhaulDBm == nil || *living.BackhaulDBm != -58 || living.Clients != 1 ||
+		!slices.Equal(living.Radios, []string{"AA:00:00:00:00:12", "AA:00:00:00:00:15"}) {
+		t.Errorf("living room %+v", living)
+	}
+	// Without a name, a node is named by its model; one without a Wi-Fi
+	// link is on a cable.
+	if nodes[1].Name != "RP-AX56" || nodes[1].Backhaul != "cable" || nodes[1].BackhaulDBm != nil {
+		t.Errorf("second node %+v", nodes[1])
+	}
+
+	snapshot, err := reader.Node("aa:00:00:00:00:02").Collect(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if clients := extraItem(snapshot, "aimesh-node", "clients"); clients == nil || *clients.Value != 1 {
+		t.Errorf("clients of the node %+v", clients)
+	}
+	if link := extraItem(snapshot, "aimesh-node", "backhaul"); link == nil || link.Text != "Wi-Fi 5 GHz" || link.Texts["de"] != "WLAN 5 GHz" {
+		t.Errorf("link of the node %+v", link)
+	}
+	if _, err := reader.Node("AA:00:00:00:00:04").Collect(t.Context()); !errors.Is(err, errNodeOffline) {
+		t.Errorf("a node that is offline: %v", err)
+	}
+	if _, err := reader.Node("AA:00:00:00:00:99").Collect(t.Context()); err == nil {
+		t.Error("a node the router no longer lists is read")
+	}
+	if MeshOf(New(Config{Protocol: ASUS, Address: host}, "right")) == nil || MeshOf(NewUPnP(host)) != nil {
+		t.Error("MeshOf finds no ASUS reader, or one in a UPnP reader")
+	}
+}
+
+func TestASUSWithoutAiMeshHasNoNodes(t *testing.T) {
+	router := newFakeASUSRouter(t)
+	reader := router.reader("right")
+	if _, err := reader.Collect(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if nodes, _ := reader.MeshNodes(); len(nodes) != 0 {
+		t.Errorf("nodes %+v", nodes)
+	}
+	if _, err := reader.Node("AA:00:00:00:00:02").Collect(t.Context()); err == nil {
+		t.Error("a node of a router without AiMesh is read")
 	}
 }
