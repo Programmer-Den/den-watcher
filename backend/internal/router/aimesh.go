@@ -20,6 +20,12 @@ import (
 // may not know it, still answers those.
 const asusMeshHook = "get_cfg_clientlist()"
 
+// asusMeshRetry is how often a router whose last answer had no AiMesh
+// nodes, or that does not know the hook, is asked for them again: most
+// routers have no mesh, and their web interface runs on a weak CPU (see
+// asusInterval). A node added to a mesh of none shows within this time.
+const asusMeshRetry = 10 * time.Minute
+
 // meshStale is how old the main router's list of nodes may be before a
 // node is no longer known: two readings missed.
 const meshStale = 3 * asusInterval
@@ -92,19 +98,46 @@ func (a *ASUSReader) Radios() []string {
 // readMesh asks the router for its AiMesh nodes and keeps them, with the
 // clients counted on each from clients, the get_clientlist of the same
 // reading. A router that does not answer it keeps the nodes from before,
-// which grow old (see meshStale). The caller holds mu.
+// which grow old (see meshStale). One that answered without nodes, or does
+// not know the hook, is asked again only after asusMeshRetry; until then
+// none is kept as a fresh list. The caller holds mu.
 func (a *ASUSReader) readMesh(ctx context.Context, clients map[string]json.RawMessage, now time.Time) {
+	if !a.noMeshAt.IsZero() && now.Sub(a.noMeshAt) < asusMeshRetry {
+		if a.noNodes {
+			a.nodesMu.Lock()
+			a.nodesAt = now
+			a.nodesMu.Unlock()
+		}
+		return
+	}
+	// An answer that is not a list, from a router that had no nodes, says
+	// it does not know the hook; a busy one (5xx) or one with nodes is asked
+	// again with the next reading.
+	unknown := func() {
+		a.nodesMu.Lock()
+		known := len(a.nodes) > 0
+		a.nodesMu.Unlock()
+		if !known {
+			a.noMeshAt, a.noNodes = now, false
+		}
+	}
 	data, status, err := a.ask(ctx, http.MethodPost, "/appGet.cgi", url.Values{"hook": {asusMeshHook}})
-	if err != nil || status != http.StatusOK {
+	if err != nil || status >= http.StatusInternalServerError {
 		return
 	}
 	var values map[string]json.RawMessage
-	if json.Unmarshal(trailingComma.ReplaceAll(data, []byte("$1")), &values) != nil {
+	if status != http.StatusOK || json.Unmarshal(trailingComma.ReplaceAll(data, []byte("$1")), &values) != nil {
+		unknown()
 		return
 	}
 	nodes, radios, err := parseMesh(values["get_cfg_clientlist"], a.base)
 	if err != nil {
+		unknown()
 		return
+	}
+	a.noMeshAt, a.noNodes = time.Time{}, false
+	if len(nodes) == 0 {
+		a.noMeshAt, a.noNodes = now, true
 	}
 	counts := nodeClients(clients)
 	for i := range nodes {

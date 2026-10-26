@@ -56,6 +56,8 @@ type ASUSReader struct {
 	refusedAt   time.Time
 	refusedLogs bool
 	untakenAt   time.Time            // when a token was not taken right after its login
+	noMeshAt    time.Time            // when the router last answered without AiMesh nodes (see readMesh)
+	noNodes     bool                 // whether that answer was a list without nodes
 	cores       map[string][2]uint64 // usage and total of each core, from before
 	traffic     map[string]*[2]counter
 	uptime      uint64
