@@ -105,28 +105,28 @@ func TestNetworkExtrasDescribeEachNetwork(t *testing.T) {
 	if v := item(t, group, "connected"); v.Text != "Home" {
 		t.Errorf("connected to %q, want Home", v.Text)
 	}
-	signal := item(t, group, "home-signal")
+	signal := item(t, group, networkID("Home")+"-signal")
 	if *signal.Value != 80 || !signal.History || signal.Section != "Home" || signal.Label != "Home: signal" || signal.Labels["de"] != "Home: Signal" {
 		t.Errorf("Home's signal = %+v, want its strongest access point's, with history, in its section", signal)
 	}
-	if v := item(t, group, "home-channel"); v.Text != "36 · 5 GHz · 80 MHz (also 2.4 GHz)" || v.Texts["de"] != "36 · 5 GHz · 80 MHz (auch 2,4 GHz)" {
+	if v := item(t, group, networkID("Home")+"-channel"); v.Text != "36 · 5 GHz · 80 MHz (also 2.4 GHz)" || v.Texts["de"] != "36 · 5 GHz · 80 MHz (auch 2,4 GHz)" {
 		t.Errorf("Home's channel = %q, %v", v.Text, v.Texts)
 	}
-	if v := item(t, group, "home-security"); v.Text != "WPA2/WPA3" {
+	if v := item(t, group, networkID("Home")+"-security"); v.Text != "WPA2/WPA3" {
 		t.Errorf("Home's security = %q, want its best access point's", v.Text)
 	}
-	if v := item(t, group, "home-details"); v.Text != "-48 dBm · Wi-Fi 6 · up to 1201 Mbit/s · 2 access points" ||
+	if v := item(t, group, networkID("Home")+"-details"); v.Text != "-48 dBm · Wi-Fi 6 · up to 1201 Mbit/s · 2 access points" ||
 		v.Texts["fr"] != "-48 dBm · Wi-Fi 6 · jusqu'à 1201 Mbit/s · 2 points d'accès" {
 		t.Errorf("Home's details = %q, %v", v.Text, v.Texts)
 	}
-	if v := item(t, group, "caf-security"); v.Section != "Café" || v.Text != "Open" || v.Texts["es"] != "Abierta" {
+	if v := item(t, group, networkID("Café")+"-security"); v.Section != "Café" || v.Text != "Open" || v.Texts["es"] != "Abierta" {
 		t.Errorf("the café's security = %+v", v)
 	}
-	if v := item(t, group, "neighbour-channel"); v.Text != "1 · 6 GHz" {
+	if v := item(t, group, networkID("Neighbour")+"-channel"); v.Text != "1 · 6 GHz" {
 		t.Errorf("the neighbour's channel = %q", v.Text)
 	}
 	for _, i := range group.Items {
-		if strings.HasPrefix(i.ID, "caf-details") {
+		if strings.HasPrefix(i.ID, networkID("Café")+"-details") {
 			t.Errorf("the café has details, though nothing more is known of it: %+v", i)
 		}
 	}
@@ -186,22 +186,26 @@ func TestNetworkExtrasWithoutWiFiReportNothing(t *testing.T) {
 }
 
 func TestNetworkIDsStayApart(t *testing.T) {
-	used := map[string]bool{}
-	first := networkID("My Wi-Fi", used)
-	second := networkID("my_wi.fi", used)
-	emoji := networkID("📶📶", used)
-	long := networkID(strings.Repeat("a", 32), used)
+	plain := networkID("den")
+	first := networkID("My Wi-Fi")
+	second := networkID("my_wi.fi")
+	emoji := networkID("📶📶")
+	long := networkID(strings.Repeat("a", 32))
 
-	if first != "my-wi-fi" || second == first || !strings.HasPrefix(second, "my-wi-fi-") {
+	if plain != "den" {
+		t.Errorf("id %q, want a name that is an id kept as it is", plain)
+	}
+	if second == first || !strings.HasPrefix(first, "my-wi-fi-") || !strings.HasPrefix(second, "my-wi-fi-") {
 		t.Errorf("ids %q and %q, want them apart", first, second)
 	}
-	for _, id := range []string{first, second, emoji, long} {
+	for _, id := range []string{plain, first, second, emoji, long} {
 		if len(id)+len("-security") > 40 || id == "" || id[0] == '-' {
 			t.Errorf("id %q does not fit", id)
 		}
 	}
-	if again := networkID("📶📶", map[string]bool{}); again != emoji {
-		t.Errorf("the id of a name changed from %q to %q", emoji, again)
+	// The id of a name is the same whatever else is in range.
+	if again := networkID("my_wi.fi"); again != second {
+		t.Errorf("the id of a name changed from %q to %q", second, again)
 	}
 }
 

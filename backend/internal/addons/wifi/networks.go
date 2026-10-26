@@ -271,9 +271,8 @@ func NetworkExtras(aps []AccessPoint) []metrics.Extra {
 	slices.SortStableFunc(networks, func(a, b *network) int {
 		return cmp.Or(cmp.Compare(strings.ToLower(a.ssid), strings.ToLower(b.ssid)), cmp.Compare(a.ssid, b.ssid))
 	})
-	used := map[string]bool{}
 	for _, n := range networks {
-		group.Items = append(group.Items, networkItems(n, networkID(n.ssid, used))...)
+		group.Items = append(group.Items, networkItems(n, networkID(n.ssid))...)
 	}
 	return []metrics.Extra{group}
 }
@@ -403,18 +402,17 @@ func detailsText(n *network) (string, map[string]string) {
 
 // networkID returns the id the values of the network ssid start with: its
 // name in lowercase letters and digits, short enough for the longest suffix
-// ("-security") to fit in an id's 40 characters. A name that leaves nothing,
-// such as one of emoji only, or whose id another network took already, gets
-// a checksum of the whole name instead, so its id stays the same and apart.
-func networkID(ssid string, used map[string]bool) string {
+// ("-security") to fit in an id's 40 characters. Only a name that is such an
+// id already keeps it as it is; any other ends in a checksum of the whole
+// name, so two names that turn into the same letters, such as "My Wi-Fi"
+// and "my_wi.fi", keep ids of their own whichever of them is in range.
+func networkID(ssid string) string {
 	const room = 40 - len("-security")
-	id := metrics.ShortID(ssid, room)
-	if id == "" || used[id] {
-		sum := fmt.Sprintf("%08x", crc32.ChecksumIEEE([]byte(ssid)))
-		id = strings.TrimLeft(metrics.ShortID(ssid, room-9)+"-"+sum, "-")
+	if id := metrics.ShortID(ssid, room); id == ssid {
+		return id
 	}
-	used[id] = true
-	return id
+	sum := fmt.Sprintf("%08x", crc32.ChecksumIEEE([]byte(ssid)))
+	return strings.TrimLeft(metrics.ShortID(ssid, room-9)+"-"+sum, "-")
 }
 
 // Nearby returns each access point on its own, for a hub to compare what its
