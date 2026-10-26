@@ -341,8 +341,8 @@ describe('wifiChanges', () => {
     ]);
     h.from = NOW - 3 * HOUR;
     expect(wifiChanges(h).map((c) => [c.kind, c.security])).toEqual([
-      ['newAccessPoint', 'WPA2 Enterprise'],
       ['lookalike', 'WPA2'],
+      ['newAccessPoint', 'WPA2 Enterprise'],
     ]);
   });
 
