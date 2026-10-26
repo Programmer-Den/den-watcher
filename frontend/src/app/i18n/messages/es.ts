@@ -501,6 +501,22 @@ export const es: Messages = {
   'wifi.noHome':
     'Ninguno de los dispositivos con el complemento Wi-Fi está conectado a una red Wi-Fi.',
   'wifi.open': 'Abierta',
+  'wifi.channels': 'Canales',
+  'wifi.where': 'Dónde están los dispositivos',
+  'wifi.channelsIntro':
+    'Cuántos routers oyen los dispositivos ahora en cada canal. Cuantos menos haya cerca del canal de tu red, menos se estorban.',
+  'wifi.routers.one': '{count} router',
+  'wifi.routers.other': '{count} routers',
+  'wifi.suggestMove': 'Menos ocupado: canal {channel}. {network} podría pasarse a él.',
+  'wifi.suggestStay': '{network} ya usa el canal {channel}, el menos ocupado.',
+  'wifi.leastCrowded': 'Menos ocupado',
+  'wifi.whereIntro':
+    'Cuánto se parece cómo oyen los dispositivos las redes ahora: dos dispositivos en la misma habitación oyen los mismos routers con una fuerza parecida. La franja muestra cuándo un dispositivo estaba en otro sitio que ahora.',
+  'wifi.together': 'Probablemente juntos: {devices}',
+  'wifi.apart': 'Ningún par de dispositivos parece estar en el mismo sitio.',
+  'wifi.sameSpot': 'En este sitio, últimas 24 horas',
+  'wifi.likeNow': '{percent} % como ahora',
+  'wifi.spotLegend': 'Verde: donde está ahora; rojo: en otro sitio; huecos: apagado o fuera.',
   'system.model': 'Modelo',
   'system.os': 'Sistema operativo',
   'system.kernel': 'Kernel',

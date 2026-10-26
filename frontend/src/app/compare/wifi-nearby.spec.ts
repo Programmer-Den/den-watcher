@@ -123,4 +123,54 @@ describe('WifiNearby', () => {
       ['Laptop', 'Access point 1 · near Laptop · connected', '5 GHz', '98 %', '–'],
     ]);
   });
+
+  /** Switches to the view of the button at index. */
+  function show(index: number): HTMLElement {
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelectorAll<HTMLButtonElement>('.choices button')[index].click();
+    fixture.detectChanges();
+    return element;
+  }
+
+  it('shows how many routers are on each channel, and the least crowded one', () => {
+    answer();
+    const element = show(2);
+    const bands = Array.from(element.querySelectorAll('.band'), (band) => ({
+      band: band.querySelector('h3')!.textContent!.trim(),
+      busy: Array.from(band.querySelectorAll('.bar'))
+        .filter((bar) => bar.querySelector('.count')!.textContent!.trim() !== '')
+        .map((bar) => bar.getAttribute('title')),
+      home: Array.from(band.querySelectorAll('.bar.home .number'), (n) => n.textContent!.trim()),
+      hint: band.querySelector('.hint')?.textContent!.trim(),
+    }));
+    expect(bands).toEqual([
+      {
+        band: '2.4 GHz',
+        busy: ['Channel 6: 1 router'],
+        home: ['6'],
+        hint: 'Den already uses channel 6, the least crowded.',
+      },
+      {
+        band: '5 GHz',
+        busy: ['Channel 36: 2 routers'],
+        home: ['36'],
+        hint: 'Least crowded: channel 52. Den could move there.',
+      },
+    ]);
+  });
+
+  it('shows how alike the devices hear the networks', () => {
+    answer();
+    const element = show(3);
+    expect(element.querySelector('.together')!.textContent!.trim()).toBe(
+      'No two devices seem to be in one place.',
+    );
+    expect(rows().map((r) => r.slice(0, 3))).toEqual([
+      ['Hub', '–', '58 %'],
+      ['Laptop', '58 %', '–'],
+    ]);
+    const steps = element.querySelectorAll('tbody tr:first-child .step');
+    expect(steps[steps.length - 1].getAttribute('title')).toBe('This hour: 100 % like now');
+    expect(steps[steps.length - 2].getAttribute('title')).toBe('1 hour ago: off or away');
+  });
 });

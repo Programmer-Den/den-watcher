@@ -500,6 +500,23 @@ export const fr: Messages = {
   'wifi.gaps': "Vides : l'appareil était éteint ou absent ; gris : il ne voyait pas le réseau.",
   'wifi.noHome': "Aucun des appareils dotés de l'extension Wi-Fi n'est connecté à un réseau Wi-Fi.",
   'wifi.open': 'Ouvert',
+  'wifi.channels': 'Canaux',
+  'wifi.where': 'Où sont les appareils',
+  'wifi.channelsIntro':
+    'Combien de routeurs les appareils entendent en ce moment sur chaque canal. Moins il y en a près du canal de votre réseau, moins ils se gênent.',
+  'wifi.routers.one': '{count} routeur',
+  'wifi.routers.other': '{count} routeurs',
+  'wifi.suggestMove': 'Le moins encombré : canal {channel}. {network} pourrait y passer.',
+  'wifi.suggestStay': '{network} utilise déjà le canal {channel}, le moins encombré.',
+  'wifi.leastCrowded': 'Le moins encombré',
+  'wifi.whereIntro':
+    "À quel point les appareils entendent les réseaux de la même façon en ce moment : deux appareils dans une même pièce entendent les mêmes routeurs à peu près aussi fort. La bande montre quand un appareil était ailleurs qu'en ce moment.",
+  'wifi.together': 'Probablement ensemble : {devices}',
+  'wifi.apart': 'Aucun appareil ne semble être au même endroit qu’un autre.',
+  'wifi.sameSpot': 'À cet endroit, dernières 24 heures',
+  'wifi.likeNow': '{percent} % comme maintenant',
+  'wifi.spotLegend':
+    'Vert : là où il est maintenant ; rouge : ailleurs ; vides : éteint ou absent.',
   'system.model': 'Modèle',
   'system.os': "Système d'exploitation",
   'system.kernel': 'Noyau',

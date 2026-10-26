@@ -1,10 +1,14 @@
 import {
   WiFiAccessPoint,
   WiFiHistory,
+  channelUse,
   homeNetwork,
   homeRows,
   networkBoxes,
   networkRows,
+  likeness,
+  places,
+  sameSpot,
   signalLevel,
   wifiBand,
   wifiChannel,
@@ -177,5 +181,78 @@ describe('wifiDevices', () => {
     const h = history([]);
     h.devices.push({ device: 'off', steps: [{ time: NOW, readings: 0 }] });
     expect(wifiDevices(h, ['pc', 'off', 'other', 'hub'])).toEqual(['pc', 'hub']);
+  });
+});
+
+describe('channelUse', () => {
+  it('counts the routers on each channel, a router with two networks on a radio once', () => {
+    const bands = channelUse(
+      history([
+        ap('a1', 'b1', 'Den', { hub: 60 }, { frequencyMHz: 2437 }, ['hub']),
+        ap('g1', 'b1', 'Den-Guest', { hub: 60 }, { frequencyMHz: 2437 }),
+        ap('a2', 'b1', 'Den', { hub: 70 }, { frequencyMHz: 5180 }, ['hub']),
+        ap('n1', 'nb', 'Neighbour', { laptop: 30 }, { frequencyMHz: 2437 }),
+        ap('n2', 'nc', 'Other', { laptop: 30 }, { frequencyMHz: 2422 }),
+        ap('n3', 'nd', 'Far', { pc: 30 }, { frequencyMHz: 5500 }),
+        ap('t1', 'te', 'Telekom', { pc: 30 }, { frequencyMHz: 6115 }),
+      ]),
+    );
+    expect(bands.map((b) => b.band)).toEqual([2.4, 5, 6]);
+    const two = bands[0];
+    expect(two.channels.map((c) => c.channel)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+    expect(two.channels.filter((c) => c.routers > 0)).toEqual([
+      { channel: 3, routers: 1, home: false },
+      { channel: 6, routers: 2, home: true },
+    ]);
+    // Channels 1 and 6 each have a neighbour two channels or less away, 11 has none.
+    expect(two.suggested).toBe(11);
+    expect(bands[1].channels).toEqual([
+      { channel: 36, routers: 1, home: true },
+      { channel: 100, routers: 1, home: false },
+    ]);
+    // The home network's block is as free as any, so it stays.
+    expect(bands[1].suggested).toBe(36);
+    expect(bands[2]).toEqual({
+      band: 6,
+      channels: [{ channel: 33, routers: 1, home: false }],
+      suggested: undefined,
+    });
+  });
+});
+
+describe('likeness', () => {
+  it('is 100 less the average difference, an access point heard by one only counting as 0 for the other', () => {
+    const a = new Map([
+      ['x', 80],
+      ['y', 40],
+    ]);
+    expect(likeness(a, new Map(a))).toBe(100);
+    expect(likeness(a, new Map([['x', 70]]))).toBe(75);
+    expect(likeness(new Map(), new Map())).toBeUndefined();
+  });
+});
+
+describe('places', () => {
+  it('groups the devices that hear the networks alike', () => {
+    const h = history([
+      ap('a1', 'b1', 'Den', { hub: 40, laptop: 90, pc: 85 }),
+      ap('a2', 'b2', 'Den', { hub: 90, laptop: 30, pc: 35 }),
+      // Below 20 %, a network does not count.
+      ap('n1', 'nb', 'Neighbour', { laptop: 15 }),
+    ]);
+    const result = places(h, ['hub', 'laptop', 'pc']);
+    expect(result.groups).toEqual([['laptop', 'pc']]);
+    expect(result.likeness.get('laptop\npc')).toBe(95);
+    expect(result.likeness.get('hub\nlaptop')).toBe(45);
+  });
+});
+
+describe('sameSpot', () => {
+  it('compares each step to how the device hears the networks now', () => {
+    const a1 = ap('a1', 'b1', 'Den', { laptop: 90 });
+    a1.seenBy[0].points.unshift({ ...a1.seenBy[0].points[0], time: NOW - HOUR, signalPercent: 30 });
+    const h = history([a1]);
+    expect(sameSpot(h, 'laptop')).toEqual([40, 100]);
+    expect(sameSpot(h, 'pc')).toEqual([undefined, 100]);
   });
 });
