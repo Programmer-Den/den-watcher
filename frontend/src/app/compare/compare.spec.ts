@@ -200,6 +200,8 @@ describe('Compare', () => {
   });
 
   afterEach(() => {
+    // What the Wi-Fi saw has a test of its own (wifi-nearby.spec.ts).
+    http.match((r) => r.url === '/api/wifi');
     http.verify();
     vi.useRealTimers();
     vi.unstubAllGlobals();

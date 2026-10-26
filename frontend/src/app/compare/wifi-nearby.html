@@ -1,0 +1,168 @@
+@if (columns().length > 0) {
+  <section aria-labelledby="compare-wifi">
+    <div class="toolbar">
+      <h2 id="compare-wifi">{{ i18n.t('wifi.title') }}</h2>
+      <div class="choices" role="group" [attr.aria-label]="i18n.t('wifi.view')">
+        @for (v of views; track v.id) {
+          <button type="button" [attr.aria-pressed]="v.id === view()" (click)="view.set(v.id)">
+            {{ i18n.t(v.label) }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @switch (view()) {
+      @case ('who') {
+        <p class="detail">{{ i18n.t('wifi.whoIntro') }}</p>
+        <div class="table" [class.stale]="connection.lost()">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">{{ i18n.t('wifi.network') }}</th>
+                <th scope="col">{{ i18n.t('wifi.channel') }}</th>
+                <th scope="col">{{ i18n.t('wifi.security') }}</th>
+                @for (device of columns(); track device.id) {
+                  <th scope="col" class="signal">
+                    <button
+                      type="button"
+                      class="device"
+                      [title]="i18n.t('compare.open')"
+                      (click)="devices.show(device.id)"
+                    >
+                      {{ name(device.id) }}
+                    </button>
+                  </th>
+                }
+                <th scope="col">{{ i18n.t('wifi.seenBy') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of networks(); track row.ssid) {
+                <tr>
+                  <th scope="row">
+                    <span class="ssid">{{ row.ssid }}</span>
+                    @if (row.home) {
+                      <span class="badge">{{ i18n.t('wifi.home') }}</span>
+                    }
+                  </th>
+                  <td>{{ channel(row.frequencyMHz) }}</td>
+                  <td>{{ security(row.security) }}</td>
+                  @for (device of columns(); track device.id) {
+                    <td class="signal">
+                      @if (row.signals.get(device.id); as percent) {
+                        <span class="level" [attr.data-level]="signalLevel(percent)">
+                          {{ percent | number: '1.0-0' : i18n.language() }} %
+                        </span>
+                      } @else {
+                        <span class="hint">–</span>
+                      }
+                    </td>
+                  }
+                  <td>
+                    {{
+                      i18n.t('wifi.seenByCount', {
+                        count: row.signals.size,
+                        total: columns().length,
+                      })
+                    }}
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td [attr.colspan]="columns().length + 4" class="hint">
+                    {{ i18n.t('wifi.noNetworks') }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="legend hint">
+          <span class="level" data-level="great">≥ 75 %</span>
+          <span class="level" data-level="good">55–74 %</span>
+          <span class="level" data-level="fair">35–54 %</span>
+          <span class="level" data-level="weak">20–34 %</span>
+          <span class="level" data-level="poor">&lt; 20 %</span>
+        </p>
+      }
+      @case ('home') {
+        @if (home(); as network) {
+          <p class="detail">{{ i18n.t('wifi.homeIntro', { network: network }) }}</p>
+          <div class="table" [class.stale]="connection.lost()">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">{{ i18n.t('compare.device') }}</th>
+                  <th scope="col">{{ i18n.t('wifi.accessPointColumn') }}</th>
+                  <th scope="col">{{ i18n.t('wifi.band') }}</th>
+                  <th scope="col" class="signal">{{ i18n.t('wifi.signal') }}</th>
+                  <th scope="col" class="signal">dBm</th>
+                  <th scope="col" class="strip-head">{{ i18n.t('wifi.lastDay') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of homeRows(); track row.device) {
+                  <tr>
+                    <th scope="row">
+                      <button
+                        type="button"
+                        class="device"
+                        [title]="i18n.t('compare.open')"
+                        (click)="devices.show(row.device)"
+                      >
+                        {{ name(row.device) }}
+                      </button>
+                    </th>
+                    @if (row.accessPoint; as ap) {
+                      <td>
+                        {{ accessPointName(row.box) }}
+                        @if (row.connected) {
+                          <span class="hint">· {{ i18n.t('wifi.connected') }}</span>
+                        }
+                      </td>
+                      <td>{{ bandOf(ap.frequencyMHz) }}</td>
+                      <td class="signal">
+                        <span class="level" [attr.data-level]="signalLevel(row.signalPercent!)">
+                          {{ row.signalPercent | number: '1.0-0' : i18n.language() }} %
+                        </span>
+                      </td>
+                      <td class="signal">
+                        @if (row.signalDBm !== undefined) {
+                          {{ row.signalDBm | number: '1.0-0' : i18n.language() }}
+                        } @else {
+                          <span class="hint">–</span>
+                        }
+                      </td>
+                    } @else {
+                      <td colspan="4" class="hint">{{ i18n.t('wifi.notInRange') }}</td>
+                    }
+                    <td>
+                      <span class="strip" role="img" [attr.aria-label]="i18n.t('wifi.lastDay')">
+                        @for (value of row.steps; track $index) {
+                          <span
+                            class="step"
+                            [attr.data-level]="
+                              value === undefined
+                                ? 'off'
+                                : value === null
+                                  ? 'none'
+                                  : signalLevel(value)
+                            "
+                            [title]="stepTitle(row.steps.length - 1 - $index, value)"
+                          ></span>
+                        }
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="hint legend">{{ i18n.t('wifi.gaps') }}</p>
+        } @else {
+          <p class="detail">{{ i18n.t('wifi.noHome') }}</p>
+        }
+      }
+    }
+  </section>
+}

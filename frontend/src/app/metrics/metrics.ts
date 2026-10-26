@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { Alert } from '../alerts/alert';
+import { WiFiHistory } from '../compare/wifi';
 import { LOCAL_DEVICE } from '../devices/devices';
 import { Extra, ExtraInfo } from './extras';
 import { System } from './system';
@@ -103,7 +104,10 @@ export interface Swap {
 
 /** A condition a Raspberry Pi's firmware reports about its power supply and clock. */
 export type ThrottlingCondition =
-  'undervoltage' | 'frequencyCapped' | 'throttled' | 'softTemperatureLimit';
+  | 'undervoltage'
+  | 'frequencyCapped'
+  | 'throttled'
+  | 'softTemperatureLimit';
 
 /** The conditions that hold now, and those that held at some point since the Pi started. */
 export interface Throttling {
@@ -248,6 +252,11 @@ export class MetricsService {
       responseType: 'blob',
       observe: 'response',
     });
+  }
+
+  /** What the Wi-Fi of every device saw nearby from `from` to `to`, both Unix seconds. */
+  wifi(from: number, to: number): Observable<WiFiHistory> {
+    return this.http.get<WiFiHistory>('/api/wifi', { params: { from, to } });
   }
 
   /** What happened to a device from `from` to `to`, both Unix seconds. */
