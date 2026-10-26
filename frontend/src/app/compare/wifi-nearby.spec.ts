@@ -106,7 +106,7 @@ describe('WifiNearby', () => {
     );
     expect(head).toEqual(['Network', 'Channel', 'Security', 'Hub', 'Laptop', 'Seen by']);
     expect(rows()).toEqual([
-      ['Den home', '36 · 5 GHz', 'WPA2/WPA3', '64 %', '98 %', '2 of 2'],
+      ['Denhome', '36 · 5 GHz', 'WPA2/WPA3', '64 %', '98 %', '2 of 2'],
       ['Vodafone Hotspot', '36 · 5 GHz', 'Open', '–', '34 %', '1 of 2'],
     ]);
   });
