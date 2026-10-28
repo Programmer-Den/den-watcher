@@ -184,11 +184,23 @@
       value, which would overwrite one given on the command line, so that one
       is saved before and put back after, in both the UI and the install.
     -->
-    <?foreach Setting in PORT;WEBSITE;DEVICE_NAME;HUB_DEVICES;HUB_ROUTERS;HUB_CHECKS;RETENTION_DAYS;HISTORY_MAX_ENTRIES;BUFFER_HOURS;ALLOWED_HOSTS;DISK_PATHS;UPDATE_CHECK;POWER;GPU;PRESSURE;KERNEL;WIFI;WIFI_SCAN;WIFI_NEARBY;MEMORY;PORTS;SMART;PROCESSES;BLUETOOTH;BLUETOOTH_NAMES ?>
+    <?foreach Setting in PORT;WEBSITE;DEVICE_NAME;HUB_DEVICES;HUB_ROUTERS;HUB_CHECKS;RETENTION_DAYS;HISTORY_MAX_ENTRIES;BUFFER_HOURS;ALLOWED_HOSTS;DISK_PATHS;UPDATE_CHECK;POWER;GPU;PRESSURE;KERNEL;WIFI;WIFI_SCAN;MEMORY;PORTS;SMART;PROCESSES;BLUETOOTH ?>
     <Property Id="$(Setting)" Secure="yes">
       <RegistrySearch Id="Remembered$(Setting)" Root="HKLM" Key="SOFTWARE\Usage Control" Name="$(Setting)" Type="raw" />
     </Property>
     <SetProperty Action="Save$(Setting)" Id="CMDLINE_$(Setting)" Value="[$(Setting)]" Before="AppSearch" Sequence="both" Condition="$(Setting)" />
+    <SetProperty Action="Restore$(Setting)" Id="$(Setting)" Value="[CMDLINE_$(Setting)]" After="AppSearch" Sequence="both" Condition="CMDLINE_$(Setting)" />
+    <?endforeach?>
+    <!--
+      The standard sequences leave room for only so many actions right
+      before AppSearch, so later options are saved before FindRelatedProducts,
+      which comes before it and reads none of them.
+    -->
+    <?foreach Setting in WIFI_NEARBY;BLUETOOTH_NAMES ?>
+    <Property Id="$(Setting)" Secure="yes">
+      <RegistrySearch Id="Remembered$(Setting)" Root="HKLM" Key="SOFTWARE\Usage Control" Name="$(Setting)" Type="raw" />
+    </Property>
+    <SetProperty Action="Save$(Setting)" Id="CMDLINE_$(Setting)" Value="[$(Setting)]" Before="FindRelatedProducts" Sequence="both" Condition="$(Setting)" />
     <SetProperty Action="Restore$(Setting)" Id="$(Setting)" Value="[CMDLINE_$(Setting)]" After="AppSearch" Sequence="both" Condition="CMDLINE_$(Setting)" />
     <?endforeach?>
     <!--
