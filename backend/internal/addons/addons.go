@@ -15,6 +15,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -192,4 +193,19 @@ func WarnRead(path string, err error) {
 	if _, logged := readFailures.LoadOrStore(path, true); !logged {
 		slog.Warn("a file the add-on reads cannot be read, so its values are left out", "file", path, "error", err)
 	}
+}
+
+// SwitchOn reports whether the add-on setting called name, which takes 0 or
+// 1, is on with value: on unless it is 0, so an unset setting keeps what the
+// add-on did before it had one. The installers refuse any other value, so
+// one that gets here anyway is warned about and counts as on.
+func SwitchOn(name, value string) bool {
+	switch strings.TrimSpace(value) {
+	case "0":
+		return false
+	case "", "1":
+	default:
+		slog.Warn(name+" must be 0 or 1, so it counts as 1", name, value)
+	}
+	return true
 }

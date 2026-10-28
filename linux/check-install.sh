@@ -211,6 +211,19 @@ for addon in power gpu processes ports smart containers bluetooth; do
 done
 "$folder/install.sh" --addons=
 
+# A group's name installs its add-ons, and only those.
+"$folder/install.sh" --addons=network
+for addon in wifi ports; do
+  systemctl is-enabled --quiet "den-watcher-$addon" || { echo "--addons=network did not install the $addon add-on" >&2; exit 1; }
+done
+if systemctl cat den-watcher-kernel > /dev/null 2>&1; then
+  echo "--addons=network installed the kernel add-on" >&2
+  exit 1
+fi
+# The Wi-Fi add-on takes WIFI_NEARBY from the settings file.
+systemctl show -p EnvironmentFiles den-watcher-wifi | grep -q /etc/den-watcher.env || { echo "the Wi-Fi add-on does not read /etc/den-watcher.env" >&2; exit 1; }
+"$folder/install.sh" --addons=
+
 # The gpu add-on runs without an NVIDIA GPU too, and then reports nothing.
 "$folder/install.sh" --addons=gpu
 addon_reports gpu "" "the gpu add-on wrote no report"

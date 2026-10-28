@@ -10,6 +10,9 @@ After=den-watcher.service NetworkManager.service
 
 [Service]
 ExecStart=/usr/local/bin/den-watcher-wifi
+# WIFI_NEARBY is set with the other settings in /etc/den-watcher.env:
+# 0 there reads only the connected interfaces, not the networks nearby.
+EnvironmentFile=-/etc/den-watcher.env
 # It asks NetworkManager over the system D-Bus for the networks nearby,
 # where root could have systemd and other services act for it, so like the
 # Bluetooth add-on it runs as a throwaway user. That user may not write to

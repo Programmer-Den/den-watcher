@@ -17,10 +17,14 @@
 //	                         (default /sys)
 //	DBUS_SYSTEM_BUS_ADDRESS  where the system D-Bus is, in a container
 //	                         (default unix:path=/var/run/dbus/system_bus_socket)
+//	BLUETOOTH_NAMES          0 to show each device by its kind instead of its
+//	                         name, which often carries its owner's name
+//	                         (default 1)
 package main
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/addons"
@@ -32,8 +36,13 @@ import (
 func main() {
 	addons.Main("bluetooth", "UsageControlBluetooth", func() addons.Read {
 		read := bluetooth.NewReader(sysfile.HostSys())
+		names := addons.SwitchOn("BLUETOOTH_NAMES", os.Getenv("BLUETOOTH_NAMES"))
 		return func(ctx context.Context, _ time.Time) []metrics.Extra {
-			return bluetooth.Extras(read(ctx))
+			reading := read(ctx)
+			if !names {
+				reading = reading.WithoutNames()
+			}
+			return bluetooth.Extras(reading)
 		}
 	})
 }

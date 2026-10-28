@@ -9,6 +9,9 @@ After=den-watcher.service bluetooth.service
 
 [Service]
 ExecStart=/usr/local/bin/den-watcher-bluetooth
+# BLUETOOTH_NAMES is set with the other settings in /etc/den-watcher.env:
+# 0 there shows each device by its kind instead of its name.
+EnvironmentFile=-/etc/den-watcher.env
 # Unlike the other add-ons it asks BlueZ over the system D-Bus, where root
 # could have systemd and other services act for it, so it runs as a
 # throwaway user. That user may not write to the root-owned add-on folder, so

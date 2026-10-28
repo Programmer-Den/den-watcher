@@ -45,6 +45,20 @@ type Device struct {
 	HasBattery bool
 }
 
+// WithoutNames returns the reading with every device's name left out, so
+// each is shown by its kind: names often carry their owner's name, such as
+// "Anna's AirPods". A nil reading stays nil.
+func (r *Reading) WithoutNames() *Reading {
+	if r == nil {
+		return nil
+	}
+	devices := slices.Clone(r.Devices)
+	for i := range devices {
+		devices[i].Name = ""
+	}
+	return &Reading{Connected: r.Connected, Devices: devices}
+}
+
 // Kind is what sort of device a device is.
 type Kind int
 
