@@ -18,10 +18,15 @@
 //	DBUS_SYSTEM_BUS_ADDRESS
 //	            on Linux, where the system D-Bus is, in a container
 //	            (default where the system keeps it)
+//	WIFI_SCAN   on Windows, 0 to never ask for a scan, as a scan takes the
+//	            Wi-Fi to other channels for a moment (default 1)
 package main
 
 import (
 	"context"
+	"log/slog"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/addons"
@@ -38,7 +43,7 @@ const scanEvery = 5 * time.Minute
 func main() {
 	addons.MainReport("wifi", "UsageControlWifi", func() addons.ReadReport {
 		read := wifi.NewReader()
-		readNetworks := wifi.NewNetworksReader(scanEvery)
+		readNetworks := wifi.NewNetworksReader(scanInterval(os.Getenv("WIFI_SCAN")))
 		// The nearby networks change only with the scans, which come every
 		// few minutes, and asking for them brings back all
 		// of NetworkManager's objects or the whole BSS list, so they are
@@ -55,4 +60,19 @@ func main() {
 			}
 		}
 	})
+}
+
+// scanInterval is how often the add-on asks for a scan with the WIFI_SCAN
+// setting value: scanEvery, or 0 for never with 0. The installer refuses
+// any other value than 0 or 1, so one that gets here anyway is warned about
+// and scans.
+func scanInterval(value string) time.Duration {
+	switch strings.TrimSpace(value) {
+	case "0":
+		return 0
+	case "", "1":
+	default:
+		slog.Warn("WIFI_SCAN must be 0 or 1, so the add-on asks for scans", "WIFI_SCAN", value)
+	}
+	return scanEvery
 }

@@ -27,7 +27,8 @@
   context switches, interrupts, handles, TCP connections and
   retransmissions.
   WIFI=1 installs the Wi-Fi add-on, den-watcher-wifi.exe, which reads the
-  signal of each connected Wi-Fi adapter.
+  signal of each connected Wi-Fi adapter and the networks nearby, asking
+  Windows to scan a connected adapter every 5 minutes unless WIFI_SCAN=0.
   MEMORY=1 installs the memory add-on, den-watcher-memory.exe, which reads
   the Memory performance counters.
   PORTS=1 installs the ports add-on, den-watcher-ports.exe, which lists the
@@ -117,6 +118,10 @@
     PRESSURE        1 to install the pressure add-on, 0 to remove it in an update or repair
     KERNEL          1 to install the kernel add-on, 0 to remove it in an update or repair
     WIFI            1 to install the Wi-Fi add-on, 0 to remove it in an update or repair
+    WIFI_SCAN       with WIFI=1, 0 to stop asking Windows to scan a connected
+                    Wi-Fi adapter for the networks nearby every 5 minutes,
+                    as each scan can delay the connection for a moment
+                    (default 1)
     MEMORY          1 to install the memory add-on, 0 to remove it in an update or repair
     PORTS           1 to install the ports add-on, 0 to remove it in an update or repair
     SMART           1 to install the smart add-on, 0 to remove it in an update or repair
@@ -128,7 +133,7 @@
   options given to the update replace them. An option given empty counts as
   not given, so to clear a remembered PORT, DEVICE_NAME, HUB_DEVICES,
   HUB_ROUTERS, HUB_CHECKS, RETENTION_DAYS, HISTORY_MAX_ENTRIES, BUFFER_HOURS, ALLOWED_HOSTS,
-  DISK_PATHS or UPDATE_CHECK, give it a single space, such as DISK_PATHS=" ",
+  DISK_PATHS, UPDATE_CHECK or WIFI_SCAN, give it a single space, such as DISK_PATHS=" ",
   which means its default. WEBSITE and the add-ons take 0 to turn them off.
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
@@ -170,7 +175,7 @@
       value, which would overwrite one given on the command line, so that one
       is saved before and put back after, in both the UI and the install.
     -->
-    <?foreach Setting in PORT;WEBSITE;DEVICE_NAME;HUB_DEVICES;HUB_ROUTERS;HUB_CHECKS;RETENTION_DAYS;HISTORY_MAX_ENTRIES;BUFFER_HOURS;ALLOWED_HOSTS;DISK_PATHS;UPDATE_CHECK;POWER;GPU;PRESSURE;KERNEL;WIFI;MEMORY;PORTS;SMART;PROCESSES;BLUETOOTH ?>
+    <?foreach Setting in PORT;WEBSITE;DEVICE_NAME;HUB_DEVICES;HUB_ROUTERS;HUB_CHECKS;RETENTION_DAYS;HISTORY_MAX_ENTRIES;BUFFER_HOURS;ALLOWED_HOSTS;DISK_PATHS;UPDATE_CHECK;POWER;GPU;PRESSURE;KERNEL;WIFI;WIFI_SCAN;MEMORY;PORTS;SMART;PROCESSES;BLUETOOTH ?>
     <Property Id="$(Setting)" Secure="yes">
       <RegistrySearch Id="Remembered$(Setting)" Root="HKLM" Key="SOFTWARE\Usage Control" Name="$(Setting)" Type="raw" />
     </Property>
@@ -206,6 +211,17 @@
     <SetProperty Action="UpdateCheckFixInstalled" Id="UpdateCheckFix" Value="REINSTALL=ALL REINSTALLMODE=m UPDATE_CHECK=true" Before="LaunchConditions" Sequence="both" Condition="Installed" />
     <Launch Condition='REMOVE = "ALL" OR NOT UPDATE_CHECK OR UPDATE_CHECK = " " OR UPDATE_CHECK = "true" OR UPDATE_CHECK = "false" OR UPDATE_CHECK = "True" OR UPDATE_CHECK = "False" OR UPDATE_CHECK = "TRUE" OR UPDATE_CHECK = "FALSE" OR UPDATE_CHECK = "t" OR UPDATE_CHECK = "f" OR UPDATE_CHECK = "T" OR UPDATE_CHECK = "F" OR UPDATE_CHECK = "1" OR UPDATE_CHECK = "0"'
             Message='UPDATE_CHECK must be true or false. To give it, run the installer from a command prompt run as administrator: msiexec /i "[OriginalDatabase]" [UpdateCheckFix]' />
+
+    <!--
+      The Wi-Fi add-on only warns about a WIFI_SCAN other than 0 or 1 and
+      scans, so the installer refuses one as it does a bad UPDATE_CHECK,
+      rather than let a mistyped 0 go unnoticed; a single space means the
+      default.
+    -->
+    <Property Id="WifiScanFix" Value="WIFI_SCAN=1" />
+    <SetProperty Action="WifiScanFixInstalled" Id="WifiScanFix" Value="REINSTALL=ALL REINSTALLMODE=m WIFI_SCAN=1" Before="LaunchConditions" Sequence="both" Condition="Installed" />
+    <Launch Condition='REMOVE = "ALL" OR NOT WIFI_SCAN OR WIFI_SCAN = " " OR WIFI_SCAN = "0" OR WIFI_SCAN = "1"'
+            Message='WIFI_SCAN must be 0 or 1. To give it, run the installer from a command prompt run as administrator: msiexec /i "[OriginalDatabase]" [WifiScanFix]' />
 
     <!--
       Derived from the options, once all of them are known. Without WEBSITE=1
@@ -408,6 +424,7 @@
         <MultiStringValue Value="ALLOWED_HOSTS=[ALLOWED_HOSTS]" />
         <MultiStringValue Value="DISK_PATHS=[DISK_PATHS]" />
         <MultiStringValue Value="UPDATE_CHECK=[UPDATE_CHECK]" />
+        <MultiStringValue Value="WIFI_SCAN=[WIFI_SCAN]" />
         <MultiStringValue Value="RESET_PASSWORD=[ServiceResetPassword]" />
         <MultiStringValue Value="ADDONS_DIR=[ADDONSFOLDER]" />
       </RegistryValue>
@@ -424,7 +441,7 @@
 
       <!-- The options, read back by the next update, and the bugfix number (see Upgrade). -->
       <RegistryValue Root="HKLM" Key="SOFTWARE\Usage Control" Name="Bugfix" Type="string" Value="$(Bugfix)" />
-      <?foreach Setting in PORT;WEBSITE;DEVICE_NAME;HUB_DEVICES;HUB_ROUTERS;HUB_CHECKS;RETENTION_DAYS;HISTORY_MAX_ENTRIES;BUFFER_HOURS;ALLOWED_HOSTS;DISK_PATHS;UPDATE_CHECK;POWER;GPU;PRESSURE;KERNEL;WIFI;MEMORY;PORTS;SMART;PROCESSES;BLUETOOTH ?>
+      <?foreach Setting in PORT;WEBSITE;DEVICE_NAME;HUB_DEVICES;HUB_ROUTERS;HUB_CHECKS;RETENTION_DAYS;HISTORY_MAX_ENTRIES;BUFFER_HOURS;ALLOWED_HOSTS;DISK_PATHS;UPDATE_CHECK;POWER;GPU;PRESSURE;KERNEL;WIFI;WIFI_SCAN;MEMORY;PORTS;SMART;PROCESSES;BLUETOOTH ?>
       <RegistryValue Root="HKLM" Key="SOFTWARE\Usage Control" Name="$(Setting)" Type="string" Value="[$(Setting)]" />
       <?endforeach?>
 
