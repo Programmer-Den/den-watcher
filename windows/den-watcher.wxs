@@ -13,8 +13,11 @@
   C:\ProgramData\Usage Control\addons, which den-watcher shows. The service
   starts the installed add-ons through the add-on host, a den-watcher.exe of
   its own, so Task Manager groups them under it, except the smart add-on,
-  which needs more rights and is a service of its own. The Add-ons page offers each one as a box, and each
-  has an install option. POWER=1 installs the power add-on,
+  which needs more rights and is a service of its own. The Edition page
+  picks Cub, the lightweight add-ons, or Grizzly, whose page offers what to
+  track in groups (System details, Hardware, Network, Bluetooth,
+  Processes), each add-on as a box below its group, and each has an install
+  option. POWER=1 installs the power add-on,
   den-watcher-power.exe, which reads the power the energy meters Windows
   offers report (CPU, memory and laptop meters), what the battery gives
   while the PC runs on it, and what NVIDIA GPUs draw.
@@ -27,8 +30,9 @@
   context switches, interrupts, handles, TCP connections and
   retransmissions.
   WIFI=1 installs the Wi-Fi add-on, den-watcher-wifi.exe, which reads the
-  signal of each connected Wi-Fi adapter and the networks nearby, asking
-  Windows to scan a connected adapter every 5 minutes unless WIFI_SCAN=0.
+  signal of each connected Wi-Fi adapter and, unless WIFI_NEARBY=0, the
+  networks nearby, asking Windows to scan a connected adapter every 5
+  minutes unless WIFI_SCAN=0.
   MEMORY=1 installs the memory add-on, den-watcher-memory.exe, which reads
   the Memory performance counters.
   PORTS=1 installs the ports add-on, den-watcher-ports.exe, which lists the
@@ -40,7 +44,7 @@
   which lists the processes using the most CPU and memory.
   BLUETOOTH=1 installs the Bluetooth add-on, den-watcher-bluetooth.exe,
   which lists the connected classic Bluetooth devices, such as headsets and
-  speakers.
+  speakers, by their names unless BLUETOOTH_NAMES=0.
 
   It also installs den-watcher-tray.exe, the icon in the taskbar that shows
   whether the service runs and pauses, stops or opens it. It starts when
@@ -122,10 +126,15 @@
                     Wi-Fi adapter for the networks nearby every 5 minutes,
                     as each scan can delay the connection for a moment
                     (default 1)
+    WIFI_NEARBY     with WIFI=1, 0 to read only the connected adapters'
+                    quality and signal, not the networks nearby, which are
+                    then neither read nor scanned for (default 1)
     MEMORY          1 to install the memory add-on, 0 to remove it in an update or repair
     PORTS           1 to install the ports add-on, 0 to remove it in an update or repair
     SMART           1 to install the smart add-on, 0 to remove it in an update or repair
     BLUETOOTH       1 to install the Bluetooth add-on, 0 to remove it in an update or repair
+    BLUETOOTH_NAMES with BLUETOOTH=1, 0 to show each device by its kind, such
+                    as Headphones, instead of its name (default 1)
     PROCESSES       1 to install the processes add-on, 0 to remove it in an update or repair
                     (default: not installed); the installer refuses any
                     other value for these
@@ -133,7 +142,7 @@
   options given to the update replace them. An option given empty counts as
   not given, so to clear a remembered PORT, DEVICE_NAME, HUB_DEVICES,
   HUB_ROUTERS, HUB_CHECKS, RETENTION_DAYS, HISTORY_MAX_ENTRIES, BUFFER_HOURS, ALLOWED_HOSTS,
-  DISK_PATHS, UPDATE_CHECK or WIFI_SCAN, give it a single space, such as DISK_PATHS=" ",
+  DISK_PATHS, UPDATE_CHECK, WIFI_SCAN, WIFI_NEARBY or BLUETOOTH_NAMES, give it a single space, such as DISK_PATHS=" ",
   which means its default. WEBSITE and the add-ons take 0 to turn them off.
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
@@ -175,7 +184,7 @@
       value, which would overwrite one given on the command line, so that one
       is saved before and put back after, in both the UI and the install.
     -->
-    <?foreach Setting in PORT;WEBSITE;DEVICE_NAME;HUB_DEVICES;HUB_ROUTERS;HUB_CHECKS;RETENTION_DAYS;HISTORY_MAX_ENTRIES;BUFFER_HOURS;ALLOWED_HOSTS;DISK_PATHS;UPDATE_CHECK;POWER;GPU;PRESSURE;KERNEL;WIFI;WIFI_SCAN;MEMORY;PORTS;SMART;PROCESSES;BLUETOOTH ?>
+    <?foreach Setting in PORT;WEBSITE;DEVICE_NAME;HUB_DEVICES;HUB_ROUTERS;HUB_CHECKS;RETENTION_DAYS;HISTORY_MAX_ENTRIES;BUFFER_HOURS;ALLOWED_HOSTS;DISK_PATHS;UPDATE_CHECK;POWER;GPU;PRESSURE;KERNEL;WIFI;WIFI_SCAN;WIFI_NEARBY;MEMORY;PORTS;SMART;PROCESSES;BLUETOOTH;BLUETOOTH_NAMES ?>
     <Property Id="$(Setting)" Secure="yes">
       <RegistrySearch Id="Remembered$(Setting)" Root="HKLM" Key="SOFTWARE\Usage Control" Name="$(Setting)" Type="raw" />
     </Property>
@@ -213,15 +222,21 @@
             Message='UPDATE_CHECK must be true or false. To give it, run the installer from a command prompt run as administrator: msiexec /i "[OriginalDatabase]" [UpdateCheckFix]' />
 
     <!--
-      The Wi-Fi add-on only warns about a WIFI_SCAN other than 0 or 1 and
-      scans, so the installer refuses one as it does a bad UPDATE_CHECK,
+      The settings that choose what an add-on collects (WIFI_SCAN and
+      WIFI_NEARBY for the Wi-Fi add-on, BLUETOOTH_NAMES for the Bluetooth
+      add-on): the add-on only warns about a value other than 0 or 1 and
+      takes 1, so the installer refuses one as it does a bad UPDATE_CHECK,
       rather than let a mistyped 0 go unnoticed; a single space means the
       default.
     -->
-    <Property Id="WifiScanFix" Value="WIFI_SCAN=1" />
-    <SetProperty Action="WifiScanFixInstalled" Id="WifiScanFix" Value="REINSTALL=ALL REINSTALLMODE=m WIFI_SCAN=1" Before="LaunchConditions" Sequence="both" Condition="Installed" />
-    <Launch Condition='REMOVE = "ALL" OR NOT WIFI_SCAN OR WIFI_SCAN = " " OR WIFI_SCAN = "0" OR WIFI_SCAN = "1"'
-            Message='WIFI_SCAN must be 0 or 1. To give it, run the installer from a command prompt run as administrator: msiexec /i "[OriginalDatabase]" [WifiScanFix]' />
+    <?foreach Switch in WIFI_SCAN;WIFI_NEARBY;BLUETOOTH_NAMES ?>
+    <Property Id="$(Switch)Fix" Value="$(Switch)=1" />
+    <SetProperty Action="$(Switch)FixInstalled" Id="$(Switch)Fix" Value="REINSTALL=ALL REINSTALLMODE=m $(Switch)=1" Before="LaunchConditions" Sequence="both" Condition="Installed" />
+    <Launch Condition='REMOVE = "ALL" OR NOT $(Switch) OR $(Switch) = " " OR $(Switch) = "0" OR $(Switch) = "1"'
+            Message='$(Switch) must be 0 or 1. To give it, run the installer from a command prompt run as administrator: msiexec /i "[OriginalDatabase]" [$(Switch)Fix]' />
+    <!-- Its box on the Grizzly page, ticked unless it is 0. -->
+    <SetProperty Action="Box$(Switch)" Id="$(Switch)_BOX" Value="1" After="LaunchConditions" Sequence="ui" Condition='$(Switch) &lt;&gt; "0"' />
+    <?endforeach?>
 
     <!--
       Derived from the options, once all of them are known. Without WEBSITE=1
@@ -301,8 +316,10 @@
     </InstallExecuteSequence>
 
     <!--
-      Each add-on's box on the Add-ons page has a property of its own, ticked
-      when the add-on is on. A cleared box leaves its property empty, which
+      Each add-on's box on the Grizzly page has a property of its own, ticked
+      when the add-on is on; Cub's add-ons are also ticked where nothing was
+      given or remembered for them, so Grizzly starts from Cub (see
+      CubBoxes). A cleared box leaves its property empty, which
       would let AppSearch bring back the remembered 1, so Next turns the box
       into 1 or 0 for the add-on's option (see AddOnsDlg).
 
@@ -325,6 +342,25 @@
     </Property>
     <?endforeach?>
 
+    <?foreach AddOn in PRESSURE;KERNEL;WIFI;MEMORY ?>
+    <SetProperty Action="CubBox$(AddOn)" Id="$(AddOn)_BOX" Value="1" After="LaunchConditions" Sequence="ui" Condition="NOT $(AddOn)" />
+    <?endforeach?>
+
+    <!--
+      The groups on the Grizzly page, the same as install.sh's, Docker's
+      profiles and the Android app's: System details (kernel, memory,
+      pressure), Hardware (power, gpu, smart), Network (Wi-Fi, ports),
+      Bluetooth and Processes. A group's box is ticked when one of its
+      add-ons is, as its add-ons' boxes are worked out above; the groups of
+      one add-on, Bluetooth and Processes, are that add-on's box.
+    -->
+    <SetProperty Action="GroupDetails" Id="DETAILS_BOX" Value="1" After="LaunchConditions" Sequence="ui"
+                 Condition='NOT KERNEL OR KERNEL = "1" OR NOT MEMORY OR MEMORY = "1" OR NOT PRESSURE OR PRESSURE = "1"' />
+    <SetProperty Action="GroupHardware" Id="HARDWARE_BOX" Value="1" After="LaunchConditions" Sequence="ui"
+                 Condition='POWER = "1" OR GPU = "1" OR SMART = "1"' />
+    <SetProperty Action="GroupNetwork" Id="NETWORK_BOX" Value="1" After="LaunchConditions" Sequence="ui"
+                 Condition='NOT WIFI OR WIFI = "1" OR PORTS = "1"' />
+
     <!--
       A repair with REINSTALLMODE=m copies and deletes no file, also not the
       program of an add-on it adds or removes. So a repair that changes an
@@ -343,13 +379,14 @@
 
     <!--
       The edition on the Edition page: Cub installs the lightweight add-ons
-      (kernel, memory, pressure, Wi-Fi), Grizzly those and the add-ons picked
-      on the Add-ons page. Not remembered itself: an update starts at Grizzly
-      when one of its add-ons is installed.
+      (kernel, memory, pressure, Wi-Fi) and asks nothing more, Grizzly the
+      add-ons and what they collect as picked group by group on the Grizzly
+      page, which starts from Cub's. Not remembered itself: an update starts
+      at Grizzly when one of its add-ons is installed, or one of Cub's is not.
     -->
     <Property Id="EDITION" Value="cub" />
     <SetProperty Action="EditionGrizzly" Id="EDITION" Value="grizzly" After="LaunchConditions" Sequence="ui"
-                 Condition='POWER = "1" OR GPU = "1" OR PROCESSES = "1" OR PORTS = "1" OR SMART = "1" OR BLUETOOTH = "1"' />
+                 Condition='POWER = "1" OR GPU = "1" OR PROCESSES = "1" OR PORTS = "1" OR SMART = "1" OR BLUETOOTH = "1" OR KERNEL = "0" OR MEMORY = "0" OR PRESSURE = "0" OR WIFI = "0"' />
 
     <!--
       The router on the Router page, shown with the website on (hub mode):
@@ -425,6 +462,8 @@
         <MultiStringValue Value="DISK_PATHS=[DISK_PATHS]" />
         <MultiStringValue Value="UPDATE_CHECK=[UPDATE_CHECK]" />
         <MultiStringValue Value="WIFI_SCAN=[WIFI_SCAN]" />
+        <MultiStringValue Value="WIFI_NEARBY=[WIFI_NEARBY]" />
+        <MultiStringValue Value="BLUETOOTH_NAMES=[BLUETOOTH_NAMES]" />
         <MultiStringValue Value="RESET_PASSWORD=[ServiceResetPassword]" />
         <MultiStringValue Value="ADDONS_DIR=[ADDONSFOLDER]" />
       </RegistryValue>
@@ -441,7 +480,7 @@
 
       <!-- The options, read back by the next update, and the bugfix number (see Upgrade). -->
       <RegistryValue Root="HKLM" Key="SOFTWARE\Usage Control" Name="Bugfix" Type="string" Value="$(Bugfix)" />
-      <?foreach Setting in PORT;WEBSITE;DEVICE_NAME;HUB_DEVICES;HUB_ROUTERS;HUB_CHECKS;RETENTION_DAYS;HISTORY_MAX_ENTRIES;BUFFER_HOURS;ALLOWED_HOSTS;DISK_PATHS;UPDATE_CHECK;POWER;GPU;PRESSURE;KERNEL;WIFI;WIFI_SCAN;MEMORY;PORTS;SMART;PROCESSES;BLUETOOTH ?>
+      <?foreach Setting in PORT;WEBSITE;DEVICE_NAME;HUB_DEVICES;HUB_ROUTERS;HUB_CHECKS;RETENTION_DAYS;HISTORY_MAX_ENTRIES;BUFFER_HOURS;ALLOWED_HOSTS;DISK_PATHS;UPDATE_CHECK;POWER;GPU;PRESSURE;KERNEL;WIFI;WIFI_SCAN;WIFI_NEARBY;MEMORY;PORTS;SMART;PROCESSES;BLUETOOTH;BLUETOOTH_NAMES ?>
       <RegistryValue Root="HKLM" Key="SOFTWARE\Usage Control" Name="$(Setting)" Type="string" Value="[$(Setting)]" />
       <?endforeach?>
 
@@ -739,11 +778,12 @@
         <Control Id="Edition" Type="RadioButtonGroup" X="20" Y="60" Width="330" Height="110" Property="EDITION">
           <RadioButtonGroup Property="EDITION">
             <RadioButton Value="cub" X="0" Y="0" Width="330" Height="15" Text="&amp;Cub: the lightweight add-ons (recommended)" />
-            <RadioButton Value="grizzly" X="0" Y="45" Width="330" Height="15" Text="&amp;Grizzly: Cub and the add-ons you pick next" />
+            <RadioButton Value="grizzly" X="0" Y="56" Width="330" Height="15" Text="&amp;Grizzly: pick what to track, group by group" />
           </RadioButtonGroup>
         </Control>
-        <Control Id="CubText" Type="Text" X="38" Y="77" Width="310" Height="24" NoPrefix="yes" Text="Kernel, memory, pressure and Wi-Fi, which read a few counters at each poll." />
-        <Control Id="GrizzlyText" Type="Text" X="38" Y="122" Width="310" Height="24" NoPrefix="yes" Text="Adds a choice of power, graphics card, processes, ports, disk health and Bluetooth, which cost more or need more rights." />
+        <Control Id="CubText" Type="Text" X="38" Y="77" Width="310" Height="36" NoPrefix="yes" Text="Tracks system details (kernel, memory details, pressure) and the network (Wi-Fi quality and the networks nearby), reading a few counters at each poll." />
+        <Control Id="GrizzlyText" Type="Text" X="38" Y="133" Width="310" Height="36" NoPrefix="yes" Text="Starts from Cub's choices, and adds power, the graphics card, disk health, listening ports, processes and Bluetooth, which cost more or need more rights." />
+        <Control Id="AlwaysText" Type="Text" X="20" Y="200" Width="330" Height="24" NoPrefix="yes" Text="Both always track CPU, memory, disks, network traffic, temperatures, graphics cards and the battery." />
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)" />
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)" />
@@ -753,26 +793,36 @@
       </Dialog>
 
       <!--
-        Grizzly's add-ons to install, one box each with what it tracks in its
-        text. Slot i is at Y = 55 + 17 * i, ten slots up to the bottom line.
-        Each Grizzly add-on that runs on Windows has a fixed slot, so adding
-        one never moves the others; a slot stays empty until its add-on is
-        added: 0 power, 1 gpu, 2 processes, 3 ports, 4 smart, 5 bluetooth, 6 to 9
-        free.
-        Cub's add-ons (kernel, memory, pressure, wifi) come with both editions
-        and have none, nor have the Linux-only add-ons (inodes, containers).
+        The Grizzly page: what to track, in the same groups as install.sh,
+        Docker's profiles and the Android app. Each group has a box, with the
+        boxes of its add-ons below it, and below an add-on what it collects
+        (WIFI_NEARBY and WIFI_SCAN, BLUETOOTH_NAMES); a box is greyed out
+        while one above it is cleared. Groups of one add-on, Bluetooth and
+        Processes, are that add-on's box. Linux-only add-ons (inodes,
+        containers) have none. Next turns the boxes into the options.
       -->
       <Dialog Id="AddOnsDlg" Width="370" Height="270" Title="[ProductName] Setup">
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
-        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}What else should Grizzly track?" />
-        <Control Id="Description" Type="Text" X="25" Y="23" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Cub's lightweight add-ons come with it. These are optional." />
-        <Control Id="Power" Type="CheckBox" X="20" Y="55" Width="330" Height="15" Property="POWER_BOX" CheckBoxValue="1" Text="&amp;Power: what the CPU, battery and NVIDIA graphics card draw" />
-        <Control Id="Gpu" Type="CheckBox" X="20" Y="72" Width="330" Height="15" Property="GPU_BOX" CheckBoxValue="1" Text="&amp;Graphics card: fan, clocks, video engines and power limit" />
-        <Control Id="Processes" Type="CheckBox" X="20" Y="89" Width="330" Height="15" Property="PROCESSES_BOX" CheckBoxValue="1" Text="P&amp;rocesses: the twenty using the most CPU and memory" />
-        <Control Id="Ports" Type="CheckBox" X="20" Y="106" Width="330" Height="15" Property="PORTS_BOX" CheckBoxValue="1" Text="P&amp;orts: which TCP and UDP ports the PC listens on" />
-        <Control Id="Smart" Type="CheckBox" X="20" Y="123" Width="330" Height="15" Property="SMART_BOX" CheckBoxValue="1" Text="&amp;Smart: the disks' health, temperature and wear" />
-        <Control Id="Bluetooth" Type="CheckBox" X="20" Y="140" Width="330" Height="15" Property="BLUETOOTH_BOX" CheckBoxValue="1" Text="Blue&amp;tooth: the connected headsets, speakers and other devices" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}What should Grizzly track?" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Cub's choices are ticked. Point at a box for what it reads." />
+        <Control Id="Details" Type="CheckBox" X="20" Y="52" Width="165" Height="14" Property="DETAILS_BOX" CheckBoxValue="1" Text="System &amp;details" ToolTip="Kernel, memory details and pressure" />
+        <Control Id="Kernel" Type="CheckBox" X="32" Y="67" Width="153" Height="14" Property="KERNEL_BOX" CheckBoxValue="1" Text="&amp;Kernel" ToolTip="Context switches, interrupts, open handles and TCP connections" EnableCondition='DETAILS_BOX' DisableCondition='NOT (DETAILS_BOX)' />
+        <Control Id="Memory" Type="CheckBox" X="32" Y="82" Width="153" Height="14" Property="MEMORY_BOX" CheckBoxValue="1" Text="&amp;Memory details" ToolTip="Committed memory, pools, page faults and paging" EnableCondition='DETAILS_BOX' DisableCondition='NOT (DETAILS_BOX)' />
+        <Control Id="Pressure" Type="CheckBox" X="32" Y="97" Width="153" Height="14" Property="PRESSURE_BOX" CheckBoxValue="1" Text="Press&amp;ure" ToolTip="Threads waiting for the CPU, pages read from disk and busy disks" EnableCondition='DETAILS_BOX' DisableCondition='NOT (DETAILS_BOX)' />
+        <Control Id="Hardware" Type="CheckBox" X="20" Y="112" Width="165" Height="14" Property="HARDWARE_BOX" CheckBoxValue="1" Text="&amp;Hardware" ToolTip="Power draw, graphics card details and disk health" />
+        <Control Id="Power" Type="CheckBox" X="32" Y="127" Width="153" Height="14" Property="POWER_BOX" CheckBoxValue="1" Text="&amp;Power draw" ToolTip="What the CPU, battery and NVIDIA graphics card draw" EnableCondition='HARDWARE_BOX' DisableCondition='NOT (HARDWARE_BOX)' />
+        <Control Id="Gpu" Type="CheckBox" X="32" Y="142" Width="153" Height="14" Property="GPU_BOX" CheckBoxValue="1" Text="&amp;Graphics card details" ToolTip="The fan, clocks, video engines and power limit of NVIDIA cards" EnableCondition='HARDWARE_BOX' DisableCondition='NOT (HARDWARE_BOX)' />
+        <Control Id="Smart" Type="CheckBox" X="32" Y="157" Width="153" Height="14" Property="SMART_BOX" CheckBoxValue="1" Text="D&amp;isk health (SMART)" ToolTip="The disks' health, temperature and wear; runs as a service of its own with more rights" EnableCondition='HARDWARE_BOX' DisableCondition='NOT (HARDWARE_BOX)' />
+        <Control Id="Processes" Type="CheckBox" X="20" Y="172" Width="165" Height="14" Property="PROCESSES_BOX" CheckBoxValue="1" Text="P&amp;rocesses" ToolTip="The twenty processes using the most CPU and memory" />
+        <Control Id="Network" Type="CheckBox" X="192" Y="52" Width="165" Height="14" Property="NETWORK_BOX" CheckBoxValue="1" Text="N&amp;etwork" ToolTip="Wi-Fi and listening ports" />
+        <Control Id="Wifi" Type="CheckBox" X="204" Y="67" Width="153" Height="14" Property="WIFI_BOX" CheckBoxValue="1" Text="&amp;Wi-Fi quality and signal" ToolTip="The link quality and signal of each connected Wi-Fi adapter" EnableCondition='NETWORK_BOX' DisableCondition='NOT (NETWORK_BOX)' />
+        <Control Id="WifiNearby" Type="CheckBox" X="216" Y="82" Width="141" Height="14" Property="WIFI_NEARBY_BOX" CheckBoxValue="1" Text="Networks ne&amp;arby" ToolTip="The Wi-Fi networks nearby, each with its signal, channel and security (WIFI_NEARBY)" EnableCondition='NETWORK_BOX AND WIFI_BOX' DisableCondition='NOT (NETWORK_BOX AND WIFI_BOX)' />
+        <Control Id="WifiScan" Type="CheckBox" X="228" Y="97" Width="129" Height="14" Property="WIFI_SCAN_BOX" CheckBoxValue="1" Text="&amp;Scan every 5 minutes" ToolTip="Asks Windows to scan for them every 5 minutes; a scan can delay the connection for a moment (WIFI_SCAN)" EnableCondition='NETWORK_BOX AND WIFI_BOX AND WIFI_NEARBY_BOX' DisableCondition='NOT (NETWORK_BOX AND WIFI_BOX AND WIFI_NEARBY_BOX)' />
+        <Control Id="Ports" Type="CheckBox" X="204" Y="112" Width="153" Height="14" Property="PORTS_BOX" CheckBoxValue="1" Text="Listening p&amp;orts" ToolTip="Which TCP and UDP ports the PC listens on" EnableCondition='NETWORK_BOX' DisableCondition='NOT (NETWORK_BOX)' />
+        <Control Id="Bluetooth" Type="CheckBox" X="192" Y="127" Width="165" Height="14" Property="BLUETOOTH_BOX" CheckBoxValue="1" Text="Blue&amp;tooth" ToolTip="The connected headsets, speakers and other devices" />
+        <Control Id="BluetoothNames" Type="CheckBox" X="204" Y="142" Width="153" Height="14" Property="BLUETOOTH_NAMES_BOX" CheckBoxValue="1" Text="Devi&amp;ce names" ToolTip="Shows each device by its name, which often carries its owner's; without, by its kind, such as Headphones (BLUETOOTH_NAMES)" EnableCondition='BLUETOOTH_BOX' DisableCondition='NOT (BLUETOOTH_BOX)' />
+        <Control Id="AlwaysText" Type="Text" X="20" Y="200" Width="330" Height="24" NoPrefix="yes" Text="Always tracked: CPU, memory, disks, network traffic, temperatures, graphics cards and the battery." />
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)" />
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)" />
@@ -831,9 +881,9 @@
       <Publish Dialog="RouterDlg" Control="Next" Event="NewDialog" Value="EditionDlg" Condition="NOT RouterInvalid" Order="3" />
       <Publish Dialog="EditionDlg" Control="Back" Event="NewDialog" Value="RouterDlg" Condition='WEBSITE = "1"' />
       <Publish Dialog="EditionDlg" Control="Back" Event="NewDialog" Value="ModeDlg" Condition='WEBSITE &lt;&gt; "1"' />
-      <!-- Both editions install Cub's add-ons; Cub none of Grizzly's. -->
+      <!-- Cub installs its add-ons and none of the others; what they collect stays as it was. -->
       <?foreach AddOn in PRESSURE;KERNEL;WIFI;MEMORY ?>
-      <Publish Dialog="EditionDlg" Control="Next" Property="$(AddOn)" Value="1" Order="1" />
+      <Publish Dialog="EditionDlg" Control="Next" Property="$(AddOn)" Value="1" Condition='EDITION = "cub"' Order="1" />
       <?endforeach?>
       <?foreach AddOn in POWER;GPU;PORTS;SMART;PROCESSES;BLUETOOTH ?>
       <Publish Dialog="EditionDlg" Control="Next" Property="$(AddOn)" Value="0" Condition='EDITION = "cub"' Order="1" />
@@ -841,7 +891,20 @@
       <Publish Dialog="EditionDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Condition='EDITION = "cub"' Order="2" />
       <Publish Dialog="EditionDlg" Control="Next" Event="NewDialog" Value="AddOnsDlg" Condition='EDITION = "grizzly"' Order="2" />
       <Publish Dialog="AddOnsDlg" Control="Back" Event="NewDialog" Value="EditionDlg" />
-      <?foreach AddOn in POWER;GPU;PORTS;SMART;PROCESSES;BLUETOOTH ?>
+      <!-- An add-on is on when its box and its group's box are ticked. -->
+      <?foreach AddOn in KERNEL;MEMORY;PRESSURE ?>
+      <Publish Dialog="AddOnsDlg" Control="Next" Property="$(AddOn)" Value="1" Condition="DETAILS_BOX AND $(AddOn)_BOX" Order="1" />
+      <Publish Dialog="AddOnsDlg" Control="Next" Property="$(AddOn)" Value="0" Condition="NOT (DETAILS_BOX AND $(AddOn)_BOX)" Order="1" />
+      <?endforeach?>
+      <?foreach AddOn in POWER;GPU;SMART ?>
+      <Publish Dialog="AddOnsDlg" Control="Next" Property="$(AddOn)" Value="1" Condition="HARDWARE_BOX AND $(AddOn)_BOX" Order="1" />
+      <Publish Dialog="AddOnsDlg" Control="Next" Property="$(AddOn)" Value="0" Condition="NOT (HARDWARE_BOX AND $(AddOn)_BOX)" Order="1" />
+      <?endforeach?>
+      <?foreach AddOn in WIFI;PORTS ?>
+      <Publish Dialog="AddOnsDlg" Control="Next" Property="$(AddOn)" Value="1" Condition="NETWORK_BOX AND $(AddOn)_BOX" Order="1" />
+      <Publish Dialog="AddOnsDlg" Control="Next" Property="$(AddOn)" Value="0" Condition="NOT (NETWORK_BOX AND $(AddOn)_BOX)" Order="1" />
+      <?endforeach?>
+      <?foreach AddOn in PROCESSES;BLUETOOTH;WIFI_NEARBY;WIFI_SCAN;BLUETOOTH_NAMES ?>
       <Publish Dialog="AddOnsDlg" Control="Next" Property="$(AddOn)" Value="1" Condition="$(AddOn)_BOX" Order="1" />
       <Publish Dialog="AddOnsDlg" Control="Next" Property="$(AddOn)" Value="0" Condition="NOT $(AddOn)_BOX" Order="1" />
       <?endforeach?>
