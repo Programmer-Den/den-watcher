@@ -16,19 +16,26 @@ import (
 // networks alike.
 const dot11BSSTypeAny = 3
 
-var wlanGetNetworkBssList = wlanapi.NewProc("WlanGetNetworkBssList")
+var (
+	wlanGetNetworkBssList = wlanapi.NewProc("WlanGetNetworkBssList")
+	wlanScan              = wlanapi.NewProc("WlanScan")
+)
 
 // NewNetworksReader returns what reads the nearby access points of every
 // Wi-Fi interface, through WlanGetNetworkBssList of Windows' Native Wifi
-// API, which lists those Windows' own scans found. It starts no scan.
-// Without the API, the WLAN AutoConfig service or a Wi-Fi adapter it reads
+// API, which lists those Windows' own scans found. Windows scans on its own
+// while an interface is not connected, but hardly at all while it is, when
+// the list would soon hold only the access point it is connected to: so it
+// asks Windows to scan each connected interface every scanEvery (none when
+// scanEvery is 0), and the next read finds what that scan found. Without
+// the API, the WLAN AutoConfig service or a Wi-Fi adapter it reads
 // nothing, and so it does when Windows denies the list, as Windows 11 24H2
 // and later do to programs without location access; why is logged once,
 // and again when it changes.
 //
 // It keeps a WLAN handle of its own open, opened at the first read and again
 // after the API failed, and closes it when ctx of the first read is done.
-func NewNetworksReader() func(ctx context.Context) []AccessPoint {
+func NewNetworksReader(scanEvery time.Duration) func(ctx context.Context) []AccessPoint {
 	var (
 		mu       sync.Mutex
 		watching sync.Once
@@ -36,6 +43,7 @@ func NewNetworksReader() func(ctx context.Context) []AccessPoint {
 		open     bool
 		closed   bool
 		logged   string
+		scanned  time.Time
 	)
 	closeHandle := func() {
 		if open {
@@ -64,8 +72,14 @@ func NewNetworksReader() func(ctx context.Context) []AccessPoint {
 			open = problem == ""
 		}
 		if open {
+			now := time.Now()
+			// A clock set back counts as due too, so it never waits that long.
+			scan := scanEvery > 0 && (now.Sub(scanned) >= scanEvery || now.Before(scanned))
+			if scan {
+				scanned = now
+			}
 			var ok bool
-			aps, problem, ok = readBSSLists(handle, time.Now())
+			aps, problem, ok = readBSSLists(handle, now, scan)
 			if !ok {
 				closeHandle()
 			}
@@ -83,12 +97,15 @@ func NewNetworksReader() func(ctx context.Context) []AccessPoint {
 }
 
 // readBSSLists reads the access points every interface sees through handle,
-// and says why when it can read less than all of them. It returns nil when
+// and says why when it can read less than all of them. With scan, it then
+// asks Windows to scan each connected interface; Windows answers at once and
+// scans in the background, and a scan it refuses, as while one runs, is
+// left for the next. It returns nil when
 // there is no interface or none could be read, and reports false when the interfaces could not be
 // listed at all.
 //
 //nolint:gosec // wlanapi.dll takes and returns pointers, which need unsafe.
-func readBSSLists(handle windows.Handle, now time.Time) ([]AccessPoint, string, bool) {
+func readBSSLists(handle windows.Handle, now time.Time, scan bool) ([]AccessPoint, string, bool) {
 	var list *byte
 	if ret, _, _ := wlanEnumInterfaces.Call(uintptr(handle), 0, uintptr(unsafe.Pointer(&list))); ret != 0 {
 		return nil, fmt.Sprintf("WlanEnumInterfaces: %v", windows.Errno(ret)), false
@@ -127,6 +144,9 @@ func readBSSLists(handle windows.Handle, now time.Time) ([]AccessPoint, string, 
 		total := *(*uint32)(unsafe.Pointer(bss))
 		aps = append(aps, parseBSSList(unsafe.Slice(bss, total), connected, now)...)
 		_, _, _ = wlanFreeMemory.Call(uintptr(unsafe.Pointer(bss)))
+		if scan && iface.connected {
+			_, _, _ = wlanScan.Call(uintptr(handle), uintptr(unsafe.Pointer(&iface.guid)), 0, 0, 0)
+		}
 	}
 	if read > 0 && aps == nil {
 		// Interfaces that see nothing nearby, unlike those Windows denies.

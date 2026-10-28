@@ -17,13 +17,15 @@ const callTimeout = 2 * time.Second
 // NewNetworksReader returns what reads the nearby access points: from
 // NetworkManager over the system D-Bus (at DBUS_SYSTEM_BUS_ADDRESS, or where
 // the system keeps it), which lists those its own scans found. It starts no
-// scan. Where NetworkManager cannot be asked, as on a system without it or
+// scan, so it ignores scanEvery: NetworkManager leaves who may ask for one
+// to polkit, which usually refuses a service's user such as the add-on's.
+// Where NetworkManager cannot be asked, as on a system without it or
 // without D-Bus, it reads nothing; why is logged once, and again when it
 // changes.
 //
 // It keeps one D-Bus connection open, opened at the first read and again
 // after it failed.
-func NewNetworksReader() func(ctx context.Context) []AccessPoint {
+func NewNetworksReader(time.Duration) func(ctx context.Context) []AccessPoint {
 	var conn *dbus.Conn
 	var logged string
 	return func(ctx context.Context) []AccessPoint {
