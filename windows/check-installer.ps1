@@ -1,6 +1,6 @@
 # Checks the Windows installer on a Windows machine, as an administrator:
-# checks it refuses an UPDATE_CHECK the service cannot read, installs it
-# with the website and the power, gpu, kernel, pressure, Wi-Fi, memory,
+# checks it refuses an UPDATE_CHECK the service cannot read and a WIFI_SCAN
+# other than 0 or 1, installs it with WIFI_SCAN=0 and the website and the power, gpu, kernel, pressure, Wi-Fi, memory,
 # ports, smart and processes add-ons on, checks the service runs all but
 # the smart add-on as child processes of its add-on host, checks the tray icon pauses,
 # resumes and stops the service, updates it to a newer bugfix without
@@ -283,10 +283,12 @@ $addOns = 'Power', 'Gpu', 'Kernel', 'Pressure', 'Wifi', 'Memory', 'Ports', 'Smar
 
 Write-Host 'An UPDATE_CHECK other than true or false is refused, naming the option'
 Assert-InstallerRefuses "/i `"$Msi`" UPDATE_CHECK=no" 'UPDATE_CHECK must be true or false.', ".msi`" UPDATE_CHECK=true"
+Write-Host 'A WIFI_SCAN other than 0 or 1 is refused, naming the option'
+Assert-InstallerRefuses "/i `"$Msi`" WIFI_SCAN=off" 'WIFI_SCAN must be 0 or 1.', ".msi`" WIFI_SCAN=1"
 if (Get-Service UsageControl -ErrorAction SilentlyContinue) { throw 'The refused install installed the service' }
 
 Write-Host 'Installing with the website and the power, gpu, kernel, pressure, Wi-Fi, memory, ports, smart, processes and Bluetooth add-ons on'
-Invoke-Installer "/i `"$Msi`" PORT=8091 WEBSITE=1 DEVICE_NAME=Runner HUB_DEVICES=Pi=192.168.1.20:9393 RETENTION_DAYS=7 DISK_PATHS=$env:SystemDrive\ UPDATE_CHECK=false RESET_PASSWORD=true POWER=1 GPU=1 KERNEL=1 PRESSURE=1 WIFI=1 MEMORY=1 PORTS=1 SMART=1 PROCESSES=1 BLUETOOTH=1"
+Invoke-Installer "/i `"$Msi`" PORT=8091 WEBSITE=1 DEVICE_NAME=Runner HUB_DEVICES=Pi=192.168.1.20:9393 RETENTION_DAYS=7 DISK_PATHS=$env:SystemDrive\ UPDATE_CHECK=false RESET_PASSWORD=true POWER=1 GPU=1 KERNEL=1 PRESSURE=1 WIFI=1 WIFI_SCAN=0 MEMORY=1 PORTS=1 SMART=1 PROCESSES=1 BLUETOOTH=1"
 $service = Get-Service UsageControl
 if ($service.StartType -ne 'Automatic') { throw "The service starts $($service.StartType), not automatically" }
 Assert-Website 8091
@@ -294,6 +296,7 @@ Assert-ServiceSetting DATA_ONLY 'false'
 Assert-ServiceSetting HUB_DEVICES 'Pi=192.168.1.20:9393'
 Assert-ServiceSetting DISK_PATHS "$env:SystemDrive\"
 Assert-ServiceSetting UPDATE_CHECK 'false'
+Assert-ServiceSetting WIFI_SCAN '0'
 Assert-ServiceSetting RESET_PASSWORD 'true'
 foreach ($addOn in $addOns) { & "Assert-$($addOn)AddOn" }
 
@@ -312,6 +315,7 @@ Assert-Website 8091
 if (-not (Test-Path "$env:ProgramData\Usage Control\usage-control.db")) { throw 'The update deleted the history' }
 Assert-ServiceSetting DISK_PATHS "$env:SystemDrive\"
 Assert-ServiceSetting UPDATE_CHECK 'false'
+Assert-ServiceSetting WIFI_SCAN '0'
 Assert-ServiceSetting RESET_PASSWORD ''
 foreach ($addOn in $addOns) { & "Assert-$($addOn)AddOn" }
 
