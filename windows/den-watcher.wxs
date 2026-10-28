@@ -9,13 +9,13 @@
   switches with the option (msiexec /i den-watcher.msi REINSTALL=ALL
   REINSTALLMODE=m WEBSITE=1).
 
-  Add-ons are optional programs that track more, each writing to
+  Add-ons are optional programs that collect more data, each writing to
   C:\ProgramData\Usage Control\addons, which den-watcher shows. The service
   starts the installed add-ons through the add-on host, a den-watcher.exe of
   its own, so Task Manager groups them under it, except the smart add-on,
   which needs more rights and is a service of its own. The Edition page
-  picks Cub, the lightweight add-ons, or Grizzly, whose page offers what to
-  track in groups (System details, Hardware, Network, Bluetooth,
+  picks Cub, the lightweight add-ons, or Grizzly, whose page offers which
+  data to collect in groups (System details, Hardware, Network, Bluetooth,
   Processes), each add-on as a box below its group, and each has an install
   option. POWER=1 installs the power add-on,
   den-watcher-power.exe, which reads the power the energy meters Windows
@@ -790,12 +790,12 @@
         <Control Id="Edition" Type="RadioButtonGroup" X="20" Y="60" Width="330" Height="110" Property="EDITION">
           <RadioButtonGroup Property="EDITION">
             <RadioButton Value="cub" X="0" Y="0" Width="330" Height="15" Text="&amp;Cub: the lightweight add-ons (recommended)" />
-            <RadioButton Value="grizzly" X="0" Y="56" Width="330" Height="15" Text="&amp;Grizzly: pick what to track, group by group" />
+            <RadioButton Value="grizzly" X="0" Y="56" Width="330" Height="15" Text="&amp;Grizzly: choose which data to collect, group by group" />
           </RadioButtonGroup>
         </Control>
-        <Control Id="CubText" Type="Text" X="38" Y="77" Width="310" Height="36" NoPrefix="yes" Text="Tracks system details (kernel, memory details, pressure) and the network (Wi-Fi quality and the networks nearby), reading a few counters at each poll." />
+        <Control Id="CubText" Type="Text" X="38" Y="77" Width="310" Height="36" NoPrefix="yes" Text="Collects system details (kernel, memory details, pressure) and the network (Wi-Fi quality and the networks nearby), reading a few counters at each poll." />
         <Control Id="GrizzlyText" Type="Text" X="38" Y="133" Width="310" Height="36" NoPrefix="yes" Text="Starts from Cub's choices, and adds power, the graphics card, disk health, listening ports, processes and Bluetooth, which cost more or need more rights." />
-        <Control Id="AlwaysText" Type="Text" X="20" Y="200" Width="330" Height="24" NoPrefix="yes" Text="Both always track CPU, memory, disks, network traffic, temperatures, graphics cards and the battery." />
+        <Control Id="AlwaysText" Type="Text" X="20" Y="200" Width="330" Height="24" NoPrefix="yes" Text="Both always collect CPU, memory, disks, network traffic, temperatures, graphics cards and the battery." />
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)" />
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)" />
@@ -805,7 +805,7 @@
       </Dialog>
 
       <!--
-        The Grizzly page: what to track, in the same groups as install.sh,
+        The Grizzly page: which data to collect, in the same groups as install.sh,
         Docker's profiles and the Android app. Each group has a box, with the
         boxes of its add-ons below it, and below an add-on what it collects
         (WIFI_NEARBY and WIFI_SCAN, BLUETOOTH_NAMES); a box is greyed out
@@ -816,7 +816,7 @@
       <Dialog Id="AddOnsDlg" Width="370" Height="270" Title="[ProductName] Setup">
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
-        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}What should Grizzly track?" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Which data do you want to collect?" />
         <Control Id="Description" Type="Text" X="25" Y="23" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="Cub's choices are ticked. Point at a box for what it reads." />
         <Control Id="Details" Type="CheckBox" X="20" Y="52" Width="165" Height="14" Property="DETAILS_BOX" CheckBoxValue="1" Text="System &amp;details" ToolTip="Kernel, memory details and pressure" />
         <Control Id="Kernel" Type="CheckBox" X="32" Y="67" Width="153" Height="14" Property="KERNEL_BOX" CheckBoxValue="1" Text="&amp;Kernel" ToolTip="Context switches, interrupts, open handles and TCP connections" EnableCondition='DETAILS_BOX' DisableCondition='NOT (DETAILS_BOX)' />
@@ -834,7 +834,7 @@
         <Control Id="Ports" Type="CheckBox" X="204" Y="112" Width="153" Height="14" Property="PORTS_BOX" CheckBoxValue="1" Text="Listening p&amp;orts" ToolTip="Which TCP and UDP ports the PC listens on" EnableCondition='NETWORK_BOX' DisableCondition='NOT (NETWORK_BOX)' />
         <Control Id="Bluetooth" Type="CheckBox" X="192" Y="127" Width="165" Height="14" Property="BLUETOOTH_BOX" CheckBoxValue="1" Text="Blue&amp;tooth" ToolTip="The connected headsets, speakers and other devices" />
         <Control Id="BluetoothNames" Type="CheckBox" X="204" Y="142" Width="153" Height="14" Property="BLUETOOTH_NAMES_BOX" CheckBoxValue="1" Text="Devi&amp;ce names" ToolTip="Shows each device by its name, which often carries its owner's; without, by its kind, such as Headphones (BLUETOOTH_NAMES)" EnableCondition='BLUETOOTH_BOX' DisableCondition='NOT (BLUETOOTH_BOX)' />
-        <Control Id="AlwaysText" Type="Text" X="20" Y="200" Width="330" Height="24" NoPrefix="yes" Text="Always tracked: CPU, memory, disks, network traffic, temperatures, graphics cards and the battery." />
+        <Control Id="AlwaysText" Type="Text" X="20" Y="200" Width="330" Height="24" NoPrefix="yes" Text="Always collected: CPU, memory, disks, network traffic, temperatures, graphics cards and the battery." />
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)" />
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)" />

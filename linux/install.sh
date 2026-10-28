@@ -14,10 +14,10 @@
 # community. The login is stored encrypted with
 # systemd-creds, and only the service can read it.
 #
-# Add-ons are optional programs that track more than den-watcher itself,
+# Add-ons are optional programs that collect more data than den-watcher itself,
 # each as a service of its own. Run in a terminal without --addons, the
 # install first asks for the edition: Cub is den-watcher with the
-# lightweight add-ons, Grizzly lets you pick what to track, group by group
+# lightweight add-ons, Grizzly lets you choose which data to collect, group by group
 # (System details, Hardware, Network, Bluetooth, Processes and containers),
 # then each add-on of a group and what some of them collect, starting from
 # Cub's. Without a terminal, an update keeps the add-ons installed before. In
@@ -259,7 +259,7 @@ elif [[ -t 0 ]]; then
     fi
   done
   echo "Which edition should this machine run?"
-  echo "  1) Cub: den-watcher with the lightweight add-ons, which track"
+  echo "  1) Cub: den-watcher with the lightweight add-ons, which collect"
   for group in "${groups[@]}"; do
     members=()
     for addon in ${group_addons[$group]}; do
@@ -269,7 +269,7 @@ elif [[ -t 0 ]]; then
       echo "       ${group_titles[$group]}: $(joined "${members[@]}")"
     fi
   done
-  echo "  2) Grizzly: pick what to track, group by group, starting from Cub's"
+  echo "  2) Grizzly: choose which data to collect, group by group, starting from Cub's"
   read -r -p "[1/2, default $edition] " answer
   answer="${answer:-$edition}"
   if [[ ! "$answer" =~ ^[12]$ ]]; then
@@ -299,8 +299,8 @@ elif [[ -t 0 ]]; then
       [[ -f "$here/den-watcher-$addon.service" && "$grouped" != *" $addon "* ]] && others+=("$addon")
     done
     echo
-    echo "What should this machine track? CPU, memory, disks, network traffic, temperatures,"
-    echo "graphics cards, battery and fans are always tracked."
+    echo "Which data do you want to collect? CPU, memory, disks, network traffic, temperatures,"
+    echo "graphics cards, battery and fans are always collected."
     for group in "${groups[@]}" other; do
       if [[ $group == other ]]; then
         members=("${others[@]}")
@@ -319,7 +319,7 @@ elif [[ -t 0 ]]; then
         [[ -n "${ticked[$addon]+set}" ]] && default=y
         titles+=("$(addon_title "$addon")")
       done
-      read -r -p "Track $title ($(joined "${titles[@]}"))? [y/n, default $default] " answer
+      read -r -p "Collect $title ($(joined "${titles[@]}"))? [y/n, default $default] " answer
       [[ "${answer:-$default}" == [yY]* ]] || continue
       for addon in "${members[@]}"; do
         if [[ ${#members[@]} -eq 1 ]]; then
