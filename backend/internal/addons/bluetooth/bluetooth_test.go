@@ -107,3 +107,28 @@ func TestExtrasNameEachDevice(t *testing.T) {
 		t.Errorf("ids = %q and %q, want valid and apart", got[0].Items[1].ID, got[0].Items[2].ID)
 	}
 }
+
+func TestWithoutNamesShowsEachDeviceByItsKind(t *testing.T) {
+	if (*Reading)(nil).WithoutNames() != nil {
+		t.Error("a machine without Bluetooth gained a reading")
+	}
+	reading := &Reading{Connected: 2, Devices: []Device{
+		{Key: "AA:BB:CC:DD:EE:01", Name: "Anna's AirPods", Kind: KindHeadphones, Battery: 80, HasBattery: true},
+		{Key: "AA:BB:CC:DD:EE:02", Name: "MX Keys", Kind: KindKeyboard},
+	}}
+	hidden := reading.WithoutNames()
+	if reading.Devices[0].Name != "Anna's AirPods" {
+		t.Error("WithoutNames changed the reading it was given")
+	}
+	group := Extras(hidden)[0]
+	var labels []string
+	for _, item := range group.Items[1:] {
+		labels = append(labels, item.Label)
+	}
+	if want := []string{"Headphones", "Keyboard"}; !reflect.DeepEqual(labels, want) {
+		t.Errorf("labels = %v, want %v", labels, want)
+	}
+	if group.Items[1].Text != "Battery 80%" || *group.Items[0].Value != 2 {
+		t.Errorf("battery or count lost: %+v", group.Items[:2])
+	}
+}

@@ -5,6 +5,9 @@
 # Add-ons are picked with COMPOSE_PROFILES in .env, such as COMPOSE_PROFILES=power or
 # COMPOSE_PROFILES=power,memory. COMPOSE_PROFILES=cub starts the lightweight ones
 # (the Cub edition); Grizzly is cub with others, such as COMPOSE_PROFILES=cub,power.
+# A group starts all of its add-ons: details (kernel, memory, pressure),
+# hardware (power), network (wifi, ports), bluetooth and programs (processes,
+# containers), such as COMPOSE_PROFILES=cub,programs.
 # Then open http://<the machine's address>:9393 from the local network.
 # What every add-on container shares: the image, no network, and no
 # privileges beyond reading.
@@ -123,7 +126,7 @@ services:
   # reaches (see docs/setup.md).
   power:
     <<: *addon
-    profiles: [power]
+    profiles: [power, hardware]
     entrypoint: ["/den-watcher-power"]
     user: "0:0"
     environment:
@@ -142,7 +145,7 @@ services:
   # mount it, and the container would not start.
   pressure:
     <<: *addon
-    profiles: [pressure, cub]
+    profiles: [pressure, details, cub]
     entrypoint: ["/den-watcher-pressure"]
     environment:
       HOST_PROC: /host/proc
@@ -159,7 +162,7 @@ services:
   # image's user, like den-watcher, without any capability or network.
   kernel:
     <<: *addon
-    profiles: [kernel, cub]
+    profiles: [kernel, details, cub]
     entrypoint: ["/den-watcher-kernel"]
     environment:
       HOST_PROC: /host/proc
@@ -179,12 +182,14 @@ services:
   # takes an authorization polkit does not give this user.
   wifi:
     <<: *addon
-    profiles: [wifi, cub]
+    profiles: [wifi, network, cub]
     entrypoint: ["/den-watcher-wifi"]
     environment:
       HOST_PROC: /host/proc
       ADDONS_DIR: /addons
       DBUS_SYSTEM_BUS_ADDRESS: unix:path=/host/run/dbus/system_bus_socket
+      # 0 reads only the connected interfaces, not the networks nearby.
+      WIFI_NEARBY: ${WIFI_NEARBY:-}
     volumes:
       - addons:/addons
       - /proc:/host/proc:ro
@@ -207,6 +212,8 @@ services:
       HOST_SYS: /host/sys
       ADDONS_DIR: /addons
       DBUS_SYSTEM_BUS_ADDRESS: unix:path=/host/run/dbus/system_bus_socket
+      # 0 shows each device by its kind instead of its name.
+      BLUETOOTH_NAMES: ${BLUETOOTH_NAMES:-}
     volumes:
       - addons:/addons
       - /sys:/host/sys:ro
@@ -218,7 +225,7 @@ services:
   # image's user, like den-watcher, without any capability or network.
   memory:
     <<: *addon
-    profiles: [memory, cub]
+    profiles: [memory, details, cub]
     entrypoint: ["/den-watcher-memory"]
     environment:
       HOST_PROC: /host/proc
@@ -233,7 +240,7 @@ services:
   # capability and without network.
   ports:
     <<: *addon
-    profiles: [ports]
+    profiles: [ports, network]
     entrypoint: ["/den-watcher-ports"]
     environment:
       HOST_PROC: /host/proc
@@ -249,7 +256,7 @@ services:
   # without any capability, without network and with both mounts read-only.
   containers:
     <<: *addon
-    profiles: [containers]
+    profiles: [containers, programs]
     entrypoint: ["/den-watcher-containers"]
     user: "0:0"
     environment:
@@ -275,7 +282,7 @@ services:
   # den-watcher, without any capability or network.
   processes:
     <<: *addon
-    profiles: [processes]
+    profiles: [processes, programs]
     entrypoint: ["/den-watcher-processes"]
     environment:
       HOST_PROC: /host/proc

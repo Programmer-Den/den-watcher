@@ -18,15 +18,16 @@
 //	DBUS_SYSTEM_BUS_ADDRESS
 //	            on Linux, where the system D-Bus is, in a container
 //	            (default where the system keeps it)
+//	WIFI_NEARBY 0 to read only the connected interfaces, not the networks
+//	            nearby, which then are neither read nor scanned for
+//	            (default 1)
 //	WIFI_SCAN   on Windows, 0 to never ask for a scan, as a scan takes the
 //	            Wi-Fi to other channels for a moment (default 1)
 package main
 
 import (
 	"context"
-	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/addons"
@@ -43,7 +44,10 @@ const scanEvery = 5 * time.Minute
 func main() {
 	addons.MainReport("wifi", "UsageControlWifi", func() addons.ReadReport {
 		read := wifi.NewReader()
-		readNetworks := wifi.NewNetworksReader(scanInterval(os.Getenv("WIFI_SCAN")))
+		var readNetworks func(context.Context) []wifi.AccessPoint
+		if addons.SwitchOn("WIFI_NEARBY", os.Getenv("WIFI_NEARBY")) {
+			readNetworks = wifi.NewNetworksReader(scanInterval(os.Getenv("WIFI_SCAN")))
+		}
 		// The nearby networks change only with the scans, which come every
 		// few minutes, and asking for them brings back all
 		// of NetworkManager's objects or the whole BSS list, so they are
@@ -51,7 +55,7 @@ func main() {
 		var networks []wifi.AccessPoint
 		var networksRead time.Time
 		return func(ctx context.Context, now time.Time) metrics.AddOnReport {
-			if addons.Due(networksRead, now, addons.ProgramInterval) {
+			if readNetworks != nil && addons.Due(networksRead, now, addons.ProgramInterval) {
 				networks, networksRead = readNetworks(ctx), now
 			}
 			return metrics.AddOnReport{
@@ -67,12 +71,8 @@ func main() {
 // any other value than 0 or 1, so one that gets here anyway is warned about
 // and scans.
 func scanInterval(value string) time.Duration {
-	switch strings.TrimSpace(value) {
-	case "0":
+	if !addons.SwitchOn("WIFI_SCAN", value) {
 		return 0
-	case "", "1":
-	default:
-		slog.Warn("WIFI_SCAN must be 0 or 1, so the add-on asks for scans", "WIFI_SCAN", value)
 	}
 	return scanEvery
 }

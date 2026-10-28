@@ -5,6 +5,7 @@
 #   sudo ./install.sh                    # install, or update to this version
 #   sudo ./install.sh --addons=cub       # install the Cub edition
 #   sudo ./install.sh --addons=cub,power # Grizzly: Cub with the power add-on
+#   sudo ./install.sh --addons=cub,network # Grizzly: Cub with every network add-on
 #   sudo ./install.sh --addons=          # install without any add-on
 #   sudo ./install.sh --uninstall        # remove it; add --purge to delete settings and history too
 #
@@ -16,9 +17,12 @@
 # Add-ons are optional programs that track more than den-watcher itself,
 # each as a service of its own. Run in a terminal without --addons, the
 # install first asks for the edition: Cub is den-watcher with the
-# lightweight add-ons, Grizzly is Cub with the other add-ons you pick, each
-# asked for in turn. Without a terminal, an update keeps the add-ons
-# installed before. In --addons, cub stands for the lightweight add-ons.
+# lightweight add-ons, Grizzly lets you pick what to track, group by group
+# (System details, Hardware, Network, Bluetooth, Processes and containers),
+# then each add-on of a group and what some of them collect, starting from
+# Cub's. Without a terminal, an update keeps the add-ons installed before. In
+# --addons, cub stands for the lightweight add-ons and a group's name, such as
+# network, for all of its add-ons.
 #
 # Settings live in /etc/den-watcher.env and the history in
 # /var/lib/den-watcher; an update keeps both. --uninstall --purge deletes
@@ -38,6 +42,25 @@ router_dropin=/etc/systemd/system/den-watcher.service.d/router-passwords.conf
 # small files or counters per poll.
 cub_addons=(kernel memory pressure wifi inodes)
 
+# The groups the add-ons are offered in, in this order, each with its title
+# and add-ons; the same groups as the Windows installer, Docker's profiles
+# and the Android app's options.
+groups=(details hardware network bluetooth programs)
+declare -A group_titles=(
+  [details]="System details"
+  [hardware]="Hardware"
+  [network]="Network"
+  [bluetooth]="Bluetooth"
+  [programs]="Processes and containers"
+)
+declare -A group_addons=(
+  [details]="kernel memory pressure inodes"
+  [hardware]="power gpu smart"
+  [network]="wifi ports"
+  [bluetooth]="bluetooth"
+  [programs]="processes containers"
+)
+
 if [[ $EUID -ne 0 ]]; then
   echo "Run this as root, for example: sudo $0 $*" >&2
   exit 1
@@ -54,7 +77,7 @@ case "${1:-}" in
   --addons=*)
     IFS=, read -r -a picked <<< "${1#--addons=}"
     for addon in "${picked[@]}"; do
-      if [[ $addon != cub && ! -f "$here/den-watcher-$addon.service" ]]; then
+      if [[ $addon != cub && -z "${group_addons[$addon]+set}" && ! -f "$here/den-watcher-$addon.service" ]]; then
         echo "There is no add-on called '$addon' in this archive." >&2
         exit 1
       fi
@@ -128,6 +151,46 @@ for service in "$here"/den-watcher-*.service /etc/systemd/system/den-watcher-*.s
   addon_descriptions[$addon]="$(sed -n 's/^Description=Den-Watcher [^:]* add-on: //p' "$service")"
 done
 
+# How the questions name each add-on.
+declare -A addon_titles=(
+  [kernel]="kernel" [memory]="memory details" [pressure]="pressure" [inodes]="inodes"
+  [power]="power draw" [gpu]="graphics card details" [smart]="disk health"
+  [wifi]="Wi-Fi quality and networks nearby" [ports]="listening ports"
+  [bluetooth]="connected devices" [processes]="top processes" [containers]="containers"
+)
+
+# The settings that choose what an add-on collects, each asked for right
+# after its add-on in Grizzly, and the question for it. Each takes 0 or 1,
+# 1 by default.
+declare -A addon_switches=([wifi]=WIFI_NEARBY [bluetooth]=BLUETOOTH_NAMES)
+declare -A switch_questions=(
+  [WIFI_NEARBY]="Also the Wi-Fi networks nearby, not only the connected one's quality?"
+  [BLUETOOTH_NAMES]="Show the devices' names? Without, each shows as its kind, such as Headphones."
+)
+# The answers, written to the settings file at install.
+declare -A switches=()
+
+# Prints how the questions name the add-on $1.
+addon_title() {
+  printf '%s' "${addon_titles[$1]:-$1}"
+}
+
+# Prints its arguments joined by ", ".
+joined() {
+  local first="$1" item
+  shift
+  printf '%s' "$first"
+  for item in "$@"; do
+    printf ', %s' "$item"
+  done
+}
+
+# Prints the value of the setting $1 in the settings file, without quotes
+# or spaces; nothing when it is not set or there is no file yet.
+setting() {
+  sed -n "s/^$1=//p" "$settings" 2> /dev/null | tail -n 1 | tr -d '[:space:]"'\''' || true
+}
+
 # Removes one add-on's service and program.
 remove_addon() {
   systemctl disable --now "den-watcher-$1.service" 2> /dev/null || true
@@ -171,8 +234,16 @@ if [[ "${1:-}" == --addons=* ]]; then
       done
       continue
     fi
+    # A group's name, such as network, stands for its add-ons in this
+    # archive; bluetooth is a group and its one add-on alike.
+    if [[ -n "${group_addons[$addon]+set}" ]]; then
+      for member in ${group_addons[$addon]}; do
+        [[ -f "$here/den-watcher-$member.service" ]] && wanted[$member]=1
+      done
+      continue
+    fi
     if [[ -z "${addon_descriptions[$addon]+set}" || ! -f "$here/den-watcher-$addon.service" ]]; then
-      echo "There is no add-on called '$addon'. Add-ons: cub ${!addon_descriptions[*]}" >&2
+      echo "There is no add-on called '$addon'. Add-ons: cub ${groups[*]} ${!addon_descriptions[*]}" >&2
       exit 1
     fi
     wanted[$addon]=1
@@ -180,33 +251,98 @@ if [[ "${1:-}" == --addons=* ]]; then
 elif [[ -t 0 ]]; then
   # Grizzly is the default when one of its add-ons is installed already.
   edition=1
+  installed_any=""
   for addon in "${!addon_descriptions[@]}"; do
-    if [[ -z "${cub[$addon]+set}" && -f "/etc/systemd/system/den-watcher-$addon.service" ]]; then
-      edition=2
+    if [[ -f "/etc/systemd/system/den-watcher-$addon.service" ]]; then
+      installed_any=1
+      [[ -z "${cub[$addon]+set}" ]] && edition=2
     fi
   done
-  cub_list="${cub_addons[*]}"
   echo "Which edition should this machine run?"
-  echo "  1) Cub: den-watcher with the lightweight add-ons (${cub_list// /, })"
-  echo "  2) Grizzly: Cub, plus the other add-ons you pick next"
+  echo "  1) Cub: den-watcher with the lightweight add-ons, which track"
+  for group in "${groups[@]}"; do
+    members=()
+    for addon in ${group_addons[$group]}; do
+      [[ -n "${cub[$addon]+set}" && -f "$here/den-watcher-$addon.service" ]] && members+=("$(addon_title "$addon")")
+    done
+    if [[ ${#members[@]} -gt 0 ]]; then
+      echo "       ${group_titles[$group]}: $(joined "${members[@]}")"
+    fi
+  done
+  echo "  2) Grizzly: pick what to track, group by group, starting from Cub's"
   read -r -p "[1/2, default $edition] " answer
   answer="${answer:-$edition}"
   if [[ ! "$answer" =~ ^[12]$ ]]; then
     echo "Choose 1 or 2." >&2
     exit 1
   fi
-  for addon in "${cub_addons[@]}"; do
-    [[ -f "$here/den-watcher-$addon.service" ]] && wanted[$addon]=1
-  done
-  if [[ $answer == 2 ]]; then
+  if [[ $answer == 1 ]]; then
+    for addon in "${cub_addons[@]}"; do
+      [[ -f "$here/den-watcher-$addon.service" ]] && wanted[$addon]=1
+    done
+  else
+    # An add-on is ticked when it is installed, or on a machine without any
+    # add-on yet, when it is one of Cub's. One that is no longer in this
+    # archive is not asked for and is removed below.
+    declare -A ticked=()
     for addon in "${!addon_descriptions[@]}"; do
-      [[ -n "${cub[$addon]+set}" ]] && continue
-      # One that is no longer in this archive is removed below.
       [[ -f "$here/den-watcher-$addon.service" ]] || continue
+      if [[ -f "/etc/systemd/system/den-watcher-$addon.service" ]] || [[ -z "$installed_any" && -n "${cub[$addon]+set}" ]]; then
+        ticked[$addon]=1
+      fi
+    done
+    # Add-ons of a newer archive that no group names yet are asked for
+    # last, on their own.
+    grouped=" ${group_addons[*]} "
+    others=()
+    for addon in "${!addon_descriptions[@]}"; do
+      [[ -f "$here/den-watcher-$addon.service" && "$grouped" != *" $addon "* ]] && others+=("$addon")
+    done
+    echo
+    echo "What should this machine track? CPU, memory, disks, network traffic, temperatures,"
+    echo "graphics cards, battery and fans are always tracked."
+    for group in "${groups[@]}" other; do
+      if [[ $group == other ]]; then
+        members=("${others[@]}")
+        title="Other add-ons"
+      else
+        members=()
+        for addon in ${group_addons[$group]}; do
+          [[ -f "$here/den-watcher-$addon.service" ]] && members+=("$addon")
+        done
+        title="${group_titles[$group]}"
+      fi
+      [[ ${#members[@]} -gt 0 ]] || continue
       default=n
-      [[ -f "/etc/systemd/system/den-watcher-$addon.service" ]] && default=y
-      read -r -p "Install the $addon add-on? It ${addon_descriptions[$addon]}. [y/n, default $default] " answer
-      [[ "${answer:-$default}" == [yY]* ]] && wanted[$addon]=1
+      titles=()
+      for addon in "${members[@]}"; do
+        [[ -n "${ticked[$addon]+set}" ]] && default=y
+        titles+=("$(addon_title "$addon")")
+      done
+      read -r -p "Track $title ($(joined "${titles[@]}"))? [y/n, default $default] " answer
+      [[ "${answer:-$default}" == [yY]* ]] || continue
+      for addon in "${members[@]}"; do
+        if [[ ${#members[@]} -eq 1 ]]; then
+          wanted[$addon]=1
+        else
+          default=n
+          [[ -n "${ticked[$addon]+set}" ]] && default=y
+          read -r -p "  The $addon add-on? It ${addon_descriptions[$addon]}. [y/n, default $default] " answer
+          [[ "${answer:-$default}" == [yY]* ]] && wanted[$addon]=1
+        fi
+        # What some add-ons collect is a setting of its own.
+        if [[ -n "${wanted[$addon]+set}" && -n "${addon_switches[$addon]+set}" ]]; then
+          switch="${addon_switches[$addon]}"
+          default=y
+          [[ "$(setting "$switch")" == 0 ]] && default=n
+          read -r -p "    ${switch_questions[$switch]} [y/n, default $default] " answer
+          if [[ "${answer:-$default}" == [yY]* ]]; then
+            switches[$switch]=1
+          else
+            switches[$switch]=0
+          fi
+        fi
+      done
     done
   fi
 else
@@ -223,7 +359,7 @@ router_password=""
 router_name=""
 router_remove=""
 kind=""
-data_only="$(sed -n 's/^DATA_ONLY=//p' "$settings" 2> /dev/null | tail -n 1 | tr -d '[:space:]"'\''' || true)"
+data_only="$(setting DATA_ONLY)"
 if [[ -t 0 && "${1:-}" != --addons=* && ! "$data_only" =~ ^(1|t|T|true|TRUE|True)$ ]]; then
   # No settings file yet on a first install.
   current="$(sed -n 's/^HUB_ROUTERS=//p' "$settings" 2> /dev/null | tail -n 1 || true)"
@@ -336,6 +472,14 @@ for addon in "${!addon_descriptions[@]}"; do
     install -m 0644 "$here/den-watcher-$addon.service" "/etc/systemd/system/den-watcher-$addon.service"
   else
     remove_addon "$addon"
+  fi
+done
+for switch in "${!switches[@]}"; do
+  # Settings files from before the setting have no line for it yet.
+  if grep -q "^$switch=" "$settings"; then
+    sed -i "s|^$switch=.*|$switch=${switches[$switch]}|" "$settings"
+  else
+    printf '\n%s=%s\n' "$switch" "${switches[$switch]}" >> "$settings"
   fi
 done
 if [[ -n "$router_entry" || -n "$router_remove" ]]; then

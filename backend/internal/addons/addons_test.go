@@ -194,3 +194,18 @@ func TestWarnReadLogsOnceAndNotForAMissingFile(t *testing.T) {
 		t.Errorf("a missing file was logged:\n%s", log.String())
 	}
 }
+
+func TestSwitchOnIsOnUnlessZero(t *testing.T) {
+	for value, want := range map[string]bool{
+		"":    true,
+		" ":   true,
+		"1":   true,
+		"0":   false,
+		" 0 ": false,
+		"no":  true,
+	} {
+		if got := SwitchOn("WIFI_NEARBY", value); got != want {
+			t.Errorf("SwitchOn(WIFI_NEARBY, %q) = %v, want %v", value, got, want)
+		}
+	}
+}
