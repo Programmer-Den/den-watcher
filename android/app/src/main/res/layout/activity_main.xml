@@ -206,47 +206,47 @@
 
             <TextView
                 style="@style/Heading"
-                android:text="@string/tracking_title" />
+                android:text="@string/collect_title" />
 
             <TextView
-                android:id="@+id/tracking_hint"
+                android:id="@+id/collect_hint"
                 style="@style/Hint"
-                android:text="@string/tracking_hint" />
+                android:text="@string/collect_hint" />
 
             <Switch
-                android:id="@+id/track_system"
-                style="@style/TrackGroup"
-                android:text="@string/track_system" />
+                android:id="@+id/collect_system"
+                style="@style/CollectGroup"
+                android:text="@string/collect_system" />
 
             <Switch
-                android:id="@+id/track_battery"
-                style="@style/TrackItem"
-                android:text="@string/track_battery" />
+                android:id="@+id/collect_battery"
+                style="@style/CollectItem"
+                android:text="@string/collect_battery" />
 
             <Switch
-                android:id="@+id/track_memory"
-                style="@style/TrackItem"
-                android:text="@string/track_memory" />
+                android:id="@+id/collect_memory"
+                style="@style/CollectItem"
+                android:text="@string/collect_memory" />
 
             <Switch
-                android:id="@+id/track_storage"
-                style="@style/TrackItem"
-                android:text="@string/track_storage" />
+                android:id="@+id/collect_storage"
+                style="@style/CollectItem"
+                android:text="@string/collect_storage" />
 
             <Switch
-                android:id="@+id/track_network"
-                style="@style/TrackGroup"
-                android:text="@string/track_network" />
+                android:id="@+id/collect_network"
+                style="@style/CollectGroup"
+                android:text="@string/collect_network" />
 
             <Switch
-                android:id="@+id/track_traffic"
-                style="@style/TrackItem"
-                android:text="@string/track_traffic" />
+                android:id="@+id/collect_traffic"
+                style="@style/CollectItem"
+                android:text="@string/collect_traffic" />
 
             <Switch
-                android:id="@+id/track_nearby"
-                style="@style/TrackItem"
-                android:text="@string/track_nearby" />
+                android:id="@+id/collect_nearby"
+                style="@style/CollectItem"
+                android:text="@string/collect_nearby" />
         </LinearLayout>
 
         <LinearLayout style="@style/Card">

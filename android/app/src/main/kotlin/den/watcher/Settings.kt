@@ -85,25 +85,25 @@ class Settings(context: Context) {
         get() = prefs.getString(OTHER_NETWORK, null)
         set(value) = prefs.edit().putString(OTHER_NETWORK, value).apply()
 
-    /** What the app tracks, as picked under What to track; everything until something is switched off. */
-    var tracking: Tracking
-        get() = Tracking(
-            system = prefs.getBoolean(TRACK_SYSTEM, true),
-            battery = prefs.getBoolean(TRACK_BATTERY, true),
-            memory = prefs.getBoolean(TRACK_MEMORY, true),
-            storage = prefs.getBoolean(TRACK_STORAGE, true),
-            network = prefs.getBoolean(TRACK_NETWORK, true),
-            traffic = prefs.getBoolean(TRACK_TRAFFIC, true),
-            nearby = prefs.getBoolean(TRACK_NEARBY, true),
+    /** Which data the app collects, as chosen on its screen; all of it until something is switched off. */
+    var dataChoice: DataChoice
+        get() = DataChoice(
+            system = prefs.getBoolean(COLLECT_SYSTEM, true),
+            battery = prefs.getBoolean(COLLECT_BATTERY, true),
+            memory = prefs.getBoolean(COLLECT_MEMORY, true),
+            storage = prefs.getBoolean(COLLECT_STORAGE, true),
+            network = prefs.getBoolean(COLLECT_NETWORK, true),
+            traffic = prefs.getBoolean(COLLECT_TRAFFIC, true),
+            nearby = prefs.getBoolean(COLLECT_NEARBY, true),
         )
         set(value) = prefs.edit()
-            .putBoolean(TRACK_SYSTEM, value.system)
-            .putBoolean(TRACK_BATTERY, value.battery)
-            .putBoolean(TRACK_MEMORY, value.memory)
-            .putBoolean(TRACK_STORAGE, value.storage)
-            .putBoolean(TRACK_NETWORK, value.network)
-            .putBoolean(TRACK_TRAFFIC, value.traffic)
-            .putBoolean(TRACK_NEARBY, value.nearby)
+            .putBoolean(COLLECT_SYSTEM, value.system)
+            .putBoolean(COLLECT_BATTERY, value.battery)
+            .putBoolean(COLLECT_MEMORY, value.memory)
+            .putBoolean(COLLECT_STORAGE, value.storage)
+            .putBoolean(COLLECT_NETWORK, value.network)
+            .putBoolean(COLLECT_TRAFFIC, value.traffic)
+            .putBoolean(COLLECT_NEARBY, value.nearby)
             .apply()
 
     /** When the newest scan of the networks nearby that was kept was made, in Unix seconds. */
@@ -155,13 +155,13 @@ class Settings(context: Context) {
         const val USUAL_NETWORKS = "usualNetworks"
         const val OTHER_NETWORK = "otherNetwork"
         const val LAST_SCAN = "lastScan"
-        const val TRACK_SYSTEM = "trackSystem"
-        const val TRACK_BATTERY = "trackBattery"
-        const val TRACK_MEMORY = "trackMemory"
-        const val TRACK_STORAGE = "trackStorage"
-        const val TRACK_NETWORK = "trackNetwork"
-        const val TRACK_TRAFFIC = "trackTraffic"
-        const val TRACK_NEARBY = "trackNearby"
+        const val COLLECT_SYSTEM = "collectSystem"
+        const val COLLECT_BATTERY = "collectBattery"
+        const val COLLECT_MEMORY = "collectMemory"
+        const val COLLECT_STORAGE = "collectStorage"
+        const val COLLECT_NETWORK = "collectNetwork"
+        const val COLLECT_TRAFFIC = "collectTraffic"
+        const val COLLECT_NEARBY = "collectNearby"
     }
 }
 

@@ -69,11 +69,11 @@ class Screenshots {
     }
 
     @Test
-    fun tracking() = shot("10-tracking") {
+    fun dataChoice() = shot("10-data-choice") {
         hubAddress = "192.168.1.20:9393"
         recording = true
         lastPush = LAST_PUSH
-        tracking = Tracking(storage = false, network = false)
+        dataChoice = DataChoice(storage = false, network = false)
     }
 
     @Test

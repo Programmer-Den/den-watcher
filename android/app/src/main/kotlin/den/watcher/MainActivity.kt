@@ -22,9 +22,9 @@ import com.google.zxing.integration.android.IntentIntegrator
 /**
  * The app's only screen, in cards as on the website: how recording goes,
  * with a dot as on the hub's page, the pairing code to enter on the hub,
- * the hub's address, scanned from the hub's page, what to track and what is
- * sent. Once the hub took a push, the hub's address, stopping and what to
- * track are locked until the hub allows a change.
+ * the hub's address, scanned from the hub's page, which data to collect and
+ * what is sent. Once the hub took a push, the hub's address, stopping and
+ * which data to collect are locked until the hub allows a change.
  */
 class MainActivity : Activity() {
     private lateinit var settings: Settings
@@ -38,7 +38,7 @@ class MainActivity : Activity() {
     private lateinit var dot: View
     private lateinit var openHub: Button
     private val handler = Handler(Looper.getMainLooper())
-    private var showingTracking = false
+    private var showingDataChoice = false
 
     private val refresh = object : Runnable {
         override fun run() {
@@ -82,46 +82,46 @@ class MainActivity : Activity() {
 
         findViewById<Button>(R.id.nearby).setOnClickListener { allowNearby() }
 
-        for ((id, change) in trackingSwitches) {
+        for ((id, change) in dataSwitches) {
             findViewById<Switch>(id).setOnCheckedChangeListener { _, on ->
-                // Only the user changes it, not showTracking setting the switches.
-                if (!showingTracking) {
-                    settings.tracking = settings.tracking.change(on)
-                    showTracking()
+                // Only the user changes it, not showDataChoice setting the switches.
+                if (!showingDataChoice) {
+                    settings.dataChoice = settings.dataChoice.change(on)
+                    showDataChoice()
                 }
             }
         }
     }
 
-    /** Each switch under What to track, with how it changes what is tracked. */
-    private val trackingSwitches: List<Pair<Int, Tracking.(Boolean) -> Tracking>> = listOf(
-        R.id.track_system to { on -> copy(system = on) },
-        R.id.track_battery to { on -> copy(battery = on) },
-        R.id.track_memory to { on -> copy(memory = on) },
-        R.id.track_storage to { on -> copy(storage = on) },
-        R.id.track_network to { on -> copy(network = on) },
-        R.id.track_traffic to { on -> copy(traffic = on) },
-        R.id.track_nearby to { on -> copy(nearby = on) },
+    /** Each switch under Which data do you want to collect, with how it changes the choice. */
+    private val dataSwitches: List<Pair<Int, DataChoice.(Boolean) -> DataChoice>> = listOf(
+        R.id.collect_system to { on -> copy(system = on) },
+        R.id.collect_battery to { on -> copy(battery = on) },
+        R.id.collect_memory to { on -> copy(memory = on) },
+        R.id.collect_storage to { on -> copy(storage = on) },
+        R.id.collect_network to { on -> copy(network = on) },
+        R.id.collect_traffic to { on -> copy(traffic = on) },
+        R.id.collect_nearby to { on -> copy(nearby = on) },
     )
 
     /**
-     * What is tracked: a group's switches below it are greyed out while it
+     * Which data is collected: a group's switches below it are greyed out while it
      * is off, and all of them while the hub locks the phone, as switching
      * everything off would stop recording.
      */
-    private fun showTracking() {
-        val tracking = settings.tracking
+    private fun showDataChoice() {
+        val choice = settings.dataChoice
         val locked = settings.locked()
         val switches = mapOf(
-            R.id.track_system to (tracking.system to true),
-            R.id.track_battery to (tracking.battery to tracking.system),
-            R.id.track_memory to (tracking.memory to tracking.system),
-            R.id.track_storage to (tracking.storage to tracking.system),
-            R.id.track_network to (tracking.network to true),
-            R.id.track_traffic to (tracking.traffic to tracking.network),
-            R.id.track_nearby to (tracking.nearby to tracking.network),
+            R.id.collect_system to (choice.system to true),
+            R.id.collect_battery to (choice.battery to choice.system),
+            R.id.collect_memory to (choice.memory to choice.system),
+            R.id.collect_storage to (choice.storage to choice.system),
+            R.id.collect_network to (choice.network to true),
+            R.id.collect_traffic to (choice.traffic to choice.network),
+            R.id.collect_nearby to (choice.nearby to choice.network),
         )
-        showingTracking = true
+        showingDataChoice = true
         for ((id, state) in switches) {
             val (on, groupOn) = state
             findViewById<Switch>(id).apply {
@@ -130,8 +130,8 @@ class MainActivity : Activity() {
                 alpha = if (isEnabled) 1f else DISABLED_ALPHA
             }
         }
-        showingTracking = false
-        findViewById<TextView>(R.id.tracking_hint).setText(if (locked) R.string.tracking_locked else R.string.tracking_hint)
+        showingDataChoice = false
+        findViewById<TextView>(R.id.collect_hint).setText(if (locked) R.string.collect_locked else R.string.collect_hint)
     }
 
     /**
@@ -285,7 +285,7 @@ class MainActivity : Activity() {
         other?.let { findViewById<TextView>(R.id.network).text = getString(R.string.network_notice, it) }
         openHub.visibility = if (HubAddress.pageUrl(settings.hubAddress) == null) View.GONE else View.VISIBLE
         showNearby()
-        showTracking()
+        showDataChoice()
     }
 
     /** The hub's address, and whether it and stopping are locked or the hub allows a change. */

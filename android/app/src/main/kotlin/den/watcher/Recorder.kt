@@ -17,15 +17,15 @@ object Recorder {
     fun recordAndPush(context: Context) {
         val app = context.applicationContext
         val settings = Settings(app)
-        val tracking = settings.tracking
-        val reading = Sampler.read(app).limitedTo(tracking)
+        val choice = settings.dataChoice
+        val reading = Sampler.read(app).limitedTo(choice)
         val rates = reading.ratesSince(settings.lastReading)
         settings.lastReading = reading
         Store(app).use { store ->
             store.add(reading.time, reading.values(rates))
             // A scan is kept once, when Android scanned again since, also
-            // after the clock went back; none while they are not tracked.
-            val scan = if (tracking.tracksNearby) Nearby.read(app, reading.time) else null
+            // after the clock went back; none while they are not collected.
+            val scan = if (choice.collectsNearby) Nearby.read(app, reading.time) else null
             scan?.takeIf { it.time > settings.lastScan || settings.lastScan > reading.time }?.let {
                 store.addScan(it)
                 settings.lastScan = it.time

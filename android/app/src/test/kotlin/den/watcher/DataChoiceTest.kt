@@ -6,7 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class TrackingTest {
+class DataChoiceTest {
     private val reading = Reading(
         time = 1_000,
         uptimeSeconds = 500,
@@ -22,13 +22,13 @@ class TrackingTest {
 
     @Test
     fun keepsEverythingByDefault() {
-        assertEquals(reading, reading.limitedTo(Tracking()))
-        assertTrue(Tracking().tracksNearby)
+        assertEquals(reading, reading.limitedTo(DataChoice()))
+        assertTrue(DataChoice().collectsNearby)
     }
 
     @Test
     fun leavesOutWhatIsSwitchedOff() {
-        val limited = reading.limitedTo(Tracking(battery = false, storage = false, traffic = false))
+        val limited = reading.limitedTo(DataChoice(battery = false, storage = false, traffic = false))
         assertNull(limited.batteryPercent)
         assertNull(limited.batteryCelsius)
         assertFalse(limited.pluggedIn)
@@ -41,11 +41,11 @@ class TrackingTest {
 
     @Test
     fun aGroupSwitchedOffLeavesOutAllOfIt() {
-        val noSystem = Tracking(system = false)
-        assertFalse(noSystem.tracksBattery || noSystem.tracksMemory || noSystem.tracksStorage)
-        assertTrue(noSystem.tracksTraffic && noSystem.tracksNearby)
-        val noNetwork = Tracking(network = false)
-        assertFalse(noNetwork.tracksTraffic || noNetwork.tracksNearby)
+        val noSystem = DataChoice(system = false)
+        assertFalse(noSystem.collectsBattery || noSystem.collectsMemory || noSystem.collectsStorage)
+        assertTrue(noSystem.collectsTraffic && noSystem.collectsNearby)
+        val noNetwork = DataChoice(network = false)
+        assertFalse(noNetwork.collectsTraffic || noNetwork.collectsNearby)
         assertTrue(reading.limitedTo(noNetwork).traffic.isEmpty())
         assertEquals(0L, reading.limitedTo(noSystem).memoryTotalBytes)
     }
