@@ -85,6 +85,27 @@ class Settings(context: Context) {
         get() = prefs.getString(OTHER_NETWORK, null)
         set(value) = prefs.edit().putString(OTHER_NETWORK, value).apply()
 
+    /** What the app tracks, as picked under What to track; everything until something is switched off. */
+    var tracking: Tracking
+        get() = Tracking(
+            system = prefs.getBoolean(TRACK_SYSTEM, true),
+            battery = prefs.getBoolean(TRACK_BATTERY, true),
+            memory = prefs.getBoolean(TRACK_MEMORY, true),
+            storage = prefs.getBoolean(TRACK_STORAGE, true),
+            network = prefs.getBoolean(TRACK_NETWORK, true),
+            traffic = prefs.getBoolean(TRACK_TRAFFIC, true),
+            nearby = prefs.getBoolean(TRACK_NEARBY, true),
+        )
+        set(value) = prefs.edit()
+            .putBoolean(TRACK_SYSTEM, value.system)
+            .putBoolean(TRACK_BATTERY, value.battery)
+            .putBoolean(TRACK_MEMORY, value.memory)
+            .putBoolean(TRACK_STORAGE, value.storage)
+            .putBoolean(TRACK_NETWORK, value.network)
+            .putBoolean(TRACK_TRAFFIC, value.traffic)
+            .putBoolean(TRACK_NEARBY, value.nearby)
+            .apply()
+
     /** When the newest scan of the networks nearby that was kept was made, in Unix seconds. */
     var lastScan: Long
         get() = prefs.getLong(LAST_SCAN, 0)
@@ -134,6 +155,13 @@ class Settings(context: Context) {
         const val USUAL_NETWORKS = "usualNetworks"
         const val OTHER_NETWORK = "otherNetwork"
         const val LAST_SCAN = "lastScan"
+        const val TRACK_SYSTEM = "trackSystem"
+        const val TRACK_BATTERY = "trackBattery"
+        const val TRACK_MEMORY = "trackMemory"
+        const val TRACK_STORAGE = "trackStorage"
+        const val TRACK_NETWORK = "trackNetwork"
+        const val TRACK_TRAFFIC = "trackTraffic"
+        const val TRACK_NEARBY = "trackNearby"
     }
 }
 

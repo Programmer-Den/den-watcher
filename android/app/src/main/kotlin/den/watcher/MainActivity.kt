@@ -14,6 +14,7 @@ import android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS
 import android.text.format.DateFormat
 import android.view.View
 import android.widget.Button
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import com.google.zxing.integration.android.IntentIntegrator
@@ -21,9 +22,9 @@ import com.google.zxing.integration.android.IntentIntegrator
 /**
  * The app's only screen, in cards as on the website: how recording goes,
  * with a dot as on the hub's page, the pairing code to enter on the hub,
- * the hub's address, scanned from the hub's page, and what is sent. Once
- * the hub took a push, the hub's address and stopping are locked until the
- * hub allows a change.
+ * the hub's address, scanned from the hub's page, what to track and what is
+ * sent. Once the hub took a push, the hub's address, stopping and what to
+ * track are locked until the hub allows a change.
  */
 class MainActivity : Activity() {
     private lateinit var settings: Settings
@@ -37,6 +38,7 @@ class MainActivity : Activity() {
     private lateinit var dot: View
     private lateinit var openHub: Button
     private val handler = Handler(Looper.getMainLooper())
+    private var showingTracking = false
 
     private val refresh = object : Runnable {
         override fun run() {
@@ -79,6 +81,57 @@ class MainActivity : Activity() {
         }
 
         findViewById<Button>(R.id.nearby).setOnClickListener { allowNearby() }
+
+        for ((id, change) in trackingSwitches) {
+            findViewById<Switch>(id).setOnCheckedChangeListener { _, on ->
+                // Only the user changes it, not showTracking setting the switches.
+                if (!showingTracking) {
+                    settings.tracking = settings.tracking.change(on)
+                    showTracking()
+                }
+            }
+        }
+    }
+
+    /** Each switch under What to track, with how it changes what is tracked. */
+    private val trackingSwitches: List<Pair<Int, Tracking.(Boolean) -> Tracking>> = listOf(
+        R.id.track_system to { on -> copy(system = on) },
+        R.id.track_battery to { on -> copy(battery = on) },
+        R.id.track_memory to { on -> copy(memory = on) },
+        R.id.track_storage to { on -> copy(storage = on) },
+        R.id.track_network to { on -> copy(network = on) },
+        R.id.track_traffic to { on -> copy(traffic = on) },
+        R.id.track_nearby to { on -> copy(nearby = on) },
+    )
+
+    /**
+     * What is tracked: a group's switches below it are greyed out while it
+     * is off, and all of them while the hub locks the phone, as switching
+     * everything off would stop recording.
+     */
+    private fun showTracking() {
+        val tracking = settings.tracking
+        val locked = settings.locked()
+        val switches = mapOf(
+            R.id.track_system to (tracking.system to true),
+            R.id.track_battery to (tracking.battery to tracking.system),
+            R.id.track_memory to (tracking.memory to tracking.system),
+            R.id.track_storage to (tracking.storage to tracking.system),
+            R.id.track_network to (tracking.network to true),
+            R.id.track_traffic to (tracking.traffic to tracking.network),
+            R.id.track_nearby to (tracking.nearby to tracking.network),
+        )
+        showingTracking = true
+        for ((id, state) in switches) {
+            val (on, groupOn) = state
+            findViewById<Switch>(id).apply {
+                isChecked = on
+                isEnabled = groupOn && !locked
+                alpha = if (isEnabled) 1f else DISABLED_ALPHA
+            }
+        }
+        showingTracking = false
+        findViewById<TextView>(R.id.tracking_hint).setText(if (locked) R.string.tracking_locked else R.string.tracking_hint)
     }
 
     /**
@@ -232,6 +285,7 @@ class MainActivity : Activity() {
         other?.let { findViewById<TextView>(R.id.network).text = getString(R.string.network_notice, it) }
         openHub.visibility = if (HubAddress.pageUrl(settings.hubAddress) == null) View.GONE else View.VISIBLE
         showNearby()
+        showTracking()
     }
 
     /** The hub's address, and whether it and stopping are locked or the hub allows a change. */
@@ -303,5 +357,6 @@ class MainActivity : Activity() {
     private companion object {
         const val REFRESH_MILLIS = 5_000L
         const val NEARBY_REQUEST = 1
+        const val DISABLED_ALPHA = 0.5f
     }
 }

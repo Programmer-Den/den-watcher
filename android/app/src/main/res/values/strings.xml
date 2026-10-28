@@ -32,7 +32,7 @@
     <string name="battery_hint">Some phones stop apps in the background to save battery. If the hub misses hours, let Den-Watcher run without battery restrictions.</string>
     <string name="battery">Battery settings</string>
     <string name="data_title">What is sent</string>
-    <string name="data_hint">The battery\'s charge and temperature, memory and storage used, the traffic of Wi-Fi and mobile data and, if you allow it, the Wi-Fi networks nearby, only to the hub on your network. Android lets no app read how busy the processor is.</string>
+    <string name="data_hint">Of what is switched on under What to track: the battery\'s charge and temperature, memory and storage used, the traffic of Wi-Fi and mobile data and, if you allow it, the Wi-Fi networks nearby, only to the hub on your network. Android lets no app read how busy the processor is.</string>
     <string name="channel_name">Recording</string>
     <string name="channel_description">Shown while the app records the usage, as Android asks for.</string>
     <string name="notification_title">Recording this phone\'s usage</string>
@@ -49,4 +49,14 @@
     <string name="nearby_allow">Allow</string>
     <string name="nearby_allow_always">Allow all the time</string>
     <string name="nearby_settings">App settings</string>
+    <string name="tracking_title">What to track</string>
+    <string name="tracking_hint">In the same groups as Den-Watcher\'s installers. What is switched off is neither read nor sent.</string>
+    <string name="tracking_locked">Locked by the hub, like the hub\'s address.</string>
+    <string name="track_system">System basics</string>
+    <string name="track_battery">Battery: charge and temperature</string>
+    <string name="track_memory">Memory used</string>
+    <string name="track_storage">Storage used</string>
+    <string name="track_network">Network</string>
+    <string name="track_traffic">Traffic of Wi-Fi and mobile data</string>
+    <string name="track_nearby">Wi-Fi networks nearby</string>
 </resources>

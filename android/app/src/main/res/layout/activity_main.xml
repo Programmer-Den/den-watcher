@@ -206,6 +206,53 @@
 
             <TextView
                 style="@style/Heading"
+                android:text="@string/tracking_title" />
+
+            <TextView
+                android:id="@+id/tracking_hint"
+                style="@style/Hint"
+                android:text="@string/tracking_hint" />
+
+            <Switch
+                android:id="@+id/track_system"
+                style="@style/TrackGroup"
+                android:text="@string/track_system" />
+
+            <Switch
+                android:id="@+id/track_battery"
+                style="@style/TrackItem"
+                android:text="@string/track_battery" />
+
+            <Switch
+                android:id="@+id/track_memory"
+                style="@style/TrackItem"
+                android:text="@string/track_memory" />
+
+            <Switch
+                android:id="@+id/track_storage"
+                style="@style/TrackItem"
+                android:text="@string/track_storage" />
+
+            <Switch
+                android:id="@+id/track_network"
+                style="@style/TrackGroup"
+                android:text="@string/track_network" />
+
+            <Switch
+                android:id="@+id/track_traffic"
+                style="@style/TrackItem"
+                android:text="@string/track_traffic" />
+
+            <Switch
+                android:id="@+id/track_nearby"
+                style="@style/TrackItem"
+                android:text="@string/track_nearby" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/Card">
+
+            <TextView
+                style="@style/Heading"
                 android:text="@string/data_title" />
 
             <TextView

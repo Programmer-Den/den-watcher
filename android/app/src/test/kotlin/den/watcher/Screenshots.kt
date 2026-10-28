@@ -69,6 +69,14 @@ class Screenshots {
     }
 
     @Test
+    fun tracking() = shot("10-tracking") {
+        hubAddress = "192.168.1.20:9393"
+        recording = true
+        lastPush = LAST_PUSH
+        tracking = Tracking(storage = false, network = false)
+    }
+
+    @Test
     fun german() = shot("5-german", "de") {
         hubAddress = "192.168.1.20:9393"
         recording = true
