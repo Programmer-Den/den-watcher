@@ -25,6 +25,7 @@ import {
   channelUse,
   homeNetwork,
   homeRows,
+  lowerAsHub,
   networkBoxes,
   networkRows,
   placeSignals,
@@ -482,7 +483,7 @@ export class WifiNearby {
     if (!signals || !this.nameFits(name) || !this.placesKnown()) {
       return;
     }
-    const others = this.named().filter((p) => p.name.toLowerCase() !== name.toLowerCase());
+    const others = this.named().filter((p) => lowerAsHub(p.name) !== lowerAsHub(name));
     this.savePlaces([...others, { name, signals }], () => this.naming.set(null));
   }
 

@@ -450,9 +450,18 @@ export interface WiFiChange {
   fromMHz?: number;
 }
 
+/**
+ * A name in lower case as the hub lowers it (Go's strings.ToLower): letter by letter, so that, unlike
+ * toLowerCase, "İ" is "i" and a closing "Σ" is "σ", and the page and the hub agree on which names
+ * are alike.
+ */
+export function lowerAsHub(name: string): string {
+  return Array.from(name, (c) => Array.from(c.toLowerCase())[0]).join('');
+}
+
 /** A network name as lookalikes are compared: without case, spaces, hyphens and underscores. */
 export function foldSSID(ssid: string): string {
-  return ssid.toLowerCase().replace(/[ _-]/g, '');
+  return lowerAsHub(ssid).replace(/[ _-]/g, '');
 }
 
 /**
@@ -466,17 +475,33 @@ function securityKinds(security: string): string[] {
 }
 
 /**
- * Whether two securities, such as "WPA2/WPA3" and "WPA2", have a kind in common. Across bands, one
- * at 6 GHz and one below, WPA3 also counts as WPA2 and OWE as Open: Wi-Fi 6E allows only WPA3 and
- * OWE there, which a mesh with WPA2 or Open below has to use, as the alert compares.
+ * Whether other, which sends a network named like own, has a kind of security in common with it,
+ * such as "WPA2/WPA3" with "WPA2", as the alert compares. Wi-Fi 6E allows only WPA3 and OWE at 6
+ * GHz, which a mesh with WPA2 or Open below has to use there: so other's WPA3 at 6 GHz, which
+ * catches no password, also counts as WPA2 next to own below, and OWE as Open. Own at 6 GHz also
+ * has the securities its router, of aps, sends the network with below; a WPA2 or Open copy below
+ * of a network sent only with WPA3 is still one, as it can catch what devices send to join it.
  */
-function sharesSecurity(a: string, b: string, acrossBands = false): boolean {
-  const kindsOf = (security: string) => {
-    const kinds = securityKinds(security);
-    return acrossBands ? [...kinds, ...belowSixGHz(kinds)] : kinds;
-  };
-  const kinds = kindsOf(b);
-  return kindsOf(a).some((kind) => kinds.includes(kind));
+function sharesSecurity(
+  other: WiFiAccessPoint,
+  own: WiFiAccessPoint,
+  aps: WiFiAccessPoint[],
+): boolean {
+  let kindsOther = securityKinds(other.security!);
+  let kindsOwn = securityKinds(own.security!);
+  if (sixGHz(other) && !sixGHz(own)) {
+    kindsOther = [...kindsOther, ...belowSixGHz(kindsOther)];
+  } else if (sixGHz(own) && !sixGHz(other)) {
+    const below = aps.filter(
+      (ap) =>
+        ap.box === own.box &&
+        !sixGHz(ap) &&
+        ap.security &&
+        foldSSID(ap.ssid ?? '') === foldSSID(own.ssid ?? ''),
+    );
+    kindsOwn = [...kindsOwn, ...below.flatMap((ap) => securityKinds(ap.security!))];
+  }
+  return kindsOther.some((kind) => kindsOwn.includes(kind));
 }
 
 /** What the kinds of a security sent at 6 GHz are sent as below it: WPA3 as WPA2, OWE as Open. */
@@ -540,7 +565,6 @@ export function wifiChanges(history: WiFiHistory): WiFiChange[] {
   const homeAPs = (home && named.get(home)) || [];
   const joinedTimes = (ap: WiFiAccessPoint) =>
     ap.seenBy.reduce((sum, s) => sum + s.points.reduce((n, p) => n + (p.connected ?? 0), 0), 0);
-  const across = (a: WiFiAccessPoint, b: WiFiAccessPoint) => sixGHz(a) !== sixGHz(b);
   // The access point the devices were connected to most is the home network's; one they were
   // connected to that shares no security with it is a copy a device joined, not a router of home.
   const reference = homeAPs
@@ -550,9 +574,7 @@ export function wifiChanges(history: WiFiHistory): WiFiChange[] {
       undefined,
     );
   const copy = (ap: WiFiAccessPoint) =>
-    !!reference &&
-    !!ap.security &&
-    !sharesSecurity(ap.security, reference.security!, across(ap, reference));
+    !!reference && !!ap.security && !sharesSecurity(ap, reference, history.accessPoints);
   const homeBoxes = new Set(
     homeAPs.filter((ap) => joinedTimes(ap) > 0 && !copy(ap)).map((ap) => ap.box),
   );
@@ -562,7 +584,7 @@ export function wifiChanges(history: WiFiHistory): WiFiChange[] {
   const otherSecurity = (ap: WiFiAccessPoint) =>
     !!ap.security &&
     joined.length > 0 &&
-    !joined.some((own) => sharesSecurity(ap.security!, own.security!, across(ap, own)));
+    !joined.some((own) => sharesSecurity(ap, own, history.accessPoints));
   const earliest = (aps: WiFiAccessPoint[]) =>
     aps.reduce((a, b) => (b.firstSeen < a.firstSeen ? b : a));
   const changes: WiFiChange[] = [];
