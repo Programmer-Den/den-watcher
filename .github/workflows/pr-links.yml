@@ -54,11 +54,15 @@ jobs:
               h === 'github.com' || h.endsWith('.github.com') || h.endsWith('.githubusercontent.com') ||
               h === pages;
 
+            // GitHub's pages about Copilot are AI links all the same (AGENTS.md, "No AI
+            // Links"), as ci/check-no-ai-links.sh counts them in the files.
+            const copilot = /^(?:[a-z][a-z0-9+.-]*:\/\/)?(?:www\.)?(?:copilot\.github\.com|github\.com\/(?:features\/)?copilot(?![a-z0-9-])|docs\.github\.com\/\S*copilot)/i;
+
             const linksOutside = (text, where) =>
               text.split(/\r?\n/).flatMap((line, i) =>
                 [...line.matchAll(link)]
                   .map(m => m[0])
-                  .filter(url => !onGitHub(host(url)))
+                  .filter(url => !onGitHub(host(url)) || copilot.test(url))
                   .map(url => `${where}, line ${i + 1}: ${url}`));
 
             const everyPage = (list, params) => github.paginate(list, { ...context.repo, ...params, per_page: 100 });
@@ -81,7 +85,7 @@ jobs:
             ];
 
             if (hits.length > 0) {
-              core.setFailed(`PR links outside GitHub; edit the title, description or comment, or reword the commits and the check re-runs:\n${hits.join('\n')}`);
+              core.setFailed(`PR links outside GitHub or to Copilot; edit the title, description or comment, or reword the commits and the check re-runs:\n${hits.join('\n')}`);
             } else {
               console.log(`PR title, description, ${commits.length} commit message(s), ${comments.length} comment(s), ${reviews.length} review(s) and ${reviewComments.length} review comment(s) link only to GitHub.`);
             }
