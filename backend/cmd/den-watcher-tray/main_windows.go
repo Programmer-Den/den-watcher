@@ -170,6 +170,9 @@ func (t *tray) refresh() {
 	} else {
 		t.openPage.Hide()
 	}
+	// A service that is still stopping cannot be started yet, so the toggle
+	// waits until it has stopped.
+	t.toggle.Enable()
 	switch {
 	case t.state == stateMissing:
 		t.toggle.Hide()
@@ -177,12 +180,15 @@ func (t *tray) refresh() {
 	case t.state.running():
 		t.toggle.SetTitle(t.text.pause)
 		t.toggle.Show()
-	case t.state == statePaused:
+	case t.state == statePaused || t.state == stateStopping && t.paused:
 		t.toggle.SetTitle(t.text.resume)
 		t.toggle.Show()
 	default:
 		t.toggle.SetTitle(t.text.start)
 		t.toggle.Show()
+	}
+	if t.state == stateStopping {
+		t.toggle.Disable()
 	}
 }
 
@@ -218,7 +224,8 @@ func (t *tray) handleClicks() {
 			}
 			t.checkNow()
 		case <-t.stop.ClickedCh:
-			if err := stopService(); err != nil {
+			// A service that is gone has nothing to stop.
+			if err := stopService(); err != nil && !errors.Is(err, windows.ERROR_SERVICE_DOES_NOT_EXIST) {
 				showError(fmt.Sprintf(t.text.stopFailed, err))
 				t.checkNow()
 				continue
