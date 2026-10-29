@@ -136,9 +136,11 @@ func smartFailures(base Alert, extras []metrics.Extra) []Alert {
 // compared without case, spaces, hyphens and underscores. Security counts as
 // other only when the two have no kind in common, so a mesh router that
 // offers WPA2 next to one with WPA2/WPA3 is none, and an access point whose
-// security is unknown is left out. One at 6 GHz is not compared with one
-// below: Wi-Fi 6E allows only WPA3 and OWE there, which a mesh with WPA2
-// below has to use, and which catches no WPA2 password.
+// security is unknown is left out. Between one at 6 GHz and one below, WPA3
+// counts as WPA2 and OWE as Open: Wi-Fi 6E allows only WPA3 and OWE there,
+// which a mesh with WPA2 or Open below has to use, and which catches no
+// password; an Open copy of a network the device joins at 6 GHz is still
+// told.
 func lookalikes(base Alert, nearby *metrics.NearbyWiFi) []Alert {
 	if nearby == nil {
 		return nil
@@ -149,11 +151,10 @@ func lookalikes(base Alert, nearby *metrics.NearbyWiFi) []Alert {
 			continue
 		}
 		for _, other := range nearby.AccessPoints {
-			if other.Box == home.Box || other.Security == "" || foldSSID(other.SSID) != foldSSID(home.SSID) ||
-				sixGHz(other) != sixGHz(home) {
+			if other.Box == home.Box || other.Security == "" || foldSSID(other.SSID) != foldSSID(home.SSID) {
 				continue
 			}
-			if sharesSecurity(other.Security, home.Security) {
+			if sharesSecurity(other.Security, home.Security, sixGHz(other) != sixGHz(home)) {
 				continue
 			}
 			a := base
@@ -167,7 +168,7 @@ func lookalikes(base Alert, nearby *metrics.NearbyWiFi) []Alert {
 
 // sixGHz reports whether an access point sends in the 6 GHz band.
 func sixGHz(ap metrics.NearbyAccessPoint) bool {
-	return ap.FrequencyMHz >= 5925
+	return ap.FrequencyMHz > 5925
 }
 
 // foldSSID returns a network name as lookalikes compares it.
@@ -195,13 +196,32 @@ func securityKinds(security string) []string {
 }
 
 // sharesSecurity reports whether two securities, such as "WPA2/WPA3" and
-// "WPA2", have a kind in common.
-func sharesSecurity(a, b string) bool {
-	kinds := securityKinds(b)
-	for _, kind := range securityKinds(a) {
-		if slices.Contains(kinds, kind) {
+// "WPA2", have a kind in common. Across bands, one at 6 GHz and one below,
+// WPA3 also counts as WPA2 and OWE as Open (see lookalikes).
+func sharesSecurity(a, b string, acrossBands bool) bool {
+	kindsA, kindsB := securityKinds(a), securityKinds(b)
+	if acrossBands {
+		kindsA, kindsB = append(kindsA, belowSixGHz(kindsA)...), append(kindsB, belowSixGHz(kindsB)...)
+	}
+	for _, kind := range kindsA {
+		if slices.Contains(kindsB, kind) {
 			return true
 		}
 	}
 	return false
+}
+
+// belowSixGHz returns what the kinds of a security sent at 6 GHz are sent as
+// below it: WPA3 as WPA2, and OWE as Open.
+func belowSixGHz(kinds []string) []string {
+	var below []string
+	for _, kind := range kinds {
+		switch {
+		case strings.HasPrefix(kind, "WPA3"):
+			below = append(below, "WPA2"+strings.TrimPrefix(kind, "WPA3"))
+		case strings.HasPrefix(kind, "OWE"):
+			below = append(below, "Open")
+		}
+	}
+	return below
 }
