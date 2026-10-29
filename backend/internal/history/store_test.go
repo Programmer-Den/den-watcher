@@ -3,6 +3,7 @@ package history
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -20,6 +21,23 @@ func openTestStore(t *testing.T) *Store {
 	}
 	t.Cleanup(func() { _ = store.Close() })
 	return store
+}
+
+func TestOpenTakesAPathWithURICharacters(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "50% #1?.db")
+	store, err := Open(context.Background(), path)
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	if err := store.DB().QueryRowContext(context.Background(), `SELECT 1`).Err(); err != nil {
+		t.Fatalf("query: %v", err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Errorf("the database is not at %s: %v", path, err)
+	}
 }
 
 func TestRangeAveragesEachStep(t *testing.T) {

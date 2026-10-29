@@ -63,6 +63,26 @@ func TestTheCertificateIsReplacedBeforeItEnds(t *testing.T) {
 	}
 }
 
+func TestTheCertificateStaysWhenANewOneCannotBeKept(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	certs, err := OpenCertificates(ctx, db)
+	if err != nil {
+		t.Fatalf("OpenCertificates() error = %v", err)
+	}
+	old := certs.Fingerprint()
+	if _, err := db.ExecContext(ctx, `DROP TABLE status_certificate`); err != nil {
+		t.Fatalf("drop the table: %v", err)
+	}
+	certs.now = func() time.Time { return time.Now().Add(certificateLife - renewBefore) }
+	if _, err := certs.GetCertificate(&tls.ClientHelloInfo{}); err != nil {
+		t.Fatalf("GetCertificate() error = %v, want the current certificate", err)
+	}
+	if certs.Fingerprint() != old {
+		t.Error("the certificate was replaced by one that could not be kept")
+	}
+}
+
 func TestThePageIsServedOverTLSOnly(t *testing.T) {
 	ctx := context.Background()
 	certs, err := OpenCertificates(ctx, openTestDB(t))

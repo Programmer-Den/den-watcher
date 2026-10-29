@@ -5,6 +5,7 @@
 package alerts
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"fmt"
@@ -341,7 +342,7 @@ func sortAlerts(list []Alert) {
 		if c := a.Started.Compare(b.Started); c != 0 {
 			return c
 		}
-		return int(a.ID - b.ID)
+		return cmp.Compare(a.ID, b.ID)
 	})
 }
 

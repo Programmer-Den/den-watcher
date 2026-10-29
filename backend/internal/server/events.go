@@ -1,6 +1,7 @@
 package server
 
 import (
+	"cmp"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -84,7 +85,7 @@ func eventsHandler(d Device, alertLog AlertLog, eventLog EventLog, retention tim
 			list = append(list, event{Kind: string(e.Kind), Time: e.Time.Unix(), Detail: e.Detail})
 		}
 
-		slices.SortStableFunc(list, func(a, b event) int { return int(a.Time - b.Time) })
+		slices.SortStableFunc(list, func(a, b event) int { return cmp.Compare(a.Time, b.Time) })
 		writeJSON(w, http.StatusOK, eventsResponse{From: from, To: to, Events: list})
 	}
 }

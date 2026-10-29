@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -95,12 +96,17 @@ func Open(ctx context.Context, path string) (*Store, error) {
 	return store, nil
 }
 
+// uriPath escapes the characters of a file path that a SQLite URI reads as
+// the start of its query or fragment, or as an escape.
+var uriPath = strings.NewReplacer("%", "%25", "?", "%3f", "#", "%23")
+
 // openDB opens the SQLite file at path, which is created once something is
 // written to it.
 func openDB(path string) (*sql.DB, error) {
 	// WAL lets the page read while the recorder writes; the busy timeout waits
 	// for a write in progress instead of failing.
-	dsn := "file:" + path + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)"
+	// The path is escaped, as "?", "#" and "%" mean something in the URI.
+	dsn := "file:" + uriPath.Replace(path) + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)"
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err

@@ -398,6 +398,18 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 		slog.Warn("RESET_PASSWORD deleted the password for changing devices; the next change chooses a new one. Unset RESET_PASSWORD again.")
 	}
 
+	// Opened before the hub, which starts collecting, so an error here
+	// leaves nothing running.
+	pageLayout, err := layout.Open(ctx, store.DB())
+	if err != nil {
+		return server.Site{}, nil, err
+	}
+
+	wifiPlaces, err := places.Open(ctx, store.DB())
+	if err != nil {
+		return server.Site{}, nil, err
+	}
+
 	// The alerts and events are opened before the hub, which deletes them for
 	// every device it forgets, also while it starts. They look at the hub's
 	// devices only once they run.
@@ -418,16 +430,6 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 	}
 
 	others, err = hub.New(ctx, store, fixed, complete, historyEntries, retention, pagePort, sampler.Reusing(reuseFor), watcher.Forget, happenings.Forget)
-	if err != nil {
-		return server.Site{}, nil, err
-	}
-
-	pageLayout, err := layout.Open(ctx, store.DB())
-	if err != nil {
-		return server.Site{}, nil, err
-	}
-
-	wifiPlaces, err := places.Open(ctx, store.DB())
 	if err != nil {
 		return server.Site{}, nil, err
 	}

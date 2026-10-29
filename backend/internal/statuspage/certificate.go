@@ -12,6 +12,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"strings"
 	"sync"
@@ -22,6 +23,9 @@ const (
 	// certificateLife is how long a certificate is valid: the longest Apple's
 	// systems accept.
 	certificateLife = 825 * 24 * time.Hour
+	// renewRetry is how long after a new certificate could not be kept it is
+	// tried again.
+	renewRetry = time.Hour
 	// renewBefore is how long before it ends a certificate is replaced.
 	renewBefore = 30 * 24 * time.Hour
 )
@@ -44,6 +48,9 @@ type Certificates struct {
 
 	mu      sync.Mutex
 	current *tls.Certificate
+	// failed is when a new certificate could not be kept, so the current one,
+	// still valid, is served until renewRetry later.
+	failed time.Time
 }
 
 // OpenCertificates returns the certificate kept in db, making one when there
@@ -99,6 +106,10 @@ func (c *Certificates) certificate(ctx context.Context) (*tls.Certificate, error
 	if c.current != nil && now.Before(c.current.Leaf.NotAfter.Add(-renewBefore)) {
 		return c.current, nil
 	}
+	valid := c.current != nil && now.Before(c.current.Leaf.NotAfter)
+	if valid && now.Before(c.failed.Add(renewRetry)) {
+		return c.current, nil
+	}
 	der, key, err := makeCertificate(now)
 	if err != nil {
 		return nil, err
@@ -108,6 +119,12 @@ func (c *Certificates) certificate(ctx context.Context) (*tls.Certificate, error
 		return nil, err
 	}
 	if _, err := c.db.ExecContext(ctx, `INSERT OR REPLACE INTO status_certificate (id, certificate, key) VALUES (1, ?, ?)`, der, key); err != nil {
+		if valid {
+			// Visitors keep the certificate they know until a new one is kept.
+			slog.Warn("could not keep a new certificate for the status page, so the current one stays until it can", "ends", c.current.Leaf.NotAfter, "error", err)
+			c.failed = now
+			return c.current, nil
+		}
 		return nil, fmt.Errorf("keep the status page's certificate: %w", err)
 	}
 	c.current = cert
