@@ -234,6 +234,7 @@ func (s *Store) DeleteBefore(ctx context.Context, t time.Time) (int64, error) {
 	// back after they were deleted.
 	s.flushing.Lock()
 	s.pend.dropBefore(t.Unix())
+	s.wifi.dropBefore(t.Truncate(time.Hour).Unix())
 	s.flushing.Unlock()
 	// The primary key starts with the device, so each device's old minutes
 	// are one range of it; a time alone would read all of them.

@@ -129,6 +129,19 @@ func (p *wifiPending) forget(device string) {
 	}
 }
 
+// dropBefore drops the hours from before hour, which are older than the
+// retention, so what failed flushes put back does not grow without end and
+// is not written after the prune.
+func (p *wifiPending) dropBefore(hour int64) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for key := range p.sums {
+		if key.hour < hour {
+			delete(p.sums, key)
+		}
+	}
+}
+
 // take returns what waits and starts over.
 func (p *wifiPending) take() map[wifiKey]*wifiSum {
 	p.mu.Lock()
