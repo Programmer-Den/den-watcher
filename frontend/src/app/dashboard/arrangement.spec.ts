@@ -124,6 +124,13 @@ describe('Arrangement', () => {
     expect(sent().at(-1)!.pinned).toEqual(['fans', 'cpu', 'extra:wifi']);
   });
 
+  it('pins a card as the page showed it, also when the host had it pinned already', () => {
+    arrangement.togglePin('cpu');
+    answer({ pinned: ['cpu', 'fans'] });
+    expect(arrangement.pinned()).toEqual(['fans', 'cpu']);
+    expect(sent().map((l) => l.pinned)).toEqual([['fans', 'cpu']]);
+  });
+
   it('makes a value of the details a card once and puts it back', () => {
     answer({
       made: ['value:kernel/forks'],

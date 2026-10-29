@@ -299,10 +299,18 @@ export class Compare {
   }
 
   /**
-   * Why a row has no values: the device does not answer, its values did not come in time for the
-   * last read, or they are on their way.
+   * Why a row has no values: the device waits for its pairing code, does not answer, its values did
+   * not come in time for the last read, or they are on their way.
    */
   protected noValues(row: Row): string {
+    // Waiting for its pairing code, the device answers but sends no values.
+    if (row.device.pairing) {
+      return this.i18n.t(
+        row.device.pairing === 'wrong'
+          ? 'devicesDialog.pairingWrong'
+          : 'devicesDialog.pairingNeeded',
+      );
+    }
     if (row.device.unreachable) {
       return this.i18n.t(notInUse(row.device) ? 'devices.notInUse' : 'devices.unreachable');
     }

@@ -126,8 +126,11 @@ export class ChartEvents {
       switchMap((r) =>
         this.metrics.events(r!.from, r!.to, r!.device).pipe(
           tap((answer) => this.events.set({ device: r!.device, events: answer.events })),
-          // Without events the charts are still drawn, unmarked.
-          catchError(() => of(null)),
+          // Without events the charts are still drawn, unmarked, and the next range reads them again.
+          catchError(() => {
+            last = null;
+            return of(null);
+          }),
         ),
       ),
     );

@@ -124,13 +124,12 @@ export class FoldedCategories {
 
   /** Folds the section, or unfolds it when it is folded. */
   toggle(category: Section): void {
-    // The change works on the layout it is given, which is the host's newer one when it answers
-    // after the click.
-    this.layout.change((layout) => ({
-      ...layout,
-      folded: layout.folded.includes(category)
-        ? layout.folded.filter((c) => c !== category)
-        : [...layout.folded, category],
-    }));
+    // Whether to fold is decided by what the page shows now, so the change made again over a layout
+    // that already has it, as after an answer that was lost, does not undo it.
+    const fold = !this.layout.layout().folded.includes(category);
+    this.layout.change((layout) => {
+      const others = layout.folded.filter((c) => c !== category);
+      return { ...layout, folded: fold ? [...others, category] : others };
+    });
   }
 }

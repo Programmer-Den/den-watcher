@@ -1,4 +1,8 @@
-import { initials } from './device-item';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+
+import { DeviceItem, initials } from './device-item';
 
 describe('initials', () => {
   it('takes the first letters of up to three words', () => {
@@ -18,5 +22,28 @@ describe('initials', () => {
 
   it('is empty for an empty name', () => {
     expect(initials('')).toBe('');
+  });
+});
+
+describe('DeviceItem', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+  });
+
+  it('tells that a device waits for its pairing code instead of that it does not answer', () => {
+    const fixture = TestBed.createComponent(DeviceItem);
+    fixture.componentRef.setInput('device', {
+      id: 'nas',
+      name: 'NAS',
+      unreachable: true,
+      unreachableSince: 1_700_000_000,
+      pairing: 'needed',
+    });
+    fixture.detectChanges();
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button');
+    expect(button.title).toBe('Waits for its pairing code');
+    expect(button.querySelector('.detail')?.textContent?.trim()).toBe('Waits for its pairing code');
   });
 });
