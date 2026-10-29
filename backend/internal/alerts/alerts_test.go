@@ -507,4 +507,13 @@ func TestLookalikes(t *testing.T) {
 	if got := lookalikes(base, office); len(got) != 1 {
 		t.Errorf("a copy without Enterprise: %+v", got)
 	}
+
+	// A mesh with WPA2 sends WPA3 at 6 GHz, which Wi-Fi 6E allows only.
+	mesh := &metrics.NearbyWiFi{AccessPoints: []metrics.NearbyAccessPoint{
+		{ID: "m1", Box: "m1", SSID: "Den", Security: "WPA2", FrequencyMHz: 5180, Connected: true},
+		{ID: "m2", Box: "m2", SSID: "Den", Security: "WPA3", FrequencyMHz: 6115},
+	}}
+	if got := lookalikes(base, mesh); len(got) != 0 {
+		t.Errorf("another mesh router at 6 GHz: %+v", got)
+	}
 }
