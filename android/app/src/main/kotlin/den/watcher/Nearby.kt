@@ -60,6 +60,14 @@ object Nearby {
     /** Results Android saw longer ago than this are left out: it keeps the last ones it has. */
     private const val FRESH_SECONDS = 120L
 
+    /**
+     * Whether a scan at time is another one than the one last kept, at last,
+     * when it is now. The time of the same scan read again can come out a
+     * second earlier or later, as now is in whole seconds; Android scans
+     * far less often than that. After the clock went back, any scan is new.
+     */
+    fun isNew(time: Long, last: Long, now: Long): Boolean = time > last + 1 || last > now
+
     /** Whether the app may read the networks nearby, at least while it is open. */
     fun allowed(context: Context): Boolean =
         context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED

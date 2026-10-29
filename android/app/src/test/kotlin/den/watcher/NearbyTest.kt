@@ -3,6 +3,7 @@ package den.watcher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NearbyTest {
@@ -16,6 +17,15 @@ class NearbyTest {
         assertEquals(-60, json.getInt("signalDBm"))
         assertEquals(true, json.getBoolean("connected"))
         assertNull(AccessPoint("aa:bb:cc", "Den", -60, 0, 0, "", 0, false).json())
+    }
+
+    @Test
+    fun keepsTheSameScanReadAgainOnce() {
+        assertFalse(Nearby.isNew(1_000, 1_000, 1_030))
+        assertFalse(Nearby.isNew(1_001, 1_000, 1_030))
+        assertTrue(Nearby.isNew(1_020, 1_000, 1_030))
+        // The clock went back.
+        assertTrue(Nearby.isNew(500, 1_000, 510))
     }
 
     @Test
