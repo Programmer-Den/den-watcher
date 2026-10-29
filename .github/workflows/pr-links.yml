@@ -24,13 +24,9 @@ permissions:
 
 jobs:
   github-links-only:
-    # Dependabot's descriptions and commit messages link to the release notes
-    # of each dependency.
-    # Skipping the job still reports the check as passed. A comment on an issue
-    # that is not a pull request is not checked.
-    if: >-
-      (github.event.pull_request.user.login || github.event.issue.user.login) != 'dependabot[bot]' &&
-      (github.event_name != 'issue_comment' || github.event.issue.pull_request)
+    # A comment on an issue that is not a pull request is not checked; skipping
+    # the job still reports the check as passed.
+    if: github.event_name != 'issue_comment' || github.event.issue.pull_request
     runs-on: ubuntu-latest
     steps:
       - name: Check PR title, description, commit messages and comments link only to GitHub
@@ -71,10 +67,14 @@ jobs:
             const comments = await everyPage(github.rest.issues.listComments, { issue_number: pull_number });
             const reviews = await everyPage(github.rest.pulls.listReviews, { pull_number });
             const reviewComments = await everyPage(github.rest.pulls.listReviewComments, { pull_number });
+            // Dependabot's title, description and commit messages link to the
+            // release notes of each dependency; the comments on its pull
+            // requests are checked like any other.
+            const dependabot = pr.user.login === 'dependabot[bot]';
             const hits = [
-              ...linksOutside(pr.title, 'title'),
-              ...linksOutside(body, 'description'),
-              ...commits.flatMap(c => linksOutside(c.commit.message, `commit ${c.sha.slice(0, 7)}`)),
+              ...(dependabot ? [] : linksOutside(pr.title, 'title')),
+              ...(dependabot ? [] : linksOutside(body, 'description')),
+              ...(dependabot ? [] : commits.flatMap(c => linksOutside(c.commit.message, `commit ${c.sha.slice(0, 7)}`))),
               ...comments.flatMap(c => linksOutside(c.body || '', `comment ${c.html_url}`)),
               ...reviews.flatMap(r => linksOutside(r.body || '', `review ${r.html_url}`)),
               ...reviewComments.flatMap(c => linksOutside(c.body || '', `review comment ${c.html_url}`))
