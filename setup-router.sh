@@ -52,6 +52,10 @@ if [[ "$(setting DATA_ONLY)" =~ ^(1|t|T|true|TRUE|True)$ ]]; then
   if [[ "$(setting PROMETHEUS)" =~ ^(1|t|T|true|TRUE|True)$ ]]; then
     still_set="${still_set:+$still_set, }PROMETHEUS"
   fi
+  # compose.yaml turns it into STATUS_ADDR, which DATA_ONLY does not start with either.
+  if [[ -n "$(setting STATUS_PORT)" ]]; then
+    still_set="${still_set:+$still_set, }STATUS_PORT"
+  fi
   echo "This device only serves its usage to a hub (DATA_ONLY in .env), which shows no router,"
   echo "and does not start while HUB_ROUTERS in .env names one. Set up the router on the hub instead."
   if [[ -n "$still_set" ]]; then

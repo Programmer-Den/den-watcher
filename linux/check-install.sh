@@ -23,7 +23,7 @@ remove_check() {
 
 trap 'if [[ "$docker_check" == true ]]; then remove_check; fi; rm -rf "$work"' EXIT
 # A failing step shows what the services logged.
-trap 'journalctl -u den-watcher -u den-watcher-power -u den-watcher-pressure -u den-watcher-kernel -u den-watcher-gpu -u den-watcher-inodes -u den-watcher-wifi -u den-watcher-memory -u den-watcher-ports -u den-watcher-smart -u den-watcher-containers -u den-watcher-processes -u den-watcher-bluetooth --no-pager | tail -40 >&2' ERR
+trap 'journalctl -u "den-watcher*" --no-pager | tail -40 >&2' ERR
 tar -xzf "$archive" -C "$work"
 folder="$(find "$work" -mindepth 1 -maxdepth 1 -type d)"
 

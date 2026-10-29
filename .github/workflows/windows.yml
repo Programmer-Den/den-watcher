@@ -97,7 +97,8 @@ jobs:
             fi
           else
             version="dev-${GITHUB_SHA::7}"
-            msi_version="0.0.$GITHUB_RUN_NUMBER"
+            # An MSI's build number is at most 65535.
+            msi_version="0.0.$((GITHUB_RUN_NUMBER % 65536))"
             bugfix=0
           fi
           {

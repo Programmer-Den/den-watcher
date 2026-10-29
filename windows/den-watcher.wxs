@@ -286,6 +286,12 @@
     <Property Id="ROUTER_SECRET" Hidden="yes" />
     <Property Id="StoreRouterPasswords" Hidden="yes" />
     <Property Id="Quote" Value='"' />
+    <!--
+      The Router page refuses a password with a double quote, which would end
+      the reg.exe argument; this refuses one given on the command line too.
+    -->
+    <Launch Condition='REMOVE = "ALL" OR NOT ROUTER_PASSWORDS OR NOT ROUTER_PASSWORDS &gt;&lt; Quote'
+            Message='ROUTER_PASSWORDS cannot hold a double quote ("). Give each router a password without one.' />
     <SetProperty Id="StoreRouterPasswords" Before="StoreRouterPasswords" Sequence="execute"
                  Value='"[System64Folder]reg.exe" add "HKLM\SOFTWARE\Usage Control\Router" /v Passwords /t REG_MULTI_SZ /d "[ROUTER_PASSWORDS]\0" /f /reg:64'
                  Condition='ROUTER_PASSWORDS AND WEBSITE = "1" AND REMOVE &lt;&gt; "ALL"' />
