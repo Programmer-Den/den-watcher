@@ -1287,6 +1287,33 @@ describe('Dashboard', () => {
     expect(text()).not.toContain('12.5 %');
   });
 
+  it('drops the values of the picked device once it stops answering', () => {
+    respond(snapshot);
+    const devices = TestBed.inject(DeviceService);
+    devices.devices.set([
+      { id: 'local', name: '' },
+      { id: 'living-room-pi', name: 'Living room Pi' },
+    ]);
+    devices.selectedId.set('living-room-pi');
+    fixture.detectChanges();
+    vi.advanceTimersByTime(0);
+    http.expectOne('/api/metrics?device=living-room-pi').flush(snapshot);
+    http
+      .expectOne('/api/availability?device=living-room-pi')
+      .flush('down', { status: 502, statusText: 'Bad Gateway' });
+    fixture.detectChanges();
+    expect(text()).toContain('12.5 %');
+
+    vi.advanceTimersByTime(REFRESH_INTERVAL_MS);
+    http
+      .expectOne('/api/metrics?device=living-room-pi')
+      .flush('down', { status: 503, statusText: 'Service Unavailable' });
+    fixture.detectChanges();
+
+    expect(text()).toContain('Living room Pi has not answered recently');
+    expect(text()).not.toContain('12.5 %');
+  });
+
   it('asks whether a router that does not answer is on and set up right', () => {
     respond(snapshot);
     const devices = TestBed.inject(DeviceService);

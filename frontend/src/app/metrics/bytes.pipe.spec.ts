@@ -10,6 +10,9 @@ describe('BytesPipe', () => {
 
   it('switches to the largest fitting unit', () => {
     expect(pipe.transform(1536, 'en-GB')).toBe('1.5 KiB');
+    // Rounded up to 1024 of a unit, it is shown as 1 of the next one.
+    expect(pipe.transform(1048575, 'en-GB')).toBe('1.0 MiB');
+    expect(pipe.transform(1023.7, 'en-GB')).toBe('1.0 KiB');
     expect(pipe.transform(8 * 1024 ** 3, 'en-GB')).toBe('8.0 GiB');
   });
 

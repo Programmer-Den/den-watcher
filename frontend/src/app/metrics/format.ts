@@ -43,11 +43,13 @@ export function formatUptime(seconds: number, i18n: I18n): string {
 
 /** A length of time: seconds below a minute, minutes below an hour, else as an uptime. */
 export function formatDuration(seconds: number, i18n: I18n): string {
-  if (seconds < 60) {
-    return i18n.t('dashboard.seconds', { seconds: Math.round(seconds) });
+  // Rounded first, so 59.6 s is a minute rather than 60 s.
+  const rounded = Math.round(seconds);
+  if (rounded < 60) {
+    return i18n.t('dashboard.seconds', { seconds: rounded });
   }
-  if (seconds < 3600) {
-    return i18n.t('dashboard.minutes', { minutes: Math.floor(seconds / 60) });
+  if (rounded < 3600) {
+    return i18n.t('dashboard.minutes', { minutes: Math.floor(rounded / 60) });
   }
-  return formatUptime(seconds, i18n);
+  return formatUptime(rounded, i18n);
 }

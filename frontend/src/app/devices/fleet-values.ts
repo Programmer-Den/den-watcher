@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, catchError, map, of, share, tap } from 'rxjs';
+import { EMPTY, Observable, catchError, map, of, share, tap } from 'rxjs';
 
 import { MetricsService } from '../metrics/metrics';
 import { Summary, summarize } from '../metrics/summary';
@@ -31,14 +31,13 @@ export class FleetValues {
 
   /**
    * The values of every device that answers, in one request for all of them; the hub does not ask
-   * for those of one that does not.
+   * for those of one that does not. When the request fails, the values read before stay.
    */
   private read(): Observable<Map<string, Summary | null>> {
     if (!this.devices.devices().some((d) => !d.unreachable)) {
       return of(new Map());
     }
     return this.metrics.fleet().pipe(
-      catchError(() => of<Record<string, never>>({})),
       map(
         (usage) =>
           new Map(
@@ -51,6 +50,7 @@ export class FleetValues {
               ]),
           ),
       ),
+      catchError(() => EMPTY),
     );
   }
 }

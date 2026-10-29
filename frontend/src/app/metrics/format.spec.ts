@@ -37,6 +37,7 @@ describe('format', () => {
 
   it('tells a length of time in seconds, minutes or as an uptime', () => {
     expect(formatDuration(42.4, i18n)).toBe('42 s');
+    expect(formatDuration(59.6, i18n)).toBe('1 min');
     expect(formatDuration(150, i18n)).toBe('2 min');
     expect(formatDuration(3 * 3600, i18n)).toBe('3 h 0 min');
   });

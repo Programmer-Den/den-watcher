@@ -348,9 +348,9 @@ export class Dashboard {
   protected readonly problem = signal<Problem | null>(null);
   protected readonly i18n = inject(I18n);
   protected readonly deviceName = computed(() => deviceName(this.devices.selected(), this.i18n));
-  /** Whether the picked device is a PC or laptop, which is just not in use while it does not answer. */
   /** Whether the times a device of a kind does not answer are times it was not in use. */
   protected readonly switchedOff = switchedOff;
+  /** Whether the picked device is a PC or laptop, which is just not in use while it does not answer. */
   protected readonly isPC = computed(() => switchedOff(this.devices.selected().kind));
   /** Whether the picked device is a router, which tells only some of what a device does. */
   protected readonly isRouter = computed(() => !!this.devices.selected().router);
@@ -561,6 +561,10 @@ export class Dashboard {
       .subscribe((result) => {
         if (typeof result === 'string') {
           this.problem.set(result);
+          // A device that stops answering keeps no values of when it did.
+          if (result === 'device') {
+            this.snapshot.set(null);
+          }
         } else {
           this.problem.set(null);
           this.snapshot.set(result);
@@ -749,7 +753,6 @@ export class Dashboard {
     afterNextRender(() => target()?.focus(), { injector: this.injector });
   }
 
-  /** How many cards, charts and detail values a folded category holds, for its title. */
   /** Opens a row of the rows view, closing the one open before, or closes it when it is open. */
   protected toggleRow(category: Section): void {
     this.openRow.update((open) => (open === category ? null : category));
@@ -759,6 +762,7 @@ export class Dashboard {
     return (this.keys() as Partial<Record<Section, RowKey[]>>)[category] ?? [];
   }
 
+  /** How many cards, charts and detail values a folded category holds, for its title. */
   protected sectionCount(cards: number, charts: number, values: number): string {
     return [
       cards > 0 ? this.i18n.plural(cards, 'categories.cards.one', 'categories.cards.other') : '',

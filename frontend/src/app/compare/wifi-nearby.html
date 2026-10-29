@@ -49,7 +49,8 @@
                   <td>{{ security(row.security) }}</td>
                   @for (device of columns(); track device.id) {
                     <td class="signal">
-                      @if (row.signals.get(device.id); as percent) {
+                      @let percent = row.signals.get(device.id);
+                      @if (percent !== undefined) {
                         <span class="level" [attr.data-level]="signalLevel(percent)">
                           {{ percent | number: '1.0-0' : i18n.language() }} %
                         </span>
@@ -228,7 +229,9 @@
                   </th>
                   @for (other of columns(); track other.id) {
                     <td class="signal">
-                      @if (other.id !== spot.device && alike(spot.device, other.id); as percent) {
+                      @let percent =
+                        other.id === spot.device ? undefined : alike(spot.device, other.id);
+                      @if (percent !== undefined) {
                         <span class="level" [attr.data-level]="alikeLevel(percent)">
                           {{ percent | number: '1.0-0' : i18n.language() }} %
                         </span>
@@ -308,7 +311,7 @@
                       <span class="spot" [attr.data-spot]="spotColor(row.now)">
                         {{ spotName(row.now) }}
                       </span>
-                      @if (row.now && row.now.place === undefined && row.hears) {
+                      @if (placesKnown() && row.now && row.now.place === undefined && row.hears) {
                         <button mat-button type="button" (click)="startNaming(row.device)">
                           {{ i18n.t('wifi.namePlace') }}
                         </button>

@@ -45,6 +45,7 @@ import {
   Device,
   DeviceKind,
   DeviceService,
+  LOCAL_DEVICE,
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
   StatusPage,
@@ -87,7 +88,9 @@ export class DevicesDialog {
   private readonly document = inject(DOCUMENT);
 
   /** Every device but the one the website runs on. */
-  protected readonly others = computed(() => this.devices.devices().slice(1));
+  protected readonly others = computed(() =>
+    this.devices.devices().filter((d) => d.id !== LOCAL_DEVICE.id),
+  );
 
   /** Whether the list of devices is shown; folded when the dialog leaves it too little room. */
   protected readonly listOpen = signal(true);

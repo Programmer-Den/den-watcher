@@ -317,7 +317,7 @@ function linesOf(byCategory: Map<string, Chart[]>): TimelineLine[] {
           : chart.title,
       unit: chart.unit,
       points: line.points,
-      series: index % COLORS,
+      series: (line.place ?? index) % COLORS,
     })),
   );
 }
