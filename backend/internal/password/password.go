@@ -193,13 +193,12 @@ func Client(from netip.Addr) netip.Addr {
 // before, since it never changes, and ErrLength when password is too short
 // or too long.
 func (p *Password) Set(ctx context.Context, password string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	salt, hash, err := p.hashNew(password)
 	if err != nil {
 		return err
 	}
-
-	p.mu.Lock()
-	defer p.mu.Unlock()
 	result, err := p.db.ExecContext(ctx, `INSERT OR IGNORE INTO `+p.table+` (id, salt, hash) VALUES (1, ?, ?)`, salt, hash) //nolint:gosec // table is a name set in code
 	if err != nil {
 		return err
@@ -213,12 +212,12 @@ func (p *Password) Set(ctx context.Context, password string) error {
 // Change sets the password, whether one was chosen before or not. It returns
 // ErrLength when password is too short or too long.
 func (p *Password) Change(ctx context.Context, password string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	salt, hash, err := p.hashNew(password)
 	if err != nil {
 		return err
 	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
 	_, err = p.db.ExecContext(ctx, `INSERT OR REPLACE INTO `+p.table+` (id, salt, hash) VALUES (1, ?, ?)`, salt, hash) //nolint:gosec // table is a name set in code
 	return err
 }
