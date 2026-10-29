@@ -1,8 +1,10 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 
 import { DeviceService } from '../devices/devices';
+import { LineChart } from '../history/line-chart';
 import { History, Snapshot } from '../metrics/metrics';
 import { summarize } from '../metrics/summary';
 import { Compare, Row, largest, sortRows, within } from './compare';
@@ -307,6 +309,25 @@ describe('Compare', () => {
     );
     expect(titles).toEqual(['CPU']);
     expect(legend()).toEqual(['Hub', 'Office PC']);
+  });
+
+  it('draws the charts again only when a name in the list of devices changes', () => {
+    answer();
+    const devices = TestBed.inject(DeviceService);
+    const chart = () =>
+      fixture.debugElement.query(By.directive(LineChart)).componentInstance.chart();
+    const drawn = chart();
+
+    // The list is read again every few seconds, mostly unchanged.
+    devices.devices.set(devices.devices().map((d) => ({ ...d })));
+    fixture.detectChanges();
+    expect(chart()).toBe(drawn);
+
+    devices.devices.set(
+      devices.devices().map((d) => (d.id === 'pc' ? { ...d, name: 'Den PC' } : d)),
+    );
+    fixture.detectChanges();
+    expect(legend()).toEqual(['Hub', 'Den PC']);
   });
 
   it("colors each device's line by its place among the devices, in every chart", () => {

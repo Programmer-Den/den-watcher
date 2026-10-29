@@ -215,6 +215,19 @@ export class Compare {
     // The list is read again every few seconds; the charts load again only when it changes.
     { equal: (a, b) => a.map((d) => d.id).join('\n') === b.map((d) => d.id).join('\n') },
   );
+  /**
+   * Each device's name and whether it is a router, by its id, from the list. The list is read every
+   * few seconds, so they are kept apart and the charts are drawn again only when they change.
+   */
+  private readonly named = computed(
+    () =>
+      new Map(
+        this.devices
+          .devices()
+          .map((d) => [d.id, { label: deviceName(d, this.i18n), router: !!d.router }]),
+      ),
+    { equal: (a, b) => JSON.stringify([...a]) === JSON.stringify([...b]) },
+  );
   protected readonly histories = signal<Histories | null>(null);
   protected readonly charts = computed(() => {
     const h = this.histories();
@@ -224,19 +237,22 @@ export class Compare {
     // Each device's line takes its color by the device's place, so it keeps it in every chart.
     const places = new Map(this.charted().map((device, place) => [device.id, place]));
     // The histories are read again only when the devices change, so a device's name and kind
-    // come from the list, which is read every few seconds.
-    const current = new Map(this.devices.devices().map((device) => [device.id, device]));
+    // come from the list.
+    const named = this.named();
     return CHARTS.map((chart) => ({
       title: this.i18n.t(chart.title),
       unit: chart.unit,
       max: chart.max,
       lines: h.devices
         .map(({ device: read, history }): ChartLine => {
-          const device = current.get(read.id) ?? read;
+          const { label, router } = named.get(read.id) ?? {
+            label: deviceName(read, this.i18n),
+            router: !!read.router,
+          };
           return {
-            label: deviceName(device, this.i18n),
-            points: within(chart.points(history.series, !!device.router), h),
-            place: places.get(device.id),
+            label,
+            points: within(chart.points(history.series, router), h),
+            place: places.get(read.id),
           };
         })
         .filter((line) => line.points.length > 0),
