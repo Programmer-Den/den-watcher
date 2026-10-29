@@ -214,3 +214,21 @@ func TestDeleteDeviceForgetsItsWiFiBeforeTheNextFlush(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestDeleteBeforeDropsTheWiFiThatWaitsFromBeforeIt(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	// Sums a failed flush put back: one from before the retention, one after.
+	old, recent := time.Now().Add(-10*24*time.Hour), time.Now()
+	store.AddWiFi("a", old, nearby(60))
+	store.AddWiFi("a", recent, nearby(60))
+	if _, err := store.DeleteBefore(ctx, time.Now().Add(-24*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Flush(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got := countRows(t, store, "wifi_hours", "a"); got != 1 {
+		t.Errorf("a has %d hours, want only the recent one written after the prune", got)
+	}
+}
