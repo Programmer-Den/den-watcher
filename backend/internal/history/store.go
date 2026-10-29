@@ -229,7 +229,11 @@ func (s *Store) cachedRange(ctx context.Context, device string, from, to time.Ti
 // downtime, or after RETENTION_DAYS was lowered, does not keep the recorders
 // from storing meanwhile.
 func (s *Store) DeleteBefore(ctx context.Context, t time.Time) (int64, error) {
+	// After a flush that is writing its minutes, which would bring old ones
+	// back after they were deleted.
+	s.flushing.Lock()
 	s.pend.dropBefore(t.Unix())
+	s.flushing.Unlock()
 	// The primary key starts with the device, so each device's old minutes
 	// are one range of it; a time alone would read all of them.
 	devices, err := s.devices(ctx)
@@ -283,10 +287,12 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 		return err
 	}
 	s.wifi.forget(device)
-	if _, err := s.deleteChunks(ctx, "wifi_hours", "device, time, ap", `device = ?`, device); err != nil {
+	wifi, err := s.deleteChunks(ctx, "wifi_hours", "device, time, ap", `device = ?`, device)
+	if err != nil {
 		return err
 	}
-	if _, err := s.deleteChunks(ctx, "wifi_scans", "device, time", `device = ?`, device); err != nil {
+	scans, err := s.deleteChunks(ctx, "wifi_scans", "device, time", `device = ?`, device)
+	if err != nil {
 		return err
 	}
 	s.brokenInfo.Range(func(key, _ any) bool {
@@ -298,7 +304,7 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	// Again, so a range read while the values were deleted, which may have
 	// some of them, is not kept (see rangeCache.put).
 	s.cache.forget(device)
-	s.shrinkLog(ctx, deleted+hourly)
+	s.shrinkLog(ctx, deleted+hourly+wifi+scans)
 	return nil
 }
 

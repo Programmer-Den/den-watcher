@@ -361,6 +361,22 @@ func TestAPhoneIsGivenItsKeyOnce(t *testing.T) {
 	if answer, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil || answer.Key != want {
 		t.Errorf("a push asking for the key after the release = %+v, %v; want the key", answer, err)
 	}
+	if answer, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil || answer.Key != "" {
+		t.Errorf("a second push asking for the key in the release = %+v, %v; want none", answer, err)
+	}
+	// A release the phone never asked for the key in gives it only while it lasts.
+	if _, err := h.ReleasePhone("pixel"); err != nil {
+		t.Fatalf("ReleasePhone() error = %v", err)
+	}
+	h.mu.Lock()
+	phone := h.find("pixel").phone
+	h.mu.Unlock()
+	phone.mu.Lock()
+	phone.releasedUntil = time.Now().Add(-time.Second)
+	phone.mu.Unlock()
+	if answer, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil || answer.Key != "" {
+		t.Errorf("a push asking for the key after the release ended = %+v, %v; want none", answer, err)
+	}
 	if other := phoneKey(h.phoneSecret, "AAAABBBB"); hex.EncodeToString(other) == want {
 		t.Error("two phones have the same key")
 	}

@@ -112,6 +112,9 @@ type phone struct {
 	// releasedUntil is until when the phone may change its hub; zero when
 	// it was never allowed.
 	releasedUntil time.Time
+	// regive lets the phone's key be given once more while it may change
+	// its hub, as when the answer that gave it was lost.
+	regive bool
 
 	// pushing makes the pushes of one phone store their minutes one at a
 	// time, as each goes on from where the one before stopped.
@@ -220,7 +223,7 @@ func (h *Hub) Receive(ctx context.Context, code string, push Push) (PushAnswer, 
 		if err != nil {
 			return PushAnswer{}, err
 		}
-		if give {
+		if give || remote.phone.takeRegive(time.Now()) {
 			answer.Key = hex.EncodeToString(key)
 		}
 	}
@@ -300,12 +303,10 @@ func (h *Hub) ReleasePhone(id string) (time.Time, error) {
 	if remote.phone == nil {
 		return time.Time{}, &InputError{Problem: ProblemKind, Message: "only a phone keeps its hub locked; other devices are added to another hub there"}
 	}
-	if err := regiveKey(h.ctx, h.store.DB(), phoneKey(h.phoneSecret, remote.Agent.pairingCode())); err != nil {
-		return time.Time{}, err
-	}
 	now := time.Now()
 	remote.phone.mu.Lock()
 	remote.phone.releasedUntil = now.Add(ReleaseTime)
+	remote.phone.regive = true
 	remote.phone.mu.Unlock()
 	slog.Info("let a phone change its hub", "name", remote.Name, "for", ReleaseTime)
 	return remote.phone.released(now), nil
@@ -318,6 +319,18 @@ func (r *Remote) ReleasedUntil() time.Time {
 		return time.Time{}
 	}
 	return r.phone.released(time.Now())
+}
+
+// takeRegive reports whether the phone's key may be given once more, seen at
+// now: once while it may change its hub, never after.
+func (p *phone) takeRegive(now time.Time) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.regive || !now.Before(p.releasedUntil) {
+		return false
+	}
+	p.regive = false
+	return true
 }
 
 // released is until when the phone may change its hub, seen at now; zero

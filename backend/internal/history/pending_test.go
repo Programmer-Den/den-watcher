@@ -294,3 +294,25 @@ func TestDeleteBeforeDropsWaitingMinutesOlderThanTheRetention(t *testing.T) {
 		t.Errorf("%d minutes written, want the 6 within the retention", got)
 	}
 }
+
+func TestDeleteBeforeWaitsForAFlushThatIsWriting(t *testing.T) {
+	ctx := context.Background()
+	store := openBatchedStore(t)
+	// A flush writing minutes older than the retention would bring them back
+	// after they were deleted.
+	store.flushing.Lock()
+	done := make(chan error)
+	go func() {
+		_, err := store.DeleteBefore(ctx, time.Unix(1_800_000_000, 0))
+		done <- err
+	}()
+	select {
+	case <-done:
+		t.Fatal("DeleteBefore() ran while a flush was writing")
+	case <-time.After(50 * time.Millisecond):
+	}
+	store.flushing.Unlock()
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+}
