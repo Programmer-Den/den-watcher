@@ -423,4 +423,19 @@ describe('wifiChanges', () => {
     h.from = NOW - 3 * HOUR;
     expect(wifiChanges(h)).toEqual([]);
   });
+
+  it('compares across 6 GHz as Wi-Fi 6E allows, and every radio of a router', () => {
+    const h = history([
+      heard('a1', 'b1', 'Den', [3, 2, 1, 0], { security: 'WPA2', frequencyMHz: 5180 }, [], true),
+      // Another router of the mesh, WPA3 only at 6 GHz: no copy.
+      heard('a2', 'b2', 'Den', [3, 2, 1, 0], { security: 'WPA3', frequencyMHz: 6115 }),
+      // A router with WPA2 on one radio and Open on another, seen later: a copy.
+      heard('c1', 'cb', 'Den', [2, 1, 0], { security: 'WPA2', frequencyMHz: 2412 }),
+      heard('c2', 'cb', 'Den', [1, 0], { security: 'Open', frequencyMHz: 5200 }),
+    ]);
+    h.from = NOW - 3 * HOUR;
+    expect(wifiChanges(h).map((c) => [c.kind, c.security, (NOW - c.time) / HOUR])).toEqual([
+      ['lookalike', 'Open', 1],
+    ]);
+  });
 });

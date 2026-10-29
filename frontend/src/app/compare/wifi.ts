@@ -465,10 +465,34 @@ function securityKinds(security: string): string[] {
   return enterprise ? kinds.map((kind) => kind + ' Enterprise') : kinds;
 }
 
-/** Whether two securities, such as "WPA2/WPA3" and "WPA2", have a kind in common. */
-function sharesSecurity(a: string, b: string): boolean {
-  const kinds = securityKinds(b);
-  return securityKinds(a).some((kind) => kinds.includes(kind));
+/**
+ * Whether two securities, such as "WPA2/WPA3" and "WPA2", have a kind in common. Across bands, one
+ * at 6 GHz and one below, WPA3 also counts as WPA2 and OWE as Open: Wi-Fi 6E allows only WPA3 and
+ * OWE there, which a mesh with WPA2 or Open below has to use, as the alert compares.
+ */
+function sharesSecurity(a: string, b: string, acrossBands = false): boolean {
+  const kindsOf = (security: string) => {
+    const kinds = securityKinds(security);
+    return acrossBands ? [...kinds, ...belowSixGHz(kinds)] : kinds;
+  };
+  const kinds = kindsOf(b);
+  return kindsOf(a).some((kind) => kinds.includes(kind));
+}
+
+/** What the kinds of a security sent at 6 GHz are sent as below it: WPA3 as WPA2, OWE as Open. */
+function belowSixGHz(kinds: string[]): string[] {
+  return kinds.flatMap((kind) =>
+    kind.startsWith('WPA3')
+      ? ['WPA2' + kind.slice('WPA3'.length)]
+      : kind.startsWith('OWE')
+        ? ['Open']
+        : [],
+  );
+}
+
+/** Whether an access point sends in the 6 GHz band. */
+function sixGHz(ap: WiFiAccessPoint): boolean {
+  return (ap.frequencyMHz ?? 0) > 5925;
 }
 
 /** The devices that saw access points in the step at time, or at all without one, strongest first. */
@@ -518,10 +542,15 @@ export function wifiChanges(history: WiFiHistory): WiFiChange[] {
       .filter((ap) => ap.seenBy.some((s) => s.points.some((p) => p.connected)))
       .map((ap) => ap.box),
   );
-  // The securities of the access points the devices were connected to, as the alert compares.
-  const homeSecurities = homeAPs.flatMap((ap) =>
-    ap.security && ap.seenBy.some((s) => s.points.some((p) => p.connected)) ? [ap.security] : [],
+  // The access points the devices were connected to, whose security the alert compares with.
+  const joined = homeAPs.filter(
+    (ap) => ap.security && ap.seenBy.some((s) => s.points.some((p) => p.connected)),
   );
+  // Whether an access point shares no security with any the devices were connected to.
+  const otherSecurity = (ap: WiFiAccessPoint) =>
+    !!ap.security &&
+    joined.length > 0 &&
+    !joined.some((own) => sharesSecurity(ap.security!, own.security!, sixGHz(ap) !== sixGHz(own)));
   const changes: WiFiChange[] = [];
   for (const [ssid, aps] of named) {
     if (home && foldSSID(ssid) === foldSSID(home)) {
@@ -530,12 +559,12 @@ export function wifiChanges(history: WiFiHistory): WiFiChange[] {
         boxes.set(ap.box, [...(boxes.get(ap.box) ?? []), ap]);
       }
       for (const radios of boxes.values()) {
-        const first = radios.reduce((a, b) => (b.firstSeen < a.firstSeen ? b : a));
-        const security = first.security;
-        const other =
-          !!security &&
-          homeSecurities.length > 0 &&
-          !homeSecurities.some((own) => sharesSecurity(security, own));
+        const earliest = (aps: WiFiAccessPoint[]) =>
+          aps.reduce((a, b) => (b.firstSeen < a.firstSeen ? b : a));
+        // Every radio of the box is compared, as the alert compares each access point.
+        const others = radios.filter(otherSecurity);
+        const other = others.length > 0;
+        const first = earliest(other ? others : radios);
         if (other || (ssid === home && first.firstSeen > start)) {
           changes.push({
             kind: other ? 'lookalike' : 'newAccessPoint',
