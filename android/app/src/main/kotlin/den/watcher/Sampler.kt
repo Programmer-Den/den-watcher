@@ -34,6 +34,7 @@ object Sampler {
         return Reading(
             time = System.currentTimeMillis() / 1000,
             uptimeSeconds = SystemClock.elapsedRealtime() / 1000,
+            boot = Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT, 0),
             batteryPercent = if (level >= 0 && scale > 0) level * 100.0 / scale else null,
             pluggedIn = plugged,
             batteryCelsius = if (tenthsCelsius != Int.MIN_VALUE && tenthsCelsius != 0) tenthsCelsius / 10.0 else null,
@@ -73,7 +74,8 @@ object Sampler {
             architecture = System.getProperty("os.arch") ?: "",
             maker = Build.MANUFACTURER.replaceFirstChar { it.uppercase() },
             model = Build.MODEL,
-            timeZoneName = zone.getDisplayName(zone.inDaylightTime(java.util.Date(now)), TimeZone.SHORT),
+            // In English, as other systems name it, not in the phone's language.
+            timeZoneName = zone.getDisplayName(zone.inDaylightTime(java.util.Date(now)), TimeZone.SHORT, java.util.Locale.US),
             timeZoneOffsetSeconds = zone.getOffset(now) / 1000,
         )
     }

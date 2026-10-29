@@ -9,6 +9,9 @@ import java.net.URL
 object Hub {
     private const val TIMEOUT_MILLIS = 10_000
 
+    /** The longest answer read; the hub's is a few hundred bytes. */
+    private const val MAX_ANSWER_BYTES = 64 * 1024
+
     /**
      * The hub's answer to a push: the phone's time of the newest minute it
      * has, for how many more seconds the phone may change its hub or stop
@@ -44,7 +47,7 @@ object Hub {
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             when (connection.responseCode) {
                 HttpURLConnection.HTTP_OK -> {
-                    val answer = connection.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+                    val answer = connection.inputStream.use { readAtMost(it, MAX_ANSWER_BYTES) }.toString(Charsets.UTF_8)
                     val json = JSONObject(answer)
                     Answer.Taken(
                         json.getLong("after"),
@@ -63,6 +66,22 @@ object Hub {
             Answer.Failed(Problem.REFUSED)
         } finally {
             connection.disconnect()
+        }
+    }
+
+    /** The bytes of input, or an IOException when it holds more than limit. */
+    private fun readAtMost(input: java.io.InputStream, limit: Int): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(8 * 1024)
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) {
+                return out.toByteArray()
+            }
+            if (out.size() + read > limit) {
+                throw IOException("the answer is longer than $limit bytes")
+            }
+            out.write(buffer, 0, read)
         }
     }
 }

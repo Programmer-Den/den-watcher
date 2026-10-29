@@ -16,6 +16,8 @@ data class Rates(val receive: Double, val send: Double)
 data class Reading(
     val time: Long,
     val uptimeSeconds: Long,
+    /** How often the phone has started, so a restart is told; 0 when it is not known. */
+    val boot: Int = 0,
     val batteryPercent: Double?,
     val pluggedIn: Boolean,
     val batteryCelsius: Double?,
@@ -34,14 +36,17 @@ data class Reading(
     /**
      * How fast each network received and sent since the reading before,
      * which may be from long ago, as while the phone was asleep: the average
-     * over that time. None after a restart of the phone, whose counters then
-     * start again, and none for a network whose counters went back.
+     * over that time, by the time since the phone started, which a change of
+     * the clock does not move. None after a restart of the phone, whose
+     * counters then start again, and none for a network whose counters went
+     * back.
      */
     fun ratesSince(before: Reading?): Map<String, Rates> {
-        if (before == null || time <= before.time || uptimeSeconds < before.uptimeSeconds) {
+        val restarted = boot != 0 && before?.boot != 0 && boot != before?.boot
+        if (before == null || restarted || uptimeSeconds <= before.uptimeSeconds) {
             return emptyMap()
         }
-        val seconds = (time - before.time).toDouble()
+        val seconds = (uptimeSeconds - before.uptimeSeconds).toDouble()
         return traffic.mapNotNull { (name, now) ->
             val then = before.traffic[name] ?: return@mapNotNull null
             val received = now.received - then.received

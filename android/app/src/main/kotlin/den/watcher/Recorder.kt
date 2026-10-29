@@ -30,12 +30,14 @@ object Recorder {
                 store.addScan(it)
                 settings.lastScan = it.time
             }
-            push(app, settings, store, reading.snapshot(rates, Sampler.device(app)))
+            push(app, settings, store) { reading.snapshot(rates, Sampler.device(app)) }
         }
     }
 
-    private fun push(context: Context, settings: Settings, store: Store, snapshot: org.json.JSONObject) {
-        val url = HubAddress.pushUrl(settings.hubAddress)
+    /** Sends what the hub does not have yet, with the newest reading, which is made only when it is sent. */
+    private fun push(context: Context, settings: Settings, store: Store, snapshot: () -> org.json.JSONObject) {
+        val address = settings.hubAddress
+        val url = HubAddress.pushUrl(address)
         if (url == null) {
             settings.problem = Problem.NO_ADDRESS
             return
@@ -44,13 +46,19 @@ object Recorder {
             settings.problem = Problem.NOT_HOME
             return
         }
-        var newest: org.json.JSONObject? = snapshot
+        var newest: org.json.JSONObject? = snapshot()
         repeat(MAX_PUSHES) {
             val now = System.currentTimeMillis() / 1000
-            val minutes = Push.fit(store.minutes(now))
+            val stored = store.minutes(now)
+            val minutes = Push.fit(stored)
             val scans = store.scans()
             val needKey = settings.hubKey.isEmpty()
-            when (val answer = Hub.push(url, settings.code, Push.body(now, newest, minutes, needKey, scans))) {
+            val answer = Hub.push(url, settings.code, Push.body(now, newest, minutes, needKey, scans))
+            // Another hub was scanned meanwhile, whose pairing starts anew.
+            if (settings.hubAddress != address) {
+                return
+            }
+            when (answer) {
                 is Hub.Answer.Failed -> {
                     settings.problem = answer.problem
                     return
@@ -58,15 +66,19 @@ object Recorder {
                 is Hub.Answer.Taken -> {
                     settings.problem = null
                     settings.lastPush = now
-                    settings.paired = true
                     // A key is taken only while the app has none, so another
                     // server at the hub's address cannot give its own.
                     if (needKey && Release.isKey(answer.key)) {
                         settings.hubKey = answer.key
                     }
-                    if (answer.releaseSeconds > 0 &&
+                    // Locked only with a key, which a change is allowed with.
+                    settings.paired = settings.hubKey.isNotEmpty()
+                    // A proof for a push no later than the one that last allowed a
+                    // change is an old answer again, as after the clock was set back.
+                    if (answer.releaseSeconds > 0 && now > settings.releasedAt &&
                         Release.proves(settings.hubKey, now, answer.releaseSeconds, answer.releaseProof)
                     ) {
+                        settings.releasedAt = now
                         settings.releasedUntil = now + minOf(answer.releaseSeconds, Release.MAX_SECONDS)
                     }
                     if (newest != null) {
@@ -74,16 +86,19 @@ object Recorder {
                     }
                     newest = null
                     // Every minute sent is deleted, also one the hub left out, such as
-                    // one older than it keeps, so it is not sent again and again.
+                    // one older than it keeps, so it is not sent again and again; none
+                    // that was not sent, whatever the answer says.
                     if (minutes.isNotEmpty()) {
-                        store.deleteUpTo(maxOf(answer.after, minutes.last().time))
+                        store.deleteUpTo(minutes.last().time)
                     }
                     // A hub that takes no scans answers none; they are kept for a week.
+                    val lastScan = scans.lastOrNull()?.optLong("time") ?: 0L
                     if (answer.wifiAfter > 0) {
-                        store.deleteScansUpTo(answer.wifiAfter)
+                        store.deleteScansUpTo(minOf(answer.wifiAfter, lastScan))
                     }
+                    val moreMinutes = minutes.size < stored.size || stored.size == Push.MAX_MINUTES
                     val moreScans = scans.size == Push.MAX_SCANS && answer.wifiAfter > 0
-                    if (minutes.size < Push.MAX_MINUTES && minutes.sumOf { it.values.size } < Push.MAX_VALUES && !moreScans) {
+                    if (!moreMinutes && !moreScans) {
                         return
                     }
                 }
