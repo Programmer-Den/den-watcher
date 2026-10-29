@@ -109,8 +109,11 @@ interface CompareChart {
   title: MessageKey;
   unit: ChartUnit;
   max?: number;
-  /** The device's line, from its history; `router` is set for a router. */
-  points: (series: Series[], router: boolean) => Point[];
+  /**
+   * The device's line, from its history; `untold` is set for a router or a phone, whose CPU (or
+   * memory) at 0 throughout is not told.
+   */
+  points: (series: Series[], untold: boolean) => Point[];
 }
 
 /** The largest value of the series of a kind at each time, such as the fullest disk. */
@@ -135,18 +138,23 @@ export function within(
   return points.filter((p) => p.time > range.from - range.step && p.time < range.to);
 }
 
+/** Whether a device tells no CPU or memory when they are 0: a router, or a phone. */
+function untold(device: Device): boolean {
+  return !!device.router || device.kind === 'phone';
+}
+
 const CHARTS: CompareChart[] = [
   {
     title: 'compare.cpu',
     unit: 'percent',
     max: 100,
-    points: (s, router) => devicePoints(s, 'cpu', router),
+    points: (s, untold) => devicePoints(s, 'cpu', untold),
   },
   {
     title: 'compare.memory',
     unit: 'percent',
     max: 100,
-    points: (s, router) => devicePoints(s, 'memory', router),
+    points: (s, untold) => devicePoints(s, 'memory', untold),
   },
   { title: 'compare.disk', unit: 'percent', max: 100, points: (s) => largest(s, 'disk') },
   { title: 'compare.temperature', unit: 'celsius', points: (s) => largest(s, 'temperature') },
@@ -216,15 +224,16 @@ export class Compare {
     { equal: (a, b) => a.map((d) => d.id).join('\n') === b.map((d) => d.id).join('\n') },
   );
   /**
-   * Each device's name and whether it is a router, by its id, from the list. The list is read every
-   * few seconds, so they are kept apart and the charts are drawn again only when they change.
+   * Each device's name and whether its CPU or memory at 0 is untold, as of a router or a phone, by
+   * its id, from the list. The list is read every few seconds, so they are kept apart and the
+   * charts are drawn again only when they change.
    */
   private readonly named = computed(
     () =>
       new Map(
         this.devices
           .devices()
-          .map((d) => [d.id, { label: deviceName(d, this.i18n), router: !!d.router }]),
+          .map((d) => [d.id, { label: deviceName(d, this.i18n), untold: untold(d) }]),
       ),
     { equal: (a, b) => JSON.stringify([...a]) === JSON.stringify([...b]) },
   );
@@ -245,13 +254,13 @@ export class Compare {
       max: chart.max,
       lines: h.devices
         .map(({ device: read, history }): ChartLine => {
-          const { label, router } = named.get(read.id) ?? {
+          const { label, untold: untoldZero } = named.get(read.id) ?? {
             label: deviceName(read, this.i18n),
-            router: !!read.router,
+            untold: untold(read),
           };
           return {
             label,
-            points: within(chart.points(history.series, router), h),
+            points: within(chart.points(history.series, untoldZero), h),
             place: places.get(read.id),
           };
         })
