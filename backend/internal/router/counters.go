@@ -20,6 +20,10 @@ type counter struct {
 	// counted, such as the line's speed with some room; 0 for
 	// maxBytesPerSecond.
 	limit float64
+	// total is the bytes counted since the counter was last reset, which
+	// unlike value goes on growing when a 32-bit counter wraps around, so
+	// what reads it as a counter, such as Prometheus, sees no reset there.
+	total uint64
 }
 
 // rate takes a new reading of the counter at now and returns the bytes per
@@ -28,8 +32,8 @@ type counter struct {
 func (c *counter) rate(value uint64, now time.Time, restarted bool) (float64, bool) {
 	previous, at, known := c.value, c.at, c.known
 	c.value, c.at, c.known = value, now, true
-	seconds := now.Sub(at).Seconds()
-	if !known || restarted || seconds <= 0 {
+	if !known || restarted {
+		c.total = value
 		return 0, false
 	}
 	var grown uint64
@@ -41,6 +45,12 @@ func (c *counter) rate(value uint64, now time.Time, restarted bool) (float64, bo
 		// lower was reset.
 		grown = value + (1<<32 - previous)
 	default:
+		c.total = value
+		return 0, false
+	}
+	seconds := now.Sub(at).Seconds()
+	if seconds <= 0 {
+		c.total += grown
 		return 0, false
 	}
 	perSecond := float64(grown) / seconds
@@ -49,8 +59,10 @@ func (c *counter) rate(value uint64, now time.Time, restarted bool) (float64, bo
 		limit = maxBytesPerSecond
 	}
 	if perSecond > limit {
+		c.total = value
 		return 0, false
 	}
+	c.total += grown
 	return perSecond, true
 }
 

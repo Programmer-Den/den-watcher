@@ -220,6 +220,7 @@ func (s *SNMPReader) network(columns map[string]map[string]snmpValue, now time.T
 		}
 		network.ReceiveBytesPerSecond, _ = rate(&counters[0], received, now, restarted)
 		network.SendBytesPerSecond, _ = rate(&counters[1], sent, now, restarted)
+		network.ReceivedBytes, network.SentBytes = counters[0].total, counters[1].total
 		inErrors, _ := number(oidIfInErrors, row)
 		outErrors, _ := number(oidIfOutErrors, row)
 		inDiscards, _ := number(oidIfInDiscards, row)

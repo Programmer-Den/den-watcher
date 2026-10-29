@@ -362,6 +362,7 @@ func (a *ASUSReader) network(values map[string]string, now time.Time, restarted 
 		network := metrics.NetworkInterface{Name: shown, ReceivedBytes: received, SentBytes: sent}
 		network.ReceiveBytesPerSecond, _ = counters[0].rate(received, now, restarted)
 		network.SendBytesPerSecond, _ = counters[1].rate(sent, now, restarted)
+		network.ReceivedBytes, network.SentBytes = counters[0].total, counters[1].total
 		interfaces = append(interfaces, network)
 	}
 	// The internet first, then the cables, then the Wi-Fi bands.
