@@ -261,6 +261,13 @@ addon_reports power "" "the power add-on wrote no report"
 rm /run/den-watcher-addons/power.json
 addon_reports power "" "the power add-on can no longer write next to the other add-ons"
 
+# A mistyped --purge changes nothing instead of uninstalling and keeping the history.
+if "$folder/install.sh" --uninstall --purge-all 2> /dev/null; then
+  echo "install.sh took the unknown option --purge-all" >&2
+  exit 1
+fi
+installed den-watcher || { echo "install.sh changed the install on an unknown option" >&2; exit 1; }
+
 # --purge also deletes settings made with systemctl edit.
 mkdir -p /etc/systemd/system/den-watcher-power.service.d
 printf '[Service]\nEnvironment=CHECK=1\n' > /etc/systemd/system/den-watcher-power.service.d/override.conf
