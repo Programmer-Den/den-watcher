@@ -9,9 +9,10 @@ import org.json.JSONObject
 /**
  * Keeps the values of every reading until the hub has them, one row per
  * value, as a data-only device keeps its minutes for the hub, and the scans
- * of the Wi-Fi networks nearby. Readings and scans older than KEEP_SECONDS
- * are deleted, so a phone that does not reach the hub for a long time does
- * not fill up.
+ * of the Wi-Fi networks nearby. Only the newest KEEP readings and scans are
+ * kept, so a phone that does not reach the hub for a long time does not fill
+ * up. They are counted rather than dated: a clock set far ahead for a moment
+ * would make every reading before it look too old to keep.
  */
 class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 2) {
     override fun onCreate(db: SQLiteDatabase) {
@@ -53,7 +54,7 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 2
             put("scan", scan.json().toString())
         }
         db.insertWithOnConflict("scans", null, row, SQLiteDatabase.CONFLICT_REPLACE)
-        db.delete("scans", "time < ?", arrayOf((scan.time - KEEP_SECONDS).toString()))
+        db.delete("scans", "time < (SELECT time FROM scans ORDER BY time DESC LIMIT 1 OFFSET ?)", arrayOf((KEEP - 1).toString()))
     }
 
     /** The oldest scans the hub does not have yet, at most Push.MAX_SCANS, in JSON. */
@@ -85,7 +86,11 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 2
                 }
                 db.insertWithOnConflict("readings", null, row, SQLiteDatabase.CONFLICT_REPLACE)
             }
-            db.delete("readings", "time < ?", arrayOf((time - KEEP_SECONDS).toString()))
+            db.delete(
+                "readings",
+                "time < (SELECT DISTINCT time FROM readings ORDER BY time DESC LIMIT 1 OFFSET ?)",
+                arrayOf((KEEP - 1).toString()),
+            )
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()
@@ -123,8 +128,8 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 2
     }
 
     companion object {
-        /** How long readings the hub does not have yet are kept: a week. */
-        const val KEEP_SECONDS = 7 * 24 * 60 * 60L
+        /** How many readings and scans the hub does not have yet are kept: a week of one every half minute. */
+        const val KEEP = 7 * 24 * 60 * 2
 
         fun minuteOf(time: Long): Long = Math.floorDiv(time, 60L) * 60
     }
