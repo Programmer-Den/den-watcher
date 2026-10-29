@@ -90,6 +90,12 @@ case "${1:-}" in
     exit 1
     ;;
 esac
+# Only --uninstall takes a second option, so a mistyped --purge does not keep
+# the settings and the history it was meant to delete.
+if (($# > 2)) || { (($# == 2)) && [[ "$1 $2" != "--uninstall --purge" ]]; }; then
+  echo "Unknown options $*. Use --addons=<names>, --uninstall or --uninstall --purge." >&2
+  exit 1
+fi
 if [[ "${1:-}" != --uninstall ]]; then
   for file in den-watcher den-watcher.service den-watcher.env.example; do
     if [[ ! -f "$here/$file" ]]; then
