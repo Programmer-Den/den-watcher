@@ -16,6 +16,7 @@ cd "$DIR"
 sites='claude\.(ai|com)|anthropic\.com|openai\.com|chatgpt\.com|(gemini|bard|aistudio)\.google\.com'
 sites+='|copilot\.microsoft\.com|github\.com/(features/)?copilot|docs\.github\.com/[^[:space:]]*copilot'
 sites+='|perplexity\.ai|mistral\.ai|x\.ai|grok\.com|deepseek\.com|poe\.com|character\.ai'
+sites+='|copilot\.github\.com|ai\.google\.dev|meta\.ai|cursor\.com|huggingface\.co'
 # Start of the line or a character that cannot be part of a host name or an
 # e-mail address, then any subdomains, so look-alikes such as notclaude.ai and
 # addresses such as a Co-Authored-By trailer's do not count.

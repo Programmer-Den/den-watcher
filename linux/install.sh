@@ -77,6 +77,8 @@ case "${1:-}" in
   --addons=*)
     IFS=, read -r -a picked <<< "${1#--addons=}"
     for addon in "${picked[@]}"; do
+      # A doubled or trailing comma names nothing.
+      [[ -z $addon ]] && continue
       if [[ $addon != cub && -z "${group_addons[$addon]+set}" && ! -f "$here/den-watcher-$addon.service" ]]; then
         echo "There is no add-on called '$addon' in this archive." >&2
         exit 1
@@ -103,7 +105,10 @@ fi
 # over as the den-watcher ones, which the install below then replaces. An
 # install removed with --uninstall left its settings and history, which move
 # too.
-if [[ -e /etc/systemd/system/usage-control.service || -e /usr/local/bin/usage-control || -e /etc/usage-control.env ]] ||
+if [[ -f /etc/usage-control.env && -f "$settings" && ! -e /etc/systemd/system/usage-control.service && ! -e /usr/local/bin/usage-control ]]; then
+  echo "/etc/usage-control.env is left as it is, as den-watcher has its own settings in $settings; delete it once nothing in it is needed." >&2
+fi
+if [[ -e /etc/systemd/system/usage-control.service || -e /usr/local/bin/usage-control || (-e /etc/usage-control.env && ! -e "$settings") ]] ||
   [[ (-d /var/lib/private/usage-control || -d /var/lib/usage-control) && ! -e /var/lib/private/den-watcher && ! -e /var/lib/den-watcher ]]; then
   echo "Moving usage-control to its new name, den-watcher, with its settings, add-ons and history."
   for old in /etc/systemd/system/usage-control*.service; do
@@ -228,6 +233,7 @@ done
 if [[ "${1:-}" == --addons=* ]]; then
   IFS=, read -r -a picked <<< "${1#--addons=}"
   for addon in "${picked[@]}"; do
+    [[ -z $addon ]] && continue
     if [[ $addon == cub ]]; then
       for light in "${cub_addons[@]}"; do
         [[ -f "$here/den-watcher-$light.service" ]] && wanted[$light]=1
@@ -249,7 +255,9 @@ if [[ "${1:-}" == --addons=* ]]; then
     wanted[$addon]=1
   done
 elif [[ -t 0 ]]; then
-  # Grizzly is the default when one of its add-ons is installed already.
+  # Grizzly is the default when an add-on outside Cub is installed already,
+  # or one of Cub's is not, as in the Windows installer, so Enter keeps the
+  # add-ons picked before.
   edition=1
   installed_any=""
   for addon in "${!addon_descriptions[@]}"; do
@@ -258,6 +266,13 @@ elif [[ -t 0 ]]; then
       [[ -z "${cub[$addon]+set}" ]] && edition=2
     fi
   done
+  if [[ -n "$installed_any" ]]; then
+    for addon in "${cub_addons[@]}"; do
+      if [[ -f "$here/den-watcher-$addon.service" && ! -f "/etc/systemd/system/den-watcher-$addon.service" ]]; then
+        edition=2
+      fi
+    done
+  fi
   echo "Which edition should this machine run?"
   echo "  1) Cub: den-watcher with the lightweight add-ons, which collect"
   for group in "${groups[@]}"; do
@@ -516,10 +531,12 @@ systemctl daemon-reload
 systemctl reset-failed den-watcher.service 2> /dev/null || true
 systemctl enable den-watcher.service > /dev/null
 systemctl restart den-watcher.service
+# The add-ons that ran are restarted with den-watcher (PartOf); this starts
+# the ones that did not.
 for addon in "${!wanted[@]}"; do
   systemctl reset-failed "den-watcher-$addon.service" 2> /dev/null || true
   systemctl enable "den-watcher-$addon.service" > /dev/null
-  systemctl restart "den-watcher-$addon.service"
+  systemctl start "den-watcher-$addon.service"
 done
 
 echo "den-watcher is running. Open http://<this machine's address>:9393 on the local network (or the port in LISTEN_ADDR)."
