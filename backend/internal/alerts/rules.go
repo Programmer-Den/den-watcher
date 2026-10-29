@@ -136,7 +136,9 @@ func smartFailures(base Alert, extras []metrics.Extra) []Alert {
 // compared without case, spaces, hyphens and underscores. Security counts as
 // other only when the two have no kind in common, so a mesh router that
 // offers WPA2 next to one with WPA2/WPA3 is none, and an access point whose
-// security is unknown is left out.
+// security is unknown is left out. One at 6 GHz is not compared with one
+// below: Wi-Fi 6E allows only WPA3 and OWE there, which a mesh with WPA2
+// below has to use, and which catches no WPA2 password.
 func lookalikes(base Alert, nearby *metrics.NearbyWiFi) []Alert {
 	if nearby == nil {
 		return nil
@@ -147,7 +149,8 @@ func lookalikes(base Alert, nearby *metrics.NearbyWiFi) []Alert {
 			continue
 		}
 		for _, other := range nearby.AccessPoints {
-			if other.Box == home.Box || other.Security == "" || foldSSID(other.SSID) != foldSSID(home.SSID) {
+			if other.Box == home.Box || other.Security == "" || foldSSID(other.SSID) != foldSSID(home.SSID) ||
+				sixGHz(other) != sixGHz(home) {
 				continue
 			}
 			if sharesSecurity(other.Security, home.Security) {
@@ -160,6 +163,11 @@ func lookalikes(base Alert, nearby *metrics.NearbyWiFi) []Alert {
 		}
 	}
 	return list
+}
+
+// sixGHz reports whether an access point sends in the 6 GHz band.
+func sixGHz(ap metrics.NearbyAccessPoint) bool {
+	return ap.FrequencyMHz >= 5925
 }
 
 // foldSSID returns a network name as lookalikes compares it.
