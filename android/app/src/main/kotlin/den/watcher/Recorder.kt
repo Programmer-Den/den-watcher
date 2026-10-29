@@ -24,11 +24,15 @@ object Recorder {
         Store(app).use { store ->
             store.add(reading.time, reading.values(rates))
             // A scan is kept once, when Android scanned again since, also
-            // after the clock went back; none while they are not collected.
-            val scan = if (choice.collectsNearby) Nearby.read(app, reading.time) else null
-            scan?.takeIf { it.time > settings.lastScan || settings.lastScan > reading.time }?.let {
-                store.addScan(it)
-                settings.lastScan = it.time
+            // after the clock went back. While they are not collected, none
+            // is kept and the ones kept before are not sent any more.
+            if (choice.collectsNearby) {
+                Nearby.read(app, reading.time)?.takeIf { Nearby.isNew(it.time, settings.lastScan, reading.time) }?.let {
+                    store.addScan(it)
+                    settings.lastScan = it.time
+                }
+            } else {
+                store.deleteScansUpTo(Long.MAX_VALUE)
             }
             push(app, settings, store) { reading.snapshot(rates, Sampler.device(app)) }
         }
