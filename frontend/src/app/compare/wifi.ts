@@ -521,9 +521,10 @@ const CHANGE_ORDER: WiFiChangeKind[] = [
 
 /**
  * What changed in the networks nearby over the history, newest first:
- * - a router not of the home network (none of the devices was connected to it) that sends a
- *   network named like it (see foldSSID): with no kind of security in common, a lookalike, which
- *   may be a copy set up to catch passwords, else, under the very name, a new access point of it;
+ * - a router not of the home network (none of the devices was connected to it, or only to it with
+ *   security the network has not) that sends a network named like it (see foldSSID): with no kind
+ *   of security in common, a lookalike, which may be a copy set up to catch passwords, else, under
+ *   the very name, a new access point of it;
  * - a router of the home network that moved to another channel;
  * - a network that appeared after the first step, and one no device saw lately (see recentSince).
  * Hidden networks are left out, as their name is not known.
@@ -537,48 +538,62 @@ export function wifiChanges(history: WiFiHistory): WiFiChange[] {
     if (ap.ssid) named.set(ap.ssid, [...(named.get(ap.ssid) ?? []), ap]);
   }
   const homeAPs = (home && named.get(home)) || [];
+  const joinedTimes = (ap: WiFiAccessPoint) =>
+    ap.seenBy.reduce((sum, s) => sum + s.points.reduce((n, p) => n + (p.connected ?? 0), 0), 0);
+  const across = (a: WiFiAccessPoint, b: WiFiAccessPoint) => sixGHz(a) !== sixGHz(b);
+  // The access point the devices were connected to most is the home network's; one they were
+  // connected to that shares no security with it is a copy a device joined, not a router of home.
+  const reference = homeAPs
+    .filter((ap) => ap.security && joinedTimes(ap) > 0)
+    .reduce<WiFiAccessPoint | undefined>(
+      (a, b) => (a && joinedTimes(a) >= joinedTimes(b) ? a : b),
+      undefined,
+    );
+  const copy = (ap: WiFiAccessPoint) =>
+    !!reference &&
+    !!ap.security &&
+    !sharesSecurity(ap.security, reference.security!, across(ap, reference));
   const homeBoxes = new Set(
-    homeAPs
-      .filter((ap) => ap.seenBy.some((s) => s.points.some((p) => p.connected)))
-      .map((ap) => ap.box),
+    homeAPs.filter((ap) => joinedTimes(ap) > 0 && !copy(ap)).map((ap) => ap.box),
   );
-  // The access points the devices were connected to, whose security the alert compares with.
-  const joined = homeAPs.filter(
-    (ap) => ap.security && ap.seenBy.some((s) => s.points.some((p) => p.connected)),
-  );
+  // The access points of home the devices were connected to, whose security the alert compares with.
+  const joined = homeAPs.filter((ap) => ap.security && joinedTimes(ap) > 0 && !copy(ap));
   // Whether an access point shares no security with any the devices were connected to.
   const otherSecurity = (ap: WiFiAccessPoint) =>
     !!ap.security &&
     joined.length > 0 &&
-    !joined.some((own) => sharesSecurity(ap.security!, own.security!, sixGHz(ap) !== sixGHz(own)));
+    !joined.some((own) => sharesSecurity(ap.security!, own.security!, across(ap, own)));
+  const earliest = (aps: WiFiAccessPoint[]) =>
+    aps.reduce((a, b) => (b.firstSeen < a.firstSeen ? b : a));
   const changes: WiFiChange[] = [];
+  // The routers that send a network named like home, however it is spelled, are told once each.
+  const boxes = new Map<string, WiFiAccessPoint[]>();
+  for (const ap of history.accessPoints) {
+    if (home && ap.ssid && foldSSID(ap.ssid) === foldSSID(home) && !homeBoxes.has(ap.box)) {
+      boxes.set(ap.box, [...(boxes.get(ap.box) ?? []), ap]);
+    }
+  }
+  for (const radios of boxes.values()) {
+    // Every radio of the box is compared, as the alert compares each access point.
+    const others = radios.filter(otherSecurity);
+    const exact = radios.filter((ap) => ap.ssid === home);
+    const first = earliest(others.length > 0 ? others : exact.length > 0 ? exact : radios);
+    if (others.length > 0 || (exact.length > 0 && first.firstSeen > start)) {
+      changes.push({
+        kind: others.length > 0 ? 'lookalike' : 'newAccessPoint',
+        time: first.firstSeen,
+        ssid: first.ssid!,
+        devices: seers(radios),
+        security: first.security,
+        frequencyMHz: first.frequencyMHz,
+      });
+    }
+  }
   for (const [ssid, aps] of named) {
     if (home && foldSSID(ssid) === foldSSID(home)) {
-      const boxes = new Map<string, WiFiAccessPoint[]>();
-      for (const ap of aps.filter((ap) => !homeBoxes.has(ap.box))) {
-        boxes.set(ap.box, [...(boxes.get(ap.box) ?? []), ap]);
-      }
-      for (const radios of boxes.values()) {
-        const earliest = (aps: WiFiAccessPoint[]) =>
-          aps.reduce((a, b) => (b.firstSeen < a.firstSeen ? b : a));
-        // Every radio of the box is compared, as the alert compares each access point.
-        const others = radios.filter(otherSecurity);
-        const other = others.length > 0;
-        const first = earliest(other ? others : radios);
-        if (other || (ssid === home && first.firstSeen > start)) {
-          changes.push({
-            kind: other ? 'lookalike' : 'newAccessPoint',
-            time: first.firstSeen,
-            ssid,
-            devices: seers(radios),
-            security: first.security,
-            frequencyMHz: first.frequencyMHz,
-          });
-        }
-      }
       continue;
     }
-    const first = aps.reduce((a, b) => (b.firstSeen < a.firstSeen ? b : a));
+    const first = earliest(aps);
     const last = Math.max(...aps.map((ap) => ap.lastSeen));
     if (first.firstSeen > start) {
       changes.push({
