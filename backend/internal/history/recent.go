@@ -37,17 +37,18 @@ type reading struct {
 }
 
 // Add keeps the values measured at one time and forgets readings older than
-// RecentSpan before it.
+// RecentSpan before it, and those after it, from before the clock was set
+// back, so the readings stay in order (see Covers and missing).
 func (r *Recent) Add(at time.Time, values map[string]float64) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.readings = append(r.readings, reading{time: at.Unix(), values: values})
 	span := RecentSpan
 	if r.Span > 0 {
 		span = r.Span
 	}
-	oldest := at.Add(-span).Unix()
-	r.readings = slices.DeleteFunc(r.readings, func(x reading) bool { return x.time < oldest })
+	oldest, now := at.Add(-span).Unix(), at.Unix()
+	r.readings = slices.DeleteFunc(r.readings, func(x reading) bool { return x.time < oldest || x.time > now })
+	r.readings = append(r.readings, reading{time: now, values: values})
 }
 
 // Covers reports whether the readings reach back to from without a gap, so a

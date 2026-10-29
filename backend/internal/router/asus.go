@@ -246,8 +246,13 @@ func (a *ASUSReader) snapshot(values map[string]json.RawMessage, now time.Time) 
 			snapshot.UptimeSeconds, _ = strconv.ParseUint(match[1], 10, 64)
 		}
 	}
-	restarted := a.uptimeRead && snapshot.UptimeSeconds < a.uptime
-	a.uptime, a.uptimeRead = snapshot.UptimeSeconds, snapshot.UptimeSeconds > 0
+	// An uptime that could not be read keeps the one before, so a restart
+	// after it is still told by the uptime going down.
+	read := snapshot.UptimeSeconds > 0
+	restarted := read && a.uptimeRead && snapshot.UptimeSeconds < a.uptime
+	if read {
+		a.uptime, a.uptimeRead = snapshot.UptimeSeconds, true
+	}
 	if restarted {
 		a.cores = nil
 	}

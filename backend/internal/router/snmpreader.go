@@ -89,14 +89,19 @@ func (s *SNMPReader) Collect(ctx context.Context) (metrics.Snapshot, error) {
 		return metrics.Snapshot{}, err
 	}
 	var snapshot metrics.Snapshot
+	read := false
 	for _, bind := range uptime {
 		if ticks, ok := bind.value.numeric(); ok {
-			snapshot.UptimeSeconds = ticks / 100
+			snapshot.UptimeSeconds, read = ticks/100, true
 			break
 		}
 	}
-	restarted := s.read && snapshot.UptimeSeconds < s.uptime
-	s.uptime, s.read = snapshot.UptimeSeconds, true
+	// An uptime that could not be read keeps the one before, so a restart
+	// after it is still told by the uptime going down.
+	restarted := read && s.read && snapshot.UptimeSeconds < s.uptime
+	if read {
+		s.uptime, s.read = snapshot.UptimeSeconds, true
+	}
 
 	columns := map[string]map[string]snmpValue{}
 	for _, column := range []string{
@@ -197,15 +202,24 @@ func (s *SNMPReader) network(columns map[string]map[string]snmpValue, now time.T
 			s.traffic[name] = counters
 		}
 		network := metrics.NetworkInterface{Name: name, ReceivedBytes: received, SentBytes: sent}
+		// For a 32-bit counter, the link's speed, with some room, tells one
+		// that was reset from one that wrapped around, as for UPnP and the
+		// FRITZ!Box. A 64-bit one does not wrap, and is not limited by a
+		// speed, which some agents report too low for virtual interfaces.
+		counters[0].limit, counters[1].limit = 0, 0
+		if speed, ok := number(oidIfHighSpeed, row); ok && speed > 0 && speed < 1<<31 {
+			network.LinkMbps = int(speed)
+			if !wide {
+				counters[0].limit = float64(speed) * 1e6 / 8 * 2
+				counters[1].limit = counters[0].limit
+			}
+		}
 		rate := (*counter).rate
 		if wide {
 			rate = (*counter).rate64
 		}
 		network.ReceiveBytesPerSecond, _ = rate(&counters[0], received, now, restarted)
 		network.SendBytesPerSecond, _ = rate(&counters[1], sent, now, restarted)
-		if speed, ok := number(oidIfHighSpeed, row); ok && speed > 0 && speed < 1<<31 {
-			network.LinkMbps = int(speed)
-		}
 		inErrors, _ := number(oidIfInErrors, row)
 		outErrors, _ := number(oidIfOutErrors, row)
 		inDiscards, _ := number(oidIfInDiscards, row)
