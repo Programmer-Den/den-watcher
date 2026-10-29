@@ -31,7 +31,7 @@
     <string name="battery_hint">Manche Handys beenden Apps im Hintergrund, um Akku zu sparen. Fehlen dem Hub Stunden, lass Den-Watcher ohne Akku-Einschränkungen laufen.</string>
     <string name="battery">Akku-Einstellungen</string>
     <string name="data_title">Was geschickt wird</string>
-    <string name="data_hint">Von den Daten, die du zum Sammeln gewählt hast: Ladung und Temperatur des Akkus, belegter Arbeitsspeicher und Speicher, der Datenverkehr über WLAN und mobile Daten und, wenn du es erlaubst, die WLANs in der Nähe, nur an den Hub in deinem Netz. Android lässt keine App lesen, wie ausgelastet der Prozessor ist.</string>
+    <string name="data_hint">Nur die Daten, die du oben zum Sammeln gewählt hast, und nur an den Hub in deinem Netz. Android lässt keine App lesen, wie ausgelastet der Prozessor ist.</string>
     <string name="channel_name">Aufzeichnung</string>
     <string name="channel_description">Wird angezeigt, solange die App die Nutzung aufzeichnet, wie Android es verlangt.</string>
     <string name="notification_title">Zeichnet die Nutzung dieses Handys auf</string>

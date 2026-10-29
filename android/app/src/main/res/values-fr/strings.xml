@@ -31,7 +31,7 @@
     <string name="battery_hint">Certains téléphones arrêtent les apps en arrière-plan pour économiser la batterie. S\'il manque des heures au hub, laissez Den-Watcher fonctionner sans restriction de batterie.</string>
     <string name="battery">Réglages de la batterie</string>
     <string name="data_title">Ce qui est envoyé</string>
-    <string name="data_hint">Parmi les données que vous avez choisi de collecter : la charge et la température de la batterie, la mémoire et le stockage utilisés, le trafic Wi-Fi et données mobiles et, si vous l\'autorisez, les réseaux Wi-Fi à proximité, uniquement au hub de votre réseau. Android ne laisse aucune app lire la charge du processeur.</string>
+    <string name="data_hint">Uniquement les données que vous avez choisi de collecter ci-dessus, et uniquement au hub de votre réseau. Android ne laisse aucune app lire la charge du processeur.</string>
     <string name="channel_name">Enregistrement</string>
     <string name="channel_description">Affichée pendant que l\'app enregistre l\'utilisation, comme Android le demande.</string>
     <string name="notification_title">Enregistre l\'utilisation de ce téléphone</string>
