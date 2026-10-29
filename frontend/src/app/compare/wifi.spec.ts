@@ -320,6 +320,16 @@ describe('placeSignals', () => {
     ]);
     expect(placeSignals(h, 'pc')).toBeUndefined();
   });
+
+  it('names a place a device that hears more access points than it keeps is found at', () => {
+    // A block of flats: 120 access points, each heard well.
+    const h = history(
+      Array.from({ length: 120 }, (_, i) => ap(`a${i}`, `b${i}`, 'Flat', { hub: 60 + i / 4 })),
+    );
+    const named = [{ name: 'Home', signals: placeSignals(h, 'hub')! }];
+    expect(Object.keys(named[0].signals).length).toBe(64);
+    expect(whereNow(h, 'hub', named)).toEqual({ place: 'Home' });
+  });
 });
 
 describe('wifiChanges', () => {

@@ -340,6 +340,27 @@ describe('Compare', () => {
     expect(swatches[1].classList).toContain('series-2');
   });
 
+  it("keeps the newest steps when this computer's clock is behind the hub's", () => {
+    http.expectOne('/api/devices/metrics').flush({ local: snapshot, router });
+    for (const r of http.match((r) => r.url === '/api/history')) {
+      // The hub's clock is five minutes ahead; it ends the range at its own time.
+      const to = Number(r.request.params.get('to')) + 300;
+      r.flush({
+        from: to - 3600,
+        to,
+        stepSeconds: 60,
+        retentionDays: 30,
+        series: [{ metric: 'cpu', points: [{ time: to - 120, value: 40 }] }],
+      });
+    }
+    fixture.detectChanges();
+    const titles = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.charts h3'),
+      (h) => h.textContent!.trim(),
+    );
+    expect(titles).toEqual(['CPU']);
+  });
+
   it('leaves out the line of a device whose history ends before the range', () => {
     answer(true);
     // With one line left, the chart needs no legend.

@@ -603,6 +603,13 @@ export interface WiFiPlace {
 /** The most access points a place keeps, as the hub takes them: the strongest. */
 export const PLACE_SIGNALS = 64;
 
+/** The PLACE_SIGNALS strongest of the signals, as a place keeps them. */
+function strongestOf(signals: Map<string, number>): [string, number][] {
+  return [...signals]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, PLACE_SIGNALS);
+}
+
 /**
  * Where a device was: at a named place, or else at home near a router of the home network, or
  * neither of them (an empty object), as somewhere not named yet.
@@ -624,8 +631,10 @@ function whereaboutOf(
   home: string | undefined,
 ): Whereabout {
   let best: { place: string; alike: number } | undefined;
+  // As many as a place keeps, so a device that hears more is not less alike to where it was named.
+  const strongest = new Map(strongestOf(signals));
   for (const place of named) {
-    const alike = likeness(signals, new Map(Object.entries(place.signals)));
+    const alike = likeness(strongest, new Map(Object.entries(place.signals)));
     if (alike !== undefined && alike >= TOGETHER && (!best || alike > best.alike)) {
       best = { place: place.name, alike };
     }
@@ -682,9 +691,7 @@ export function placeSignals(
   history: WiFiHistory,
   device: string,
 ): Record<string, number> | undefined {
-  const strongest = [...signalsOf(history, device)]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, PLACE_SIGNALS);
+  const strongest = strongestOf(signalsOf(history, device));
   return strongest.length > 0
     ? Object.fromEntries(strongest.map(([id, signal]) => [id, Math.round(signal * 10) / 10]))
     : undefined;

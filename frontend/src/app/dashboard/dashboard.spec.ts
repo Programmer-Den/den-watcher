@@ -1446,7 +1446,7 @@ describe('Dashboard', () => {
     expect(text()).toContain('WAN');
   });
 
-  it('leaves out the processor of a phone, whose app cannot read it', () => {
+  it('leaves out the processor of a phone, whose app cannot read it, and the values it does not collect', () => {
     vi.setSystemTime(new Date('2026-10-02T12:00:00Z'));
     respond(snapshot);
     const devices = TestBed.inject(DeviceService);
@@ -1483,6 +1483,9 @@ describe('Dashboard', () => {
     );
     expect(titles).not.toContain('CPU');
     expect(titles).toContain('Memory');
+    // Its app was told not to collect the storage and the traffic.
+    expect(titles).not.toContain('Disks');
+    expect(titles).not.toContain('Network');
   });
 
   it('shows how long another device was offline since it was added', () => {
