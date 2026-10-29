@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.PowerManager
 import android.os.SystemClock
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Wakes the phone every half minute while recording, takes a reading and
@@ -23,6 +24,11 @@ class RecordAlarm : BroadcastReceiver() {
             return
         }
         schedule(app, INTERVAL_MILLIS)
+        // While a long sync runs, the alarms meanwhile add no readings that
+        // would all be taken one after another once it is done.
+        if (!running.compareAndSet(false, true)) {
+            return
+        }
         val lock = app.getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "den.watcher:record")
         lock.acquire(LOCK_MILLIS)
@@ -33,6 +39,7 @@ class RecordAlarm : BroadcastReceiver() {
             try {
                 runCatching { Recorder.recordAndPush(app) }
             } finally {
+                running.set(false)
                 if (lock.isHeld) lock.release()
             }
         }
@@ -45,6 +52,9 @@ class RecordAlarm : BroadcastReceiver() {
         private const val LOCK_MILLIS = 10 * 60_000L
 
         private val worker = Executors.newSingleThreadExecutor()
+
+        /** Whether a reading and its pushes run or wait on the worker. */
+        private val running = AtomicBoolean(false)
 
         /** Rings at once, and from then on every half minute. */
         fun start(context: Context) = schedule(context.applicationContext, 0)

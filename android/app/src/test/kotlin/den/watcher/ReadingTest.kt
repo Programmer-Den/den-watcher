@@ -6,9 +6,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReadingTest {
-    private fun reading(time: Long, uptime: Long, wifi: Traffic, mobile: Traffic = Traffic(0, 0)) = Reading(
+    private fun reading(time: Long, uptime: Long, wifi: Traffic, mobile: Traffic = Traffic(0, 0), boot: Int = 0) = Reading(
         time = time,
         uptimeSeconds = uptime,
+        boot = boot,
         batteryPercent = 80.0,
         pluggedIn = false,
         batteryCelsius = 31.5,
@@ -33,8 +34,25 @@ class ReadingTest {
         val before = reading(1_000, 500, Traffic(1_000, 100))
         assertTrue(reading(1_030, 20, Traffic(4_000, 400)).ratesSince(before).isEmpty())
         assertTrue(reading(1_030, 530, Traffic(4_000, 400)).ratesSince(null).isEmpty())
-        assertTrue(reading(1_000, 530, Traffic(4_000, 400)).ratesSince(before).isEmpty())
+        assertTrue(reading(1_030, 500, Traffic(4_000, 400)).ratesSince(before).isEmpty())
         assertFalse(Sampler.WIFI in reading(1_030, 530, Traffic(10, 400)).ratesSince(before))
+    }
+
+    @Test
+    fun measuresSpeedsByTheTimeSinceTheStartNotByTheClock() {
+        val before = reading(1_000, 500, Traffic(1_000, 100))
+        // The clock moved an hour on between the two readings, 30 s apart.
+        val now = reading(4_630, 530, Traffic(4_000, 400))
+        assertEquals(Rates(100.0, 10.0), now.ratesSince(before)[Sampler.WIFI])
+        // And back.
+        assertEquals(Rates(100.0, 10.0), reading(10, 530, Traffic(4_000, 400)).ratesSince(before)[Sampler.WIFI])
+    }
+
+    @Test
+    fun measuresNoSpeedsAfterARestartThatStartedLaterThanTheReadingBefore() {
+        val before = reading(1_000, 500, Traffic(1_000, 100), boot = 7)
+        assertTrue(reading(9_000, 7_200, Traffic(4_000, 400), boot = 8).ratesSince(before).isEmpty())
+        assertEquals(Rates(100.0, 10.0), reading(1_030, 530, Traffic(4_000, 400), boot = 7).ratesSince(before)[Sampler.WIFI])
     }
 
     @Test

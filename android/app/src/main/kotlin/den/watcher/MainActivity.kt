@@ -85,8 +85,11 @@ class MainActivity : Activity() {
         for ((id, change) in dataSwitches) {
             findViewById<Switch>(id).setOnCheckedChangeListener { _, on ->
                 // Only the user changes it, not showDataChoice setting the switches.
+                // The hub may have locked the phone since the switches were shown.
                 if (!showingDataChoice) {
-                    settings.dataChoice = settings.dataChoice.change(on)
+                    if (!settings.locked()) {
+                        settings.dataChoice = settings.dataChoice.change(on)
+                    }
                     showDataChoice()
                 }
             }
@@ -224,6 +227,7 @@ class MainActivity : Activity() {
             // address can be scanned again, as when the phone was not added.
             settings.paired = false
             settings.releasedUntil = 0
+            settings.releasedAt = 0
             settings.hubKey = ""
             // The network the new hub is first reached on is the usual one.
             settings.usualNetworks = emptySet()

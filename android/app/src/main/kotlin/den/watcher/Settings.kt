@@ -53,8 +53,21 @@ class Settings(context: Context) {
         get() = prefs.getLong(RELEASED_UNTIL, 0)
         set(value) = prefs.edit().putLong(RELEASED_UNTIL, value).apply()
 
-    /** Whether changing the hub or stopping recording waits for the hub to allow it, at now. */
-    fun locked(now: Long = System.currentTimeMillis() / 1000): Boolean = paired && now >= releasedUntil
+    /**
+     * When the push was sent whose answer allowed the change, in Unix seconds;
+     * a proof for that push or an earlier one allows nothing again.
+     */
+    var releasedAt: Long
+        get() = prefs.getLong(RELEASED_AT, 0)
+        set(value) = prefs.edit().putLong(RELEASED_AT, value).apply()
+
+    /**
+     * Whether changing the hub or stopping recording waits for the hub to
+     * allow it, at now; also when the clock was set back to before the hub
+     * allowed it.
+     */
+    fun locked(now: Long = System.currentTimeMillis() / 1000): Boolean =
+        paired && (now >= releasedUntil || now < releasedAt)
 
     /** Whether recording was switched on, so it starts again with the phone. */
     var recording: Boolean
@@ -119,6 +132,7 @@ class Settings(context: Context) {
     private fun readingTo(r: Reading): JSONObject = JSONObject()
         .put("time", r.time)
         .put("uptime", r.uptimeSeconds)
+        .put("boot", r.boot)
         .put("traffic", JSONObject().apply { r.traffic.forEach { (name, t) -> put(name, JSONObject().put("received", t.received).put("sent", t.sent)) } })
 
     private fun readingFrom(o: JSONObject): Reading {
@@ -126,6 +140,7 @@ class Settings(context: Context) {
         return Reading(
             time = o.getLong("time"),
             uptimeSeconds = o.getLong("uptime"),
+            boot = o.optInt("boot"),
             batteryPercent = null,
             pluggedIn = false,
             batteryCelsius = null,
@@ -148,6 +163,7 @@ class Settings(context: Context) {
         const val RECORDING = "recording"
         const val PAIRED = "paired"
         const val RELEASED_UNTIL = "releasedUntil"
+        const val RELEASED_AT = "releasedAt"
         const val HUB_KEY = "hubKey"
         const val LAST_PUSH = "lastPush"
         const val PROBLEM = "problem"
