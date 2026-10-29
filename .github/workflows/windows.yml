@@ -97,8 +97,9 @@ jobs:
             fi
           else
             version="dev-${GITHUB_SHA::7}"
-            # An MSI's build number is at most 65535.
-            msi_version="0.0.$((GITHUB_RUN_NUMBER % 65536))"
+            # An MSI's build number is at most 65535, so higher run numbers
+            # carry into the minor number and the version still grows.
+            msi_version="0.$((GITHUB_RUN_NUMBER / 65536)).$((GITHUB_RUN_NUMBER % 65536))"
             bugfix=0
           fi
           {
