@@ -217,23 +217,26 @@ class MainActivity : Activity() {
             Toast.makeText(this, R.string.scan_invalid, Toast.LENGTH_LONG).show()
             return
         }
-        // The hub may have locked it while the scanner was open.
-        if (settings.locked()) {
-            showStatus()
-            return
+        // A push that is taking the old hub's answer finishes first, so it is not kept for the new one.
+        synchronized(Recorder.hubLock) {
+            // The hub may have locked it while the scanner was open.
+            if (settings.locked()) {
+                showStatus()
+                return
+            }
+            if (scanned != settings.hubAddress) {
+                // Another hub is locked once it takes a push; until then the
+                // address can be scanned again, as when the phone was not added.
+                settings.paired = false
+                settings.releasedUntil = 0
+                settings.releasedAt = 0
+                settings.hubKey = ""
+                // The network the new hub is first reached on is the usual one.
+                settings.usualNetworks = emptySet()
+                settings.otherNetwork = null
+            }
+            settings.hubAddress = scanned
         }
-        if (scanned != settings.hubAddress) {
-            // Another hub is locked once it takes a push; until then the
-            // address can be scanned again, as when the phone was not added.
-            settings.paired = false
-            settings.releasedUntil = 0
-            settings.releasedAt = 0
-            settings.hubKey = ""
-            // The network the new hub is first reached on is the usual one.
-            settings.usualNetworks = emptySet()
-            settings.otherNetwork = null
-        }
-        settings.hubAddress = scanned
         Toast.makeText(this, R.string.address_saved, Toast.LENGTH_SHORT).show()
         if (settings.recording) {
             // Tries the new address right away.
