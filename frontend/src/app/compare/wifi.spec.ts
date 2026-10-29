@@ -438,4 +438,21 @@ describe('wifiChanges', () => {
       ['lookalike', 'Open', 1],
     ]);
   });
+
+  it('tells a copy a device joined, and a router under two spellings once', () => {
+    const h = history([
+      heard('a1', 'b1', 'Den', [3, 2, 1, 0], { security: 'WPA2' }, [], true),
+      heard('a2', 'b2', 'Den', [3, 2, 1, 0], { security: 'WPA2' }, [], true),
+      // An open copy one device joined for a step.
+      heard('c1', 'cb', 'Den', [1], { security: 'Open' }, [], true),
+      // A router that sends the name twice, spelled two ways.
+      heard('d1', 'db', 'DEN', [2, 1, 0], { security: 'Open' }),
+      heard('d2', 'db', 'Den', [1, 0], { security: 'Open' }),
+    ]);
+    h.from = NOW - 3 * HOUR;
+    expect(wifiChanges(h).map((c) => [c.kind, c.ssid, (NOW - c.time) / HOUR])).toEqual([
+      ['lookalike', 'Den', 1],
+      ['lookalike', 'DEN', 2],
+    ]);
+  });
 });
