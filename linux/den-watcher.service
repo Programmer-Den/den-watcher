@@ -39,7 +39,8 @@ RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes
 LockPersonality=yes
-MemoryDenyWriteExecute=yes
+# Not MemoryDenyWriteExecute=yes: nvidia-smi, which reads NVIDIA GPUs, may
+# need memory that is written and run, as in the gpu add-on.
 SystemCallArchitectures=native
 
 [Install]

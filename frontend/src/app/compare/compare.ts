@@ -304,7 +304,16 @@ export class Compare {
     ).pipe(
       map((answers) => {
         const read = answers.filter((a) => a !== null);
-        return { from, to, step: read[0]?.history.stepSeconds ?? 60, devices: read };
+        // The backend ends the range at its own time, so a clock behind the hub's does not cut
+        // off the newest steps. A device that does not answer has its history moved back, which
+        // does not move the range.
+        const end = Math.max(to, ...read.map((a) => a.history.to));
+        return {
+          from: end - seconds,
+          to: end,
+          step: read[0]?.history.stepSeconds ?? 60,
+          devices: read,
+        };
       }),
     );
   }

@@ -592,15 +592,20 @@ export class Dashboard {
 
   /** The cards the device's values fill, in the order the page shows them within a category. */
   private cards(s: Snapshot): Card[] {
-    const readsLess = this.readsLess();
+    // A phone's app sends only the values its user chose to collect.
+    const readsLess = this.readsLess() || this.isPhone();
     const fixed = (kind: keyof typeof CARD_TITLES, category: Category, shows: unknown) =>
       shows ? [{ id: kind, kind, category }] : [];
     return [
-      ...fixed('cpu', 'system', (!readsLess && !this.isPhone()) || s.cpu.cores > 0),
+      ...fixed('cpu', 'system', !readsLess || s.cpu.cores > 0),
       ...fixed('memory', 'system', !readsLess || s.memory.totalBytes > 0),
       ...fixed('disks', 'storage', !readsLess || s.disks.length > 0),
       ...fixed('diskActivity', 'storage', hasDiskActivity(s)),
-      ...fixed('network', 'network', !this.isChecked() || s.network.length > 0),
+      ...fixed(
+        'network',
+        'network',
+        (!this.isChecked() && !this.isPhone()) || s.network.length > 0,
+      ),
       ...fixed('connection', 'network', s.responseMilliseconds !== undefined),
       ...fixed('gpus', 'system', s.gpus?.length),
       ...fixed('temperatures', 'temperature', !readsLess || s.temperatures.length > 0),
