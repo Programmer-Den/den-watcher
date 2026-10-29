@@ -2,6 +2,7 @@ package router
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -292,6 +293,30 @@ func TestASUSCPUAfterARestart(t *testing.T) {
 	}
 	if got := reader.cpu(map[string]string{"cpu1_total": "100", "cpu1_usage": "90"}); got.Cores != 0 {
 		t.Errorf("after counters started again got %+v, want none", got)
+	}
+}
+
+func TestASUSTellsARestartAfterAnUptimeItCouldNotRead(t *testing.T) {
+	reader := &ASUSReader{}
+	values := func(uptime, received string) map[string]json.RawMessage {
+		text, _ := json.Marshal(uptime)
+		netdev, _ := json.Marshal(map[string]string{"INTERNET_rx": received, "INTERNET_tx": "0x0"})
+		return map[string]json.RawMessage{"uptime": text, "netdev": netdev}
+	}
+	start := time.Now()
+	for i, v := range []map[string]json.RawMessage{
+		values("Thu, 10 Oct 2026 08:00:00 +0200(5000 secs since boot)", "0xf0000000"),
+		values("", "0xf0001000"),
+		// Restarted: the counter starting low again is no 32-bit wrap.
+		values("Thu, 10 Oct 2026 08:01:00 +0200(20 secs since boot)", "0x10"),
+	} {
+		snapshot, err := reader.snapshot(v, start.Add(time.Duration(i)*30*time.Second))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i == 2 && snapshot.Network[0].ReceiveBytesPerSecond != 0 {
+			t.Errorf("the restart counted %v bytes per second", snapshot.Network[0].ReceiveBytesPerSecond)
+		}
 	}
 }
 

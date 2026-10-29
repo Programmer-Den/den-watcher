@@ -41,6 +41,25 @@ func TestRecentForgetsOldReadings(t *testing.T) {
 	}
 }
 
+func TestRecentForgetsReadingsAfterTheClockWasSetBack(t *testing.T) {
+	var recent Recent
+	now := time.Unix(1_800_000_000, 0)
+	recent.Add(now, map[string]float64{MetricCPU: 99})
+	recent.Add(now.Add(5*time.Second), map[string]float64{MetricCPU: 99})
+	back := now.Add(-time.Hour)
+	for i := range 4 {
+		recent.Add(back.Add(time.Duration(i)*5*time.Second), map[string]float64{MetricCPU: 1})
+	}
+
+	if !recent.Covers(back) {
+		t.Error("Covers() = false after the clock was set back, want the new readings to cover their range")
+	}
+	got := recent.Average(back, now.Add(time.Minute))
+	if !reflect.DeepEqual(got, map[string]float64{MetricCPU: 1}) {
+		t.Errorf("Average() = %v, want only the readings since the clock was set back", got)
+	}
+}
+
 func TestRecentCoversFromItsOldestReadingOn(t *testing.T) {
 	var recent Recent
 	oldest := time.Unix(1_800_000_000, 0)
