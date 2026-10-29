@@ -180,3 +180,37 @@ func TestWiFiGivesAnAccessPointAsItWasLastSeen(t *testing.T) {
 		t.Errorf("AccessPoint = %+v, want it on 5500 MHz with WPA2/WPA3 as last seen, first seen in the first hour", ap)
 	}
 }
+
+func TestDeleteDeviceForgetsItsWiFiBeforeTheNextFlush(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	store.AddWiFi("nas", time.Unix(1_800_000_000, 0), nearby(60))
+	// Another write keeps DeleteDevice deleting; a flush that took the
+	// device's sums meanwhile would write them after the delete.
+	conn, err := store.db.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = conn.Close() }()
+	if _, err := conn.ExecContext(ctx, `BEGIN IMMEDIATE`); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error)
+	go func() { done <- store.DeleteDevice(ctx, "nas") }()
+	waiting := func() bool {
+		store.wifi.mu.Lock()
+		defer store.wifi.mu.Unlock()
+		return len(store.wifi.sums) > 0
+	}
+	for deadline := time.Now().Add(2 * time.Second); waiting(); time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("the deleted device's Wi-Fi sums still wait to be written while it is deleted")
+		}
+	}
+	if _, err := conn.ExecContext(ctx, `ROLLBACK`); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+}

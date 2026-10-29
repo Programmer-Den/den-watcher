@@ -270,9 +270,11 @@ func (s *Store) DeleteBefore(ctx context.Context, t time.Time) (int64, error) {
 // DeleteDevice deletes every value of one device, and how its extras are
 // described, in chunks as DeleteBefore does.
 func (s *Store) DeleteDevice(ctx context.Context, device string) error {
-	// After a flush that is writing its minutes, which would bring them back.
+	// After a flush that is writing its minutes and Wi-Fi sums, which would
+	// bring them back, and before the next one can take them.
 	s.flushing.Lock()
 	s.pend.forget(device)
+	s.wifi.forget(device)
 	s.flushing.Unlock()
 	s.cache.forget(device)
 	deleted, err := s.deleteChunks(ctx, "history_minutes", "device, time", `device = ?`, device)
@@ -286,7 +288,6 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	if _, err := s.db.ExecContext(ctx, `DELETE FROM extra_info WHERE device = ?`, device); err != nil {
 		return err
 	}
-	s.wifi.forget(device)
 	wifi, err := s.deleteChunks(ctx, "wifi_hours", "device, time, ap", `device = ?`, device)
 	if err != nil {
 		return err
