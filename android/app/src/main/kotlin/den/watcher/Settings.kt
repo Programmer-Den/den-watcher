@@ -85,6 +85,27 @@ class Settings(context: Context) {
         get() = prefs.getString(OTHER_NETWORK, null)
         set(value) = prefs.edit().putString(OTHER_NETWORK, value).apply()
 
+    /** Which data the app collects, as chosen on its screen; all of it until something is switched off. */
+    var dataChoice: DataChoice
+        get() = DataChoice(
+            system = prefs.getBoolean(COLLECT_SYSTEM, true),
+            battery = prefs.getBoolean(COLLECT_BATTERY, true),
+            memory = prefs.getBoolean(COLLECT_MEMORY, true),
+            storage = prefs.getBoolean(COLLECT_STORAGE, true),
+            network = prefs.getBoolean(COLLECT_NETWORK, true),
+            traffic = prefs.getBoolean(COLLECT_TRAFFIC, true),
+            nearby = prefs.getBoolean(COLLECT_NEARBY, true),
+        )
+        set(value) = prefs.edit()
+            .putBoolean(COLLECT_SYSTEM, value.system)
+            .putBoolean(COLLECT_BATTERY, value.battery)
+            .putBoolean(COLLECT_MEMORY, value.memory)
+            .putBoolean(COLLECT_STORAGE, value.storage)
+            .putBoolean(COLLECT_NETWORK, value.network)
+            .putBoolean(COLLECT_TRAFFIC, value.traffic)
+            .putBoolean(COLLECT_NEARBY, value.nearby)
+            .apply()
+
     /** When the newest scan of the networks nearby that was kept was made, in Unix seconds. */
     var lastScan: Long
         get() = prefs.getLong(LAST_SCAN, 0)
@@ -134,6 +155,13 @@ class Settings(context: Context) {
         const val USUAL_NETWORKS = "usualNetworks"
         const val OTHER_NETWORK = "otherNetwork"
         const val LAST_SCAN = "lastScan"
+        const val COLLECT_SYSTEM = "collectSystem"
+        const val COLLECT_BATTERY = "collectBattery"
+        const val COLLECT_MEMORY = "collectMemory"
+        const val COLLECT_STORAGE = "collectStorage"
+        const val COLLECT_NETWORK = "collectNetwork"
+        const val COLLECT_TRAFFIC = "collectTraffic"
+        const val COLLECT_NEARBY = "collectNearby"
     }
 }
 

@@ -63,4 +63,24 @@
         <item name="android:drawableTint">@color/primary</item>
         <item name="android:textColor">@color/primary</item>
     </style>
+
+    <!-- A group's switch under Which data do you want to collect, and the switches of its data below it. -->
+    <style name="CollectGroup">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">14dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="CollectItem">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:textSize">15sp</item>
+    </style>
 </resources>

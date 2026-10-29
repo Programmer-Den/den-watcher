@@ -31,7 +31,7 @@
     <string name="battery_hint">Manche Handys beenden Apps im Hintergrund, um Akku zu sparen. Fehlen dem Hub Stunden, lass Den-Watcher ohne Akku-Einschränkungen laufen.</string>
     <string name="battery">Akku-Einstellungen</string>
     <string name="data_title">Was geschickt wird</string>
-    <string name="data_hint">Ladung und Temperatur des Akkus, belegter Arbeitsspeicher und Speicher, der Datenverkehr über WLAN und mobile Daten und, wenn du es erlaubst, die WLANs in der Nähe, nur an den Hub in deinem Netz. Android lässt keine App lesen, wie ausgelastet der Prozessor ist.</string>
+    <string name="data_hint">Nur die Daten, die du oben zum Sammeln gewählt hast, und nur an den Hub in deinem Netz. Android lässt keine App lesen, wie ausgelastet der Prozessor ist.</string>
     <string name="channel_name">Aufzeichnung</string>
     <string name="channel_description">Wird angezeigt, solange die App die Nutzung aufzeichnet, wie Android es verlangt.</string>
     <string name="notification_title">Zeichnet die Nutzung dieses Handys auf</string>
@@ -48,4 +48,14 @@
     <string name="nearby_allow">Erlauben</string>
     <string name="nearby_allow_always">Immer erlauben</string>
     <string name="nearby_settings">App-Einstellungen</string>
+    <string name="collect_title">Welche Daten möchtest du sammeln?</string>
+    <string name="collect_hint">In denselben Gruppen wie in den Installern von Den-Watcher. Was ausgeschaltet ist, wird weder gelesen noch geschickt.</string>
+    <string name="collect_locked">Vom Hub gesperrt, wie die Adresse des Hubs.</string>
+    <string name="collect_system">System-Grundwerte</string>
+    <string name="collect_battery">Akku: Ladung und Temperatur</string>
+    <string name="collect_memory">Belegter Arbeitsspeicher</string>
+    <string name="collect_storage">Belegter Speicher</string>
+    <string name="collect_network">Netzwerk</string>
+    <string name="collect_traffic">Datenverkehr über WLAN und mobile Daten</string>
+    <string name="collect_nearby">WLANs in der Nähe</string>
 </resources>

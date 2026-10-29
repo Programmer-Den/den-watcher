@@ -206,6 +206,53 @@
 
             <TextView
                 style="@style/Heading"
+                android:text="@string/collect_title" />
+
+            <TextView
+                android:id="@+id/collect_hint"
+                style="@style/Hint"
+                android:text="@string/collect_hint" />
+
+            <Switch
+                android:id="@+id/collect_system"
+                style="@style/CollectGroup"
+                android:text="@string/collect_system" />
+
+            <Switch
+                android:id="@+id/collect_battery"
+                style="@style/CollectItem"
+                android:text="@string/collect_battery" />
+
+            <Switch
+                android:id="@+id/collect_memory"
+                style="@style/CollectItem"
+                android:text="@string/collect_memory" />
+
+            <Switch
+                android:id="@+id/collect_storage"
+                style="@style/CollectItem"
+                android:text="@string/collect_storage" />
+
+            <Switch
+                android:id="@+id/collect_network"
+                style="@style/CollectGroup"
+                android:text="@string/collect_network" />
+
+            <Switch
+                android:id="@+id/collect_traffic"
+                style="@style/CollectItem"
+                android:text="@string/collect_traffic" />
+
+            <Switch
+                android:id="@+id/collect_nearby"
+                style="@style/CollectItem"
+                android:text="@string/collect_nearby" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/Card">
+
+            <TextView
+                style="@style/Heading"
                 android:text="@string/data_title" />
 
             <TextView

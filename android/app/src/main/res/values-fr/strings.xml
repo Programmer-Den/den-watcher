@@ -31,7 +31,7 @@
     <string name="battery_hint">Certains téléphones arrêtent les apps en arrière-plan pour économiser la batterie. S\'il manque des heures au hub, laissez Den-Watcher fonctionner sans restriction de batterie.</string>
     <string name="battery">Réglages de la batterie</string>
     <string name="data_title">Ce qui est envoyé</string>
-    <string name="data_hint">La charge et la température de la batterie, la mémoire et le stockage utilisés, le trafic Wi-Fi et données mobiles et, si vous l\'autorisez, les réseaux Wi-Fi à proximité, uniquement au hub de votre réseau. Android ne laisse aucune app lire la charge du processeur.</string>
+    <string name="data_hint">Uniquement les données que vous avez choisi de collecter ci-dessus, et uniquement au hub de votre réseau. Android ne laisse aucune app lire la charge du processeur.</string>
     <string name="channel_name">Enregistrement</string>
     <string name="channel_description">Affichée pendant que l\'app enregistre l\'utilisation, comme Android le demande.</string>
     <string name="notification_title">Enregistre l\'utilisation de ce téléphone</string>
@@ -48,4 +48,14 @@
     <string name="nearby_allow">Autoriser</string>
     <string name="nearby_allow_always">Toujours autoriser</string>
     <string name="nearby_settings">Paramètres de l\'app</string>
+    <string name="collect_title">Quelles données voulez-vous collecter ?</string>
+    <string name="collect_hint">Dans les mêmes groupes que les installateurs de Den-Watcher. Ce qui est désactivé n\'est ni lu ni envoyé.</string>
+    <string name="collect_locked">Verrouillé par le hub, comme l\'adresse du hub.</string>
+    <string name="collect_system">Bases du système</string>
+    <string name="collect_battery">Batterie : charge et température</string>
+    <string name="collect_memory">Mémoire utilisée</string>
+    <string name="collect_storage">Stockage utilisé</string>
+    <string name="collect_network">Réseau</string>
+    <string name="collect_traffic">Trafic Wi-Fi et données mobiles</string>
+    <string name="collect_nearby">Réseaux Wi-Fi à proximité</string>
 </resources>

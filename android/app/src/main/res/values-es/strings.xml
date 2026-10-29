@@ -31,7 +31,7 @@
     <string name="battery_hint">Algunos móviles detienen las apps en segundo plano para ahorrar batería. Si al hub le faltan horas, deja que Den-Watcher funcione sin restricciones de batería.</string>
     <string name="battery">Ajustes de batería</string>
     <string name="data_title">Qué se envía</string>
-    <string name="data_hint">La carga y la temperatura de la batería, la memoria y el almacenamiento usados, el tráfico de Wi-Fi y datos móviles y, si lo permites, las redes Wi-Fi cercanas, solo al hub de tu red. Android no deja que ninguna app lea lo ocupado que está el procesador.</string>
+    <string name="data_hint">Solo los datos que has elegido recopilar arriba, y solo al hub de tu red. Android no deja que ninguna app lea lo ocupado que está el procesador.</string>
     <string name="channel_name">Registro</string>
     <string name="channel_description">Se muestra mientras la app registra el uso, como pide Android.</string>
     <string name="notification_title">Registrando el uso de este móvil</string>
@@ -48,4 +48,14 @@
     <string name="nearby_allow">Permitir</string>
     <string name="nearby_allow_always">Permitir siempre</string>
     <string name="nearby_settings">Ajustes de la app</string>
+    <string name="collect_title">¿Qué datos quieres recopilar?</string>
+    <string name="collect_hint">En los mismos grupos que los instaladores de Den-Watcher. Lo que está desactivado no se lee ni se envía.</string>
+    <string name="collect_locked">Bloqueado por el hub, como la dirección del hub.</string>
+    <string name="collect_system">Datos básicos del sistema</string>
+    <string name="collect_battery">Batería: carga y temperatura</string>
+    <string name="collect_memory">Memoria usada</string>
+    <string name="collect_storage">Almacenamiento usado</string>
+    <string name="collect_network">Red</string>
+    <string name="collect_traffic">Tráfico de Wi-Fi y datos móviles</string>
+    <string name="collect_nearby">Redes Wi-Fi cercanas</string>
 </resources>
