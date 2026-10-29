@@ -64,6 +64,23 @@ func TestANameIsKeptWithoutTheSpacesAroundIt(t *testing.T) {
 	}
 }
 
+func TestANameMayHoldAnyTextButControlCharacters(t *testing.T) {
+	ctx := context.Background()
+	s := openTestStore(t)
+	// A no-break space, as French typing puts one, and an emoji with zero-width joiners.
+	names := []string{"Salle\u00a0à manger", "Home \U0001F468\u200D\U0001F469\u200D\U0001F467"}
+	var places []Place
+	for _, name := range names {
+		places = append(places, Place{Name: name, Signals: map[string]float64{"17226b1f68ae": 64}})
+	}
+	if err := s.Write(ctx, places); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+	if got, err := s.Read(ctx); err != nil || len(got) != 2 || got[0].Name != names[0] || got[1].Name != names[1] {
+		t.Errorf("Read() = %v, %v; want %q", got, err, names)
+	}
+}
+
 func TestRefusesPlacesThatAreNotValid(t *testing.T) {
 	signals := map[string]float64{"17226b1f68ae": 64}
 	tooManyPlaces := make([]Place, MaxPlaces+1)

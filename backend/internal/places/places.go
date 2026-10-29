@@ -87,8 +87,10 @@ func (s *Store) Write(ctx context.Context, places []Place) error {
 	}
 	seen := map[string]bool{}
 	for i, place := range places {
+		// Only control characters are refused: a name may hold a no-break
+		// space, or an emoji joined from several with a zero-width joiner.
 		name := strings.TrimSpace(place.Name)
-		if name == "" || len(name) > MaxNameBytes || !utf8.ValidString(name) || strings.ContainsFunc(name, func(r rune) bool { return !unicode.IsPrint(r) }) {
+		if name == "" || len(name) > MaxNameBytes || !utf8.ValidString(name) || strings.ContainsFunc(name, unicode.IsControl) {
 			return &InputError{fmt.Sprintf("each place's name must be printable text of 1 to %d bytes", MaxNameBytes)}
 		}
 		if seen[strings.ToLower(name)] {
