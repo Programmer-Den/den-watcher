@@ -29,6 +29,22 @@ describe('chartsOf', () => {
   });
 });
 
+describe('chartsOf for a phone', () => {
+  it('leaves out the CPU its app cannot read, and adds up its network cards', () => {
+    const series = [
+      { metric: 'cpu', points: [{ time: 0, value: 0 }] },
+      { metric: 'memory', points: [{ time: 0, value: 70 }] },
+      { metric: 'network.receive:wlan0', points: [{ time: 0, value: 100 }] },
+      { metric: 'network.receive:rmnet0', points: [{ time: 0, value: 50 }] },
+    ];
+    const t = (key: MessageKey, params?: TextParams) => translate('en-GB', key, params);
+
+    const charts = chartsOf(series, t, false, true);
+    expect(charts.map((c) => c.title)).toEqual(['Memory', 'Network']);
+    expect(charts[1].lines[0].points).toEqual([{ time: 0, value: 150 }]);
+  });
+});
+
 describe('chartsOf for a router', () => {
   it('leaves out CPU and memory while a router tells none', () => {
     const series = [

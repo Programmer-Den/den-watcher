@@ -31,6 +31,11 @@ export class DeviceCharts {
    */
   private readonly readByHub = computed(() => readByHub(this.devices.selected()));
 
+  /** Whether a CPU or memory at 0 throughout is not told: by a device the hub reads, or a phone. */
+  private readonly untold = computed(
+    () => this.readByHub() || this.devices.selected()?.kind === 'phone',
+  );
+
   private readonly charts = computed(() => this.chartsOf(this.store.history()));
 
   /** The charts of each card that has any, by the card's id. */
@@ -58,7 +63,12 @@ export class DeviceCharts {
       return [];
     }
     return [
-      ...chartsOf(history.series, (key, params) => this.i18n.t(key, params), this.readByHub()),
+      ...chartsOf(
+        history.series,
+        (key, params) => this.i18n.t(key, params),
+        this.readByHub(),
+        this.untold(),
+      ),
       ...extraChartsOf(history.series, history.extras ?? {}, this.i18n.language()),
     ];
   }
@@ -108,8 +118,9 @@ function networkLines(
  * temperatures, network speed, the time another device took to answer the hub,
  * disk usage and disk activity, with titles and
  * labels in the language of t. Charts without values are left out. A router
- * read without a login tells no CPU or memory, which are kept as 0, so for a
- * router those lines are left out while they hold nothing but 0. A router's
+ * read without a login tells no CPU or memory, and a phone no CPU (nor its
+ * memory when its user chose not to collect it), which are kept as 0, so with
+ * untold those lines are left out while they hold nothing but 0. A router's
  * network is its internet connection where it tells which one that is, as
  * its other interfaces carry the same traffic again.
  */
@@ -117,9 +128,10 @@ export function chartsOf(
   series: Series[],
   t: (key: MessageKey, params?: TextParams) => string,
   router = false,
+  untold = router,
 ): Chart[] {
   const named = (kind: string) => linesOf(series, kind);
-  const metric = (name: string) => devicePoints(series, name, router);
+  const metric = (name: string) => devicePoints(series, name, untold);
 
   const charts: Chart[] = [
     {
@@ -284,15 +296,15 @@ export function isWan(name: string): boolean {
 }
 
 /**
- * The points of one metric of a device, such as "cpu"; none when it is not stored, and none for a
- * router's CPU and memory while they hold nothing but 0, as a router read without a login tells
- * neither.
+ * The points of one metric of a device, such as "cpu"; none when it is not stored, and with untold
+ * none for the CPU and memory while they hold nothing but 0, as a router read without a login tells
+ * neither, and a phone no CPU.
  */
-export function devicePoints(series: Series[], name: string, router: boolean): Point[] {
+export function devicePoints(series: Series[], name: string, untold: boolean): Point[] {
   const points = pointsOf(series, name);
-  const untold =
-    router && (name === 'cpu' || name === 'memory') && points.every((p) => p.value === 0);
-  return untold ? [] : points;
+  const none =
+    untold && (name === 'cpu' || name === 'memory') && points.every((p) => p.value === 0);
+  return none ? [] : points;
 }
 
 /** The points of one metric, such as "cpu"; none when it is not stored. */
