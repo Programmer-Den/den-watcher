@@ -382,6 +382,35 @@ func TestAPhoneIsGivenItsKeyOnce(t *testing.T) {
 	}
 }
 
+func TestAPhoneAddedAgainIsGivenItsKey(t *testing.T) {
+	ctx := context.Background()
+	h := openTestHub(t, openTestStore(t), nil)
+	if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+		t.Fatalf("AddPhone() error = %v", err)
+	}
+	want := hex.EncodeToString(phoneKey(h.phoneSecret, "7KQMX2RP"))
+	push := Push{Now: time.Now().Unix(), NeedKey: true}
+	if answer, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil || answer.Key != want {
+		t.Fatalf("the first push asking for the key = %+v, %v; want the key", answer, err)
+	}
+	if err := h.Remove(ctx, "pixel", false); err != nil {
+		t.Fatalf("Remove() error = %v", err)
+	}
+	if err := h.waitRemoved(ctx, "pixel", time.Minute); err != nil {
+		t.Fatalf("waitRemoved() error = %v", err)
+	}
+	// The app dropped its key meanwhile, as on another hub, and keeps its code.
+	if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+		t.Fatalf("AddPhone() again error = %v", err)
+	}
+	if answer, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil || answer.Key != want {
+		t.Errorf("the first push after it was added again = %+v, %v; want the key", answer, err)
+	}
+	if answer, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil || answer.Key != "" {
+		t.Errorf("a second push after it was added again = %+v, %v; want none", answer, err)
+	}
+}
+
 func TestReleaseProofMatchesTheApp(t *testing.T) {
 	key := make([]byte, 32)
 	for i := range key {

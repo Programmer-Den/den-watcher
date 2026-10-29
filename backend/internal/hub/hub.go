@@ -622,7 +622,11 @@ func (h *Hub) removeRemote(ctx context.Context, remote *Remote, keepHistory bool
 	h.recording.Add(1)
 	// Once the device is deleted from the database, the rest follows even
 	// when the page that asked has gone away, so nothing is left half removed.
-	if err := h.unsave(context.WithoutCancel(ctx), id, keepHistory); err != nil {
+	var phoneCode string
+	if remote.phone != nil {
+		phoneCode = remote.Agent.pairingCode()
+	}
+	if err := h.unsave(context.WithoutCancel(ctx), id, keepHistory, phoneCode); err != nil {
 		h.recording.Done()
 		return err
 	}
@@ -656,8 +660,11 @@ func (h *Hub) removeRemote(ctx context.Context, remote *Remote, keepHistory bool
 }
 
 // unsave deletes a removed device from the database. With keepHistory, it is
-// noted in hub_kept, so its availability and kind outlast a restart.
-func (h *Hub) unsave(ctx context.Context, id string, keepHistory bool) error {
+// noted in hub_kept, so its availability and kind outlast a restart. For a
+// phone, with its pairing code phoneCode, the note that its key was given
+// goes too, so the phone gets its key when it is added again: the code stays
+// the same on the phone, and so does its key.
+func (h *Hub) unsave(ctx context.Context, id string, keepHistory bool, phoneCode string) error {
 	tx, err := h.store.DB().BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -665,6 +672,11 @@ func (h *Hub) unsave(ctx context.Context, id string, keepHistory bool) error {
 	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.ExecContext(ctx, `DELETE FROM hub_devices WHERE id = ?`, id); err != nil {
 		return err
+	}
+	if phoneCode != "" {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM hub_phone_keys_given WHERE key_hash = ?`, keyHash(phoneKey(h.phoneSecret, phoneCode))); err != nil {
+			return err
+		}
 	}
 	if keepHistory {
 		_, err := tx.ExecContext(ctx, `
