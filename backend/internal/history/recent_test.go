@@ -25,6 +25,23 @@ func TestRecentRangeAveragesEachStep(t *testing.T) {
 	}
 }
 
+func TestRecentRangeKeepsTheWholeStepItStartsIn(t *testing.T) {
+	var recent Recent
+	start := time.Unix(1_800_000_000, 0) // a multiple of the 10 second step below
+	for i, cpu := range []float64{10, 20, 30, 40} {
+		recent.Add(start.Add(time.Duration(i)*5*time.Second), map[string]float64{MetricCPU: cpu})
+	}
+
+	// From late in the first step: the same answer as from its start, as the
+	// database gives.
+	got := recent.Range(start.Add(7*time.Second), start.Add(20*time.Second), 10*time.Second)
+
+	want := []Series{{Metric: MetricCPU, Points: []Point{{start.Unix(), 15}, {start.Unix() + 10, 35}}}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Range() = %+v, want %+v, with the whole first step", got, want)
+	}
+}
+
 func TestRecentForgetsOldReadings(t *testing.T) {
 	var recent Recent
 	now := time.Unix(1_800_000_000, 0)

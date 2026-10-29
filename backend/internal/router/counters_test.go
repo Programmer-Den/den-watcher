@@ -49,3 +49,20 @@ func TestTotalGoesOnGrowingWhenA32BitCounterWraps(t *testing.T) {
 		t.Errorf("total after a restart = %d, want 800", c.total)
 	}
 }
+
+func TestASpeedTooLowOnlyTellsAWrapFromAReset(t *testing.T) {
+	// A bridge that reports 10 Mbit/s carries 100 Mbit/s.
+	c := counter{limit: 10e6 / 8 * 2}
+	now := time.Now()
+	c.rate(1<<32-200_000_000, now, false)
+	if rate, ok := c.rate(1<<32-75_000_000, now.Add(10*time.Second), false); !ok || rate != 12_500_000 {
+		t.Errorf("growth faster than the speed: got %v, %v", rate, ok)
+	}
+	// It wraps as fast as before: a wrap, not a reset.
+	if rate, ok := c.rate(50_000_000, now.Add(20*time.Second), false); !ok || rate != 12_500_000 {
+		t.Errorf("wrap as fast as before: got %v, %v", rate, ok)
+	}
+	if c.total != 1<<32+50_000_000 {
+		t.Errorf("total = %d, want %d", c.total, uint64(1<<32+50_000_000))
+	}
+}
