@@ -494,6 +494,45 @@ func TestSNMPTellsAReset32BitCounterByTheLinkSpeed(t *testing.T) {
 	}
 }
 
+func TestSNMPDoesNotLimitA64BitCounterBySpeed(t *testing.T) {
+	reader := &SNMPReader{}
+	start := time.Now()
+	columns := func(received uint64) map[string]map[string]snmpValue {
+		return map[string]map[string]snmpValue{
+			oidIfOperStatus:  {"2": integer(1)},
+			oidIfName:        {"2": text("br-lan")},
+			oidIfHCInOctets:  {"2": counter64(received)},
+			oidIfHCOutOctets: {"2": counter64(0)},
+			// What some agents report for a bridge, whatever it carries.
+			oidIfHighSpeed: {"2": gauge(10)},
+		}
+	}
+	reader.network(columns(0), start, false)
+	got := reader.network(columns(100_000_000), start.Add(10*time.Second), false)
+	if got[0].ReceiveBytesPerSecond != 10_000_000 {
+		t.Errorf("got %v bytes per second, want 10000000", got[0].ReceiveBytesPerSecond)
+	}
+}
+
+func TestSNMPKeepsTheUptimeWhenAReadingHasNone(t *testing.T) {
+	mib := routerMIB(1, 1, 500000)
+	agent := newFakeSNMPAgent(t, mib)
+	reader := newTestSNMP(t, agent, false, "", "public")
+	if _, err := reader.Collect(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	agent.mu.Lock()
+	mib[oidUptime] = text("busy")
+	agent.mu.Unlock()
+	if _, err := reader.Collect(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	// So a restart after it is told by the uptime going down from 5000.
+	if reader.uptime != 5000 || !reader.read {
+		t.Errorf("uptime %d, read %v; want 5000 kept", reader.uptime, reader.read)
+	}
+}
+
 func TestSNMPWithoutHostResources(t *testing.T) {
 	mib := routerMIB(100, 100, 100)
 	for oid := range mib {
