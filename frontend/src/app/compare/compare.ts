@@ -223,16 +223,22 @@ export class Compare {
     }
     // Each device's line takes its color by the device's place, so it keeps it in every chart.
     const places = new Map(this.charted().map((device, place) => [device.id, place]));
+    // The histories are read again only when the devices change, so a device's name and kind
+    // come from the list, which is read every few seconds.
+    const current = new Map(this.devices.devices().map((device) => [device.id, device]));
     return CHARTS.map((chart) => ({
       title: this.i18n.t(chart.title),
       unit: chart.unit,
       max: chart.max,
       lines: h.devices
-        .map(({ device, history }): ChartLine => ({
-          label: deviceName(device, this.i18n),
-          points: within(chart.points(history.series, !!device.router), h),
-          place: places.get(device.id),
-        }))
+        .map(({ device: read, history }): ChartLine => {
+          const device = current.get(read.id) ?? read;
+          return {
+            label: deviceName(device, this.i18n),
+            points: within(chart.points(history.series, !!device.router), h),
+            place: places.get(device.id),
+          };
+        })
         .filter((line) => line.points.length > 0),
     })).filter((chart) => chart.lines.length > 0);
   });

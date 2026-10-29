@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import { DeviceService } from './devices';
-import { FleetValues } from './fleet-values';
+import { FLEET_REFRESH_MS, FleetValues } from './fleet-values';
 
 describe('FleetValues', () => {
   let http: HttpTestingController;
@@ -51,5 +51,31 @@ describe('FleetValues', () => {
     second.unsubscribe();
     vi.advanceTimersByTime(60_000);
     http.expectNone('/api/devices/metrics');
+  });
+
+  it('keeps the values read before when a read fails', () => {
+    TestBed.inject(DeviceService).devices.set([
+      { id: 'local', name: '' },
+      { id: 'pi', name: 'Pi' },
+    ]);
+    const fleet = TestBed.inject(FleetValues);
+    const watching = fleet.watch.subscribe();
+    vi.advanceTimersByTime(0);
+    http.expectOne('/api/devices/metrics').flush({
+      pi: {
+        time: '2026-10-11T12:00:00Z',
+        uptimeSeconds: 60,
+        cpu: { usagePercent: 20, cores: 4 },
+        memory: { totalBytes: 100, usedBytes: 50, usedPercent: 50 },
+        temperatures: [],
+        disks: [],
+        network: [],
+      },
+    });
+
+    vi.advanceTimersByTime(FLEET_REFRESH_MS);
+    http.expectOne('/api/devices/metrics').flush('no', { status: 500, statusText: 'Server Error' });
+    expect(fleet.summaries().get('pi')?.cpu).toBe(20);
+    watching.unsubscribe();
   });
 });

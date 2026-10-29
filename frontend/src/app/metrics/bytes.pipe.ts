@@ -18,7 +18,9 @@ const UNITS: MessageKey[] = [
 export function formatBytes(bytes: number, language: LanguageCode): string {
   let value = bytes;
   let unit = 0;
-  while (value >= 1024 && unit < UNITS.length - 1) {
+  // A value that would be shown rounded up to 1024 is shown in the next unit.
+  const shown = (v: number, u: number) => (u === 0 ? Math.round(v) : Math.round(v * 10) / 10);
+  while (shown(value, unit) >= 1024 && unit < UNITS.length - 1) {
     value /= 1024;
     unit++;
   }

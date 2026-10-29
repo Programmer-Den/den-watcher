@@ -14,7 +14,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 
 import { I18n } from '../i18n/i18n';
-import { DeviceKind, MIN_PASSWORD_LENGTH, kindName } from './devices';
+import { DeviceKind, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, kindName } from './devices';
 
 /** What the password is asked for. */
 export interface PasswordDialogData {
@@ -63,6 +63,7 @@ export class PasswordDialog {
     inject<MatDialogRef<PasswordDialog, PasswordDialogResult>>(MatDialogRef);
 
   protected readonly minLength = MIN_PASSWORD_LENGTH;
+  protected readonly maxLength = MAX_PASSWORD_LENGTH;
   protected readonly password = signal('');
   protected readonly repeated = signal('');
   protected readonly keepHistory = signal(false);

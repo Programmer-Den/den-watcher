@@ -260,4 +260,27 @@ describe('WifiNearby', () => {
       ['Laptop', 'Home · Access point 1 Name this place'],
     ]);
   });
+
+  it('names no place until the named places are read, and reads them again when that fails', () => {
+    answer();
+    show(4);
+    http
+      .expectOne((r) => r.url === '/api/wifi/places')
+      .flush('no', { status: 503, statusText: 'Unavailable' });
+    fixture.detectChanges();
+    expect(rows().map((r) => r.slice(0, 2))).toEqual([
+      ['Hub', 'Home · Access point 1'],
+      ['Laptop', 'Home · Access point 1'],
+    ]);
+
+    vi.advanceTimersByTime(10_000);
+    http
+      .expectOne((r) => r.url === '/api/wifi/places')
+      .flush({ places: [{ name: 'Work', signals: { n1: 34, a1: 98 } }] });
+    fixture.detectChanges();
+    expect(rows().map((r) => r.slice(0, 2))).toEqual([
+      ['Hub', 'Home · Access point 1 Name this place'],
+      ['Laptop', 'Work'],
+    ]);
+  });
 });

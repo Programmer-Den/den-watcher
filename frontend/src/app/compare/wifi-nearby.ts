@@ -1,11 +1,11 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { catchError, of } from 'rxjs';
+import { catchError, of, retry } from 'rxjs';
 
 import { HubConnection } from '../connection/connection';
 import { Device, DeviceService, deviceName } from '../devices/devices';
@@ -78,6 +78,9 @@ const MAX_PLACE_NAME_BYTES = 100;
 /** How often what the Wi-Fi saw is read again: the hub keeps it by hour. */
 const REFRESH_MS = 5 * 60_000;
 
+/** How long after the named places could not be read they are read again. */
+const PLACES_RETRY_MS = 10_000;
+
 /**
  * Compares the Wi-Fi networks the devices with the Wi-Fi add-on see: which device hears which
  * network how well, how well each one hears the network they are connected to, through which of
@@ -98,6 +101,7 @@ export class WifiNearby {
   protected readonly devices = inject(DeviceService);
   protected readonly i18n = inject(I18n);
   protected readonly connection = inject(HubConnection);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly views = VIEWS;
   protected readonly view = signal<WifiView>('who');
@@ -160,6 +164,11 @@ export class WifiNearby {
 
   /** The places named on the page, read once the view of places is first shown. */
   protected readonly named = signal<WiFiPlace[]>([]);
+  /**
+   * Whether the named places have been read. Until then a place is not named or removed, as
+   * saving the whole list would replace the places kept on the hub.
+   */
+  protected readonly placesKnown = signal(false);
   /** The device whose place is being named, and the name typed so far. */
   protected readonly naming = signal<string | null>(null);
   protected readonly placeName = signal('');
@@ -228,8 +237,11 @@ export class WifiNearby {
         this.placesRead = true;
         this.metrics
           .wifiPlaces()
-          .pipe(catchError(() => of([])))
-          .subscribe((named) => this.named.set(named));
+          .pipe(retry({ delay: PLACES_RETRY_MS }), takeUntilDestroyed(this.destroyRef))
+          .subscribe((named) => {
+            this.named.set(named);
+            this.placesKnown.set(true);
+          });
       }
     });
   }
@@ -467,7 +479,7 @@ export class WifiNearby {
     const history = this.history();
     const name = this.placeName().trim();
     const signals = history && placeSignals(history, device);
-    if (!signals || !this.nameFits(name)) {
+    if (!signals || !this.nameFits(name) || !this.placesKnown()) {
       return;
     }
     const others = this.named().filter((p) => p.name.toLowerCase() !== name.toLowerCase());
@@ -475,6 +487,9 @@ export class WifiNearby {
   }
 
   protected removePlace(name: string): void {
+    if (!this.placesKnown()) {
+      return;
+    }
     this.savePlaces(this.named().filter((p) => p.name !== name));
   }
 
