@@ -79,7 +79,15 @@ type seen struct {
 	uptime  uint64
 	version string
 	written time.Time
+	// stored is whether it was read from the database at the start, where
+	// its uptime is the one written at written.
+	stored bool
 }
+
+// bootSlack is how much later than the start before a device's start may
+// seem, from the hub's clock and the delay of a reading, and not be a new
+// start.
+const bootSlack = time.Minute
 
 // Log looks at the devices every Interval and keeps their events.
 type Log struct {
@@ -114,7 +122,7 @@ func Open(ctx context.Context, db *sql.DB, devices func() []Target, retention ti
 		if err := rows.Scan(&device, &s.uptime, &s.version, &written); err != nil {
 			return nil, fmt.Errorf("read the devices last seen: %w", err)
 		}
-		s.written = time.UnixMilli(written)
+		s.written, s.stored = time.UnixMilli(written), true
 		l.seen[device] = s
 	}
 	return l, rows.Err()
@@ -141,7 +149,8 @@ func (l *Log) Run(ctx context.Context) {
 }
 
 // Check reads every device once and keeps a reboot when its uptime is less
-// than at the reading before, and an update when its version changed. A
+// than at the reading before, or, at the first reading after the hub started,
+// when it started later than before, and an update when its version changed. A
 // device that does not answer is left as it was; one that tells no uptime,
 // such as a printer, has no reboots, and one that tells no version, such as
 // a router, no updates.
@@ -179,10 +188,17 @@ func (l *Log) note(ctx context.Context, device string, uptime uint64, version st
 		version = before.version
 	}
 	var happened []Event
-	if known && uptime > 0 && uptime < before.uptime {
-		// Started at whole seconds, so readings of one start a little apart
-		// agree. The uptime is bounded so it fits in a Duration.
-		started := now.Add(-time.Duration(min(uptime, math.MaxInt64/uint64(time.Second))) * time.Second).Truncate(time.Second)
+	// Started at whole seconds, so readings of one start a little apart
+	// agree. The uptime is bounded so it fits in a Duration.
+	startOf := func(at time.Time, uptime uint64) time.Time {
+		return at.Add(-time.Duration(min(uptime, math.MaxInt64/uint64(time.Second))) * time.Second).Truncate(time.Second)
+	}
+	started := startOf(now, uptime)
+	// The first reading after the hub started is compared with the start
+	// before by the clock as well: a device that started again while the hub
+	// was stopped can have been up longer than when last written.
+	if known && uptime > 0 && (uptime < before.uptime ||
+		before.stored && before.uptime > 0 && started.After(startOf(before.written, before.uptime).Add(bootSlack))) {
 		happened = append(happened, Event{Time: started, Kind: KindReboot})
 	}
 	if known && before.version != "" && version != before.version {

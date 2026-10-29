@@ -112,6 +112,37 @@ func TestNoticesARebootWhileTheHubWasStopped(t *testing.T) {
 	}
 }
 
+func TestNoticesARebootWhileTheHubWasStoppedByItsStart(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "events.db")
+	// Started again just before the hub stopped.
+	u := &usage{snapshot: reading(300, "1.4.0")}
+	targets := []Target{{ID: "local", Usage: u}}
+	now := time.Unix(1_800_000_000, 0)
+	openTest(t, path, &targets).Check(ctx, now)
+
+	// Two hours later, it started again 30 minutes ago: longer up than when
+	// last seen, but since a later start.
+	u.snapshot = reading(1800, "1.4.0")
+	later := now.Add(2 * time.Hour)
+	l := openTest(t, path, &targets)
+	l.Check(ctx, later)
+	want := []Event{{Time: later.Add(-30 * time.Minute), Kind: KindReboot}}
+	if got := between(t, l, "local"); !reflect.DeepEqual(got, want) {
+		t.Fatalf("events = %+v, want %+v", got, want)
+	}
+
+	// Up all along since: no other start, also when the hub starts again.
+	u.snapshot = reading(1800+3600, "1.4.0")
+	l.Check(ctx, later.Add(time.Hour))
+	l = openTest(t, path, &targets)
+	u.snapshot = reading(1800+7200, "1.4.0")
+	l.Check(ctx, later.Add(2*time.Hour))
+	if got := between(t, l, "local"); !reflect.DeepEqual(got, want) {
+		t.Fatalf("events after more readings = %+v, want %+v", got, want)
+	}
+}
+
 func TestStoresAnUptimeTooLargeForTheDatabase(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "events.db")
