@@ -57,6 +57,10 @@ export class DeviceItem {
       const since = formatDate(lostSince, 'short', this.i18n.language());
       return this.i18n.t('devices.unreachableSince', { since });
     }
+    // Waiting for its pairing code, the device answers all the same.
+    if (device.pairing) {
+      return this.i18n.t('home.pairing');
+    }
     if (!device.unreachable) {
       return this.i18n.t('devices.reachable');
     }

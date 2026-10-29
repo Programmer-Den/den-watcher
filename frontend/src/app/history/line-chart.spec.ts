@@ -6,6 +6,7 @@ import {
   ChartData,
   ChartLine,
   LineChart,
+  lineSegments,
   needsYear,
   niceCeiling,
   pointerFraction,
@@ -221,6 +222,21 @@ describe('pointerFraction', () => {
     expect(at(150)).toBe(0.25);
     expect(at(50)).toBe(0);
     expect(at(400)).toBe(1);
+  });
+});
+
+describe('lineSegments', () => {
+  it('draws values below 0 at the bottom and above the top at the top', () => {
+    const points = [
+      { time: 0, value: -5 },
+      { time: 60, value: 50 },
+      { time: 120, value: 150 },
+    ];
+    expect(
+      lineSegments(points, 0, 180, 60, 100)
+        .flat()
+        .map((p) => p.y),
+    ).toEqual([1, 0.5, 0]);
   });
 });
 

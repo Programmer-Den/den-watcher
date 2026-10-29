@@ -40,7 +40,7 @@
         <app-alert-icon [level]="level" role="img" [attr.aria-label]="i18n.t('alerts.onCard')" />
       }
     </span>
-    @if (state() !== 'reachable') {
+    @if (state() !== 'reachable' || device().pairing) {
       <span class="detail">{{ status() }}</span>
     } @else if (values?.cpu !== undefined) {
       <span class="detail values">

@@ -200,7 +200,8 @@ export function lineSegments(
   for (const point of points) {
     // Each point is the average of its step, so it is drawn in the step's middle.
     const x = (point.time + step / 2 - from) / (to - from);
-    const y = 1 - Math.min(point.value, top) / top;
+    // A value below 0, such as a temperature below freezing, is drawn at the bottom.
+    const y = 1 - Math.min(Math.max(point.value, 0), top) / top;
     if (previous === null || point.time - previous > 2 * step) {
       segments.push([]);
     }

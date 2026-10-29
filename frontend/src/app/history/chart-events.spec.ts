@@ -156,6 +156,14 @@ describe('ChartEvents', () => {
       .expectOne((r) => r.url === '/api/events')
       .flush('', { status: 500, statusText: 'Server Error' });
     expect(events.markers()).toEqual([]);
+
+    // The next range read tries again, without waiting 30 s.
+    vi.advanceTimersByTime(5_000);
+    show(5, 1805);
+    http
+      .expectOne((r) => r.url === '/api/events')
+      .flush({ from: 5, to: 1805, events: [{ kind: 'reboot', time: 900 }] });
+    expect(events.markers()).toEqual([{ kind: 'reboot', time: 900, text: 'Restarted' }]);
     watching.unsubscribe();
   });
 });

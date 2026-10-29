@@ -98,12 +98,13 @@ export class Arrangement {
 
   /** Pins a card above the categories, after the cards pinned before; unpins a pinned one. */
   togglePin(id: string): void {
-    this.layout.change((layout) => ({
-      ...layout,
-      pinned: layout.pinned.includes(id)
-        ? layout.pinned.filter((p) => p !== id)
-        : [...layout.pinned, id],
-    }));
+    // Whether to pin is decided by what the page shows now, so the change made again over a layout
+    // that already has it, as after an answer that was lost, does not undo it.
+    const pin = !this.layout.layout().pinned.includes(id);
+    this.layout.change((layout) => {
+      const others = layout.pinned.filter((p) => p !== id);
+      return { ...layout, pinned: pin ? [...others, id] : others };
+    });
   }
 
   /** Makes a value of the details a card of its own, after the other cards of its category. */

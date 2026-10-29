@@ -76,6 +76,19 @@ describe('categories', () => {
     ]);
   });
 
+  it('keeps a fold the host kept although its answer was lost, instead of undoing it', () => {
+    const folded = TestBed.inject(FoldedCategories);
+    http.expectOne('/api/layout').flush({ folded: [] });
+    folded.toggle('storage');
+    writes()[0].flush('lost', { status: 504, statusText: 'Gateway Timeout' });
+
+    show('hidden');
+    show('visible');
+    http.expectOne('/api/layout').flush({ folded: ['storage'] });
+    expect([...folded.folded()]).toEqual(['storage']);
+    expect(writes().map((w) => w.request.body.folded)).toEqual([['storage']]);
+  });
+
   it('sends one layout at a time, the newest last', () => {
     const folded = TestBed.inject(FoldedCategories);
     http.expectOne('/api/layout').flush({ folded: [] });
