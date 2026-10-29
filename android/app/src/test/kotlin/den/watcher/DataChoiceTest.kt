@@ -40,6 +40,19 @@ class DataChoiceTest {
     }
 
     @Test
+    fun keepsOnlyTheValuesStillCollectedOfAMinuteKeptBefore() {
+        val values = reading.values(mapOf(Sampler.WIFI to Rates(10.0, 1.0)))
+        val choice = DataChoice(battery = false, storage = false)
+        assertEquals(
+            setOf("memory", "network.receive:wifi", "network.send:wifi"),
+            values.keys.filter(choice::keeps).toSet(),
+        )
+        assertEquals(values.keys, values.keys.filter(DataChoice()::keeps).toSet())
+        assertTrue(DataChoice(network = false).keeps("memory"))
+        assertFalse(DataChoice(network = false).keeps("network.send:mobile"))
+    }
+
+    @Test
     fun aGroupSwitchedOffLeavesOutAllOfIt() {
         val noSystem = DataChoice(system = false)
         assertFalse(noSystem.collectsBattery || noSystem.collectsMemory || noSystem.collectsStorage)

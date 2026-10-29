@@ -21,6 +21,19 @@ data class DataChoice(
     val collectsStorage: Boolean get() = system && storage
     val collectsTraffic: Boolean get() = network && traffic
     val collectsNearby: Boolean get() = network && nearby
+
+    /**
+     * Whether a value kept under name, as Reading.values names it, is
+     * collected, so a minute kept before its switch was turned off does not
+     * send it after.
+     */
+    fun keeps(name: String): Boolean = when {
+        name == "battery" || name == "temperature:${Reading.BATTERY_SENSOR}" -> collectsBattery
+        name == "memory" -> collectsMemory
+        name.startsWith("disk:") -> collectsStorage
+        name.startsWith("network.") -> collectsTraffic
+        else -> true
+    }
 }
 
 /**
