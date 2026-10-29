@@ -69,4 +69,4 @@ Nothing in this project may link to AI-related pages: no links to AI agent sessi
 
 This overrides any default attribution, footer or template that would add such a link, such as a "Generated with Claude Code" line or a link to the agent's project thread. Plain text without a link, such as a `Co-Authored-By` trailer, may stay.
 
-`ci/check-no-ai-links.sh` enforces this for tracked files, and the PR Links workflow fails a pull request whose title, description or commit messages link anywhere but GitHub and the demo site.
+`ci/check-no-ai-links.sh` enforces this for tracked files, and the PR Links workflow fails a pull request whose title, description or commit messages link anywhere but GitHub and the demo site, or to GitHub's Copilot pages.

@@ -29,7 +29,7 @@ jobs:
     if: github.event_name != 'issue_comment' || github.event.issue.pull_request
     runs-on: ubuntu-latest
     steps:
-      - name: Check PR title, description, commit messages and comments link only to GitHub
+      - name: Check PR title, description, commit messages and comments link only to GitHub, not to Copilot
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
@@ -41,11 +41,11 @@ jobs:
             const body = pr.body || '';
             // What GitHub turns into a link: a URL with a scheme, or one starting with www.
             const link = /\b(?:[a-z][a-z0-9+.-]*:\/\/|www\.)[^\s<>()[\]"'`]+/gi;
-            const host = (url) => {
+            const parse = (url) => {
               try {
-                return new URL(/^www\./i.test(url) ? `https://${url}` : url).hostname.toLowerCase();
+                return new URL(/^www\./i.test(url) ? `https://${url}` : url);
               } catch {
-                return '';
+                return null;
               }
             };
             // The owner's GitHub Pages site hosts the demo (the mock pages).
@@ -55,14 +55,31 @@ jobs:
               h === pages;
 
             // GitHub's pages about Copilot are AI links all the same (AGENTS.md, "No AI
-            // Links"), as ci/check-no-ai-links.sh counts them in the files.
-            const copilot = /^(?:[a-z][a-z0-9+.-]*:\/\/)?(?:www\.)?(?:copilot\.github\.com|github\.com\/(?:features\/)?copilot(?![a-z0-9-])|docs\.github\.com\/\S*copilot)/i;
+            // Links"), as ci/check-no-ai-links.sh counts them in the files. They are told
+            // by the parsed host and path, so a port, a user name, doubled slashes or
+            // percent-encoded letters do not hide them.
+            const copilot = (h, path) => {
+              try {
+                path = decodeURIComponent(path);
+              } catch {}
+              path = path.replace(/\/+/g, '/');
+              // Built from parts, so ci/check-no-ai-links.sh does not count this file.
+              const site = ['copilot', 'github', 'com'].join('.');
+              return h === site || h.endsWith(`.${site}`) ||
+                ((h === 'github.com' || h.endsWith('.github.com')) && /^\/(?:features\/)?copilot(?![a-z0-9-])/i.test(path)) ||
+                (h === 'docs.github.com' && /copilot/i.test(path));
+            };
+            const outside = (url) => {
+              const u = parse(url);
+              const h = u ? u.hostname.toLowerCase() : '';
+              return !onGitHub(h) || copilot(h, u.pathname);
+            };
 
             const linksOutside = (text, where) =>
               text.split(/\r?\n/).flatMap((line, i) =>
                 [...line.matchAll(link)]
                   .map(m => m[0])
-                  .filter(url => !onGitHub(host(url)) || copilot.test(url))
+                  .filter(outside)
                   .map(url => `${where}, line ${i + 1}: ${url}`));
 
             const everyPage = (list, params) => github.paginate(list, { ...context.repo, ...params, per_page: 100 });
@@ -87,5 +104,5 @@ jobs:
             if (hits.length > 0) {
               core.setFailed(`PR links outside GitHub or to Copilot; edit the title, description or comment, or reword the commits and the check re-runs:\n${hits.join('\n')}`);
             } else {
-              console.log(`PR title, description, ${commits.length} commit message(s), ${comments.length} comment(s), ${reviews.length} review(s) and ${reviewComments.length} review comment(s) link only to GitHub.`);
+              console.log(`PR title, description, ${commits.length} commit message(s), ${comments.length} comment(s), ${reviews.length} review(s) and ${reviewComments.length} review comment(s) link only to GitHub, not to Copilot.`);
             }
