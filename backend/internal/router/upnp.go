@@ -156,6 +156,7 @@ func (u *UPnPReader) read(ctx context.Context) (metrics.Snapshot, error) {
 	wan := metrics.NetworkInterface{Name: "WAN", ReceivedBytes: receivedBytes, SentBytes: sentBytes}
 	wan.ReceiveBytesPerSecond, _ = u.received.rate(receivedBytes, now, restarted)
 	wan.SendBytesPerSecond, _ = u.sent.rate(sentBytes, now, restarted)
+	wan.ReceivedBytes, wan.SentBytes = u.received.total, u.sent.total
 	if down > 0 {
 		wan.LinkMbps = int(min(down/1_000_000, 1<<31-1))
 	}

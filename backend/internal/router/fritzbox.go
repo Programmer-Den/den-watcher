@@ -240,6 +240,7 @@ func (f *FritzBoxReader) read(ctx context.Context) (metrics.Snapshot, error) {
 	wan := metrics.NetworkInterface{Name: "WAN", ReceivedBytes: receivedBytes, SentBytes: sentBytes}
 	wan.ReceiveBytesPerSecond, _ = rate(&f.received, receivedBytes, now, restarted)
 	wan.SendBytesPerSecond, _ = rate(&f.sent, sentBytes, now, restarted)
+	wan.ReceivedBytes, wan.SentBytes = f.received.total, f.sent.total
 
 	if down > 0 {
 		wan.LinkMbps = int(min(down/1_000_000, 1<<31-1))
