@@ -82,9 +82,8 @@ func keyHash(key []byte) string {
 }
 
 // giveKey reports whether the phone's key may be given, and notes it as
-// given: only the first time, or the first time since the hub's owner
-// allowed the phone a change (see ReleasePhone), as when the answer that
-// gave it was lost.
+// given: only the first time. While the hub's owner allows the phone a
+// change, it may be given once more (see phone.takeRegive).
 func giveKey(ctx context.Context, db *sql.DB, key []byte) (bool, error) {
 	result, err := db.ExecContext(ctx, `INSERT OR IGNORE INTO hub_phone_keys_given (key_hash) VALUES (?)`, keyHash(key))
 	if err != nil {
@@ -92,10 +91,4 @@ func giveKey(ctx context.Context, db *sql.DB, key []byte) (bool, error) {
 	}
 	n, err := result.RowsAffected()
 	return n == 1, err
-}
-
-// regiveKey lets the phone's key be given once more.
-func regiveKey(ctx context.Context, db *sql.DB, key []byte) error {
-	_, err := db.ExecContext(ctx, `DELETE FROM hub_phone_keys_given WHERE key_hash = ?`, keyHash(key))
-	return err
 }
