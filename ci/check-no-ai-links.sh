@@ -22,9 +22,16 @@ sites+='|copilot\.github\.com|ai\.google\.dev|meta\.ai|cursor\.com|huggingface\.
 # addresses such as a Co-Authored-By trailer's do not count.
 pattern="(^|[^a-z0-9.@-])([a-z0-9-]+\.)*($sites)([^a-z0-9-]|$)"
 
-if hits=$(git grep -nIiE -e "$pattern"); then
+# git grep exits 1 when nothing matches and higher on an error, such as DIR
+# not being a git checkout, which must not count as a pass.
+status=0
+hits=$(git grep -nIiE -e "$pattern") || status=$?
+if ((status == 0)); then
   while IFS= read -r hit; do printf '[FAIL] %s\n' "$hit" >&2; done <<< "$hits"
   echo 'Found links to AI sites; AGENTS.md ("No AI Links") keeps them out of the repository.' >&2
   exit 1
+elif ((status != 1)); then
+  echo "git grep failed in $DIR, so the files could not be checked." >&2
+  exit "$status"
 fi
 echo '[PASS] No links to AI sites in tracked files.'

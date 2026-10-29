@@ -60,13 +60,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # A fix step that stopped early on an error, as when `go get` failed,
+          # can leave go.mod half updated and untidy; the last step fails the run.
+          if [[ ! -f "$RUNNER_TEMP/fixes.md.done" ]]; then
+            echo "The fix step stopped early, so the pull request is left as it is."
+            exit 0
+          fi
           open_pr="$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
 
           if git diff --quiet; then
             echo "Nothing to update."
-            # A fix step that stopped early on an error, as when the vulnerability
-            # database could not be reached, says nothing about the open pull request.
-            if [[ -n "$open_pr" && -f "$RUNNER_TEMP/fixes.md.done" ]]; then
+            if [[ -n "$open_pr" ]]; then
               gh pr close "$open_pr" --delete-branch \
                 --comment "main has no known vulnerabilities with a fix anymore, so this is no longer needed."
             fi

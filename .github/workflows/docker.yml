@@ -80,6 +80,7 @@ jobs:
             return 1
           }
           latest=false
+          minor=false
           if [[ "$GITHUB_REF_TYPE" == tag ]]; then
             version="${GITHUB_REF_NAME#v}"
             if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([a-z]*|-[a-z]+(\.?[0-9]+)?)$ ]]; then
@@ -94,11 +95,21 @@ jobs:
                 exit 1
               fi
               latest=true
+              minor=true
+              read -ra parts <<< "$key"
               while read -r release; do
                 if release_key="$(version_key "$release")" && newer "$release_key" "$key"; then
-                  echo "$GITHUB_REF_NAME is older than the release $release, so :latest stays where it is."
-                  latest=false
-                  break
+                  if [[ "$latest" == true ]]; then
+                    echo "$GITHUB_REF_NAME is older than the release $release, so :latest stays where it is."
+                    latest=false
+                  fi
+                  # A late bugfix of an older patch, such as 1.2.3a after 1.2.4,
+                  # leaves :1.2 on the newer one.
+                  read -ra release_parts <<< "$release_key"
+                  if [[ "$minor" == true && "${release_parts[0]} ${release_parts[1]}" == "${parts[0]} ${parts[1]}" ]]; then
+                    echo "$GITHUB_REF_NAME is older than the release $release, so :${parts[0]}.${parts[1]} stays where it is."
+                    minor=false
+                  fi
                 fi
               done <<< "$releases"
             fi
@@ -106,9 +117,10 @@ jobs:
             echo "version=$GITHUB_REF_NAME-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           fi
           echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          echo "minor=$minor" >> "$GITHUB_OUTPUT"
 
-      # main publishes :main, a tag v1.2.3 publishes :1.2.3, :1.2 and, when it is the
-      # newest release, :latest,
+      # main publishes :main, a tag v1.2.3 publishes :1.2.3, :1.2 when it is the
+      # newest release of 1.2, and :latest when it is the newest release,
       # and every published image also gets :sha-<commit>. A pre-release tag
       # such as 1.2.3-alpha publishes only :1.2.3-alpha (and :sha-<commit>).
       # A bugfix tag such as 1.2.3a is not semver, so the tags are matched by
@@ -126,7 +138,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=match,pattern=^v?(\d+\.\d+\.\d+(?:[a-z]*|-[a-z]+(?:\.?\d+)?))$,group=1
-            type=match,pattern=^v?(\d+\.\d+)\.\d+[a-z]*$,group=1
+            type=match,pattern=^v?(\d+\.\d+)\.\d+[a-z]*$,group=1,enable=${{ steps.version.outputs.minor == 'true' }}
             type=raw,value=latest,enable=${{ steps.version.outputs.latest == 'true' }}
             type=sha,format=short
 
