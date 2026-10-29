@@ -262,9 +262,14 @@ if [[ "${1:-}" == --addons=* ]]; then
   done
 elif [[ -t 0 ]]; then
   # Grizzly is the default when an add-on outside Cub is installed already,
-  # or one of Cub's is not, as in the Windows installer, so Enter keeps the
-  # add-ons picked before.
+  # one of Cub's is not, or one of Cub's collects less than in Cub, as in the
+  # Windows installer, so Enter keeps the add-ons picked before.
   edition=1
+  for addon in "${cub_addons[@]}"; do
+    if [[ -n "${addon_switches[$addon]+set}" && "$(setting "${addon_switches[$addon]}")" == 0 ]]; then
+      edition=2
+    fi
+  done
   installed_any=""
   for addon in "${!addon_descriptions[@]}"; do
     if [[ -f "/etc/systemd/system/den-watcher-$addon.service" ]]; then
@@ -298,8 +303,12 @@ elif [[ -t 0 ]]; then
     exit 1
   fi
   if [[ $answer == 1 ]]; then
+    # Cub's add-ons, with all they collect, as its text says.
     for addon in "${cub_addons[@]}"; do
-      [[ -f "$here/den-watcher-$addon.service" ]] && wanted[$addon]=1
+      if [[ -f "$here/den-watcher-$addon.service" ]]; then
+        wanted[$addon]=1
+        [[ -n "${addon_switches[$addon]+set}" ]] && switches[${addon_switches[$addon]}]=1
+      fi
     done
   else
     # An add-on is ticked when it is installed, or on a machine without any
