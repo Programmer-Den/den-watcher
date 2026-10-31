@@ -8,6 +8,7 @@ import {
   networkBoxes,
   networkRows,
   likeness,
+  lowerAsHub,
   placeSignals,
   places,
   sameSpot,
@@ -79,6 +80,14 @@ describe('signalLevel', () => {
       'weak',
       'poor',
     ]);
+  });
+});
+
+describe('lowerAsHub', () => {
+  it('lowers letter by letter, as the hub does', () => {
+    expect(lowerAsHub('İzmir')).toBe('izmir');
+    expect(lowerAsHub('ΟΔΟΣ')).toBe('οδοσ');
+    expect(lowerAsHub('Küche 🏠')).toBe('küche 🏠');
   });
 });
 
@@ -436,6 +445,30 @@ describe('wifiChanges', () => {
     h.from = NOW - 3 * HOUR;
     expect(wifiChanges(h).map((c) => [c.kind, c.security, (NOW - c.time) / HOUR])).toEqual([
       ['lookalike', 'Open', 1],
+    ]);
+  });
+
+  it('tells a WPA2 copy below of a network joined at 6 GHz that its router sends only with WPA3', () => {
+    const joined = heard(
+      'a1',
+      'b1',
+      'Den',
+      [3, 2, 1, 0],
+      { security: 'WPA3', frequencyMHz: 6115 },
+      [],
+      true,
+    );
+    const copy = heard('c1', 'cb', 'Den', [1, 0], { security: 'WPA2', frequencyMHz: 5180 });
+    const h = history([joined, copy]);
+    h.from = NOW - 3 * HOUR;
+    expect(wifiChanges(h).map((c) => [c.kind, c.security])).toEqual([['lookalike', 'WPA2']]);
+
+    // The joined router sends WPA2 below too, as a mesh does: the other is a new access point.
+    const below = heard('a0', 'b1', 'Den', [3, 2, 1, 0], { security: 'WPA2', frequencyMHz: 5500 });
+    const mesh = history([joined, below, copy]);
+    mesh.from = NOW - 3 * HOUR;
+    expect(wifiChanges(mesh).map((c) => [c.kind, c.security])).toEqual([
+      ['newAccessPoint', 'WPA2'],
     ]);
   });
 

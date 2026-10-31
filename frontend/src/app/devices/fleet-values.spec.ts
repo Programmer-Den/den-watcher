@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import { DeviceService } from './devices';
-import { FLEET_REFRESH_MS, FleetValues } from './fleet-values';
+import { FLEET_KEPT_FAILURES, FLEET_REFRESH_MS, FleetValues } from './fleet-values';
 
 describe('FleetValues', () => {
   let http: HttpTestingController;
@@ -53,7 +53,7 @@ describe('FleetValues', () => {
     http.expectNone('/api/devices/metrics');
   });
 
-  it('keeps the values read before when a read fails', () => {
+  it('keeps the values read before when a read fails, for answering devices and a while', () => {
     TestBed.inject(DeviceService).devices.set([
       { id: 'local', name: '' },
       { id: 'pi', name: 'Pi' },
@@ -76,6 +76,47 @@ describe('FleetValues', () => {
     vi.advanceTimersByTime(FLEET_REFRESH_MS);
     http.expectOne('/api/devices/metrics').flush('no', { status: 500, statusText: 'Server Error' });
     expect(fleet.summaries().get('pi')?.cpu).toBe(20);
+
+    // Fails on: after FLEET_KEPT_FAILURES reads, the old values are not shown as current.
+    for (let i = 1; i < FLEET_KEPT_FAILURES; i++) {
+      vi.advanceTimersByTime(FLEET_REFRESH_MS);
+      http
+        .expectOne('/api/devices/metrics')
+        .flush('no', { status: 500, statusText: 'Server Error' });
+    }
+    expect(fleet.summaries().get('pi')?.cpu).toBe(20);
+    vi.advanceTimersByTime(FLEET_REFRESH_MS);
+    http.expectOne('/api/devices/metrics').flush('no', { status: 500, statusText: 'Server Error' });
+    expect(fleet.summaries().get('pi')).toBeNull();
+    watching.unsubscribe();
+  });
+
+  it('does not keep the values of a device that stopped answering when a read fails', () => {
+    const devices = TestBed.inject(DeviceService).devices;
+    devices.set([{ id: 'pi', name: 'Pi' }]);
+    const fleet = TestBed.inject(FleetValues);
+    const watching = fleet.watch.subscribe();
+    vi.advanceTimersByTime(0);
+    http.expectOne('/api/devices/metrics').flush({
+      pi: {
+        time: '2026-10-11T12:00:00Z',
+        uptimeSeconds: 60,
+        cpu: { usagePercent: 20, cores: 4 },
+        memory: { totalBytes: 100, usedBytes: 50, usedPercent: 50 },
+        temperatures: [],
+        disks: [],
+        network: [],
+      },
+    });
+
+    devices.set([
+      { id: 'pi', name: 'Pi', unreachable: true },
+      { id: 'local', name: '' },
+    ]);
+    vi.advanceTimersByTime(FLEET_REFRESH_MS);
+    http.expectOne('/api/devices/metrics').flush('no', { status: 500, statusText: 'Server Error' });
+    expect(fleet.summaries().has('pi')).toBe(false);
+    expect(fleet.summaries().get('local')).toBeNull();
     watching.unsubscribe();
   });
 });
