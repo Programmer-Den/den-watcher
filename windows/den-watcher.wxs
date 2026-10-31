@@ -397,14 +397,15 @@
 
     <!--
       The edition on the Edition page: Cub installs the lightweight add-ons
-      (kernel, memory, pressure, Wi-Fi) and asks nothing more, Grizzly the
-      add-ons and what they collect as picked group by group on the Grizzly
-      page, which starts from Cub's. Not remembered itself: an update starts
-      at Grizzly when one of its add-ons is installed, or one of Cub's is not.
+      (kernel, memory, pressure, Wi-Fi) with all they collect and asks nothing
+      more, Grizzly the add-ons and what they collect as picked group by group
+      on the Grizzly page, which starts from Cub's. Not remembered itself: an
+      update starts at Grizzly when one of its add-ons is installed, one of
+      Cub's is not, or the Wi-Fi add-on collects less than in Cub.
     -->
     <Property Id="EDITION" Value="cub" />
     <SetProperty Action="EditionGrizzly" Id="EDITION" Value="grizzly" After="LaunchConditions" Sequence="ui"
-                 Condition='POWER = "1" OR GPU = "1" OR PROCESSES = "1" OR PORTS = "1" OR SMART = "1" OR BLUETOOTH = "1" OR KERNEL = "0" OR MEMORY = "0" OR PRESSURE = "0" OR WIFI = "0"' />
+                 Condition='POWER = "1" OR GPU = "1" OR PROCESSES = "1" OR PORTS = "1" OR SMART = "1" OR BLUETOOTH = "1" OR KERNEL = "0" OR MEMORY = "0" OR PRESSURE = "0" OR WIFI = "0" OR WIFI_NEARBY = "0" OR WIFI_SCAN = "0"' />
 
     <!--
       The router on the Router page, shown with the website on (hub mode):
@@ -899,8 +900,11 @@
       <Publish Dialog="RouterDlg" Control="Next" Event="NewDialog" Value="EditionDlg" Condition="NOT RouterInvalid" Order="3" />
       <Publish Dialog="EditionDlg" Control="Back" Event="NewDialog" Value="RouterDlg" Condition='WEBSITE = "1"' />
       <Publish Dialog="EditionDlg" Control="Back" Event="NewDialog" Value="ModeDlg" Condition='WEBSITE &lt;&gt; "1"' />
-      <!-- Cub installs its add-ons and none of the others; what they collect stays as it was. -->
-      <?foreach AddOn in PRESSURE;KERNEL;WIFI;MEMORY ?>
+      <!--
+        Cub installs its add-ons, with all they collect, as its text says, and
+        none of the others; what those collect stays as it was.
+      -->
+      <?foreach AddOn in PRESSURE;KERNEL;WIFI;WIFI_NEARBY;WIFI_SCAN;MEMORY ?>
       <Publish Dialog="EditionDlg" Control="Next" Property="$(AddOn)" Value="1" Condition='EDITION = "cub"' Order="1" />
       <?endforeach?>
       <?foreach AddOn in POWER;GPU;PORTS;SMART;PROCESSES;BLUETOOTH ?>
