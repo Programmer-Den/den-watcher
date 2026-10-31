@@ -166,14 +166,13 @@ The alert log can switch on notifications from the browser, in each browser on i
 | --- | --- | --- | --- |
 | Server, IoT device or check does not answer (not a PC or laptop) | | 2 minutes without an answer | |
 | Disk usage, per disk | 90 % | 95 % | |
-| Memory used | 90 % | 95 % | 2 minutes |
 | CPU usage | 95 % | | 5 minutes |
 | Temperature, per sensor | 85 °C | 95 °C | 1 minute |
 | Raspberry Pi throttling now | frequency capped, throttled or soft temperature limit | undervoltage | |
 | SMART check of a disk (smart add-on) | | failed, or the disk cannot be read | |
 | A network nearby named like the one the device is connected to but secured otherwise (wifi add-on) | a router of its own sends it, with no kind of security in common, such as an open *Den* next to *Den* with WPA2/WPA3: it may be a copy set up to catch passwords | | |
 
-A value must stay at or above the threshold for the time in *Must last* before it is an alert, so a short peak is none. An alert ends once the value is below the warning threshold by a margin (2 points for disks, 5 for memory and temperatures, 10 for the CPU), so a value hovering around a threshold does not start and end alerts all the time. A warning that rises past the alert threshold becomes an alert; the log keeps the highest level and value each one reached. Names are compared without case, spaces, hyphens and underscores, and a mesh router that offers less, such as WPA2 next to WPA2/WPA3, or an access point whose security is unknown is no copy. While a device's values cannot be read for a moment, its alerts last on. The alerts that last are taken up again after a restart, and end at the first check that finds their value back to normal. The log keeps alerts for `RETENTION_DAYS` after they ended, except those of a device removed on the hub without its history, or taken out of `HUB_DEVICES`, `HUB_ROUTERS` or `HUB_CHECKS`, which go with it.
+The memory used raises none, on no kind of device: systems keep memory in use on purpose, as phones do, so a high share is normal (the log keeps those of older versions). A value must stay at or above the threshold for the time in *Must last* before it is an alert, so a short peak is none. An alert ends once the value is below the warning threshold by a margin (2 points for disks, 5 for temperatures, 10 for the CPU), so a value hovering around a threshold does not start and end alerts all the time. A warning that rises past the alert threshold becomes an alert; the log keeps the highest level and value each one reached. Names are compared without case, spaces, hyphens and underscores, and a mesh router that offers less, such as WPA2 next to WPA2/WPA3, or an access point whose security is unknown is no copy. While a device's values cannot be read for a moment, its alerts last on. The alerts that last are taken up again after a restart, and end at the first check that finds their value back to normal. The log keeps alerts for `RETENTION_DAYS` after they ended, except those of a device removed on the hub without its history, or taken out of `HUB_DEVICES`, `HUB_ROUTERS` or `HUB_CHECKS`, which go with it.
 
 ## The usage for Prometheus
 

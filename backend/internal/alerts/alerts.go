@@ -44,8 +44,10 @@ type Kind string
 
 // The kinds of alerts.
 const (
-	KindOffline     Kind = "offline"
-	KindDisk        Kind = "disk"
+	KindOffline Kind = "offline"
+	KindDisk    Kind = "disk"
+	// KindMemory is no longer raised: a full memory is normal, as the
+	// system keeps it in use; the log keeps the ones from before.
 	KindMemory      Kind = "memory"
 	KindCPU         Kind = "cpu"
 	KindTemperature Kind = "temperature"
@@ -264,8 +266,6 @@ func holdFor(kind Kind) time.Duration {
 	switch kind {
 	case KindCPU:
 		return 5 * time.Minute
-	case KindMemory:
-		return 2 * time.Minute
 	case KindTemperature:
 		return time.Minute
 	}
