@@ -40,7 +40,6 @@ func (t threshold) level(value float64, active Level) Level {
 // The thresholds of the values that are watched.
 var (
 	diskThreshold        = threshold{Warn: 90, Alert: 95, Ease: 2}
-	memoryThreshold      = threshold{Warn: 90, Alert: 95, Ease: 5}
 	cpuThreshold         = threshold{Warn: 95, Ease: 10}
 	temperatureThreshold = threshold{Warn: 85, Alert: 95, Ease: 5}
 )
@@ -85,9 +84,6 @@ func conditions(ctx context.Context, target Target, now time.Time, levels map[st
 		if d.TotalBytes > 0 {
 			add(KindDisk, d.Path, d.UsedPercent, diskThreshold)
 		}
-	}
-	if s.Memory.TotalBytes > 0 {
-		add(KindMemory, "", s.Memory.UsedPercent, memoryThreshold)
 	}
 	if s.CPU.Cores > 0 {
 		add(KindCPU, "", s.CPU.UsagePercent, cpuThreshold)

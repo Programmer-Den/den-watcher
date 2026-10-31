@@ -124,6 +124,20 @@ func TestCPUMustLastBeforeItIsAnAlert(t *testing.T) {
 	}
 }
 
+func TestAFullMemoryIsNoAlert(t *testing.T) {
+	ctx := context.Background()
+	u := &usage{snapshot: metrics.Snapshot{Memory: metrics.Memory{TotalBytes: 100, UsedBytes: 99, UsedPercent: 99}}}
+	targets := []Target{{ID: "phone", Name: "Phone", Usage: u}}
+	w, _ := openTest(t, &targets)
+	start := time.Unix(1_800_000_000, 0)
+	for at := start; !at.After(start.Add(10 * time.Minute)); at = at.Add(Interval) {
+		w.Check(ctx, at)
+	}
+	if got := w.Active("phone"); len(got) != 0 {
+		t.Fatalf("memory 99 %% used: %+v", got)
+	}
+}
+
 func TestAServerThatDoesNotAnswerIsAnAlertButAPCIsNot(t *testing.T) {
 	ctx := context.Background()
 	now := time.Unix(1_800_000_000, 0)

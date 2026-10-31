@@ -22,7 +22,7 @@ function alertId(device: string, kind: Alert['kind'], subject = ''): number {
 
 /**
  * The alerts of a machine at t, by the same thresholds as the backend: a disk from 90 % a warning
- * and from 95 % an alert, memory the same, a temperature from 85 °C and 95 °C.
+ * and from 95 % an alert, a temperature from 85 °C and 95 °C. The memory used raises none.
  */
 export function activeAlerts(machine: DemoMachine, t: number): Alert[] {
   const s = snapshotOf(machine, t, 'demo');
@@ -50,9 +50,6 @@ export function activeAlerts(machine: DemoMachine, t: number): Alert[] {
   for (const disk of s.disks) {
     add('disk', disk.usedPercent, 90, 95, disk.path);
   }
-  if (s.memory.totalBytes > 0) {
-    add('memory', s.memory.usedPercent, 90, 95);
-  }
   for (const sensor of s.temperatures) {
     add('temperature', sensor.celsius, 85, 95, sensor.sensor);
   }
@@ -77,9 +74,9 @@ function earlierAlerts(t: number): Alert[] {
       id: 3,
       device: 'windows-server',
       deviceName: 'Windows Server',
-      kind: 'memory',
+      kind: 'cpu',
       level: 'warning',
-      value: 93,
+      value: 97,
       started: at(20),
       ended: at(19.2),
     },
