@@ -75,11 +75,14 @@ func NewNetworksReader(scanEvery time.Duration) func(ctx context.Context) []Acce
 			now := time.Now()
 			// A clock set back counts as due too, so it never waits that long.
 			scan := scanEvery > 0 && (now.Sub(scanned) >= scanEvery || now.Before(scanned))
-			if scan {
+			var ok, asked bool
+			aps, problem, asked, ok = readBSSLists(handle, now, scan)
+			// Only a scan Windows took waits scanEvery: one it refused, or
+			// none, as before an interface is connected, is asked at the
+			// next read.
+			if asked {
 				scanned = now
 			}
-			var ok bool
-			aps, problem, ok = readBSSLists(handle, now, scan)
 			if !ok {
 				closeHandle()
 			}
@@ -99,27 +102,24 @@ func NewNetworksReader(scanEvery time.Duration) func(ctx context.Context) []Acce
 // readBSSLists reads the access points every interface sees through handle,
 // and says why when it can read less than all of them. With scan, it then
 // asks Windows to scan each connected interface; Windows answers at once and
-// scans in the background, and a scan it refuses, as while one runs, is
-// left for the next. It returns nil when
-// there is no interface or none could be read, and reports false when the interfaces could not be
-// listed at all.
+// scans in the background, and whether it took a scan is reported (asked).
+// It returns nil when there is no interface or none could be read, and
+// reports false when the interfaces could not be listed at all.
 //
 //nolint:gosec // wlanapi.dll takes and returns pointers, which need unsafe.
-func readBSSLists(handle windows.Handle, now time.Time, scan bool) ([]AccessPoint, string, bool) {
+func readBSSLists(handle windows.Handle, now time.Time, scan bool) (aps []AccessPoint, problem string, asked, ok bool) {
 	var list *byte
 	if ret, _, _ := wlanEnumInterfaces.Call(uintptr(handle), 0, uintptr(unsafe.Pointer(&list))); ret != 0 {
-		return nil, fmt.Sprintf("WlanEnumInterfaces: %v", windows.Errno(ret)), false
+		return nil, fmt.Sprintf("WlanEnumInterfaces: %v", windows.Errno(ret)), false, false
 	}
 	count := *(*uint32)(unsafe.Pointer(list))
 	interfaces := parseInterfaces(unsafe.Slice(list, interfaceListSize(int(count))))
 	_, _, _ = wlanFreeMemory.Call(uintptr(unsafe.Pointer(list)))
 	if len(interfaces) == 0 {
-		return nil, "", true
+		return nil, "", false, true
 	}
 
-	var aps []AccessPoint
 	read := 0
-	problem := ""
 	for _, iface := range interfaces {
 		connected := ""
 		if iface.connected {
@@ -145,12 +145,14 @@ func readBSSLists(handle windows.Handle, now time.Time, scan bool) ([]AccessPoin
 		aps = append(aps, parseBSSList(unsafe.Slice(bss, total), connected, now)...)
 		_, _, _ = wlanFreeMemory.Call(uintptr(unsafe.Pointer(bss)))
 		if scan && iface.connected {
-			_, _, _ = wlanScan.Call(uintptr(handle), uintptr(unsafe.Pointer(&iface.guid)), 0, 0, 0)
+			if ret, _, _ := wlanScan.Call(uintptr(handle), uintptr(unsafe.Pointer(&iface.guid)), 0, 0, 0); ret == 0 {
+				asked = true
+			}
 		}
 	}
 	if read > 0 && aps == nil {
 		// Interfaces that see nothing nearby, unlike those Windows denies.
 		aps = []AccessPoint{}
 	}
-	return aps, problem, true
+	return aps, problem, asked, true
 }

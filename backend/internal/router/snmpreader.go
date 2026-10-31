@@ -204,8 +204,9 @@ func (s *SNMPReader) network(columns map[string]map[string]snmpValue, now time.T
 		network := metrics.NetworkInterface{Name: name, ReceivedBytes: received, SentBytes: sent}
 		// For a 32-bit counter, the link's speed, with some room, tells one
 		// that was reset from one that wrapped around, as for UPnP and the
-		// FRITZ!Box. A 64-bit one does not wrap, and is not limited by a
-		// speed, which some agents report too low for virtual interfaces.
+		// FRITZ!Box; some agents report it too low for virtual interfaces,
+		// so it limits only a wrap (see counter). A 64-bit one does not
+		// wrap, and is not limited by a speed.
 		counters[0].limit, counters[1].limit = 0, 0
 		if speed, ok := number(oidIfHighSpeed, row); ok && speed > 0 && speed < 1<<31 {
 			network.LinkMbps = int(speed)

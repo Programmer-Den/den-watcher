@@ -516,8 +516,14 @@ func TestLookalikes(t *testing.T) {
 	if got := lookalikes(base, mesh); len(got) != 0 {
 		t.Errorf("another mesh router at 6 GHz: %+v", got)
 	}
-	// Joined at 6 GHz, the mesh's WPA2 below is its own, but an Open copy is not.
+	// Joined at 6 GHz, a WPA2 router below is a copy that can catch what
+	// devices send to join, unless the joined router sends WPA2 below too,
+	// as a mesh does: then it is the mesh's own, but an Open copy is not.
 	mesh.AccessPoints[0].Connected, mesh.AccessPoints[1].Connected = false, true
+	if got := lookalikes(base, mesh); len(got) != 1 {
+		t.Errorf("joined at 6 GHz with WPA3 only, a WPA2 copy below: %+v", got)
+	}
+	mesh.AccessPoints = append(mesh.AccessPoints, metrics.NearbyAccessPoint{ID: "m3", Box: "m2", SSID: "Den", Security: "WPA2", FrequencyMHz: 5500})
 	if got := lookalikes(base, mesh); len(got) != 0 {
 		t.Errorf("joined at 6 GHz, another mesh router below: %+v", got)
 	}

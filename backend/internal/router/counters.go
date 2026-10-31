@@ -18,8 +18,13 @@ type counter struct {
 	known bool
 	// limit is the fastest traffic in bytes per second the counter can have
 	// counted, such as the line's speed with some room; 0 for
-	// maxBytesPerSecond.
+	// maxBytesPerSecond. It only tells a wrap from a reset: some agents
+	// report a speed too low, as for virtual interfaces, so a counter that
+	// grew is counted up to maxBytesPerSecond, and a wrap up to twice the
+	// rate before too.
 	limit float64
+	// last is the rate of the previous reading in bytes per second.
+	last float64
 	// total is the bytes counted since the counter was last reset, which
 	// unlike value goes on growing when a 32-bit counter wraps around, so
 	// what reads it as a counter, such as Prometheus, sees no reset there.
@@ -36,7 +41,10 @@ func (c *counter) rate(value uint64, now time.Time, restarted bool) (float64, bo
 		c.total = value
 		return 0, false
 	}
+	last := c.last
+	c.last = 0
 	var grown uint64
+	limit := float64(maxBytesPerSecond)
 	switch {
 	case value >= previous:
 		grown = value - previous
@@ -44,6 +52,9 @@ func (c *counter) rate(value uint64, now time.Time, restarted bool) (float64, bo
 		// A 32-bit counter that wrapped around; one that went down from
 		// lower was reset.
 		grown = value + (1<<32 - previous)
+		if c.limit > 0 {
+			limit = min(limit, max(c.limit, 2*last))
+		}
 	default:
 		c.total = value
 		return 0, false
@@ -54,15 +65,12 @@ func (c *counter) rate(value uint64, now time.Time, restarted bool) (float64, bo
 		return 0, false
 	}
 	perSecond := float64(grown) / seconds
-	limit := c.limit
-	if limit <= 0 {
-		limit = maxBytesPerSecond
-	}
 	if perSecond > limit {
 		c.total = value
 		return 0, false
 	}
 	c.total += grown
+	c.last = perSecond
 	return perSecond, true
 }
 

@@ -143,6 +143,35 @@ func TestNoticesARebootWhileTheHubWasStoppedByItsStart(t *testing.T) {
 	}
 }
 
+func TestKeepsAnOldReadingAfterARestartFromBeingAReboot(t *testing.T) {
+	ctx := context.Background()
+	now := time.Unix(1_800_000_000, 0)
+	// After a restart the phone's reading is 2 minutes old, or two weeks
+	// later its uptime has drifted 5 minutes behind the hub's clock: up all
+	// along, so no reboot.
+	cases := []struct {
+		name   string
+		uptime uint64
+		later  time.Duration
+	}{
+		{"old reading", 3600 + 600 - 120, 10 * time.Minute},
+		{"drifted uptime", 3600 + 14*24*3600 - 300, 14 * 24 * time.Hour},
+	}
+	for _, c := range cases {
+		path := filepath.Join(t.TempDir(), "events.db")
+		u := &usage{snapshot: reading(3600, "1.4.0")}
+		targets := []Target{{ID: "phone", Usage: u}}
+		openTest(t, path, &targets).Check(ctx, now)
+
+		u.snapshot = reading(c.uptime, "1.4.0")
+		l := openTest(t, path, &targets)
+		l.Check(ctx, now.Add(c.later))
+		if got := between(t, l, "phone"); len(got) != 0 {
+			t.Fatalf("%s: events = %+v, want none", c.name, got)
+		}
+	}
+}
+
 func TestStoresAnUptimeTooLargeForTheDatabase(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "events.db")

@@ -85,9 +85,15 @@ type seen struct {
 }
 
 // bootSlack is how much later than the start before a device's start may
-// seem, from the hub's clock and the delay of a reading, and not be a new
-// start.
-const bootSlack = time.Minute
+// seem, from the hub's clock and the age of a reading, and not be a new
+// start: a phone's reading can be phoneFresh (90 s) old, and more when the
+// phone sleeps. driftSlack adds a part of the time since the uptime was
+// written, as a device's uptime and the hub's clock drift apart (50 ppm,
+// as on some routers, is a minute in two weeks).
+const (
+	bootSlack  = 3 * time.Minute
+	driftSlack = 5000
+)
 
 // Log looks at the devices every Interval and keeps their events.
 type Log struct {
@@ -198,7 +204,7 @@ func (l *Log) note(ctx context.Context, device string, uptime uint64, version st
 	// before by the clock as well: a device that started again while the hub
 	// was stopped can have been up longer than when last written.
 	if known && uptime > 0 && (uptime < before.uptime ||
-		before.stored && before.uptime > 0 && started.After(startOf(before.written, before.uptime).Add(bootSlack))) {
+		before.stored && before.uptime > 0 && started.After(startOf(before.written, before.uptime).Add(bootSlack+now.Sub(before.written)/driftSlack))) {
 		happened = append(happened, Event{Time: started, Kind: KindReboot})
 	}
 	if known && before.version != "" && version != before.version {

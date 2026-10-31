@@ -152,9 +152,11 @@ func (r *Recent) Average(from, to time.Time) map[string]float64 {
 
 // Range returns the readings from from up to (not including) to, averaged
 // over steps of the given length, in the same shape as Store.Range.
-// Steps start at multiples of step since the Unix epoch, as in the database.
+// Steps start at multiples of step since the Unix epoch, as in the database,
+// and, as there, the first includes the whole step from falls in.
 func (r *Recent) Range(from, to time.Time, step time.Duration) []Series {
 	stepSeconds := max(1, int64(step/time.Second))
+	first := from.Unix() / stepSeconds * stepSeconds
 	type bucket struct {
 		sum   float64
 		count int
@@ -163,7 +165,7 @@ func (r *Recent) Range(from, to time.Time, step time.Duration) []Series {
 
 	r.mu.Lock()
 	for _, x := range r.readings {
-		if x.time < from.Unix() || x.time >= to.Unix() {
+		if x.time < first || x.time >= to.Unix() {
 			continue
 		}
 		start := x.time / stepSeconds * stepSeconds
