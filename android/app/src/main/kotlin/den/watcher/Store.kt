@@ -9,9 +9,9 @@ import org.json.JSONObject
 /**
  * Keeps the values of every reading until the hub has them, one row per
  * value, as a data-only device keeps its minutes for the hub, and the scans
- * of the Wi-Fi networks nearby. Only the newest KEEP readings and scans are
- * kept, so a phone that does not reach the hub for a long time does not fill
- * up. They are counted rather than dated: a clock set far ahead for a moment
+ * of the Wi-Fi networks nearby. Only the newest KEEP scans and about the
+ * newest KEEP readings are kept, so a phone that does not reach the hub for a
+ * long time does not fill up. They are counted rather than dated: a clock set far ahead for a moment
  * would make every reading before it look too old to keep.
  */
 class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 2) {
@@ -86,11 +86,17 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 2
                 }
                 db.insertWithOnConflict("readings", null, row, SQLiteDatabase.CONFLICT_REPLACE)
             }
-            db.delete(
-                "readings",
-                "time < (SELECT DISTINCT time FROM readings ORDER BY time DESC LIMIT 1 OFFSET ?)",
-                arrayOf((KEEP - 1).toString()),
-            )
+            // Finding the cut-off walks every reading kept, so it is looked
+            // for only every PRUNE_EVERY readings, and at the first one after
+            // the app started: a phone away from the hub keeps a little more
+            // than KEEP for a while.
+            if (added++ % PRUNE_EVERY == 0) {
+                db.delete(
+                    "readings",
+                    "time < (SELECT DISTINCT time FROM readings ORDER BY time DESC LIMIT 1 OFFSET ?)",
+                    arrayOf((KEEP - 1).toString()),
+                )
+            }
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()
@@ -130,6 +136,12 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 2
     companion object {
         /** How many readings and scans the hub does not have yet are kept: a week of one every half minute. */
         const val KEEP = 7 * 24 * 60 * 2
+
+        /** How many readings are added between two looks for the ones too old to keep: an hour's. */
+        const val PRUNE_EVERY = 120
+
+        /** How many readings were added since the app started. */
+        private var added = 0
 
         fun minuteOf(time: Long): Long = Math.floorDiv(time, 60L) * 60
     }
