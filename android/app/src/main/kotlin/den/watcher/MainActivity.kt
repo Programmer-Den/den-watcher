@@ -82,6 +82,8 @@ class MainActivity : Activity() {
 
         findViewById<Button>(R.id.nearby).setOnClickListener { allowNearby() }
 
+        findViewById<Button>(R.id.apps).setOnClickListener { openUsageAccess() }
+
         for ((id, change) in dataSwitches) {
             findViewById<Switch>(id).setOnCheckedChangeListener { _, on ->
                 // Only the user changes it, not showDataChoice setting the switches.
@@ -105,6 +107,7 @@ class MainActivity : Activity() {
         R.id.collect_network to { on -> copy(network = on) },
         R.id.collect_traffic to { on -> copy(traffic = on) },
         R.id.collect_nearby to { on -> copy(nearby = on) },
+        R.id.collect_apps to { on -> copy(apps = on) },
     )
 
     /**
@@ -123,6 +126,7 @@ class MainActivity : Activity() {
             R.id.collect_network to (choice.network to true),
             R.id.collect_traffic to (choice.traffic to choice.network),
             R.id.collect_nearby to (choice.nearby to choice.network),
+            R.id.collect_apps to (choice.apps to true),
         )
         showingDataChoice = true
         for ((id, state) in switches) {
@@ -178,6 +182,26 @@ class MainActivity : Activity() {
                 else -> R.string.nearby_allow
             },
         )
+    }
+
+    /**
+     * Opens Android's settings for usage access, which has no popup to ask
+     * with: at this app where Android allows it, otherwise at the list of apps.
+     */
+    private fun openUsageAccess() {
+        val intent = Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
+        val atApp = Intent(intent).setData(Uri.fromParts("package", packageName, null))
+        val opened = runCatching { startActivity(atApp) }.isSuccess || runCatching { startActivity(intent) }.isSuccess
+        if (!opened) {
+            Toast.makeText(this, R.string.apps_no_settings, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /** Whether the uses of apps are read: allowed in Android's settings, or not. */
+    private fun showApps() {
+        val allowed = Usage.allowed(this)
+        findViewById<TextView>(R.id.apps_state).setText(if (allowed) R.string.apps_on else R.string.apps_off)
+        findViewById<Button>(R.id.apps).setText(if (allowed) R.string.apps_settings else R.string.apps_allow)
     }
 
     override fun onResume() {
@@ -292,6 +316,7 @@ class MainActivity : Activity() {
         other?.let { findViewById<TextView>(R.id.network).text = getString(R.string.network_notice, it) }
         openHub.visibility = if (HubAddress.pageUrl(settings.hubAddress) == null) View.GONE else View.VISIBLE
         showNearby()
+        showApps()
         showDataChoice()
     }
 

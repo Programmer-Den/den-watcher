@@ -1,0 +1,96 @@
+:host {
+  display: block;
+  margin-bottom: 1.25rem;
+}
+
+/* The screen time and its chart beside the apps, or above them where there is no room. */
+.body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 0.5rem 2rem;
+  align-items: start;
+}
+
+.value {
+  margin: 0;
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail {
+  margin: 0.25rem 0 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+/* The screen time of each step, as columns along the range. */
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 6rem;
+  margin-top: 1rem;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.bar {
+  flex: 1 1 0;
+  min-width: 0;
+  height: calc(var(--share, 0) * 100%);
+  border-radius: 2px 2px 0 0;
+  background: color-mix(in srgb, var(--mat-sys-primary) 75%, transparent);
+}
+
+.bar:hover {
+  background: var(--mat-sys-primary);
+}
+
+h4 {
+  margin: 0.25rem 0 0.5rem;
+  font: var(--mat-sys-title-small);
+}
+
+.apps {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.apps li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  column-gap: 0.75rem;
+  align-items: baseline;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+}
+
+.opens {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875em;
+}
+
+/* How long the app was used, as a share of the longest used app. */
+.meter {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--mat-sys-primary) calc(var(--share, 0) * 100%),
+    var(--mat-sys-surface-container-high) 0
+  );
+}
+
+.more {
+  margin-top: 0.75rem;
+}

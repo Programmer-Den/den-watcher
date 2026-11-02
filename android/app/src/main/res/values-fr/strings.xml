@@ -58,4 +58,12 @@
     <string name="collect_network">Réseau</string>
     <string name="collect_traffic">Trafic Wi-Fi et données mobiles</string>
     <string name="collect_nearby">Réseaux Wi-Fi à proximité</string>
+    <string name="apps_title">Utilisation des apps</string>
+    <string name="apps_hint">Le temps d\'écran, les apps ouvertes, quand et combien de temps, et combien de fois le téléphone a été déverrouillé, depuis le journal d\'Android. Android ne le demande que dans ses paramètres, sous Accès aux données d\'utilisation. Il ne garde son journal que quelques jours, donc l\'app garde les utilisations jusqu\'au retour du téléphone à la maison ; la première fois, elle les lit aussi loin qu\'Android les a.</string>
+    <string name="apps_off">Non lue. Autorisez l\'accès aux données d\'utilisation pour Den-Watcher dans les paramètres d\'Android.</string>
+    <string name="apps_on">Lue, même quand le téléphone est ailleurs.</string>
+    <string name="apps_allow">Autoriser l\'accès aux données d\'utilisation</string>
+    <string name="apps_settings">Paramètres d\'accès aux données d\'utilisation</string>
+    <string name="apps_no_settings">Ce téléphone n\'a pas de paramètres d\'accès aux données d\'utilisation.</string>
+    <string name="collect_apps">Utilisation des apps : temps d\'écran, apps et déverrouillages</string>
 </resources>

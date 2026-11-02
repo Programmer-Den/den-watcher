@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/history"
 	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
@@ -56,7 +57,35 @@ type Push struct {
 	// first, at most ScansPerPush of them, also from while it was away, so
 	// the hub can tell where it was.
 	WiFi []PhoneScan `json:"wifi,omitempty"`
+	// Uses are the times apps were in use on the phone and it was unlocked,
+	// which the phone kept, at most UsesPerPush of them, also from while it
+	// was away. Each is sent once it is over.
+	Uses []PhoneUse `json:"uses,omitempty"`
 }
+
+// PhoneUse is one time an app was in use on a phone, or the phone was
+// unlocked. Times are Unix milliseconds on the phone's clock.
+type PhoneUse struct {
+	// ID is the phone's number for it, up to which the answer's UsesAfter
+	// tells the hub has them.
+	ID int64 `json:"id"`
+	// App is the app's package name, such as org.mozilla.firefox; empty for
+	// an unlock.
+	App string `json:"app,omitempty"`
+	// Label is the app's name as the phone shows it.
+	Label string `json:"label,omitempty"`
+	// Start is when it started.
+	Start int64 `json:"start"`
+	// Millis is how long the app was in use; 0 for an unlock.
+	Millis int64 `json:"millis,omitempty"`
+}
+
+// UsesPerPush is how many uses of apps one push may have.
+const UsesPerPush = 500
+
+// maxAppName is the longest package name or app name kept, in bytes; a
+// longer one is cut.
+const maxAppName = 200
 
 // PhoneScan is what a phone's Wi-Fi saw nearby at Time, Unix seconds on the
 // phone's clock.
@@ -93,6 +122,9 @@ type PushAnswer struct {
 	// WiFiAfter is the phone's time of the newest scan the hub has: the
 	// phone may delete it and the ones before.
 	WiFiAfter int64 `json:"wifiAfter,omitempty"`
+	// UsesAfter is the largest ID of the uses of apps of the push, once the
+	// hub has them: the phone may delete them and the ones with smaller IDs.
+	UsesAfter int64 `json:"usesAfter,omitempty"`
 }
 
 // ErrUnknownPhone is a push with a code no phone added on the hub has.
@@ -100,7 +132,7 @@ var ErrUnknownPhone = errors.New("no phone added on the hub has this pairing cod
 
 // ErrPushTooLarge is a push with more minutes or values than one push may
 // have.
-var ErrPushTooLarge = fmt.Errorf("a push may have at most %d minutes, %d values and %d scans; send the rest in another push", MinutesPerAnswer, ValuesPerAnswer, ScansPerPush)
+var ErrPushTooLarge = fmt.Errorf("a push may have at most %d minutes, %d values, %d scans and %d uses of apps; send the rest in another push", MinutesPerAnswer, ValuesPerAnswer, ScansPerPush, UsesPerPush)
 
 // phone keeps what a phone pushed: its newest reading, which the hub's
 // recorder of it reads as it reads a router, and up to which minute it has
@@ -207,7 +239,7 @@ func (h *Hub) Receive(ctx context.Context, code string, push Push) (PushAnswer, 
 	for _, minute := range push.Minutes {
 		values += len(minute.Values)
 	}
-	if len(push.Minutes) > MinutesPerAnswer || values > ValuesPerAnswer && len(push.Minutes) > 1 || len(push.WiFi) > ScansPerPush {
+	if len(push.Minutes) > MinutesPerAnswer || values > ValuesPerAnswer && len(push.Minutes) > 1 || len(push.WiFi) > ScansPerPush || len(push.Uses) > UsesPerPush {
 		return PushAnswer{}, ErrPushTooLarge
 	}
 	h.mu.Lock()
@@ -253,6 +285,7 @@ func (p *phone) receive(ctx context.Context, push Push, now time.Time, key []byt
 	answer := PushAnswer{After: after}
 	if err == nil {
 		answer.WiFiAfter = p.receiveWiFi(push, now)
+		answer.UsesAfter, err = p.receiveUses(ctx, push, now)
 	}
 	if until := p.released(now); !until.IsZero() {
 		// Rounded up, so the last moments are not lost to the rounding.
@@ -288,6 +321,51 @@ func (p *phone) receiveWiFi(push Push, now time.Time) int64 {
 		f.store.AddWiFi(f.device, at, metrics.CleanNearbyWiFi(&metrics.NearbyWiFi{AccessPoints: scan.AccessPoints}))
 	}
 	return p.wifiAfter
+}
+
+// receiveUses stores the uses of apps of a push, at their start on the hub's
+// clock, as the minutes are moved (see fetcher.receive), and returns the
+// largest ID among them, or 0 when it has none. A use older than the
+// retention or from the future is left out, but counts as had, so the phone
+// deletes it, and so does one that makes no sense, such as one longer than a
+// day. The caller holds pushing.
+func (p *phone) receiveUses(ctx context.Context, push Push, now time.Time) (int64, error) {
+	f := p.minutes
+	var after int64
+	uses := make([]history.AppUse, 0, len(push.Uses))
+	for _, u := range push.Uses {
+		after = max(after, u.ID)
+		start := u.Start + f.offset*1000
+		if u.Millis < 0 || u.Millis > 24*int64(time.Hour/time.Millisecond) || u.Start <= 0 ||
+			start > now.Add(maxClockJitter).UnixMilli() || f.retention > 0 && start < now.Add(-f.retention).UnixMilli() {
+			continue
+		}
+		if u.App == "" && u.Millis > 0 {
+			continue
+		}
+		uses = append(uses, history.AppUse{
+			App:        cut(u.App, maxAppName),
+			Label:      cut(strings.TrimSpace(u.Label), maxAppName),
+			PhoneStart: u.Start,
+			Start:      start,
+			Millis:     u.Millis,
+		})
+	}
+	if err := f.store.AddAppUses(ctx, f.device, uses); err != nil {
+		return 0, err
+	}
+	return after, nil
+}
+
+// cut returns s cut to at most n bytes, at the start of a character.
+func cut(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+	return s[:n]
 }
 
 // ReleasePhone lets the phone with the id change its hub for ReleaseTime,

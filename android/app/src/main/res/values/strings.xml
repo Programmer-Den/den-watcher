@@ -59,4 +59,12 @@
     <string name="collect_network">Network</string>
     <string name="collect_traffic">Traffic of Wi-Fi and mobile data</string>
     <string name="collect_nearby">Wi-Fi networks nearby</string>
+    <string name="apps_title">App usage</string>
+    <string name="apps_hint">Screen time, which apps were open, when and for how long, and how often the phone was unlocked, from Android\'s own log. Android asks for it only in its settings, under Usage access. It keeps its log for a few days only, so the app keeps the uses until the phone is home again; the first time, it reads them as far back as Android has them.</string>
+    <string name="apps_off">Not read. Allow usage access for Den-Watcher in Android\'s settings.</string>
+    <string name="apps_on">Read, also while the phone is away.</string>
+    <string name="apps_allow">Allow usage access</string>
+    <string name="apps_settings">Usage access settings</string>
+    <string name="apps_no_settings">This phone has no settings for usage access.</string>
+    <string name="collect_apps">App usage: screen time, apps and unlocks</string>
 </resources>

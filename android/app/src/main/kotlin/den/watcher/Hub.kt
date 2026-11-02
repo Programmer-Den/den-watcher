@@ -18,7 +18,8 @@ object Hub {
      * recording (0 when it may not) with the hub's proof of that, the
      * phone's key when the push asked for it, and the phone's time of the
      * newest scan of the networks nearby it has (0 for a hub that takes
-     * none).
+     * none), and the largest number of the uses of apps it has (0 for a hub
+     * that takes none).
      */
     sealed interface Answer {
         data class Taken(
@@ -27,6 +28,7 @@ object Hub {
             val releaseProof: String = "",
             val key: String = "",
             val wifiAfter: Long = 0,
+            val usesAfter: Long = 0,
         ) : Answer
         data class Failed(val problem: Problem) : Answer
     }
@@ -55,6 +57,7 @@ object Hub {
                         json.optString("releaseProof"),
                         json.optString("key"),
                         json.optLong("wifiAfter"),
+                        json.optLong("usesAfter"),
                     )
                 }
                 HttpURLConnection.HTTP_FORBIDDEN -> Answer.Failed(Problem.NOT_ADDED)

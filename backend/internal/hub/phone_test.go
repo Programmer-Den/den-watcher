@@ -421,3 +421,61 @@ func TestReleaseProofMatchesTheApp(t *testing.T) {
 		t.Errorf("releaseProof() = %s, want %s", got, want)
 	}
 }
+
+func TestThePhonesAppUsesAreStoredOnceAtTheHubsTime(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	h := openTestHub(t, store, nil)
+	if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+		t.Fatalf("AddPhone() error = %v", err)
+	}
+	// The phone's clock is an hour behind. It kept an unlock and two uses of
+	// a browser, one of them from while it was away, one use from before the
+	// retention and one that makes no sense, sent out of order.
+	now := time.Now()
+	phoneNow := now.Add(-time.Hour)
+	ms := func(t time.Time) int64 { return t.UnixMilli() }
+	push := Push{Now: phoneNow.Unix(), Uses: []PhoneUse{
+		{ID: 7, App: "org.mozilla.firefox", Label: "Firefox", Start: ms(phoneNow.Add(-10 * time.Minute)), Millis: 5 * 60 * 1000},
+		{ID: 5, Start: ms(phoneNow.Add(-11 * time.Minute))},
+		{ID: 6, App: "org.mozilla.firefox", Label: "Firefox", Start: ms(phoneNow.Add(-3 * time.Hour)), Millis: 60 * 1000},
+		{ID: 9, App: "old.app", Start: ms(phoneNow.Add(-60 * 24 * time.Hour)), Millis: 1000},
+		{ID: 8, App: "odd.app", Start: ms(phoneNow.Add(-time.Minute)), Millis: -1},
+	}}
+	answer, err := h.Receive(ctx, "7KQM-X2RP", push)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if answer.UsesAfter != 9 {
+		t.Errorf("UsesAfter = %d, want the largest ID of the push, 9", answer.UsesAfter)
+	}
+	// The same push again counts nothing twice.
+	if _, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil {
+		t.Fatal(err)
+	}
+	usage, err := store.AppUses(ctx, "pixel", now.Add(-5*time.Hour), now.Add(time.Minute), time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if usage.Unlocks != 1 || usage.ScreenSeconds != 6*60 {
+		t.Errorf("unlocks %d and screen time %v s, want 1 and 360 s", usage.Unlocks, usage.ScreenSeconds)
+	}
+	if len(usage.Apps) != 1 || usage.Apps[0] != (history.AppTime{App: "org.mozilla.firefox", Label: "Firefox", Seconds: 6 * 60, Opens: 2}) {
+		t.Errorf("apps %+v, want Firefox with 6 minutes and 2 opens", usage.Apps)
+	}
+	// At the hub's time: the newest use in the hour of now, not an hour before.
+	recent := now.Add(-10 * time.Minute).Truncate(time.Hour).Unix()
+	found := false
+	for _, step := range usage.Steps {
+		if step.Time == recent && step.ScreenSeconds > 0 {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("steps %+v, want screen time in the hour starting at %d", usage.Steps, recent)
+	}
+
+	if _, err := h.Receive(ctx, "7KQM-X2RP", Push{Now: phoneNow.Unix(), Uses: make([]PhoneUse, UsesPerPush+1)}); !errors.Is(err, ErrPushTooLarge) {
+		t.Errorf("Receive() with %d uses error = %v, want %v", UsesPerPush+1, err, ErrPushTooLarge)
+	}
+}

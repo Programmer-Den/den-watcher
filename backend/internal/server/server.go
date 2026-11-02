@@ -128,6 +128,9 @@ type Site struct {
 	// WiFi is what the devices' Wi-Fi saw nearby; nil leaves out GET
 	// /api/wifi.
 	WiFi WiFiSource
+	// AppUses is how the phones' apps were used; nil leaves out GET
+	// /api/phone/usage.
+	AppUses AppUseSource
 	// Routers tells which device each router seen on the Wi-Fi is, for GET
 	// /api/wifi; nil tells none.
 	Routers RouterBoxes
@@ -218,6 +221,11 @@ func New(site Site) http.Handler {
 	}
 	if site.WiFi != nil {
 		mux.HandleFunc("GET /api/wifi", wifiHandler(site.WiFi, site.Routers, site.Retention))
+	}
+	if site.AppUses != nil {
+		mux.HandleFunc("GET /api/phone/usage", forDevice(site.Devices, func(d Device) http.HandlerFunc {
+			return appUseHandler(d, site.AppUses, site.Retention)
+		}))
 	}
 	if site.Layout != nil {
 		mux.HandleFunc("GET /api/layout", readLayout(site.Layout))

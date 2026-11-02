@@ -17,6 +17,26 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
+    <!-- When which app was in use and when the phone was unlocked, from
+         Android's usage log; Android shows no popup for it, the user allows
+         it in its settings under Usage access, or not. -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- The names of the apps that were in use, all of which a user can open,
+         and which of them are home screens, whose time is no app's. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
+    </queries>
+
     <!-- The camera scans the code with the hub's address; the scanner asks for it. -->
     <uses-feature
         android:name="android.hardware.camera.any"
@@ -52,7 +72,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Records the phone's own battery, memory, storage, traffic and, when allowed, the Wi-Fi networks nearby, and sends them to the user's Den-Watcher hub on the home network." />
+                android:value="Records the phone's own battery, memory, storage, traffic and, when allowed, the Wi-Fi networks nearby and which apps were in use, and sends them to the user's Den-Watcher hub on the home network." />
         </service>
 
         <service

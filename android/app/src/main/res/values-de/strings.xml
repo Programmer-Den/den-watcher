@@ -58,4 +58,12 @@
     <string name="collect_network">Netzwerk</string>
     <string name="collect_traffic">Datenverkehr über WLAN und mobile Daten</string>
     <string name="collect_nearby">WLANs in der Nähe</string>
+    <string name="apps_title">App-Nutzung</string>
+    <string name="apps_hint">Bildschirmzeit, welche Apps wann und wie lange offen waren und wie oft das Handy entsperrt wurde, aus Androids eigenem Protokoll. Android fragt danach nur in seinen Einstellungen unter Nutzungsdatenzugriff. Es behält sein Protokoll nur wenige Tage, deshalb bewahrt die App die Nutzungen auf, bis das Handy wieder zu Hause ist; beim ersten Mal liest sie so weit zurück, wie Android sie hat.</string>
+    <string name="apps_off">Wird nicht gelesen. Erlaube Den-Watcher den Nutzungsdatenzugriff in den Einstellungen von Android.</string>
+    <string name="apps_on">Wird gelesen, auch wenn das Handy unterwegs ist.</string>
+    <string name="apps_allow">Nutzungsdatenzugriff erlauben</string>
+    <string name="apps_settings">Einstellungen für Nutzungsdatenzugriff</string>
+    <string name="apps_no_settings">Dieses Handy hat keine Einstellungen für den Nutzungsdatenzugriff.</string>
+    <string name="collect_apps">App-Nutzung: Bildschirmzeit, Apps und Entsperrungen</string>
 </resources>

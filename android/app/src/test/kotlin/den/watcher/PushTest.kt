@@ -36,4 +36,12 @@ class PushTest {
         val body = Push.body(600, null, emptyList(), scans = listOf(scan))
         assertEquals(540, body.getJSONArray("wifi").getJSONObject(0).getLong("time"))
     }
+
+    @Test
+    fun sendsTheUsesOfAppsOnlyWhenThereAreSome() {
+        assertFalse(Push.body(600, null, emptyList()).has("uses"))
+        val use = AppUse("chat", 540_000, 1_000, "Chat").json(7)
+        val body = Push.body(600, null, emptyList(), uses = listOf(use))
+        assertEquals(7, body.getJSONArray("uses").getJSONObject(0).getLong("id"))
+    }
 }

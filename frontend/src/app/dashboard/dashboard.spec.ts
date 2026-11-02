@@ -67,6 +67,8 @@ describe('Dashboard', () => {
     http.match((r) => r.url === '/api/layout');
     // The marks of the charts are read alongside the history; these tests leave them unanswered.
     http.match((r) => r.url === '/api/events');
+    // A phone's page also reads its app usage, which its own card's tests check.
+    http.match((r) => r.url === '/api/phone/usage');
     http.verify();
     vi.useRealTimers();
     vi.restoreAllMocks();

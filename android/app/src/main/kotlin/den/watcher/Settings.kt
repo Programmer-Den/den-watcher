@@ -108,6 +108,7 @@ class Settings(context: Context) {
             network = prefs.getBoolean(COLLECT_NETWORK, true),
             traffic = prefs.getBoolean(COLLECT_TRAFFIC, true),
             nearby = prefs.getBoolean(COLLECT_NEARBY, true),
+            apps = prefs.getBoolean(COLLECT_APPS, true),
         )
         set(value) = prefs.edit()
             .putBoolean(COLLECT_SYSTEM, value.system)
@@ -117,12 +118,22 @@ class Settings(context: Context) {
             .putBoolean(COLLECT_NETWORK, value.network)
             .putBoolean(COLLECT_TRAFFIC, value.traffic)
             .putBoolean(COLLECT_NEARBY, value.nearby)
+            .putBoolean(COLLECT_APPS, value.apps)
             .apply()
 
     /** When the newest scan of the networks nearby that was kept was made, in Unix seconds. */
     var lastScan: Long
         get() = prefs.getLong(LAST_SCAN, 0)
         set(value) = prefs.edit().putLong(LAST_SCAN, value).apply()
+
+    /**
+     * Up to when Android's usage log was read, in Unix milliseconds: the
+     * start of a use still going on then, so it is read again whole; 0 until
+     * it was first read.
+     */
+    var usesReadUntil: Long
+        get() = prefs.getLong(USES_READ_UNTIL, 0)
+        set(value) = prefs.edit().putLong(USES_READ_UNTIL, value).apply()
 
     /** The reading before the newest, whose traffic the speeds are measured from. */
     var lastReading: Reading?
@@ -178,6 +189,8 @@ class Settings(context: Context) {
         const val COLLECT_NETWORK = "collectNetwork"
         const val COLLECT_TRAFFIC = "collectTraffic"
         const val COLLECT_NEARBY = "collectNearby"
+        const val COLLECT_APPS = "collectApps"
+        const val USES_READ_UNTIL = "usesReadUntil"
     }
 }
 
