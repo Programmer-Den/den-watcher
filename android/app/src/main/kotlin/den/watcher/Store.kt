@@ -8,13 +8,14 @@ import org.json.JSONObject
 
 /**
  * Keeps the values of every reading until the hub has them, one row per
- * value, as a data-only device keeps its minutes for the hub, and the scans
- * of the Wi-Fi networks nearby. Only the newest KEEP scans and about the
+ * value, as a data-only device keeps its minutes for the hub, the scans
+ * of the Wi-Fi networks nearby, and the uses of apps and unlocks, which
+ * Android keeps in its own log only for a few days. Only the newest KEEP scans and about the
  * newest KEEP readings are kept, so a phone that does not reach the hub for a
  * long time does not fill up. They are counted rather than dated: a clock set far ahead for a moment
  * would make every reading before it look too old to keep.
  */
-class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 2) {
+class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 3) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
             """
@@ -27,12 +28,78 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 2
             """.trimIndent(),
         )
         createScans(db)
+        createUses(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) {
             createScans(db)
         }
+        if (oldVersion < 3) {
+            createUses(db)
+        }
+    }
+
+    private fun createUses(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE uses (
+                id     INTEGER PRIMARY KEY AUTOINCREMENT, -- the number the hub answers up to
+                app    TEXT    NOT NULL, -- the app's package name; empty for an unlock
+                label  TEXT    NOT NULL, -- the app's name as the phone shows it
+                start  INTEGER NOT NULL, -- Unix milliseconds on the phone's clock
+                millis INTEGER NOT NULL, -- how long it was in use; 0 for an unlock
+                UNIQUE (app, start)
+            )
+            """.trimIndent(),
+        )
+    }
+
+    /**
+     * Keeps the uses of apps and the unlocks read from Android's log, once
+     * each, also when one is read again, and deletes the oldest beyond
+     * KEEP_USES.
+     */
+    fun addUses(uses: List<AppUse>) {
+        if (uses.isEmpty()) {
+            return
+        }
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            for (use in uses) {
+                val row = ContentValues().apply {
+                    put("app", use.app)
+                    put("label", use.label)
+                    put("start", use.start)
+                    put("millis", use.millis)
+                }
+                db.insertWithOnConflict("uses", null, row, SQLiteDatabase.CONFLICT_IGNORE)
+            }
+            db.delete("uses", "id <= (SELECT MAX(id) FROM uses) - ?", arrayOf(KEEP_USES.toString()))
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /** The oldest uses the hub does not have yet, at most Push.MAX_USES, in JSON. */
+    fun uses(): List<JSONObject> {
+        val uses = mutableListOf<JSONObject>()
+        readableDatabase.rawQuery(
+            "SELECT id, app, label, start, millis FROM uses ORDER BY id LIMIT ?",
+            arrayOf(Push.MAX_USES.toString()),
+        ).use { rows ->
+            while (rows.moveToNext()) {
+                uses += AppUse(rows.getString(1), rows.getLong(3), rows.getLong(4), rows.getString(2)).json(rows.getLong(0))
+            }
+        }
+        return uses
+    }
+
+    /** Deletes the use with the number after and the ones before, which the hub has. */
+    fun deleteUsesUpTo(after: Long) {
+        writableDatabase.delete("uses", "id <= ?", arrayOf(after.toString()))
     }
 
     private fun createScans(db: SQLiteDatabase) {
@@ -136,6 +203,12 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 2
     companion object {
         /** How many readings and scans the hub does not have yet are kept: a week of one every half minute. */
         const val KEEP = 7 * 24 * 60 * 2
+
+        /**
+         * How many uses of apps and unlocks the hub does not have yet are
+         * kept: far more than a week of them.
+         */
+        const val KEEP_USES = 50_000
 
         /** How many readings are added between two looks for the ones too old to keep: an hour's. */
         const val PRUNE_EVERY = 120

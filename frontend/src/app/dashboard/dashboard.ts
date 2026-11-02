@@ -57,6 +57,7 @@ import {
 } from '../metrics/format';
 import { systemFacts } from '../metrics/system';
 import { PageVisibility } from '../page-visibility';
+import { PhoneUsageCard } from '../phone/phone-usage';
 import { ArrangeBar } from './arrange-bar';
 import { ArrangeControls } from './arrange-controls';
 import { Arrangement } from './arrangement';
@@ -309,6 +310,7 @@ type Problem = 'backend' | 'device';
   selector: 'app-dashboard',
   imports: [
     AlertChips,
+    PhoneUsageCard,
     ArrangeBar,
     ArrangeControls,
     BytesPipe,
@@ -359,7 +361,7 @@ export class Dashboard {
   /** Whether the picked device runs no Den-Watcher, so it tells only some of what a device does. */
   protected readonly readsLess = computed(() => this.isRouter() || this.isChecked());
   /** Whether the picked device is a phone, whose app cannot read the processor's usage. */
-  private readonly isPhone = computed(() => this.devices.selected().kind === 'phone');
+  protected readonly isPhone = computed(() => this.devices.selected().kind === 'phone');
   /**
    * The message above the page while the backend or the picked device does not answer; none while
    * the banner across the page tells that the hub does not answer.

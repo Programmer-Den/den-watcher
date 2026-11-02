@@ -20,6 +20,7 @@ import {
 } from './demo-backend';
 import { demoVersion } from './demo-build';
 import { FLEET } from './fleet';
+import { DEMO_PHONE } from './phone-usage';
 import { DEMO_PLACES, demoWifi } from './wifi';
 
 describe('DemoBackend', () => {
@@ -61,6 +62,20 @@ describe('DemoBackend', () => {
     } finally {
       localStorage.removeItem(PLACES_STORAGE_KEY);
     }
+  });
+
+  it("tells the phone's screen time and apps, and no other device's", async () => {
+    const to = Math.floor(Date.now() / 1000);
+    const usage = await firstValueFrom(metrics.phoneUsage(to - 86400, to, DEMO_PHONE));
+    expect(usage.screenSeconds).toBeGreaterThan(3600);
+    expect(usage.unlocks).toBeGreaterThan(10);
+    expect(usage.apps[0].label).toBe('Firefox');
+    expect(usage.steps.reduce((sum, s) => sum + s.screenSeconds, 0)).toBeCloseTo(
+      usage.screenSeconds,
+    );
+    await expect(
+      firstValueFrom(metrics.phoneUsage(to - 86400, to, 'local-x')),
+    ).rejects.toBeTruthy();
   });
 
   it('shows a remote status page whose password cannot be changed', async () => {

@@ -1,9 +1,11 @@
 package den.watcher
 
 import android.Manifest
+import android.app.AppOpsManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Looper
+import android.os.Process
 import android.view.View
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -77,6 +79,13 @@ class Screenshots {
     }
 
     @Test
+    fun appUsage() = shot("11-app-usage", usageAccess = true) {
+        hubAddress = "192.168.1.20:9393"
+        recording = true
+        lastPush = LAST_PUSH
+    }
+
+    @Test
     fun german() = shot("5-german", "de") {
         hubAddress = "192.168.1.20:9393"
         recording = true
@@ -101,10 +110,17 @@ class Screenshots {
     }
 
     /**
-     * Saves the screen with settings as set and the permissions granted, as
-     * <name>-light.png and <name>-dark.png.
+     * Saves the screen with settings as set and the permissions granted, and
+     * usage access when usageAccess is set, as <name>-light.png and
+     * <name>-dark.png.
      */
-    private fun shot(name: String, language: String? = null, permissions: Array<String> = emptyArray(), set: Settings.() -> Unit) {
+    private fun shot(
+        name: String,
+        language: String? = null,
+        permissions: Array<String> = emptyArray(),
+        usageAccess: Boolean = false,
+        set: Settings.() -> Unit,
+    ) {
         folder.mkdirs()
         for (mode in listOf("light", "dark")) {
             val qualifiers = listOfNotNull(language, if (mode == "dark") "night" else "notnight")
@@ -113,6 +129,12 @@ class Screenshots {
             app.getSharedPreferences("settings", 0).edit().clear().commit()
             Settings(app).set()
             shadowOf(app).grantPermissions(*permissions)
+            shadowOf(app.getSystemService(AppOpsManager::class.java)).setMode(
+                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                Process.myUid(),
+                app.packageName,
+                if (usageAccess) AppOpsManager.MODE_ALLOWED else AppOpsManager.MODE_DEFAULT,
+            )
             val activity = Robolectric.buildActivity(MainActivity::class.java).setup().get()
             // Runs the status refresh that onResume posts.
             shadowOf(Looper.getMainLooper()).idle()

@@ -125,6 +125,11 @@
   <p>{{ i18n.t('dashboard.loading') }}</p>
 }
 
+<!-- What a phone's app reads with usage access, over the picked range. -->
+@if (isPhone() && !kiosk.on) {
+  <app-phone-usage />
+}
+
 @let timeline = pageView.view() === 'timeline' && !kiosk.on;
 <!-- A wall display always shows the cards, and takes no clicks to pick another view. -->
 @if (!kiosk.on && (snapshot() || timeline)) {

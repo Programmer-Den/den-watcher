@@ -256,6 +256,13 @@ export class MetricsService {
     return this.http.get<WiFiHistory>('/api/wifi', { params: { from, to } });
   }
 
+  /** How a phone was used from `from` to `to`, both Unix seconds: its screen time, unlocks and apps. */
+  phoneUsage(from: number, to: number, device: string): Observable<PhoneUsage> {
+    return this.http.get<PhoneUsage>('/api/phone/usage', {
+      params: { from, to, ...deviceParam(device) },
+    });
+  }
+
   /** The places named on the page, by what a device's Wi-Fi hears there. */
   wifiPlaces(): Observable<WiFiPlace[]> {
     return this.http
@@ -279,6 +286,24 @@ export class MetricsService {
 /** The backend answers for the device it runs on when a request names none. */
 function deviceParam(device: string): Record<string, string> {
   return device === LOCAL_DEVICE.id ? {} : { device };
+}
+
+/**
+ * What GET /api/phone/usage answers: how a phone was used, from what its app reads with usage
+ * access, in steps of whole hours. Times are Unix seconds.
+ */
+export interface PhoneUsage {
+  from: number;
+  to: number;
+  stepSeconds: number;
+  /** How long apps were in use in the range in all. */
+  screenSeconds: number;
+  /** How often the phone was unlocked in the range. */
+  unlocks: number;
+  /** The steps anything happened in, by time. */
+  steps: { time: number; screenSeconds: number; unlocks?: number }[];
+  /** The apps used in the range, the longest used first; opens counts the uses that started in it. */
+  apps: { app: string; label?: string; seconds: number; opens: number }[];
 }
 
 /** This computer's time in whole Unix seconds, as the history is asked for. */

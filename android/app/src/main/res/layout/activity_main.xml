@@ -206,6 +206,25 @@
 
             <TextView
                 style="@style/Heading"
+                android:text="@string/apps_title" />
+
+            <TextView
+                android:id="@+id/apps_state"
+                style="@style/Hint" />
+
+            <TextView
+                style="@style/Hint"
+                android:text="@string/apps_hint" />
+
+            <Button
+                android:id="@+id/apps"
+                style="@style/Button.Outlined" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/Card">
+
+            <TextView
+                style="@style/Heading"
                 android:text="@string/collect_title" />
 
             <TextView
@@ -247,6 +266,11 @@
                 android:id="@+id/collect_nearby"
                 style="@style/CollectItem"
                 android:text="@string/collect_nearby" />
+
+            <Switch
+                android:id="@+id/collect_apps"
+                style="@style/CollectGroup"
+                android:text="@string/collect_apps" />
         </LinearLayout>
 
         <LinearLayout style="@style/Card">

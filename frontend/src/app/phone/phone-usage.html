@@ -1,0 +1,66 @@
+<section class="card" aria-labelledby="phone-usage-title" [class.stale]="connection.lost()">
+  <h3 id="phone-usage-title">{{ i18n.t('phoneUsage.title') }}</h3>
+  @if (usage(); as u) {
+    @if (u.apps.length === 0 && u.unlocks === 0) {
+      <p class="detail">{{ i18n.t('phoneUsage.none') }}</p>
+    } @else {
+      <div class="body">
+        <div>
+          <p class="value">{{ duration(u.screenSeconds) }}</p>
+          <p class="detail">
+            {{ i18n.plural(u.unlocks, 'phoneUsage.unlocks.one', 'phoneUsage.unlocks.other') }} ·
+            {{ i18n.plural(u.apps.length, 'phoneUsage.appsUsed.one', 'phoneUsage.appsUsed.other') }}
+          </p>
+          @if (days(u); as d) {
+            <p class="detail">
+              {{ i18n.t('phoneUsage.perDay', { duration: duration(u.screenSeconds / d) }) }}
+            </p>
+          }
+          @if (bars().length >= MIN_BARS) {
+            <div class="bars" role="img" [attr.aria-label]="i18n.t('phoneUsage.chart')">
+              @for (bar of bars(); track bar.time) {
+                <span
+                  class="bar"
+                  [style.--share]="bar.share"
+                  [title]="
+                    i18n.t('phoneUsage.step', {
+                      time:
+                        (bar.time * 1000 | date: stepFormat() : undefined : i18n.language()) ?? '',
+                      duration: duration(bar.seconds),
+                    })
+                  "
+                ></span>
+              }
+            </div>
+          }
+        </div>
+        <div>
+          <h4>{{ i18n.t('phoneUsage.apps') }}</h4>
+          <ol class="apps">
+            @for (app of apps(); track app.app) {
+              <li>
+                <span class="name" [title]="app.app">{{ app.label || app.app }}</span>
+                <span class="time">{{ duration(app.seconds) }}</span>
+                <span class="opens">{{
+                  i18n.plural(app.opens, 'phoneUsage.opens.one', 'phoneUsage.opens.other')
+                }}</span>
+                <span class="meter" [style.--share]="app.seconds / longestApp()"></span>
+              </li>
+            }
+          </ol>
+          @if (u.apps.length > apps().length || showAll()) {
+            <button type="button" class="outlined-button more" (click)="showAll.set(!showAll())">
+              {{
+                showAll()
+                  ? i18n.t('phoneUsage.showFewer')
+                  : i18n.t('phoneUsage.showAll', { count: u.apps.length })
+              }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+  } @else {
+    <p class="detail">{{ i18n.t('dashboard.loading') }}</p>
+  }
+</section>
