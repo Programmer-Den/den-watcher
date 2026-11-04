@@ -17,6 +17,7 @@ data class Words(val en: String, val de: String, val fr: String, val es: String)
 enum class ExtraUnit(val json: String) {
     PERCENT("percent"),
     CELSIUS("celsius"),
+    BYTES("bytes"),
     WATTS("watts"),
     NUMBER("number"),
     TEXT("text"),

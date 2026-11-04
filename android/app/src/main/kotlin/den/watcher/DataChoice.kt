@@ -6,7 +6,8 @@ package den.watcher
  * (the battery, memory and storage, and the phone's heat) and Network (the
  * traffic of Wi-Fi and mobile data, the Wi-Fi networks nearby, and the Wi-Fi
  * networks the phone was connected to and when), and App usage (the screen
- * time, which apps were used and how long, and the unlocks), which a phone
+ * time, which apps were used and how long, the unlocks and the data each
+ * app used), which a phone
  * has and a PC's installer does not offer. A value is collected when its
  * group and its own switch are on; everything is on until switched off.
  */
@@ -58,6 +59,7 @@ fun Reading.limitedTo(choice: DataChoice): Reading = copy(
     batteryCelsius = batteryCelsius.takeIf { choice.collectsBattery },
     batteryDetails = batteryDetails.takeIf { choice.collectsBattery },
     thermal = thermal.takeIf { choice.collectsThermal },
+    appTraffic = appTraffic.takeIf { choice.collectsApps },
     memoryTotalBytes = if (choice.collectsMemory) memoryTotalBytes else 0,
     memoryAvailableBytes = if (choice.collectsMemory) memoryAvailableBytes else 0,
     storageTotalBytes = if (choice.collectsStorage) storageTotalBytes else 0,
