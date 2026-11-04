@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 
 import { EvenColumns } from '../layout/even-columns';
 import { ArrangeControls } from './arrange-controls';
@@ -139,5 +140,31 @@ describe('CardSlot', () => {
     fixture.detectChanges();
     expect(cpu.style.gridColumn).toBe('');
     expect(button()).toBeNull();
+  });
+
+  it('shows all values while wider, or opened where no wider card fits', () => {
+    const { fixture, cpu } = grid(1000);
+    const slot = fixture.debugElement.query(By.css('[appCardSlot="cpu"]')).injector.get(CardSlot);
+    const toggle = () => {
+      slot.toggle();
+      fixture.detectChanges();
+    };
+    expect(cpu.classList).not.toContain('full');
+    toggle();
+    expect(cpu.style.gridColumn).toBe('span 2');
+    expect(cpu.classList).toContain('full');
+    toggle();
+    toggle();
+    expect(cpu.classList).not.toContain('full');
+
+    // On a phone the card opens in place instead, and closes again.
+    FakeResizeObserver.last?.resize(300);
+    fixture.detectChanges();
+    toggle();
+    expect(cpu.style.gridColumn).toBe('');
+    expect(cpu.classList).toContain('full');
+    toggle();
+    expect(cpu.classList).not.toContain('full');
+    expect(sent()).toEqual([]);
   });
 });

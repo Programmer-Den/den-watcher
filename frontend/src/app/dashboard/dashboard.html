@@ -144,7 +144,13 @@
   <app-timeline [class.stale]="connection.lost()" />
 } @else {
   @let arranging = arrangement.arranging() && !rows;
-  <div class="categories" [class.rows]="rows" [class.stale]="connection.lost()">
+  <!-- Cards show their charts without their numbers, but on a wall display, which takes no clicks. -->
+  <div
+    class="categories"
+    [class.rows]="rows"
+    [class.quiet]="!rows && !kiosk.on"
+    [class.stale]="connection.lost()"
+  >
     @for (section of sections(); track section.category) {
       @let folded =
         rows ? openRow() !== section.category : foldedCategories.folded().has(section.category);
@@ -323,7 +329,7 @@
                           }
                           @if (s.memory.swap; as swap) {
                             <p class="sensor swap">
-                              <span>{{ i18n.t('dashboard.swap') }}</span
+                              <span class="label">{{ i18n.t('dashboard.swap') }}</span
                               ><span
                                 >{{ swap.usedPercent | number: '1.0-1' : i18n.language() }} %</span
                               >
@@ -657,11 +663,11 @@
                             />
                             @let earlier = earlierConditions(t);
                             @if (t.now.length > 0 || earlier.length > 0) {
-                              <p class="value" [class.problem]="t.now.length > 0">
+                              <p class="value state" [class.problem]="t.now.length > 0">
                                 {{ i18n.t('dashboard.powerWarning') }}
                               </p>
                               @if (t.now.length > 0) {
-                                <p class="detail problem">
+                                <p class="detail state problem">
                                   {{
                                     i18n.t('dashboard.throttlingNow', {
                                       conditions: conditionList(t.now),
@@ -670,7 +676,7 @@
                                 </p>
                               }
                               @if (earlier.length > 0) {
-                                <p class="detail">
+                                <p class="detail state">
                                   {{
                                     i18n.t('dashboard.throttlingEarlier', {
                                       conditions: conditionList(earlier),
@@ -679,7 +685,7 @@
                                 </p>
                               }
                             } @else {
-                              <p class="value">{{ i18n.t('dashboard.powerOk') }}</p>
+                              <p class="value state">{{ i18n.t('dashboard.powerOk') }}</p>
                               <p class="detail">{{ i18n.t('dashboard.powerNoProblems') }}</p>
                             }
                             <app-card-charts [chart]="chartOf(card)" />

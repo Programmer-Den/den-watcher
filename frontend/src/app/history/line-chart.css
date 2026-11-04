@@ -41,7 +41,8 @@
 }
 
 .y-axis {
-  display: flex;
+  /* A card that leaves its numbers to the readout hides the axes with --y-axis and --x-axis. */
+  display: var(--y-axis, flex);
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-end;
@@ -51,13 +52,15 @@
 }
 
 .plot {
+  /* In its column also when the y axis is hidden. */
+  grid-area: 1 / 2;
   position: relative;
   touch-action: pan-y;
 }
 
 .x-axis {
   grid-column: 2;
-  display: flex;
+  display: var(--x-axis, flex);
   justify-content: space-between;
   gap: 0.5rem;
   margin-top: 0.25rem;
