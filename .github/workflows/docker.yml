@@ -121,10 +121,12 @@ jobs:
           else
             echo "version=$GITHUB_REF_NAME-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           fi
-          # The registry takes only lower-case names.
-          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/den-watcher" >> "$GITHUB_OUTPUT"
-          echo "latest=$latest" >> "$GITHUB_OUTPUT"
-          echo "minor=$minor" >> "$GITHUB_OUTPUT"
+          {
+            # The registry takes only lower-case names.
+            echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/den-watcher"
+            echo "latest=$latest"
+            echo "minor=$minor"
+          } >> "$GITHUB_OUTPUT"
 
       # main publishes :main, a tag v1.2.3 publishes :1.2.3, :1.2 when it is the
       # newest release of 1.2, and :latest when it is the newest release,
