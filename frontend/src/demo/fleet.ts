@@ -2019,6 +2019,79 @@ function phoneHealth(): Extra[] {
   ];
 }
 
+/** The apps whose data the demo phone tells, most first as the app lists them, with the share of the day's data each used over Wi-Fi and mobile data. */
+const phoneDataApps: { id: string; label: string; wifi: number; mobile: number }[] = [
+  { id: 'org-schabi-newpipe', label: 'NewPipe', wifi: 0.52, mobile: 0.34 },
+  { id: 'org-mozilla-firefox', label: 'Firefox', wifi: 0.21, mobile: 0.21 },
+  { id: 'android', label: 'Android system', wifi: 0.12, mobile: 0.18 },
+  { id: 'org-thoughtcrime-securesms', label: 'Signal', wifi: 0.08, mobile: 0.15 },
+  { id: 'org-breezyweather', label: 'Breezy Weather', wifi: 0.01, mobile: 0.04 },
+  { id: 'other', label: 'Other apps', wifi: 0.06, mobile: 0.08 },
+];
+
+const phoneDataLabels: Record<string, Record<string, string>> = {
+  android: { de: 'Android-System', fr: 'Système Android', es: 'Sistema Android' },
+  other: { de: 'Andere Apps', fr: 'Autres apps', es: 'Otras apps' },
+};
+
+/**
+ * The data each app on the phone used today, as the Android app tells it, over Wi-Fi and mobile data; the bytes
+ * come from values() as "extra:app-data-wifi/<id>" and "extra:app-data-mobile/<id>".
+ */
+function phoneAppData(): Extra[] {
+  const description = 'How much each app sent and received since midnight, as Android counts it.';
+  const descriptions = {
+    de: 'Wie viel jede App seit Mitternacht gesendet und empfangen hat, wie Android es zählt.',
+    fr: "Ce que chaque app a envoyé et reçu depuis minuit, selon le décompte d'Android.",
+    es: 'Cuánto envió y recibió cada app desde medianoche, según lo cuenta Android.',
+  };
+  const items = phoneDataApps.map((app) => ({
+    id: app.id,
+    label: app.label,
+    labels: phoneDataLabels[app.id] ?? { de: app.label, fr: app.label, es: app.label },
+    unit: 'bytes' as const,
+  }));
+  return [
+    {
+      id: 'app-data-wifi',
+      title: 'Data per app today: Wi-Fi',
+      titles: {
+        de: 'Daten pro App heute: WLAN',
+        fr: "Données par app aujourd'hui : Wi-Fi",
+        es: 'Datos por app hoy: Wi-Fi',
+      },
+      description,
+      descriptions,
+      items,
+    },
+    {
+      id: 'app-data-mobile',
+      title: 'Data per app today: mobile',
+      titles: {
+        de: 'Daten pro App heute: mobil',
+        fr: "Données par app aujourd'hui : mobile",
+        es: 'Datos por app hoy: móvil',
+      },
+      description,
+      descriptions,
+      items,
+    },
+  ];
+}
+
+/** The values of phoneAppData() at t: the data of the day so far, more over the waking hours. */
+function phoneAppDataValues(t: number): Values {
+  const hours = hourOf(t);
+  const wifi = 1.6 * GB * Math.max(0.05, Math.min(1, (hours - 6) / 16));
+  const mobile = 0.35 * GB * Math.max(0.02, Math.min(1, (hours - 7) / 12));
+  const values: Values = {};
+  for (const app of phoneDataApps) {
+    values[`extra:app-data-wifi/${app.id}`] = Math.round(wifi * app.wifi);
+    values[`extra:app-data-mobile/${app.id}`] = Math.round(mobile * app.mobile);
+  }
+  return values;
+}
+
 /** A phone that sends the hub its usage when it is back on the home Wi-Fi; at home now. */
 const androidPhone: DemoMachine = {
   device: { id: 'android-phone', kind: 'phone', name: 'Android phone', removable: true },
@@ -2037,7 +2110,7 @@ const androidPhone: DemoMachine = {
   // Its user chose not to collect the storage in the app, so its page shows no disks.
   disks: [],
   network: [{ name: 'wlan0', addresses: ['192.168.1.52'] }],
-  extras: [...wifiAddOn('wlan0'), ...phoneHealth()],
+  extras: [...wifiAddOn('wlan0'), ...phoneHealth(), ...phoneAppData()],
   bootedDaysAgo: 6.1,
   values: (t, step) => {
     // How busy the phone is, which only warms its battery: the app cannot read it.
@@ -2052,6 +2125,7 @@ const androidPhone: DemoMachine = {
       'extra:battery-health/current': Math.round(milliamps),
       'extra:battery-health/cycles': 312,
       'extra:thermal/headroom': 18 + cpu * 0.5,
+      ...phoneAppDataValues(t),
       memory: vary(t, step, 142, 68, 0, 100, [5, 900]),
       battery: batteryPercent(t + 1500),
       'temperature:battery': 29 + cpu * 0.12,

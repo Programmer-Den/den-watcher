@@ -61,11 +61,11 @@
     <string name="collect_nearby">Redes Wi-Fi cercanas</string>
     <string name="collect_connected">Wi-Fi conectada, con las horas</string>
     <string name="apps_title">Uso de apps</string>
-    <string name="apps_hint">El tiempo de pantalla, qué apps estuvieron abiertas, cuándo y cuánto tiempo, y cuántas veces se desbloqueó el teléfono, del propio registro de Android. Android solo lo pide en sus ajustes, en Acceso a datos de uso. Guarda su registro solo unos días, así que la app guarda los usos hasta que el teléfono vuelve a casa; la primera vez los lee tan atrás como Android los tenga.</string>
+    <string name="apps_hint">El tiempo de pantalla, qué apps estuvieron abiertas, cuándo y cuánto tiempo, y cuántas veces se desbloqueó el teléfono, del propio registro de Android. Android solo lo pide en sus ajustes, en Acceso a datos de uso. Guarda su registro solo unos días, así que la app guarda los usos hasta que el teléfono vuelve a casa; la primera vez los lee tan atrás como Android los tenga. También lee cuántos datos usó cada app hoy, que Android cuenta de todos modos.</string>
     <string name="apps_off">No se lee. Permite el acceso a datos de uso para Den-Watcher en los ajustes de Android.</string>
     <string name="apps_on">Se lee, también con el teléfono fuera de casa.</string>
     <string name="apps_allow">Permitir el acceso a datos de uso</string>
     <string name="apps_settings">Ajustes de acceso a datos de uso</string>
     <string name="apps_no_settings">Este teléfono no tiene ajustes de acceso a datos de uso.</string>
-    <string name="collect_apps">Uso de apps: tiempo de pantalla, apps y desbloqueos</string>
+    <string name="collect_apps">Uso de apps: tiempo de pantalla, apps, desbloqueos y datos por app</string>
 </resources>
