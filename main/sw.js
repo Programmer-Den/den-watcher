@@ -13,7 +13,7 @@
 
 // The build's files below the page, the page itself as '', and a version that changes with any
 // of them; scripts/precache.mjs puts them in after each build.
-const BUILD = {"version":"e672879669212b03","files":["apple-touch-icon.png","chunk-C-r1NGkp.js","chunk-CHWJdOum.js","chunk-CbsO7ihn.js","chunk-D3fdxUHS.js","chunk-Dsraws6r.js","chunk-Vba1JMKo.js","chunk-l_RqkB28.js","chunk-q-2VLoSl.js","flags/de.svg","flags/en-GB.svg","flags/en-US.svg","flags/es.svg","flags/fr.svg","icon-192.png","icon-512.png","icon-maskable-512.png","","main-B72KAPQC.js","manifest.webmanifest","mascot.svg","styles-E7IGHT2T.css"]};
+const BUILD = {"version":"c2fbdba583303601","files":["apple-touch-icon.png","chunk-5Q7k0nuM.js","chunk-C-r1NGkp.js","chunk-CQulTHID.js","chunk-CboVe2Pd.js","chunk-CpF-SzQC.js","chunk-DSKdMNSt.js","chunk-DXOCc7M3.js","chunk-DeFKOAQ-.js","flags/de.svg","flags/en-GB.svg","flags/en-US.svg","flags/es.svg","flags/fr.svg","icon-192.png","icon-512.png","icon-maskable-512.png","","main-UYDCKVI2.js","manifest.webmanifest","mascot.svg","styles-E7IGHT2T.css"]};
 
 const scope = new URL(self.registration.scope);
 /** Each page its own caches, as the demo has two pages on one site, one inside the other. */
