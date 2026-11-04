@@ -44,4 +44,12 @@ class PushTest {
         val body = Push.body(600, null, emptyList(), uses = listOf(use))
         assertEquals(7, body.getJSONArray("uses").getJSONObject(0).getLong("id"))
     }
+
+    @Test
+    fun sendsTheConnectionsOnlyWhenThereAreSome() {
+        assertFalse(Push.body(600, null, emptyList()).has("connections"))
+        val connection = Connection("Home", 540_000, 600_000).json(3, open = true)
+        val body = Push.body(600, null, emptyList(), connections = listOf(connection))
+        assertEquals("Home", body.getJSONArray("connections").getJSONObject(0).getString("ssid"))
+    }
 }

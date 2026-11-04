@@ -462,15 +462,16 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 		Files:     web.Files(),
 		Update:    func() update.Status { return update.Status{Current: version.Version} },
 
-		Minutes: history.Reader{Store: store, Recent: recent, Device: history.LocalDevice},
-		Alerts:  watcher,
-		Layout:  pageLayout,
-		Places:  wifiPlaces,
-		Backups: store,
-		Events:  happenings,
-		WiFi:    store,
-		AppUses: store,
-		Routers: others,
+		Minutes:         history.Reader{Store: store, Recent: recent, Device: history.LocalDevice},
+		Alerts:          watcher,
+		Layout:          pageLayout,
+		Places:          wifiPlaces,
+		Backups:         store,
+		Events:          happenings,
+		WiFi:            store,
+		AppUses:         store,
+		WiFiConnections: store,
+		Routers:         others,
 	}
 	if checker := update.NewChecker(version.Version); checker != nil && checkUpdates {
 		site.Update = checker.Status

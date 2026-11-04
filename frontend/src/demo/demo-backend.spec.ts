@@ -78,6 +78,24 @@ describe('DemoBackend', () => {
     ).rejects.toBeTruthy();
   });
 
+  it('tells which Wi-Fi the phone was on over the last days, and no other device', async () => {
+    const to = Math.floor(Date.now() / 1000);
+    const wifi = await firstValueFrom(metrics.phoneWifi(to - 7 * 86400, to, DEMO_PHONE));
+    const names = new Set(wifi.connections.map((c) => c.ssid));
+    expect(names).toContain('Den');
+    expect(names).toContain('Office');
+    for (const [i, c] of wifi.connections.entries()) {
+      expect(c.end).toBeGreaterThan(c.start);
+      expect(c.end).toBeGreaterThan(wifi.from);
+      expect(c.start).toBeLessThan(wifi.to);
+      // One after another, never two at once.
+      if (i > 0) {
+        expect(c.start).toBeGreaterThanOrEqual(wifi.connections[i - 1].end);
+      }
+    }
+    await expect(firstValueFrom(metrics.phoneWifi(to - 86400, to, 'local-x'))).rejects.toBeTruthy();
+  });
+
   it('shows a remote status page whose password cannot be changed', async () => {
     expect(await firstValueFrom(devices.statusPage())).toEqual(DEMO_STATUS_PAGE);
     const refused = await firstValueFrom(devices.setStatusPassword('new password', 'hub')).catch(

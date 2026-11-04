@@ -125,9 +125,10 @@
   <p>{{ i18n.t('dashboard.loading') }}</p>
 }
 
-<!-- What a phone's app reads with usage access, over the picked range. -->
+<!-- What a phone's app reads with usage access and the location permission, over the picked range. -->
 @if (isPhone() && !kiosk.on) {
   <app-phone-usage />
+  <app-phone-wifi />
 }
 
 @let timeline = pageView.view() === 'timeline' && !kiosk.on;

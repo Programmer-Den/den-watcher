@@ -69,6 +69,7 @@ describe('Dashboard', () => {
     http.match((r) => r.url === '/api/events');
     // A phone's page also reads its app usage, which its own card's tests check.
     http.match((r) => r.url === '/api/phone/usage');
+    http.match((r) => r.url === '/api/phone/wifi');
     http.verify();
     vi.useRealTimers();
     vi.restoreAllMocks();

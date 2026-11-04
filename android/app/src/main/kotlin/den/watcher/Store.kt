@@ -9,13 +9,14 @@ import org.json.JSONObject
 /**
  * Keeps the values of every reading until the hub has them, one row per
  * value, as a data-only device keeps its minutes for the hub, the scans
- * of the Wi-Fi networks nearby, and the uses of apps and unlocks, which
+ * of the Wi-Fi networks nearby, the Wi-Fi networks the phone was connected
+ * to, and the uses of apps and unlocks, which
  * Android keeps in its own log only for a few days. Only the newest KEEP scans and about the
  * newest KEEP readings are kept, so a phone that does not reach the hub for a
  * long time does not fill up. They are counted rather than dated: a clock set far ahead for a moment
  * would make every reading before it look too old to keep.
  */
-class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 3) {
+class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 4) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
             """
@@ -29,6 +30,7 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 3
         )
         createScans(db)
         createUses(db)
+        createConnections(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -38,6 +40,101 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 3
         if (oldVersion < 3) {
             createUses(db)
         }
+        if (oldVersion < 4) {
+            createConnections(db)
+        }
+    }
+
+    private fun createConnections(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE connections (
+                id    INTEGER PRIMARY KEY AUTOINCREMENT, -- the number the hub answers up to
+                ssid  TEXT    NOT NULL, -- the Wi-Fi's name
+                start INTEGER NOT NULL, -- Unix milliseconds on the phone's clock
+                ended INTEGER NOT NULL, -- the last reading that found the phone on it
+                open  INTEGER NOT NULL, -- 1 while it goes on, at most one
+                sent  INTEGER NOT NULL DEFAULT 0 -- the end the hub last took of an open one
+            )
+            """.trimIndent(),
+        )
+    }
+
+    /** The connection still open and its number, or null when there is none. */
+    private fun openConnection(db: SQLiteDatabase): Pair<Long, Connection>? =
+        db.rawQuery("SELECT id, ssid, start, ended FROM connections WHERE open = 1 ORDER BY id DESC LIMIT 1", null).use { rows ->
+            if (rows.moveToNext()) rows.getLong(0) to Connection(rows.getString(1), rows.getLong(2), rows.getLong(3)) else null
+        }
+
+    /**
+     * Keeps that a reading at now found the phone on the Wi-Fi ssid, or on
+     * none for null, as WifiLog.follow tells, and deletes the oldest
+     * connections beyond KEEP_CONNECTIONS.
+     */
+    fun addConnection(ssid: String?, now: Long) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            val open = openConnection(db)
+            val followed = WifiLog.follow(open?.second, ssid, now)
+            if (open != null) {
+                val row = ContentValues().apply {
+                    if (followed.closed) put("open", 0) else put("ended", followed.open?.end ?: open.second.end)
+                }
+                db.update("connections", row, "id = ?", arrayOf(open.first.toString()))
+            }
+            val started = followed.open
+            if (started != null && (open == null || followed.closed)) {
+                val row = ContentValues().apply {
+                    put("ssid", started.ssid)
+                    put("start", started.start)
+                    put("ended", started.end)
+                    put("open", 1)
+                }
+                db.insert("connections", null, row)
+            }
+            db.delete("connections", "id <= (SELECT MAX(id) FROM connections) - ?", arrayOf(KEEP_CONNECTIONS.toString()))
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
+     * The oldest connections the hub does not have yet, at most
+     * Push.MAX_CONNECTIONS, in JSON: every one that is over, and the open one
+     * when it was not sent yet or went on for WifiLog.RESEND_MILLIS since,
+     * or the clock went back.
+     */
+    fun connections(): List<JSONObject> {
+        val connections = mutableListOf<JSONObject>()
+        readableDatabase.rawQuery(
+            // A number in the text, as one passed as an argument would be compared as text.
+            "SELECT id, ssid, start, ended, open FROM connections " +
+                "WHERE open = 0 OR ended - sent >= ${WifiLog.RESEND_MILLIS} OR sent > ended ORDER BY id LIMIT ?",
+            arrayOf(Push.MAX_CONNECTIONS.toString()),
+        ).use { rows ->
+            while (rows.moveToNext()) {
+                connections += Connection(rows.getString(1), rows.getLong(2), rows.getLong(3)).json(rows.getLong(0), rows.getInt(4) == 1)
+            }
+        }
+        return connections
+    }
+
+    /**
+     * Deletes the connections that are over with the number after and the
+     * ones before, which the hub has, and keeps the end it has of the open
+     * one, so that is sent again only once it went on.
+     */
+    fun connectionsTaken(after: Long) {
+        val db = writableDatabase
+        db.delete("connections", "id <= ? AND open = 0", arrayOf(after.toString()))
+        db.execSQL("UPDATE connections SET sent = ended WHERE id <= ? AND open = 1", arrayOf<Any?>(after))
+    }
+
+    /** Deletes every connection kept, as when they are no longer collected. */
+    fun deleteConnections() {
+        writableDatabase.delete("connections", null, null)
     }
 
     private fun createUses(db: SQLiteDatabase) {
@@ -209,6 +306,12 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 3
          * kept: far more than a week of them.
          */
         const val KEEP_USES = 50_000
+
+        /**
+         * How many connections to a Wi-Fi the hub does not have yet are
+         * kept: far more than a week of them.
+         */
+        const val KEEP_CONNECTIONS = 10_000
 
         /** How many readings are added between two looks for the ones too old to keep: an hour's. */
         const val PRUNE_EVERY = 120

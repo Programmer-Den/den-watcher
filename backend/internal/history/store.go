@@ -83,7 +83,7 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	if _, err := db.ExecContext(ctx, schema+extraSchema+wifiSchema+appUseSchema); err != nil {
+	if _, err := db.ExecContext(ctx, schema+extraSchema+wifiSchema+appUseSchema+wifiConnectionSchema); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
@@ -269,7 +269,11 @@ func (s *Store) DeleteBefore(ctx context.Context, t time.Time) (int64, error) {
 	if err != nil {
 		return deleted, err
 	}
-	s.shrinkLog(ctx, deleted+hourly+wifi+scans+uses)
+	connections, err := s.deleteChunks(ctx, "wifi_connections", "device, start", `end_time < ?`, t.UnixMilli())
+	if err != nil {
+		return deleted, err
+	}
+	s.shrinkLog(ctx, deleted+hourly+wifi+scans+uses+connections)
 	return deleted, nil
 }
 
@@ -306,6 +310,10 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	if err != nil {
 		return err
 	}
+	connections, err := s.deleteChunks(ctx, "wifi_connections", "device, start", `device = ?`, device)
+	if err != nil {
+		return err
+	}
 	s.brokenInfo.Range(func(key, _ any) bool {
 		if key.(brokenInfoKey).device == device {
 			s.brokenInfo.Delete(key)
@@ -315,7 +323,7 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	// Again, so a range read while the values were deleted, which may have
 	// some of them, is not kept (see rangeCache.put).
 	s.cache.forget(device)
-	s.shrinkLog(ctx, deleted+hourly+wifi+scans+uses)
+	s.shrinkLog(ctx, deleted+hourly+wifi+scans+uses+connections)
 	return nil
 }
 

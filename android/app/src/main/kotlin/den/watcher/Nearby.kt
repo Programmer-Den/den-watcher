@@ -51,14 +51,51 @@ data class Scan(val time: Long, val accessPoints: List<AccessPoint>) {
 }
 
 /**
- * Reads the Wi-Fi networks nearby from the scans Android makes on its own;
- * the app starts none. Android gives them only with the location permission,
- * and while the app is in the background only when it is allowed all the
- * time, so the hub can tell where the phone was, also while it was away.
+ * Reads the Wi-Fi networks nearby from the scans Android makes, and asks
+ * Android for one every SCAN_EVERY_MILLIS when it made none since, as a
+ * phone with its screen off seldom scans on its own. Android gives them only
+ * with the location permission, and while the app is in the background only
+ * when it is allowed all the time, so the hub can tell where the phone was
+ * over the day, also while it was away.
  */
 object Nearby {
     /** Results Android saw longer ago than this are left out: it keeps the last ones it has. */
     private const val FRESH_SECONDS = 120L
+
+    /**
+     * How often the app asks for a scan: often enough to tell where the
+     * phone was over the day, seldom enough to cost little battery, and far
+     * less often than Android allows an app in front (4 in 2 minutes), which
+     * the app with its notification counts as.
+     */
+    const val SCAN_EVERY_MILLIS = 5 * 60_000L
+
+    /**
+     * Whether to ask for a scan at now, when the app last asked for one at
+     * last and Android last scanned at newest, all in Unix milliseconds (0
+     * for never): once neither happened for SCAN_EVERY_MILLIS, and at once
+     * after the clock went back.
+     */
+    fun scanDue(last: Long, newest: Long, now: Long): Boolean =
+        (now - last >= SCAN_EVERY_MILLIS || last > now) && (now - newest >= SCAN_EVERY_MILLIS || newest > now)
+
+    /**
+     * Asks Android to scan for the networks nearby, whose results a later
+     * reading reads, and tells whether Android took it: not without the
+     * permission, with Wi-Fi and Wi-Fi scanning off, or too often.
+     */
+    // Lint cannot tell that allowed checks the permission.
+    @SuppressLint("MissingPermission")
+    fun requestScan(context: Context): Boolean {
+        if (!allowed(context)) {
+            return false
+        }
+        val wifi = context.getSystemService(WifiManager::class.java) ?: return false
+        // Deprecated for apps in front, but still the only way to ask, and allowed.
+        @Suppress("DEPRECATION")
+        val started = runCatching { wifi.startScan() }.getOrDefault(false)
+        return started
+    }
 
     /**
      * Whether a scan at time is another one than the one last kept, at last,

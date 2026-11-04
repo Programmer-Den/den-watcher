@@ -61,7 +61,34 @@ type Push struct {
 	// which the phone kept, at most UsesPerPush of them, also from while it
 	// was away. Each is sent once it is over.
 	Uses []PhoneUse `json:"uses,omitempty"`
+	// Connections are the times the phone was connected to a Wi-Fi, which
+	// it kept, at most ConnectionsPerPush of them, also from while it was
+	// away. The one that goes on is sent again every few minutes with its
+	// new end, and once more when it is over.
+	Connections []PhoneConnection `json:"connections,omitempty"`
 }
+
+// PhoneConnection is one time a phone was connected to a Wi-Fi. Times are
+// Unix milliseconds on the phone's clock.
+type PhoneConnection struct {
+	// ID is the phone's number for it, up to which the answer's
+	// ConnectionsAfter tells the hub has them.
+	ID int64 `json:"id"`
+	// SSID is the Wi-Fi's name.
+	SSID string `json:"ssid"`
+	// Start is when the phone was first found on it, End when it was last.
+	Start int64 `json:"start"`
+	End   int64 `json:"end"`
+	// Open is set while the phone is still on it.
+	Open bool `json:"open,omitempty"`
+}
+
+// ConnectionsPerPush is how many connections to a Wi-Fi one push may have.
+const ConnectionsPerPush = 500
+
+// maxSSID is the longest name of a Wi-Fi kept, in bytes: 32 bytes, which
+// Android tells as 64 hex digits when they are no text.
+const maxSSID = 64
 
 // PhoneUse is one time an app was in use on a phone, or the phone was
 // unlocked. Times are Unix milliseconds on the phone's clock.
@@ -125,6 +152,10 @@ type PushAnswer struct {
 	// UsesAfter is the largest ID of the uses of apps of the push, once the
 	// hub has them: the phone may delete them and the ones with smaller IDs.
 	UsesAfter int64 `json:"usesAfter,omitempty"`
+	// ConnectionsAfter is the largest ID of the connections to a Wi-Fi of
+	// the push, once the hub has them: the phone may delete the ones that
+	// are over, up to it.
+	ConnectionsAfter int64 `json:"connectionsAfter,omitempty"`
 }
 
 // ErrUnknownPhone is a push with a code no phone added on the hub has.
@@ -132,7 +163,7 @@ var ErrUnknownPhone = errors.New("no phone added on the hub has this pairing cod
 
 // ErrPushTooLarge is a push with more minutes or values than one push may
 // have.
-var ErrPushTooLarge = fmt.Errorf("a push may have at most %d minutes, %d values, %d scans and %d uses of apps; send the rest in another push", MinutesPerAnswer, ValuesPerAnswer, ScansPerPush, UsesPerPush)
+var ErrPushTooLarge = fmt.Errorf("a push may have at most %d minutes, %d values, %d scans, %d uses of apps and %d connections to a Wi-Fi; send the rest in another push", MinutesPerAnswer, ValuesPerAnswer, ScansPerPush, UsesPerPush, ConnectionsPerPush)
 
 // phone keeps what a phone pushed: its newest reading, which the hub's
 // recorder of it reads as it reads a router, and up to which minute it has
@@ -239,7 +270,7 @@ func (h *Hub) Receive(ctx context.Context, code string, push Push) (PushAnswer, 
 	for _, minute := range push.Minutes {
 		values += len(minute.Values)
 	}
-	if len(push.Minutes) > MinutesPerAnswer || values > ValuesPerAnswer && len(push.Minutes) > 1 || len(push.WiFi) > ScansPerPush || len(push.Uses) > UsesPerPush {
+	if len(push.Minutes) > MinutesPerAnswer || values > ValuesPerAnswer && len(push.Minutes) > 1 || len(push.WiFi) > ScansPerPush || len(push.Uses) > UsesPerPush || len(push.Connections) > ConnectionsPerPush {
 		return PushAnswer{}, ErrPushTooLarge
 	}
 	h.mu.Lock()
@@ -286,6 +317,9 @@ func (p *phone) receive(ctx context.Context, push Push, now time.Time, key []byt
 	if err == nil {
 		answer.WiFiAfter = p.receiveWiFi(push, now)
 		answer.UsesAfter, err = p.receiveUses(ctx, push, now)
+	}
+	if err == nil {
+		answer.ConnectionsAfter, err = p.receiveConnections(ctx, push, now)
 	}
 	if until := p.released(now); !until.IsZero() {
 		// Rounded up, so the last moments are not lost to the rounding.
@@ -352,6 +386,40 @@ func (p *phone) receiveUses(ctx context.Context, push Push, now time.Time) (int6
 		})
 	}
 	if err := f.store.AddAppUses(ctx, f.device, uses); err != nil {
+		return 0, err
+	}
+	return after, nil
+}
+
+// receiveConnections stores the connections to a Wi-Fi of a push, at their
+// times on the hub's clock, as the minutes are moved (see fetcher.receive),
+// and returns the largest ID among them, or 0 when it has none. A connection
+// that ended before the retention or starts in the future is left out, but
+// counts as had, so the phone deletes it, and so does one that makes no
+// sense, such as one without a name or that ends before it starts. One that
+// goes on into the future, as by a clock that jumped, ends now. The caller
+// holds pushing.
+func (p *phone) receiveConnections(ctx context.Context, push Push, now time.Time) (int64, error) {
+	f := p.minutes
+	var after int64
+	latest := now.Add(maxClockJitter).UnixMilli()
+	connections := make([]history.WiFiConnection, 0, len(push.Connections))
+	for _, c := range push.Connections {
+		after = max(after, c.ID)
+		ssid := cut(strings.TrimSpace(c.SSID), maxSSID)
+		start, end := c.Start+f.offset*1000, c.End+f.offset*1000
+		if ssid == "" || c.Start <= 0 || c.End < c.Start || start > latest ||
+			f.retention > 0 && end < now.Add(-f.retention).UnixMilli() {
+			continue
+		}
+		connections = append(connections, history.WiFiConnection{
+			SSID:       ssid,
+			PhoneStart: c.Start,
+			Start:      start,
+			End:        min(end, latest),
+		})
+	}
+	if err := f.store.AddWiFiConnections(ctx, f.device, connections); err != nil {
 		return 0, err
 	}
 	return after, nil

@@ -107,6 +107,7 @@ class MainActivity : Activity() {
         R.id.collect_network to { on -> copy(network = on) },
         R.id.collect_traffic to { on -> copy(traffic = on) },
         R.id.collect_nearby to { on -> copy(nearby = on) },
+        R.id.collect_connected to { on -> copy(connected = on) },
         R.id.collect_apps to { on -> copy(apps = on) },
     )
 
@@ -126,6 +127,7 @@ class MainActivity : Activity() {
             R.id.collect_network to (choice.network to true),
             R.id.collect_traffic to (choice.traffic to choice.network),
             R.id.collect_nearby to (choice.nearby to choice.network),
+            R.id.collect_connected to (choice.connected to choice.network),
             R.id.collect_apps to (choice.apps to true),
         )
         showingDataChoice = true

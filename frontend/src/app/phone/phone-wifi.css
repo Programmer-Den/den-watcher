@@ -1,0 +1,121 @@
+:host {
+  display: block;
+  margin-bottom: 1.25rem;
+}
+
+.value {
+  margin: 0;
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail {
+  margin: 0.25rem 0 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+/* The connections along the range, each in its network's color. */
+.strip {
+  position: relative;
+  height: 1.75rem;
+  margin-top: 1rem;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--mat-sys-surface-container-high);
+}
+
+.segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 2px;
+  background: var(--color);
+}
+
+.segment:hover {
+  filter: brightness(1.15);
+}
+
+.other {
+  --color: var(--mat-sys-outline);
+}
+
+.ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875em;
+}
+
+/* The networks beside the connections, or above them where there is no room. */
+.body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 0.5rem 2rem;
+  align-items: start;
+  margin-top: 0.75rem;
+}
+
+h4 {
+  margin: 0.25rem 0 0.5rem;
+  font: var(--mat-sys-title-small);
+}
+
+.list {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  column-gap: 0.75rem;
+  align-items: baseline;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-right: 0.375rem;
+  border-radius: 2px;
+  background: var(--color);
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+}
+
+.count {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875em;
+}
+
+/* How long the phone was on the network, as a share of the longest. */
+.meter {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--mat-sys-primary) calc(var(--share, 0) * 100%),
+    var(--mat-sys-surface-container-high) 0
+  );
+}
+
+.more {
+  margin-top: 0.75rem;
+}
+
+.nearby {
+  margin-top: 1rem;
+  font-size: 0.875em;
+}

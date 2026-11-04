@@ -263,6 +263,13 @@ export class MetricsService {
     });
   }
 
+  /** Which Wi-Fi a phone was connected to from `from` to `to`, both Unix seconds, and when. */
+  phoneWifi(from: number, to: number, device: string): Observable<PhoneWifi> {
+    return this.http.get<PhoneWifi>('/api/phone/wifi', {
+      params: { from, to, ...deviceParam(device) },
+    });
+  }
+
   /** The places named on the page, by what a device's Wi-Fi hears there. */
   wifiPlaces(): Observable<WiFiPlace[]> {
     return this.http
@@ -304,6 +311,17 @@ export interface PhoneUsage {
   steps: { time: number; screenSeconds: number; unlocks?: number }[];
   /** The apps used in the range, the longest used first; opens counts the uses that started in it. */
   apps: { app: string; label?: string; seconds: number; opens: number }[];
+}
+
+/**
+ * What GET /api/phone/wifi answers: which Wi-Fi a phone was connected to and when, from what its
+ * app reads with the location permission, oldest first, each whole, also one that reaches over the
+ * edge of the range. Times are Unix seconds.
+ */
+export interface PhoneWifi {
+  from: number;
+  to: number;
+  connections: { ssid: string; start: number; end: number }[];
 }
 
 /** This computer's time in whole Unix seconds, as the history is asked for. */

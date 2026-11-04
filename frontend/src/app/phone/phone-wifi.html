@@ -1,0 +1,85 @@
+<section class="card" aria-labelledby="phone-wifi-title" [class.stale]="connection.lost()">
+  <h3 id="phone-wifi-title">{{ i18n.t('phoneWifi.title') }}</h3>
+  @if (wifi(); as w) {
+    @if (w.connections.length === 0) {
+      <p class="detail">{{ i18n.t('phoneWifi.none') }}</p>
+    } @else {
+      <p class="value">{{ i18n.t('phoneWifi.total', { duration: duration(total()) }) }}</p>
+      <p class="detail">
+        {{ i18n.plural(networks().length, 'phoneWifi.networks.one', 'phoneWifi.networks.other') }}
+      </p>
+      <div class="strip" role="img" [attr.aria-label]="i18n.t('phoneWifi.chart')">
+        @for (s of segments(); track $index) {
+          <span
+            [class]="s.color < 0 ? 'segment other' : 'segment series-' + s.color"
+            [style.left.%]="s.left"
+            [style.width.%]="s.width"
+            [title]="
+              i18n.t('phoneWifi.segment', {
+                network: s.ssid,
+                from: (s.start * 1000 | date: timeFormat() : undefined : i18n.language()) ?? '',
+                to: (s.end * 1000 | date: timeFormat() : undefined : i18n.language()) ?? '',
+              })
+            "
+          ></span>
+        }
+      </div>
+      <div class="ends detail">
+        <span>{{ w.from * 1000 | date: timeFormat() : undefined : i18n.language() }}</span>
+        <span>{{ w.to * 1000 | date: timeFormat() : undefined : i18n.language() }}</span>
+      </div>
+      <div class="body">
+        <div>
+          <h4>{{ i18n.t('phoneWifi.byNetwork') }}</h4>
+          <ol class="list networks">
+            @for (n of networks(); track n.ssid) {
+              <li>
+                <span class="name">
+                  <span [class]="n.color < 0 ? 'swatch other' : 'swatch series-' + n.color"></span>
+                  {{ n.ssid }}
+                </span>
+                <span class="time">{{ duration(n.seconds) }}</span>
+                <span class="count">{{
+                  i18n.plural(n.connections, 'phoneWifi.connected.one', 'phoneWifi.connected.other')
+                }}</span>
+                <span class="meter" [style.--share]="n.seconds / longest()"></span>
+              </li>
+            }
+          </ol>
+        </div>
+        <div>
+          <h4>{{ i18n.t('phoneWifi.times') }}</h4>
+          <ol class="list times">
+            @for (c of connections(); track $index) {
+              <li>
+                <span class="name">
+                  <span [class]="c.color < 0 ? 'swatch other' : 'swatch series-' + c.color"></span>
+                  {{ c.ssid }}
+                </span>
+                <span class="time">{{
+                  i18n.t('phoneWifi.span', {
+                    from: (c.start * 1000 | date: timeFormat() : undefined : i18n.language()) ?? '',
+                    to: (c.end * 1000 | date: timeFormat() : undefined : i18n.language()) ?? '',
+                  })
+                }}</span>
+                <span class="count">{{ duration(c.end - c.start) }}</span>
+              </li>
+            }
+          </ol>
+          @if (segments().length > FIRST_CONNECTIONS) {
+            <button type="button" class="outlined-button more" (click)="showAll.set(!showAll())">
+              {{
+                showAll()
+                  ? i18n.t('phoneWifi.showFewer')
+                  : i18n.t('phoneWifi.showAll', { count: segments().length })
+              }}
+            </button>
+          }
+        </div>
+      </div>
+      <p class="detail nearby">{{ i18n.t('phoneWifi.nearby') }}</p>
+    }
+  } @else {
+    <p class="detail">{{ i18n.t('dashboard.loading') }}</p>
+  }
+</section>
