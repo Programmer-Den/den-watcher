@@ -18,7 +18,9 @@
               i18n.t('phoneWifi.segment', {
                 network: s.ssid,
                 from: (s.start * 1000 | date: timeFormat() : undefined : i18n.language()) ?? '',
-                to: (s.end * 1000 | date: timeFormat() : undefined : i18n.language()) ?? '',
+                to:
+                  (s.end * 1000 | date: endFormat(s.start, s.end) : undefined : i18n.language()) ??
+                  '',
               })
             "
           ></span>
@@ -59,7 +61,9 @@
                 <span class="time">{{
                   i18n.t('phoneWifi.span', {
                     from: (c.start * 1000 | date: timeFormat() : undefined : i18n.language()) ?? '',
-                    to: (c.end * 1000 | date: timeFormat() : undefined : i18n.language()) ?? '',
+                    to:
+                      (c.end * 1000
+                        | date: endFormat(c.start, c.end) : undefined : i18n.language()) ?? '',
                   })
                 }}</span>
                 <span class="count">{{ duration(c.end - c.start) }}</span>

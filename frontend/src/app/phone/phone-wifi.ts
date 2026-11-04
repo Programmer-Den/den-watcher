@@ -133,6 +133,12 @@ export class PhoneWifiCard {
 
   protected readonly duration = (seconds: number) => formatDuration(seconds, this.i18n);
 
+  /** The end of a connection, without the weekday again when it ends on the day it started. */
+  protected readonly endFormat = (start: number, end: number) =>
+    new Date(start * 1000).toDateString() === new Date(end * 1000).toDateString()
+      ? this.i18n.t('format.time')
+      : this.timeFormat();
+
   constructor() {
     const asked = computed(() => ({ device: this.devices.selected().id, span: this.store.span() }));
     toObservable(asked)
