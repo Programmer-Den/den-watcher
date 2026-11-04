@@ -27,12 +27,13 @@ object Recorder {
         val settings = Settings(app)
         val choice = settings.dataChoice
         val reading = Sampler.read(app).limitedTo(choice).let {
-            // Read only while collected, as they take a moment or open Android's Bluetooth profiles.
+            // Read only while collected, as they take a moment or open Android's Bluetooth profiles or start the step counter.
             val now = System.currentTimeMillis()
             it.copy(
                 appTraffic = if (choice.collectsApps) AppData.read(app, now) else null,
                 appStorage = if (choice.collectsStorage) AppStorage.read(app, now) else null,
                 bluetooth = if (choice.collectsBluetooth) Bluetooth.read(app) else null,
+                steps = if (choice.collectsSteps) countSteps(app, settings) else null,
             )
         }
         val rates = reading.ratesSince(settings.lastReading)
@@ -92,6 +93,20 @@ object Recorder {
         val read = Usage.read(context, from, now)
         store.addUses(read.uses)
         settings.usesReadUntil = read.openSince ?: now
+    }
+
+    /**
+     * The steps of today, from the step counter's newest value, which the
+     * count kept since the reading before goes on from; null until the
+     * counter told one.
+     */
+    private fun countSteps(context: Context, settings: Settings): Long? {
+        val counter = Steps.read(context) ?: return null
+        val day = java.time.LocalDate.now().toEpochDay()
+        // The first count starts today at 0, as the counter's steps since the phone started are not all today's.
+        val count = (settings.stepCount ?: StepCount(day, 0, counter)).next(counter, day)
+        settings.stepCount = count
+        return count.today
     }
 
     /** Sends what the hub does not have yet, with the newest reading, which is made only when it is sent. */

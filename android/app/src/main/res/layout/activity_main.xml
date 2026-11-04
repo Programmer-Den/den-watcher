@@ -236,6 +236,27 @@
                 style="@style/Button.Outlined" />
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/steps_group"
+            style="@style/Card">
+
+            <TextView
+                style="@style/Heading"
+                android:text="@string/steps_title" />
+
+            <TextView
+                android:id="@+id/steps_state"
+                style="@style/Hint" />
+
+            <TextView
+                style="@style/Hint"
+                android:text="@string/steps_hint" />
+
+            <Button
+                android:id="@+id/steps"
+                style="@style/Button.Outlined" />
+        </LinearLayout>
+
         <LinearLayout style="@style/Card">
 
             <TextView
@@ -320,6 +341,11 @@
                 android:id="@+id/collect_bluetooth"
                 style="@style/CollectGroup"
                 android:text="@string/collect_bluetooth" />
+
+            <Switch
+                android:id="@+id/collect_steps"
+                style="@style/CollectGroup"
+                android:text="@string/collect_steps" />
         </LinearLayout>
 
         <LinearLayout style="@style/Card">

@@ -7,7 +7,7 @@ package den.watcher
  * traffic and signal of Wi-Fi and mobile data, the Wi-Fi networks nearby, and the Wi-Fi
  * networks the phone was connected to and when), and App usage (the screen
  * time, which apps were used and how long, the unlocks and the data each
- * app used) and Bluetooth (the devices connected to the phone), which a phone
+ * app used), Bluetooth (the devices connected to the phone) and Steps, which a phone
  * has and a PC's installer does not offer. A value is collected when its
  * group and its own switch are on; everything is on until switched off.
  */
@@ -23,6 +23,7 @@ data class DataChoice(
     val connected: Boolean = true,
     val apps: Boolean = true,
     val bluetooth: Boolean = true,
+    val steps: Boolean = true,
 ) {
     val collectsBattery: Boolean get() = system && battery
     val collectsMemory: Boolean get() = system && memory
@@ -33,6 +34,7 @@ data class DataChoice(
     val collectsConnected: Boolean get() = network && connected
     val collectsApps: Boolean get() = apps
     val collectsBluetooth: Boolean get() = bluetooth
+    val collectsSteps: Boolean get() = steps
 
     /**
      * Whether a value kept under name, as Reading.values names it, is
@@ -47,6 +49,7 @@ data class DataChoice(
         name.startsWith("disk:") -> collectsStorage
         name.startsWith("network.") -> collectsTraffic
         name.startsWith("extra:${Bluetooth.GROUP}/") -> collectsBluetooth
+        name.startsWith("extra:${Steps.GROUP}/") -> collectsSteps
         name.startsWith("extra:${Signal.WIFI}/") || name.startsWith("extra:${Signal.MOBILE}/") -> collectsTraffic
         else -> true
     }
@@ -73,4 +76,5 @@ fun Reading.limitedTo(choice: DataChoice): Reading = copy(
     wifiLink = wifiLink.takeIf { choice.collectsTraffic },
     mobileSignal = mobileSignal.takeIf { choice.collectsTraffic },
     bluetooth = bluetooth.takeIf { choice.collectsBluetooth },
+    steps = steps.takeIf { choice.collectsSteps },
 )

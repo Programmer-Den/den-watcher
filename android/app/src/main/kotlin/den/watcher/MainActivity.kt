@@ -96,6 +96,7 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.apps).setOnClickListener { openUsageAccess() }
 
         findViewById<Button>(R.id.bluetooth).setOnClickListener { allowBluetooth() }
+        findViewById<Button>(R.id.steps).setOnClickListener { allowSteps() }
 
         for ((id, change) in dataSwitches) {
             findViewById<Switch>(id).setOnCheckedChangeListener { _, on ->
@@ -124,6 +125,7 @@ class MainActivity : Activity() {
         R.id.collect_connected to { on -> copy(connected = on) },
         R.id.collect_apps to { on -> copy(apps = on) },
         R.id.collect_bluetooth to { on -> copy(bluetooth = on) },
+        R.id.collect_steps to { on -> copy(steps = on) },
     )
 
     /**
@@ -146,6 +148,7 @@ class MainActivity : Activity() {
             R.id.collect_connected to (choice.connected to choice.network),
             R.id.collect_apps to (choice.apps to true),
             R.id.collect_bluetooth to (choice.bluetooth to true),
+            R.id.collect_steps to (choice.steps to true),
         )
         showingDataChoice = true
         for ((id, state) in switches) {
@@ -231,11 +234,36 @@ class MainActivity : Activity() {
         }
     }
 
+    /**
+     * Asks for the Physical activity permission the steps need from Android
+     * 10 on, or opens the app's settings once it was given or Android asks
+     * no more.
+     */
+    private fun allowSteps() {
+        if (!Steps.allowed(this) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            requestPermissions(arrayOf(Manifest.permission.ACTIVITY_RECOGNITION), STEPS_REQUEST)
+        } else {
+            runCatching {
+                startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
+            }
+        }
+    }
+
     /** Whether the connected Bluetooth devices are read: allowed, or not. */
     private fun showBluetooth() {
         val allowed = Bluetooth.allowed(this)
         findViewById<TextView>(R.id.bluetooth_state).setText(if (allowed) R.string.bluetooth_on else R.string.bluetooth_off)
         findViewById<Button>(R.id.bluetooth).setText(if (allowed) R.string.nearby_settings else R.string.nearby_allow)
+    }
+
+    /** Whether the steps are counted: allowed, or not; a phone without a step counter shows no card for them. */
+    private fun showSteps() {
+        val available = Steps.available(this)
+        findViewById<View>(R.id.steps_group).visibility = if (available) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.collect_steps).visibility = if (available) View.VISIBLE else View.GONE
+        val allowed = Steps.allowed(this)
+        findViewById<TextView>(R.id.steps_state).setText(if (allowed) R.string.steps_on else R.string.steps_off)
+        findViewById<Button>(R.id.steps).setText(if (allowed) R.string.nearby_settings else R.string.nearby_allow)
     }
 
     /** Whether the uses of apps are read: allowed in Android's settings, or not. */
@@ -362,6 +390,7 @@ class MainActivity : Activity() {
         showNearby()
         showApps()
         showBluetooth()
+        showSteps()
         showDataChoice()
     }
 
@@ -435,6 +464,7 @@ class MainActivity : Activity() {
         const val REFRESH_MILLIS = 5_000L
         const val NEARBY_REQUEST = 1
         const val BLUETOOTH_REQUEST = 2
+        const val STEPS_REQUEST = 3
         const val DISABLED_ALPHA = 0.5f
     }
 }

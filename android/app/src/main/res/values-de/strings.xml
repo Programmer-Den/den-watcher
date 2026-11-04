@@ -76,4 +76,9 @@
     <string name="bluetooth_hint">Welche Bluetooth-Geräte mit dem Handy verbunden sind, etwa Kopfhörer, eine Uhr oder das Auto, mit Namen und Geräteart, und wie viele über den Tag. Android fragt dafür ab Android 12 nach der Berechtigung Geräte in der Nähe. Es kostet keinen Akku: Die App fragt Android nur, was verbunden ist.</string>
     <string name="bluetooth_off">Wird nicht gelesen. Erlaube Den-Watcher Geräte in der Nähe.</string>
     <string name="bluetooth_on">Wird gelesen, auch wenn das Handy unterwegs ist.</string>
+    <string name="collect_steps">Schritte</string>
+    <string name="steps_title">Schritte</string>
+    <string name="steps_hint">Die Schritte, die das Handy heute zählt, von seinem Schrittzähler, einem Chip, der sie selbst zählt, deshalb kostet es fast keinen Akku. Android fragt dafür ab Android 10 nach der Berechtigung Körperliche Aktivität.</string>
+    <string name="steps_off">Werden nicht gezählt. Erlaube Den-Watcher Körperliche Aktivität.</string>
+    <string name="steps_on">Werden gezählt, auch wenn das Handy unterwegs ist.</string>
 </resources>

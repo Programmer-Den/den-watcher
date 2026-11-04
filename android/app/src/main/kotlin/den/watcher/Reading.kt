@@ -41,6 +41,8 @@ data class Reading(
     val appStorage: List<AppBytes>? = null,
     /** The Bluetooth devices connected to the phone. */
     val bluetooth: List<BluetoothDevice>? = null,
+    /** The steps counted today. */
+    val steps: Long? = null,
 ) {
     val memoryUsedBytes: Long get() = (memoryTotalBytes - memoryAvailableBytes).coerceAtLeast(0)
     val memoryUsedPercent: Double get() = percent(memoryUsedBytes, memoryTotalBytes)
@@ -95,6 +97,7 @@ data class Reading(
         appTraffic?.let { addAll(AppData.extras(it)) }
         appStorage?.takeIf { it.isNotEmpty() }?.let { add(AppStorage.extra(it)) }
         bluetooth?.let { add(Bluetooth.extra(it)) }
+        steps?.let { add(Steps.extra(it)) }
     }
 
     /**

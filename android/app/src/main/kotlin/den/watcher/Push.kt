@@ -49,7 +49,7 @@ object Push {
      * not had a reading with them yet.
      */
     fun describe(minutes: List<Minute>): Map<String, JSONObject> =
-        (Health.descriptions() + Signal.descriptions() + Bluetooth.descriptions()).filterKeys { metric -> minutes.any { metric in it.values } }
+        (Health.descriptions() + Signal.descriptions() + Bluetooth.descriptions() + Steps.descriptions()).filterKeys { metric -> minutes.any { metric in it.values } }
 
     /**
      * The body of a push sent at now, with the newest reading when there is

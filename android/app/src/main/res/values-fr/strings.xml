@@ -76,4 +76,9 @@
     <string name="bluetooth_hint">Les appareils Bluetooth connectés au téléphone, comme un casque, une montre ou la voiture, avec leur nom et leur type, et combien au fil de la journée. Android demande pour cela l\'autorisation Appareils à proximité à partir d\'Android 12. Cela ne coûte pas de batterie : l\'app demande seulement à Android ce qui est connecté.</string>
     <string name="bluetooth_off">Non lus. Autorisez Appareils à proximité pour Den-Watcher.</string>
     <string name="bluetooth_on">Lus, même quand le téléphone est ailleurs.</string>
+    <string name="collect_steps">Pas</string>
+    <string name="steps_title">Pas</string>
+    <string name="steps_hint">Les pas que le téléphone compte aujourd\'hui, par son podomètre, une puce qui les compte elle-même, donc presque sans batterie. Android demande pour cela l\'autorisation Activité physique à partir d\'Android 10.</string>
+    <string name="steps_off">Non comptés. Autorisez Activité physique pour Den-Watcher.</string>
+    <string name="steps_on">Comptés, même quand le téléphone est ailleurs.</string>
 </resources>
