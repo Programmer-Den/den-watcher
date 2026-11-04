@@ -307,6 +307,9 @@ export const fr: Messages = {
   'history.wider': 'Élargir la carte, avec toutes ses valeurs',
   'history.allValues': 'Afficher toutes les valeurs de la carte',
   'history.fewerValues': 'Afficher à nouveau seulement le graphique',
+  'history.dragToZoom':
+    'Faites glisser sur le graphique pour zoomer, double-cliquez pour revoir toute la période',
+  'history.zoomBack': 'Afficher toute la période',
   'history.narrower': 'Rétrécir la carte',
   'history.chartSummary': 'Graphique « {title} » du {from} au {to} : {lines}',
   'history.chartLineLatest': '{label} (dernière valeur {value})',

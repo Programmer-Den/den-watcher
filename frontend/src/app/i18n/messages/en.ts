@@ -304,6 +304,9 @@ export const en = {
   'history.wider': 'Make the card wider, with all its values',
   'history.allValues': 'Show all values of the card',
   'history.fewerValues': 'Show only the chart again',
+  'history.dragToZoom':
+    'Drag across the chart to zoom in, double-click to see the whole range again',
+  'history.zoomBack': 'Show the whole range',
   'history.narrower': 'Make the card narrow again',
   'history.chartSummary': 'Chart of “{title}” from {from} to {to}: {lines}',
   'history.chartLineLatest': '{label} (latest {value})',

@@ -1,5 +1,5 @@
 import { DatePipe, NgTemplateOutlet, formatDate } from '@angular/common';
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 
 import { I18n } from '../i18n/i18n';
 import { MessageKey } from '../i18n/messages/en';
@@ -65,7 +65,32 @@ export class LineChart {
    */
   readonly shared = input(false);
 
+  /** Whether dragging across the chart picks a stretch to zoom into, which `zoomed` tells. */
+  readonly zoomable = input(false);
+  /** The stretch dragged across, from the start of its first step to the end of its last. */
+  readonly zoomed = output<{ from: number; to: number }>();
+  /** A double click asks to show the whole range again. */
+  readonly unzoomed = output();
+
   private readonly pointer = inject(ChartPointer);
+  /** Where a drag to zoom started, as the start of its step, while the mouse button is down. */
+  private readonly dragStart = signal<number | null>(null);
+
+  /** The stretch being dragged across, in percent of the plot's width, or null. */
+  protected readonly brush = computed(() => {
+    const start = this.dragStart();
+    const time = this.hoverTime();
+    if (start === null || time === null) {
+      return null;
+    }
+    const span = this.to() - this.from();
+    const left = Math.min(start, time);
+    const right = Math.max(start, time) + this.step();
+    return {
+      left: ((left - this.from()) / span) * 100,
+      width: ((right - left) / span) * 100,
+    };
+  });
 
   protected readonly lines = computed(() => this.chart().lines);
   private readonly unit = computed(() => this.chart().unit);
@@ -76,7 +101,14 @@ export class LineChart {
     this.lines().map((line, index): CanvasLine => {
       const place = line.place ?? index;
       return {
-        segments: lineSegments(line.points, this.from(), this.to(), this.step(), this.top()),
+        // A chart zoomed into a stretch draws only the points within it.
+        segments: lineSegments(
+          line.points.filter((p) => p.time >= this.from() && p.time < this.to()),
+          this.from(),
+          this.to(),
+          this.step(),
+          this.top(),
+        ),
         series: place % COLORS,
         dashed: place >= COLORS,
       };
@@ -179,6 +211,28 @@ export class LineChart {
       this.pointer.point(this, time);
     } else {
       this.ownTime.set(time);
+    }
+  }
+
+  /** A mouse press on a chart that zooms starts a drag across the stretch to zoom into. */
+  protected onPointerDown(event: PointerEvent): void {
+    this.onPointerMove(event);
+    if (this.zoomable() && event.pointerType === 'mouse' && event.button === 0) {
+      (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
+      this.dragStart.set(stepUnder(event, this.from(), this.to(), this.step()));
+    }
+  }
+
+  /** Ends a drag, and zooms into what it went across when that is more than two steps. */
+  protected onPointerUp(event: PointerEvent): void {
+    const start = this.dragStart();
+    if (start === null) {
+      return;
+    }
+    this.dragStart.set(null);
+    const end = stepUnder(event, this.from(), this.to(), this.step());
+    if (Math.abs(end - start) >= 2 * this.step()) {
+      this.zoomed.emit({ from: Math.min(start, end), to: Math.max(start, end) + this.step() });
     }
   }
 

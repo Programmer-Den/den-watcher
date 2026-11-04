@@ -308,6 +308,9 @@ export const de: Messages = {
   'history.wider': 'Karte breiter machen, mit allen Werten',
   'history.allValues': 'Alle Werte der Karte zeigen',
   'history.fewerValues': 'Wieder nur das Diagramm zeigen',
+  'history.dragToZoom':
+    'Über das Diagramm ziehen zum Vergrößern, Doppelklick zeigt wieder den ganzen Zeitraum',
+  'history.zoomBack': 'Ganzen Zeitraum zeigen',
   'history.narrower': 'Karte wieder schmal machen',
   'history.chartSummary': 'Diagramm „{title}“ von {from} bis {to}: {lines}',
   'history.chartLineLatest': '{label} (zuletzt {value})',

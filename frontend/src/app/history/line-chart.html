@@ -17,7 +17,11 @@
 
   <div
     class="plot"
-    (pointerdown)="onPointerMove($event)"
+    [class.zoomable]="zoomable()"
+    [attr.title]="zoomable() ? i18n.t('history.dragToZoom') : null"
+    (pointerdown)="onPointerDown($event)"
+    (pointerup)="onPointerUp($event)"
+    (dblclick)="unzoomed.emit()"
     (pointermove)="onPointerMove($event)"
     (pointerleave)="onPointerLeave($event)"
   >
@@ -32,6 +36,9 @@
       <app-chart-markers [markers]="markers()" [from]="from()" [to]="to()" />
     }
 
+    @if (brush(); as b) {
+      <div class="brush" [style.left.%]="b.left" [style.width.%]="b.width"></div>
+    }
     @if (readout(); as r) {
       <div class="crosshair" [style.left.%]="r.left"></div>
       @if (r.own) {
