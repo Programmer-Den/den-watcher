@@ -123,6 +123,44 @@ describe('LineChart', () => {
     expect(second.querySelector('.crosshair')).toBeNull();
   });
 
+  it('zooms into the stretch dragged across, and draws only the points within it', () => {
+    const element = render([
+      {
+        label: 'CPU',
+        points: [
+          { time: 0, value: 10 },
+          { time: 300, value: 50 },
+        ],
+      },
+    ]);
+    fixture.componentRef.setInput('zoomable', true);
+    fixture.detectChanges();
+    const zoomed: { from: number; to: number }[] = [];
+    fixture.componentInstance.zoomed.subscribe((stretch) => zoomed.push(stretch));
+    const plot = element.querySelector('.plot') as HTMLElement;
+    plot.getBoundingClientRect = () => ({ left: 0, width: 600 }) as DOMRect;
+    const press = (type: string, clientX: number) =>
+      plot.dispatchEvent(new PointerEvent(type, { clientX, pointerType: 'mouse', button: 0 }));
+
+    press('pointerdown', 130);
+    press('pointermove', 330);
+    fixture.detectChanges();
+    expect(element.querySelector('.brush')).not.toBeNull();
+    press('pointerup', 330);
+    // From the start of the step at 120 s to the end of the one at 300 s.
+    expect(zoomed).toEqual([{ from: 120, to: 360 }]);
+
+    // A click without a drag zooms into nothing.
+    press('pointerdown', 330);
+    press('pointerup', 340);
+    expect(zoomed.length).toBe(1);
+
+    fixture.componentRef.setInput('from', 120);
+    fixture.componentRef.setInput('to', 360);
+    fixture.detectChanges();
+    expect(drawn()[0].segments).toEqual([[{ x: 0.875, y: 0.5 }]]);
+  });
+
   it('marks what happened, and tells it at the pointer', () => {
     const element = render([{ label: 'CPU', points: [{ time: 120, value: 12.5 }] }]);
     fixture.componentRef.setInput('markers', [

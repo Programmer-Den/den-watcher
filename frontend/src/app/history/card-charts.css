@@ -50,3 +50,25 @@
 .widen[aria-pressed='true'] {
   color: var(--mat-sys-primary);
 }
+
+/* The stretch the chart is zoomed into, with the way back to the whole range. */
+.zoom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  margin: 0 0 0.5rem;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.zoom button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--mat-sys-primary);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}

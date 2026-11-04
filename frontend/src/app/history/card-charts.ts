@@ -1,4 +1,5 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CardSlot } from '../dashboard/card-slot';
@@ -9,27 +10,43 @@ import { ChartEvents } from './chart-events';
 import { HistoryStore } from './history-store';
 import { Chart } from './history';
 import { LineChart } from './line-chart';
+import { SHORT_SPAN } from './live-history';
 
 /**
  * The chart of one dashboard card, over the range picked at the top of the page, at the bottom of
  * the card, taller as the card is wider. Outside the arrange mode, a button in the card's corner
  * steps the card to 2 and 4 cards wide, as far as they fit, and back, until the page loads again;
- * where no wider card fits, as on a phone, it opens the card to show all its values instead.
+ * where no wider card fits, as on a phone, it opens the card to show all its values instead. A card
+ * showing all its values zooms its chart into a stretch dragged across it.
  */
 @Component({
   selector: 'app-card-charts',
-  imports: [LineChart, WidthIcon],
+  imports: [DatePipe, LineChart, WidthIcon],
   template: `
     @if (store.history(); as h) {
       @if (chart(); as chart) {
         <div class="chart">
+          @if (zoom(); as z) {
+            <p class="zoom">
+              <span
+                >{{ z.from * 1000 | date: zoomFormat() : undefined : i18n.language() }} –
+                {{ z.to * 1000 | date: zoomFormat() : undefined : i18n.language() }}</span
+              >
+              <button type="button" (click)="zoom.set(null)">
+                {{ i18n.t('history.zoomBack') }}
+              </button>
+            </p>
+          }
           <app-line-chart
             [chart]="chart"
-            [from]="h.from"
-            [to]="h.to"
+            [from]="zoom()?.from ?? h.from"
+            [to]="zoom()?.to ?? h.to"
             [step]="h.stepSeconds"
             [markers]="events.markers()"
             [shared]="true"
+            [zoomable]="!!slot?.full()"
+            (zoomed)="zoom.set($event)"
+            (unzoomed)="zoom.set(null)"
           />
         </div>
       }
@@ -66,6 +83,18 @@ export class CardCharts {
   /** How many cards wide the card shows, which sets how tall its chart is. */
   protected readonly width = computed(() => this.slot?.shown() ?? 1);
 
+  /**
+   * The stretch of the range a card showing all its values is zoomed into by a drag across its
+   * chart; null for the whole range, and again when the card shows fewer values or the range changes.
+   */
+  protected readonly zoom = signal<{ from: number; to: number } | null>(null);
+
+  /** The time format of the zoomed stretch, with seconds for a short one. */
+  protected readonly zoomFormat = computed(() => {
+    const z = this.zoom();
+    return this.i18n.t(z && z.to - z.from <= SHORT_SPAN ? 'format.timeSeconds' : 'format.time');
+  });
+
   /** What the corner button does next: make the card wider or narrow, or open or close it. */
   protected buttonLabel(slot: CardSlot): MessageKey {
     if (!slot.widens()) {
@@ -75,6 +104,12 @@ export class CardCharts {
   }
 
   constructor() {
+    effect(() => {
+      this.store.span();
+      if (!this.slot?.full()) {
+        this.zoom.set(null);
+      }
+    });
     this.events.watch.pipe(takeUntilDestroyed()).subscribe();
   }
 }

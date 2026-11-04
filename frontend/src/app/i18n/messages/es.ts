@@ -308,6 +308,9 @@ export const es: Messages = {
   'history.wider': 'Ensanchar la tarjeta, con todos sus valores',
   'history.allValues': 'Mostrar todos los valores de la tarjeta',
   'history.fewerValues': 'Volver a mostrar solo el gráfico',
+  'history.dragToZoom':
+    'Arrastra sobre el gráfico para ampliar, doble clic para volver a ver todo el periodo',
+  'history.zoomBack': 'Mostrar todo el periodo',
   'history.narrower': 'Volver a estrechar la tarjeta',
   'history.chartSummary': 'Gráfico «{title}» del {from} al {to}: {lines}',
   'history.chartLineLatest': '{label} (último valor {value})',

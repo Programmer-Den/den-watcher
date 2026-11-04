@@ -72,6 +72,19 @@
   display: var(--middle-time, inline);
 }
 
+.plot.zoomable {
+  cursor: col-resize;
+}
+
+/* The stretch a drag goes across, which the chart zooms into when the button is let go. */
+.brush {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--mat-sys-primary) 18%, transparent);
+  pointer-events: none;
+}
+
 .crosshair {
   position: absolute;
   top: 0;
