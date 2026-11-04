@@ -30,6 +30,9 @@
     <string name="battery_title">Akku</string>
     <string name="battery_hint">Manche Handys beenden Apps im Hintergrund, um Akku zu sparen. Fehlen dem Hub Stunden, lass Den-Watcher ohne Akku-Einschränkungen laufen.</string>
     <string name="battery">Akku-Einstellungen</string>
+    <string name="save_battery">Akku sparen</string>
+    <string name="save_battery_hint">Pausiert die eigenen WLAN-Scans der App, und bei ausgeschaltetem Bildschirm liest sie alle 5 Minuten statt jede halbe Minute. Die Sperre des Hubs blockiert das nie, du kannst es also immer einschalten. Der Hub hat dann für diese Zeit weniger Punkte und weniger WLANs.</string>
+    <string name="save_battery_auto">Gerade von selbst an, da Androids Energiesparmodus an ist.</string>
     <string name="data_title">Was geschickt wird</string>
     <string name="data_hint">Nur die Daten, die du oben zum Sammeln gewählt hast, und nur an den Hub in deinem Netz. Android lässt keine App lesen, wie ausgelastet der Prozessor ist.</string>
     <string name="channel_name">Aufzeichnung</string>

@@ -30,6 +30,9 @@
     <string name="battery_title">Batterie</string>
     <string name="battery_hint">Certains téléphones arrêtent les apps en arrière-plan pour économiser la batterie. S\'il manque des heures au hub, laissez Den-Watcher fonctionner sans restriction de batterie.</string>
     <string name="battery">Réglages de la batterie</string>
+    <string name="save_battery">Économiser la batterie</string>
+    <string name="save_battery_hint">Met en pause les scans Wi-Fi de l\'app, et écran éteint, elle lit toutes les 5 minutes au lieu de toutes les demi-minutes. Le verrou du hub ne le bloque jamais : vous pouvez toujours l\'activer. Le hub a alors moins de points et moins de réseaux Wi-Fi pour cette période.</string>
+    <string name="save_battery_auto">Activé de lui-même, car l\'économiseur de batterie d\'Android est activé.</string>
     <string name="data_title">Ce qui est envoyé</string>
     <string name="data_hint">Uniquement les données que vous avez choisi de collecter ci-dessus, et uniquement au hub de votre réseau. Android ne laisse aucune app lire la charge du processeur.</string>
     <string name="channel_name">Enregistrement</string>
