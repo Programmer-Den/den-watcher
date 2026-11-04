@@ -89,11 +89,11 @@ object AppData {
     }
 
     /**
-     * The group of the apps, most first: the same app under several numbers,
-     * as after an update, is added up, apps without a name and those past
-     * MAX_APPS are Other apps.
+     * The group of the apps' bytes, most first: the same app under several
+     * numbers is added up, apps without a name and those past MAX_APPS are
+     * Other apps.
      */
-    private fun group(id: String, title: Words, apps: List<AppBytes>): Extra {
+    fun group(id: String, title: Words, apps: List<AppBytes>, description: Words = DESCRIPTION): Extra {
         val byApp = apps.groupBy { if (it.app in SPECIAL || it.label.isNotEmpty()) it.app else OTHER }
             .map { (app, uses) -> AppBytes(app, uses.first().label, uses.sumOf { it.bytes }) }
             .sortedWith(compareByDescending<AppBytes> { it.bytes }.thenBy { it.app })
@@ -104,12 +104,7 @@ object AppData {
         return Extra(
             id = id,
             title = title,
-            description = Words(
-                "How much each app sent and received since midnight, as Android counts it.",
-                "Wie viel jede App seit Mitternacht gesendet und empfangen hat, wie Android es zählt.",
-                "Ce que chaque app a envoyé et reçu depuis minuit, selon le décompte d'Android.",
-                "Cuánto envió y recibió cada app desde medianoche, según lo cuenta Android.",
-            ),
+            description = description,
             values = shown.map { app ->
                 ExtraValue(uniqueId(idOf(app.app), ids), labelOf(app), ExtraUnit.BYTES, value = app.bytes.toDouble())
             } + if (other > 0) {
@@ -149,6 +144,13 @@ object AppData {
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
     }.timeInMillis
+
+    private val DESCRIPTION = Words(
+        "How much each app sent and received since midnight, as Android counts it.",
+        "Wie viel jede App seit Mitternacht gesendet und empfangen hat, wie Android es zählt.",
+        "Ce que chaque app a envoyé et reçu depuis minuit, selon le décompte d'Android.",
+        "Cuánto envió y recibió cada app desde medianoche, según lo cuenta Android.",
+    )
 
     /** The group of the data over Wi-Fi. */
     const val WIFI = "app-data-wifi"

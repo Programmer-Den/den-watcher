@@ -40,4 +40,15 @@ class AppDataTest {
         assertEquals(40, AppData.idOf("com.example." + "a".repeat(60)).length)
         assertEquals("other", AppData.idOf("..."))
     }
+
+    @Test
+    fun tellsTheStoragePerAppAsAnExtra() {
+        val extra = AppStorage.extra(listOf(AppBytes("org.example.small", "Small", 10), AppBytes("org.example.big", "Big", 2_000)))
+        assertEquals(AppStorage.GROUP, extra.id)
+        assertEquals("Speicher pro App", extra.title.de)
+        assertEquals(listOf("Big", "Small"), extra.values.map { it.label.en })
+        val reading = Reading(1_000, 500, 0, null, false, null, 0, 0, 0, 0, emptyMap(), appStorage = listOf(AppBytes("org.example", "Example", 5)))
+        assertEquals(listOf(AppStorage.GROUP), reading.extras().map { it.id })
+        assertEquals(emptyList<Extra>(), reading.limitedTo(DataChoice(storage = false)).extras())
+    }
 }
