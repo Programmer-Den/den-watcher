@@ -40,8 +40,8 @@
     <string name="network_usual">C\'est aussi mon réseau</string>
     <string name="network_channel_name">Autres réseaux</string>
     <string name="network_channel_description">Quand le hub répond sur un autre réseau que l\'habituel.</string>
-    <string name="nearby_title">Réseaux Wi-Fi à proximité</string>
-    <string name="nearby_hint">Avec eux, le hub sait où était ce téléphone : dans quelle pièce de la maison, et dans les lieux que vous nommez, comme Travail. Android ne les donne qu\'avec l\'autorisation de localisation ; l\'app ne lit jamais votre position et ne lance aucune recherche, elle lit seulement les réseaux qu\'Android a vus. Ils sont gardés jusqu\'au retour du téléphone à la maison.</string>
+    <string name="nearby_title">Réseaux Wi-Fi</string>
+    <string name="nearby_hint">Avec eux, le hub sait où était ce téléphone au fil de la journée : à quel Wi-Fi il était connecté et quand, dans quelle pièce de la maison, et dans les lieux que vous nommez, comme Travail. Android ne donne les noms des réseaux qu\'avec l\'autorisation de localisation ; l\'app ne lit jamais votre position. Toutes les 5 minutes, elle demande à Android de rechercher les réseaux à portée, ce qui consomme peu de batterie. Ils sont gardés jusqu\'au retour du téléphone à la maison.</string>
     <string name="nearby_off">Non lus.</string>
     <string name="nearby_open">Lus seulement quand l\'app est ouverte. Autorisez-les tout le temps pour les lire aussi quand le téléphone est dans votre poche.</string>
     <string name="nearby_always">Lus tout le temps, même quand le téléphone est ailleurs.</string>
@@ -58,6 +58,7 @@
     <string name="collect_network">Réseau</string>
     <string name="collect_traffic">Trafic Wi-Fi et données mobiles</string>
     <string name="collect_nearby">Réseaux Wi-Fi à proximité</string>
+    <string name="collect_connected">Wi-Fi connecté, avec les heures</string>
     <string name="apps_title">Utilisation des apps</string>
     <string name="apps_hint">Le temps d\'écran, les apps ouvertes, quand et combien de temps, et combien de fois le téléphone a été déverrouillé, depuis le journal d\'Android. Android ne le demande que dans ses paramètres, sous Accès aux données d\'utilisation. Il ne garde son journal que quelques jours, donc l\'app garde les utilisations jusqu\'au retour du téléphone à la maison ; la première fois, elle les lit aussi loin qu\'Android les a.</string>
     <string name="apps_off">Non lue. Autorisez l\'accès aux données d\'utilisation pour Den-Watcher dans les paramètres d\'Android.</string>

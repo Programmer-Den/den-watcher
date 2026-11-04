@@ -58,6 +58,7 @@ import {
 import { systemFacts } from '../metrics/system';
 import { PageVisibility } from '../page-visibility';
 import { PhoneUsageCard } from '../phone/phone-usage';
+import { PhoneWifiCard } from '../phone/phone-wifi';
 import { ArrangeBar } from './arrange-bar';
 import { ArrangeControls } from './arrange-controls';
 import { Arrangement } from './arrangement';
@@ -311,6 +312,7 @@ type Problem = 'backend' | 'device';
   imports: [
     AlertChips,
     PhoneUsageCard,
+    PhoneWifiCard,
     ArrangeBar,
     ArrangeControls,
     BytesPipe,

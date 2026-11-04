@@ -40,8 +40,8 @@
     <string name="network_usual">Das ist auch mein Netz</string>
     <string name="network_channel_name">Andere Netze</string>
     <string name="network_channel_description">Wenn der Hub in einem anderen als dem üblichen Netz antwortet.</string>
-    <string name="nearby_title">WLANs in der Nähe</string>
-    <string name="nearby_hint">Damit sieht der Hub, wo dieses Handy war: in welchem Raum zu Hause und an Orten, die du benennst, etwa Arbeit. Android gibt sie nur mit der Standortberechtigung; die App liest nie deinen Standort und startet keine Suche, sie liest nur die WLANs, die Android gesehen hat. Sie werden aufbewahrt, bis das Handy wieder zu Hause ist.</string>
+    <string name="nearby_title">WLANs</string>
+    <string name="nearby_hint">Damit sieht der Hub, wo dieses Handy über den Tag war: mit welchem WLAN es wann verbunden war, in welchem Raum zu Hause und an Orten, die du benennst, etwa Arbeit. Android gibt die Namen der WLANs nur mit der Standortberechtigung; die App liest nie deinen Standort. Alle 5 Minuten lässt sie Android nach den WLANs in Reichweite suchen, was kaum Akku kostet. Sie werden aufbewahrt, bis das Handy wieder zu Hause ist.</string>
     <string name="nearby_off">Werden nicht gelesen.</string>
     <string name="nearby_open">Werden nur gelesen, solange die App offen ist. Erlaube es immer, damit sie auch gelesen werden, wenn das Handy in der Tasche ist.</string>
     <string name="nearby_always">Werden immer gelesen, auch wenn das Handy unterwegs ist.</string>
@@ -58,6 +58,7 @@
     <string name="collect_network">Netzwerk</string>
     <string name="collect_traffic">Datenverkehr über WLAN und mobile Daten</string>
     <string name="collect_nearby">WLANs in der Nähe</string>
+    <string name="collect_connected">Verbundenes WLAN, mit Uhrzeiten</string>
     <string name="apps_title">App-Nutzung</string>
     <string name="apps_hint">Bildschirmzeit, welche Apps wann und wie lange offen waren und wie oft das Handy entsperrt wurde, aus Androids eigenem Protokoll. Android fragt danach nur in seinen Einstellungen unter Nutzungsdatenzugriff. Es behält sein Protokoll nur wenige Tage, deshalb bewahrt die App die Nutzungen auf, bis das Handy wieder zu Hause ist; beim ersten Mal liest sie so weit zurück, wie Android sie hat.</string>
     <string name="apps_off">Wird nicht gelesen. Erlaube Den-Watcher den Nutzungsdatenzugriff in den Einstellungen von Android.</string>

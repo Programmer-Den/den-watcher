@@ -23,6 +23,7 @@ import { alertLog, fleetAlerts } from './alerts';
 import { demoEvents } from './events';
 import { DemoMachine, FLEET, extraInfoOf, offlineSince, snapshotOf } from './fleet';
 import { DEMO_PHONE, demoPhoneUsage } from './phone-usage';
+import { demoPhoneWifi } from './phone-wifi';
 import { DEMO_PLACES, demoWifi } from './wifi';
 
 /** How many days of history the demo hub keeps; more than 30 shows the "All" range. */
@@ -110,6 +111,14 @@ export class DemoBackend implements HttpBackend {
       const to = Math.min(Number(url.searchParams.get('to')), Math.floor(now) + 1);
       const from = Math.max(Number(url.searchParams.get('from')), to - DEMO_RETENTION_DAYS * 86400);
       return respond(request, demoPhoneUsage(from, to));
+    }
+    if (request.method === 'GET' && url.pathname === '/api/phone/wifi') {
+      if (device !== DEMO_PHONE) {
+        return fail(request, 404, null);
+      }
+      const to = Math.min(Number(url.searchParams.get('to')), Math.floor(now) + 1);
+      const from = Math.max(Number(url.searchParams.get('from')), to - DEMO_RETENTION_DAYS * 86400);
+      return respond(request, demoPhoneWifi(from, to));
     }
     if (request.method === 'GET' && url.pathname === '/api/devices/suggestion') {
       return respond(request, DEMO_SUGGESTION);

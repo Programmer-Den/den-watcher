@@ -4,7 +4,8 @@ package den.watcher
  * Which data the app collects, as chosen under Which data do you want to
  * collect, in the same groups as den-watcher's installers: System basics
  * (the battery, memory and storage) and Network (the traffic of Wi-Fi and
- * mobile data, and the Wi-Fi networks nearby), and App usage (the screen
+ * mobile data, the Wi-Fi networks nearby, and the Wi-Fi networks the phone
+ * was connected to and when), and App usage (the screen
  * time, which apps were used and how long, and the unlocks), which a phone
  * has and a PC's installer does not offer. A value is collected when its
  * group and its own switch are on; everything is on until switched off.
@@ -17,6 +18,7 @@ data class DataChoice(
     val network: Boolean = true,
     val traffic: Boolean = true,
     val nearby: Boolean = true,
+    val connected: Boolean = true,
     val apps: Boolean = true,
 ) {
     val collectsBattery: Boolean get() = system && battery
@@ -24,6 +26,7 @@ data class DataChoice(
     val collectsStorage: Boolean get() = system && storage
     val collectsTraffic: Boolean get() = network && traffic
     val collectsNearby: Boolean get() = network && nearby
+    val collectsConnected: Boolean get() = network && connected
     val collectsApps: Boolean get() = apps
 
     /**

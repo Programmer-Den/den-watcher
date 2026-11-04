@@ -20,6 +20,9 @@ object Push {
     /** The most uses of apps and unlocks one push may hold, as many as the hub takes. */
     const val MAX_USES = 500
 
+    /** The most connections to a Wi-Fi one push may hold, as many as the hub takes. */
+    const val MAX_CONNECTIONS = 500
+
     /** The header the pairing code is sent in, as a hub sends it to a device. */
     const val CODE_HEADER = "Usage-Control-Pairing-Code"
 
@@ -42,8 +45,8 @@ object Push {
 
     /**
      * The body of a push sent at now, with the newest reading when there is
-     * one, the scans of the networks nearby and the uses of apps, asking for
-     * the phone's key when needKey is set.
+     * one, the scans of the networks nearby, the uses of apps and the
+     * connections to a Wi-Fi, asking for the phone's key when needKey is set.
      */
     fun body(
         now: Long,
@@ -52,11 +55,13 @@ object Push {
         needKey: Boolean = false,
         scans: List<JSONObject> = emptyList(),
         uses: List<JSONObject> = emptyList(),
+        connections: List<JSONObject> = emptyList(),
     ): JSONObject = JSONObject().apply {
         put("now", now)
         if (needKey) put("needKey", true)
         if (scans.isNotEmpty()) put("wifi", JSONArray().apply { scans.forEach { put(it) } })
         if (uses.isNotEmpty()) put("uses", JSONArray().apply { uses.forEach { put(it) } })
+        if (connections.isNotEmpty()) put("connections", JSONArray().apply { connections.forEach { put(it) } })
         snapshot?.let { put("snapshot", it) }
         put(
             "minutes",

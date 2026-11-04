@@ -70,4 +70,16 @@ class NearbyTest {
         assertEquals(600, json.getLong("time"))
         assertEquals(1, json.getJSONArray("accessPoints").length())
     }
+
+    @Test
+    fun asksForAScanOnlyWhenNoneWasMadeForAWhile() {
+        val now = 10_000_000L
+        val every = Nearby.SCAN_EVERY_MILLIS
+        assertTrue(Nearby.scanDue(0, 0, now))
+        assertFalse(Nearby.scanDue(now - every + 1, 0, now))
+        assertFalse(Nearby.scanDue(0, now - 60_000, now))
+        assertTrue(Nearby.scanDue(now - every, now - every, now))
+        // After the clock went back.
+        assertTrue(Nearby.scanDue(now + 1, 0, now))
+    }
 }

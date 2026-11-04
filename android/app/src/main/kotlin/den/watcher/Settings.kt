@@ -108,6 +108,7 @@ class Settings(context: Context) {
             network = prefs.getBoolean(COLLECT_NETWORK, true),
             traffic = prefs.getBoolean(COLLECT_TRAFFIC, true),
             nearby = prefs.getBoolean(COLLECT_NEARBY, true),
+            connected = prefs.getBoolean(COLLECT_CONNECTED, true),
             apps = prefs.getBoolean(COLLECT_APPS, true),
         )
         set(value) = prefs.edit()
@@ -118,6 +119,7 @@ class Settings(context: Context) {
             .putBoolean(COLLECT_NETWORK, value.network)
             .putBoolean(COLLECT_TRAFFIC, value.traffic)
             .putBoolean(COLLECT_NEARBY, value.nearby)
+            .putBoolean(COLLECT_CONNECTED, value.connected)
             .putBoolean(COLLECT_APPS, value.apps)
             .apply()
 
@@ -125,6 +127,14 @@ class Settings(context: Context) {
     var lastScan: Long
         get() = prefs.getLong(LAST_SCAN, 0)
         set(value) = prefs.edit().putLong(LAST_SCAN, value).apply()
+
+    /**
+     * When the app last asked Android to scan for the networks nearby, in
+     * Unix milliseconds; 0 until it did.
+     */
+    var lastScanRequest: Long
+        get() = prefs.getLong(LAST_SCAN_REQUEST, 0)
+        set(value) = prefs.edit().putLong(LAST_SCAN_REQUEST, value).apply()
 
     /**
      * Up to when Android's usage log was read, in Unix milliseconds: the
@@ -189,6 +199,8 @@ class Settings(context: Context) {
         const val COLLECT_NETWORK = "collectNetwork"
         const val COLLECT_TRAFFIC = "collectTraffic"
         const val COLLECT_NEARBY = "collectNearby"
+        const val COLLECT_CONNECTED = "collectConnected"
+        const val LAST_SCAN_REQUEST = "lastScanRequest"
         const val COLLECT_APPS = "collectApps"
         const val USES_READ_UNTIL = "usesReadUntil"
     }

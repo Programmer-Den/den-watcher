@@ -479,3 +479,65 @@ func TestThePhonesAppUsesAreStoredOnceAtTheHubsTime(t *testing.T) {
 		t.Errorf("Receive() with %d uses error = %v, want %v", UsesPerPush+1, err, ErrPushTooLarge)
 	}
 }
+
+func TestThePhonesWiFiConnectionsAreStoredAtTheHubsTime(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	h := openTestHub(t, store, nil)
+	if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+		t.Fatalf("AddPhone() error = %v", err)
+	}
+	// The phone's clock is an hour behind. It was at home in the morning
+	// and is at work now, kept one from before the retention and one
+	// without a name, sent out of order.
+	now := time.Now()
+	phoneNow := now.Add(-time.Hour)
+	ms := func(t time.Time) int64 { return t.UnixMilli() }
+	work := PhoneConnection{ID: 4, SSID: "Work", Start: ms(phoneNow.Add(-30 * time.Minute)), End: ms(phoneNow.Add(-5 * time.Minute)), Open: true}
+	push := Push{Now: phoneNow.Unix(), Connections: []PhoneConnection{
+		work,
+		{ID: 3, SSID: " Home ", Start: ms(phoneNow.Add(-3 * time.Hour)), End: ms(phoneNow.Add(-time.Hour))},
+		{ID: 1, SSID: "Old", Start: ms(phoneNow.Add(-61 * 24 * time.Hour)), End: ms(phoneNow.Add(-60 * 24 * time.Hour))},
+		{ID: 2, SSID: "", Start: ms(phoneNow.Add(-2 * time.Hour)), End: ms(phoneNow.Add(-2 * time.Hour))},
+	}}
+	answer, err := h.Receive(ctx, "7KQM-X2RP", push)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if answer.ConnectionsAfter != 4 {
+		t.Errorf("ConnectionsAfter = %d, want the largest ID of the push, 4", answer.ConnectionsAfter)
+	}
+	// The open one again, as it went on.
+	work.End = ms(phoneNow)
+	if _, err := h.Receive(ctx, "7KQM-X2RP", Push{Now: phoneNow.Unix(), Connections: []PhoneConnection{work}}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := store.WiFiConnections(ctx, "pixel", now.Add(-5*time.Hour), now.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []history.PhoneConnection{
+		{SSID: "Home", Start: now.Add(-3 * time.Hour).Unix(), End: now.Add(-time.Hour).Unix()},
+		{SSID: "Work", Start: now.Add(-30 * time.Minute).Unix(), End: now.Unix()},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("connections = %+v, want %+v", got, want)
+	}
+	for i := range want {
+		// Moved by the clock offset, which is measured to the second.
+		if got[i].SSID != want[i].SSID || abs(got[i].Start-want[i].Start) > 2 || abs(got[i].End-want[i].End) > 2 {
+			t.Errorf("connection %d = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+
+	if _, err := h.Receive(ctx, "7KQM-X2RP", Push{Now: phoneNow.Unix(), Connections: make([]PhoneConnection, ConnectionsPerPush+1)}); !errors.Is(err, ErrPushTooLarge) {
+		t.Errorf("Receive() with %d connections error = %v, want %v", ConnectionsPerPush+1, err, ErrPushTooLarge)
+	}
+}
+
+func abs(n int64) int64 {
+	if n < 0 {
+		return -n
+	}
+	return n
+}

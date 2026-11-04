@@ -24,6 +24,8 @@ class DataChoiceTest {
     fun keepsEverythingByDefault() {
         assertEquals(reading, reading.limitedTo(DataChoice()))
         assertTrue(DataChoice().collectsNearby)
+        assertTrue(DataChoice().collectsConnected)
+        assertFalse(DataChoice(network = false).collectsConnected)
     }
 
     @Test

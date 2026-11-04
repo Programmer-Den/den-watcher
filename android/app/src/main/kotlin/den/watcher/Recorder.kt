@@ -5,8 +5,8 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 
 /**
- * Takes a reading, keeps its values, the networks nearby and the uses of
- * apps, and sends what
+ * Takes a reading, keeps its values, the networks nearby, the Wi-Fi the
+ * phone is connected to and the uses of apps, and sends what
  * the hub does not have yet. RecordAlarm does this every half minute, and
  * SyncJob every quarter of an hour, so one reading is taken at a time.
  */
@@ -35,12 +35,25 @@ object Recorder {
             // after the clock went back. While they are not collected, none
             // is kept and the ones kept before are not sent any more.
             if (choice.collectsNearby) {
-                Nearby.read(app, reading.time)?.takeIf { Nearby.isNew(it.time, settings.lastScan, reading.time) }?.let {
+                val scan = Nearby.read(app, reading.time)
+                scan?.takeIf { Nearby.isNew(it.time, settings.lastScan, reading.time) }?.let {
                     store.addScan(it)
                     settings.lastScan = it.time
                 }
+                // Its results are read at the next reading, half a minute later.
+                val now = System.currentTimeMillis()
+                if (Nearby.scanDue(settings.lastScanRequest, (scan?.time ?: 0) * 1000, now) && Nearby.requestScan(app)) {
+                    settings.lastScanRequest = now
+                }
             } else {
                 store.deleteScansUpTo(Long.MAX_VALUE)
+            }
+            // While they are not collected, none is kept and the ones kept
+            // before are not sent any more.
+            if (choice.collectsConnected) {
+                store.addConnection(WifiLog.connected(app), System.currentTimeMillis())
+            } else {
+                store.deleteConnections()
             }
             recordUses(app, settings, store, choice)
             push(app, settings, store) { reading.snapshot(rates, Sampler.device(app)) }
@@ -95,8 +108,9 @@ object Recorder {
             val minutes = Push.fit(stored)
             val scans = store.scans()
             val uses = if (choice.collectsApps) store.uses() else emptyList()
+            val connections = if (choice.collectsConnected) store.connections() else emptyList()
             val needKey = settings.hubKey.isEmpty()
-            val answer = Hub.push(url, settings.code, Push.body(now, newest, minutes, needKey, scans, uses))
+            val answer = Hub.push(url, settings.code, Push.body(now, newest, minutes, needKey, scans, uses, connections))
             synchronized(hubLock) {
                 // Another hub was scanned meanwhile, whose pairing starts anew.
                 if (settings.hubAddress != address) {
@@ -145,10 +159,16 @@ object Recorder {
                         if (answer.usesAfter > 0) {
                             store.deleteUsesUpTo(minOf(answer.usesAfter, lastUse))
                         }
+                        // A hub that takes no connections answers none; they are kept until one does.
+                        val lastConnection = connections.lastOrNull()?.optLong("id") ?: 0L
+                        if (answer.connectionsAfter > 0) {
+                            store.connectionsTaken(minOf(answer.connectionsAfter, lastConnection))
+                        }
                         val moreMinutes = minutes.size < stored.size || stored.size == Push.MAX_MINUTES
                         val moreScans = scans.size == Push.MAX_SCANS && answer.wifiAfter > 0
                         val moreUses = uses.size == Push.MAX_USES && answer.usesAfter > 0
-                        if (!moreMinutes && !moreScans && !moreUses) {
+                        val moreConnections = connections.size == Push.MAX_CONNECTIONS && answer.connectionsAfter > 0
+                        if (!moreMinutes && !moreScans && !moreUses && !moreConnections) {
                             return
                         }
                     }
