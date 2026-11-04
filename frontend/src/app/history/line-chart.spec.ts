@@ -93,6 +93,36 @@ describe('LineChart', () => {
     expect(element.querySelector('.tooltip')).toBeNull();
   });
 
+  it('shares the moment under the pointer with the other shared charts', () => {
+    const first = render([{ label: 'CPU', points: [{ time: 120, value: 12.5 }] }]);
+    fixture.componentRef.setInput('shared', true);
+    fixture.detectChanges();
+    const firstFixture = fixture;
+    const second = render([{ label: 'Memory', points: [{ time: 120, value: 40 }] }]);
+    fixture.componentRef.setInput('shared', true);
+    fixture.detectChanges();
+    const plot = first.querySelector('.plot') as HTMLElement;
+    plot.getBoundingClientRect = () => ({ left: 0, width: 600 }) as DOMRect;
+
+    plot.dispatchEvent(new MouseEvent('pointermove', { clientX: 150 }));
+    firstFixture.detectChanges();
+    fixture.detectChanges();
+    // Both mark the moment; only the chart the pointer is on shows its values.
+    expect(first.querySelector('.tooltip')?.textContent).toContain('12.5 %');
+    expect(second.querySelector('.crosshair')).not.toBeNull();
+    expect(second.querySelector('.tooltip')).toBeNull();
+
+    // A finger lifting off keeps the moment; the mouse leaving clears it.
+    plot.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'touch' }));
+    fixture.detectChanges();
+    expect(second.querySelector('.crosshair')).not.toBeNull();
+    plot.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' }));
+    firstFixture.detectChanges();
+    fixture.detectChanges();
+    expect(first.querySelector('.crosshair')).toBeNull();
+    expect(second.querySelector('.crosshair')).toBeNull();
+  });
+
   it('marks what happened, and tells it at the pointer', () => {
     const element = render([{ label: 'CPU', points: [{ time: 120, value: 12.5 }] }]);
     fixture.componentRef.setInput('markers', [

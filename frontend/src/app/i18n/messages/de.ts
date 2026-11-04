@@ -8,6 +8,7 @@ export const de: Messages = {
   'connection.lost': '{hub} antwortet nicht',
   'connection.notLive':
     'Seit {since} ist nichts auf dieser Seite live, denn die Werte aller Geräte kommen über {hub}. Die Seite versucht es weiter und aktualisiert sich, sobald {hub} wieder antwortet.',
+  'dashboard.atTime': 'um {time}',
   'dashboard.unreachable':
     'Das Backend ist nicht erreichbar. Angezeigt werden die zuletzt bekannten Werte.',
   'dashboard.deviceUnreachable':

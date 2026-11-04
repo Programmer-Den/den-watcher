@@ -5,6 +5,7 @@ import { By } from '@angular/platform-browser';
 
 import { DeviceService, LOCAL_DEVICE } from '../devices/devices';
 import { ChartCanvas } from '../history/chart-canvas';
+import { ChartPointer } from '../history/chart-pointer';
 import { HistoryStore } from '../history/history-store';
 import { Sparkline } from '../history/sparkline';
 import { History, Snapshot } from '../metrics/metrics';
@@ -211,6 +212,36 @@ describe('Glance', () => {
     expect(lines[1]).toEqual([]);
     // Both cards together, 2 KiB/s, at the top of a 2 KiB/s chart.
     expect(lines[4]).toEqual([[{ x: 0.05, y: 0 }]]);
+  });
+
+  it('shows the values at the moment the pointer is on in a chart, and now again after', () => {
+    TestBed.inject(HistoryStore).span.set(3600);
+    show(SNAPSHOT, {
+      from: 0,
+      to: 1000,
+      stepSeconds: 100,
+      retentionDays: 30,
+      series: [
+        {
+          metric: 'cpu',
+          points: [
+            { time: 0, value: 50 },
+            { time: 100, value: 21.25 },
+          ],
+        },
+      ],
+    });
+    const pointer = TestBed.inject(ChartPointer);
+
+    pointer.point({}, 100);
+    fixture.detectChanges();
+    expect(tiles()[0]).toMatch(/^CPU 4 cores · 1.4 GHz 21.3%at \d/);
+    // A tile without a value at that moment keeps now's.
+    expect(tiles()[1]).toBe('Memory Swap 3.6 % 38.8%3.0 GiB of 8.0 GiB');
+
+    pointer.clear();
+    fixture.detectChanges();
+    expect(tiles()[0]).toBe('CPU 4 cores · 1.4 GHz 7.7%Load 0.34 · 0.29 · 0.35');
   });
 
   it('does not draw the small charts again for a new snapshot while the history stays', () => {

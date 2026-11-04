@@ -1,10 +1,11 @@
-import { formatNumber } from '@angular/common';
+import { formatDate, formatNumber } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AlertKind, AlertLevel } from '../alerts/alert';
 import { worstLevel } from '../alerts/alerts';
 import { DeviceService, readByHub } from '../devices/devices';
+import { ChartPointer } from '../history/chart-pointer';
 import { HistoryStore } from '../history/history-store';
 import { isWan, linesOf, pointsOf, sum } from '../history/history';
 import { Sparkline } from '../history/sparkline';
@@ -37,6 +38,7 @@ import { GlanceTile, Tile } from './glance-tile';
             [unit]="tile.chartUnit"
             [max]="tile.max"
             [series]="tile.series"
+            [time]="pointer.time()"
           />
         }
       </app-glance-tile>
@@ -60,6 +62,8 @@ export class Glance {
   readonly snapshot = input.required<Snapshot>();
 
   protected readonly store = inject(HistoryStore);
+  /** The moment the pointer is on in a chart, whose values the tiles show instead of now. */
+  protected readonly pointer = inject(ChartPointer);
   private readonly devices = inject(DeviceService);
   private readonly i18n = inject(I18n);
 
@@ -82,7 +86,37 @@ export class Glance {
     return sum(lines.filter((line) => counted(line.label)));
   });
 
+  /**
+   * The tiles now, or while the pointer is on a moment in a chart, at that moment: each value from
+   * its chart, and under it the time instead of its line. A tile without a value then keeps now's.
+   */
   protected readonly tiles = computed((): Tile[] => {
+    const tiles = this.now();
+    const time = this.pointer.time();
+    const h = this.store.history();
+    if (time === null || !h || time < h.from || time >= h.to) {
+      return tiles;
+    }
+    const language = this.i18n.language();
+    const format = this.i18n.t(h.stepSeconds < 60 ? 'format.timeSeconds' : 'format.time');
+    const sub = this.i18n.t('dashboard.atTime', {
+      time: formatDate(time * 1000, format, language),
+    });
+    return tiles.map((tile) => {
+      const value = tile.points.find((p) => p.time === time)?.value;
+      if (value === undefined) {
+        return tile;
+      }
+      if (tile.id === 'network') {
+        const [received, unit] = splitUnit(formatBytes(value, language));
+        return { ...tile, value: `↓ ${received}`, unit: `${unit}/s`, sub, at: true };
+      }
+      return { ...tile, value: formatNumber(value, language, '1.0-1'), sub, at: true };
+    });
+  });
+
+  /** The tiles with the values now. */
+  private readonly now = computed((): Tile[] => {
     const s = this.snapshot();
     const series = this.store.history()?.series ?? [];
     const t = this.i18n.t.bind(this.i18n);

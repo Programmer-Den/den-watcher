@@ -15,7 +15,12 @@
     <span><ng-container *ngTemplateOutlet="formatted; context: { $implicit: 0 }" /></span>
   </div>
 
-  <div class="plot" (pointermove)="onPointerMove($event)" (pointerleave)="onPointerLeave()">
+  <div
+    class="plot"
+    (pointerdown)="onPointerMove($event)"
+    (pointermove)="onPointerMove($event)"
+    (pointerleave)="onPointerLeave($event)"
+  >
     <canvas
       [appChartCanvas]="canvasLines()"
       [grid]="true"
@@ -29,34 +34,38 @@
 
     @if (readout(); as r) {
       <div class="crosshair" [style.left.%]="r.left"></div>
-      <div class="tooltip" [class.flip]="r.left > 60" [style.left.%]="r.left" aria-hidden="true">
-        <p class="time">
-          {{ r.time * 1000 | date: readoutFormat() : undefined : i18n.language() }}
-        </p>
-        @for (line of lines(); track $index; let i = $index) {
-          <p>
-            <span class="swatch" [class]="seriesClass(line, i)"></span>
-            <strong>
-              @if (r.values[i] !== null) {
-                <ng-container *ngTemplateOutlet="formatted; context: { $implicit: r.values[i] }" />
-              } @else {
-                –
+      @if (r.own) {
+        <div class="tooltip" [class.flip]="r.left > 60" [style.left.%]="r.left" aria-hidden="true">
+          <p class="time">
+            {{ r.time * 1000 | date: readoutFormat() : undefined : i18n.language() }}
+          </p>
+          @for (line of lines(); track $index; let i = $index) {
+            <p>
+              <span class="swatch" [class]="seriesClass(line, i)"></span>
+              <strong>
+                @if (r.values[i] !== null) {
+                  <ng-container
+                    *ngTemplateOutlet="formatted; context: { $implicit: r.values[i] }"
+                  />
+                } @else {
+                  –
+                }
+              </strong>
+              @if (lines().length > 1) {
+                <span class="label">{{ line.label }}</span>
               }
-            </strong>
-            @if (lines().length > 1) {
-              <span class="label">{{ line.label }}</span>
-            }
-          </p>
-        }
-        @for (event of r.events; track $index) {
-          <p class="event">
-            <span
-              [class]="'event-mark ' + event.kind + (event.level === 'warning' ? ' warning' : '')"
-            ></span
-            >{{ event.text }}
-          </p>
-        }
-      </div>
+            </p>
+          }
+          @for (event of r.events; track $index) {
+            <p class="event">
+              <span
+                [class]="'event-mark ' + event.kind + (event.level === 'warning' ? ' warning' : '')"
+              ></span
+              >{{ event.text }}
+            </p>
+          }
+        </div>
+      }
     }
   </div>
 

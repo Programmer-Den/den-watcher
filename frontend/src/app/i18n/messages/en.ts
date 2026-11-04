@@ -10,6 +10,7 @@ export const en = {
   'connection.lost': '{hub} is not answering',
   'connection.notLive':
     'Since {since}, nothing on this page is live, because the values of all devices come through {hub}. The page keeps trying and catches up as soon as it answers again.',
+  'dashboard.atTime': 'at {time}',
   'dashboard.unreachable': 'The backend cannot be reached. Showing the last known values.',
   'dashboard.deviceUnreachable':
     '{device} has not answered recently. Is Den-Watcher running on it?',
