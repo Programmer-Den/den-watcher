@@ -73,3 +73,9 @@ h3 > app-alert-icon {
   min-height: 3rem;
   margin: 0 -1rem;
 }
+
+/* The time of the moment the pointer is on in a chart, whose value the tile shows. */
+.sub.at {
+  color: var(--mat-sys-primary);
+  font-weight: 600;
+}

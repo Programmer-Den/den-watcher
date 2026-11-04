@@ -16,6 +16,8 @@ export interface Tile {
   detail: string;
   /** Under the value, such as the load or how much of the disk is used. */
   sub: string;
+  /** Whether the value is from the moment the pointer is on in a chart, which `sub` tells. */
+  at?: boolean;
   alert: AlertLevel | null;
   /** The value over the range the charts show; empty while it loads. */
   points: Point[];
@@ -47,7 +49,7 @@ export interface Tile {
       {{ tile().value }}<span class="unit">{{ tile().unit }}</span>
     </p>
     @if (tile().sub) {
-      <p class="sub">{{ tile().sub }}</p>
+      <p class="sub" [class.at]="tile().at">{{ tile().sub }}</p>
     }
     <div class="chart"><ng-content /></div>
   `,

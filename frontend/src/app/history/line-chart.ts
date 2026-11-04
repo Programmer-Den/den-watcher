@@ -7,6 +7,7 @@ import { ExtraUnit, formatExtra } from '../metrics/extras';
 import { Point } from '../metrics/metrics';
 import { CanvasLine, ChartCanvas, PlotPoint } from './chart-canvas';
 import { ChartMarker, POINTER_SLACK, markersIn } from './chart-events';
+import { ChartPointer } from './chart-pointer';
 import { ChartMarkers } from './chart-markers';
 import { SHORT_SPAN } from './live-history';
 
@@ -58,6 +59,13 @@ export class LineChart {
   readonly step = input.required<number>();
   /** What happened to the device, marked on the chart and told in the readout. */
   readonly markers = input<ChartMarker[]>([]);
+  /**
+   * Whether the chart shares the moment under the pointer with the page's other shared charts: each
+   * marks it, and only the chart the pointer is on shows the values.
+   */
+  readonly shared = input(false);
+
+  private readonly pointer = inject(ChartPointer);
 
   protected readonly lines = computed(() => this.chart().lines);
   private readonly unit = computed(() => this.chart().unit);
@@ -117,8 +125,17 @@ export class LineChart {
     });
   });
 
+  /** The start of the step under the pointer in this chart alone, when it does not share it. */
+  private readonly ownTime = signal<number | null>(null);
+
   /** The start of the step under the pointer, or null when the pointer is elsewhere. */
-  protected readonly hoverTime = signal<number | null>(null);
+  protected readonly hoverTime = computed(() => {
+    if (!this.shared()) {
+      return this.ownTime();
+    }
+    const time = this.pointer.time();
+    return time !== null && time >= this.from() && time < this.to() ? time : null;
+  });
 
   /** The date format of the tooltip, with seconds when a step is shorter than a minute. */
   protected readonly readoutFormat = computed(() =>
@@ -132,6 +149,8 @@ export class LineChart {
     }
     return {
       time,
+      // A shared chart the pointer is not on marks the moment without its values.
+      own: !this.shared() || this.pointer.source() === this,
       left: stepCenter(time, this.from(), this.to(), this.step()),
       values: this.lines().map((line) => line.points.find((p) => p.time === time)?.value ?? null),
       events: markersIn(
@@ -155,11 +174,24 @@ export class LineChart {
   }
 
   protected onPointerMove(event: PointerEvent): void {
-    this.hoverTime.set(stepUnder(event, this.from(), this.to(), this.step()));
+    const time = stepUnder(event, this.from(), this.to(), this.step());
+    if (this.shared()) {
+      this.pointer.point(this, time);
+    } else {
+      this.ownTime.set(time);
+    }
   }
 
-  protected onPointerLeave(): void {
-    this.hoverTime.set(null);
+  /** A finger lifts off without the pointer leaving for another chart, so a touch keeps its moment. */
+  protected onPointerLeave(event: PointerEvent): void {
+    if (event.pointerType === 'touch') {
+      return;
+    }
+    if (this.shared()) {
+      this.pointer.leave(this);
+    } else {
+      this.ownTime.set(null);
+    }
   }
 }
 

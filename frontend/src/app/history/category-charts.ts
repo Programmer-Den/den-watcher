@@ -27,6 +27,7 @@ import { LineChart } from './line-chart';
                 [to]="h.to"
                 [step]="h.stepSeconds"
                 [markers]="events.markers()"
+                [shared]="true"
               />
             </div>
           }

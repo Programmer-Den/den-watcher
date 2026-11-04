@@ -8,6 +8,7 @@ export const fr: Messages = {
   'connection.lost': '{hub} ne répond pas',
   'connection.notLive':
     'Depuis {since}, rien sur cette page n’est en direct, car les valeurs de tous les appareils passent par {hub}. La page continue d’essayer et se met à jour dès que {hub} répond à nouveau.',
+  'dashboard.atTime': 'à {time}',
   'dashboard.unreachable': 'Le backend est injoignable. Affichage des dernières valeurs connues.',
   'dashboard.deviceUnreachable': '{device} n’a pas répondu récemment. Den-Watcher y est-il lancé ?',
   'dashboard.routerUnreachable':
