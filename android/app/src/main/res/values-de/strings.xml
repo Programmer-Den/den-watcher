@@ -57,7 +57,7 @@
     <string name="collect_storage">Belegter Speicher</string>
     <string name="collect_thermal">Wärme und Drosselung</string>
     <string name="collect_network">Netzwerk</string>
-    <string name="collect_traffic">Datenverkehr über WLAN und mobile Daten</string>
+    <string name="collect_traffic">Datenverkehr und Signal von WLAN und mobilen Daten</string>
     <string name="collect_nearby">WLANs in der Nähe</string>
     <string name="collect_connected">Verbundenes WLAN, mit Uhrzeiten</string>
     <string name="apps_title">App-Nutzung</string>

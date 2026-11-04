@@ -17,7 +17,7 @@ import java.util.TimeZone
 /**
  * Reads the phone's usage through what Android gives every app without a
  * permission: the battery, memory, storage, the phone's heat and the traffic
- * of Wi-Fi and mobile data. Android lets no app read how busy the processor is.
+ * and signal of Wi-Fi and mobile data. Android lets no app read how busy the processor is.
  */
 object Sampler {
     fun read(context: Context): Reading {
@@ -46,6 +46,8 @@ object Sampler {
             traffic = traffic(),
             batteryDetails = Health.battery(battery, context.getSystemService(BatteryManager::class.java)),
             thermal = Health.thermal(context.getSystemService(PowerManager::class.java)),
+            wifiLink = Signal.wifi(context),
+            mobileSignal = Signal.mobile(context),
         )
     }
 

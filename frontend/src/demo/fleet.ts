@@ -2092,6 +2092,93 @@ function phoneAppDataValues(t: number): Values {
   return values;
 }
 
+/**
+ * What the Android app tells of its Wi-Fi and mobile signal, as it does: the link quality and signal come from
+ * values() as "extra:wifi/wifi-quality" and "extra:wifi/wifi-signal" (see wifiValues), the link speed as
+ * "extra:wifi/wifi-speed", and the signal bars and strength as "extra:mobile-signal/level" and
+ * "extra:mobile-signal/signal".
+ */
+function phoneSignal(): Extra[] {
+  return [
+    {
+      id: 'wifi',
+      title: 'Wi-Fi',
+      titles: { de: 'WLAN', fr: 'Wi-Fi', es: 'Wi-Fi' },
+      description:
+        "How good the phone's Wi-Fi connection is: its link quality from the signal, the signal level, the speed of the link and the band.",
+      descriptions: {
+        de: 'Wie gut die WLAN-Verbindung des Handys ist: die Verbindungsqualität aus dem Signal, der Signalpegel, die Geschwindigkeit der Verbindung und das Band.',
+        fr: "La qualité de la connexion Wi-Fi du téléphone : la qualité du lien d'après le signal, le niveau du signal, le débit du lien et la bande.",
+        es: 'La calidad de la conexión Wi-Fi del teléfono: la calidad del enlace según la señal, el nivel de señal, la velocidad del enlace y la banda.',
+      },
+      items: [
+        addOnValue('wifi-quality', 'percent', 'Link quality', {
+          de: 'Verbindungsqualität',
+          fr: 'Qualité du lien',
+          es: 'Calidad del enlace',
+        }),
+        {
+          id: 'wifi-signal',
+          label: 'Signal (dBm)',
+          labels: { de: 'Signal (dBm)', fr: 'Signal (dBm)', es: 'Señal (dBm)' },
+          unit: 'number',
+        },
+        {
+          id: 'wifi-speed',
+          label: 'Link speed (Mbit/s)',
+          labels: {
+            de: 'Verbindungsgeschwindigkeit (Mbit/s)',
+            fr: 'Débit du lien (Mbit/s)',
+            es: 'Velocidad del enlace (Mbit/s)',
+          },
+          unit: 'number',
+        },
+        {
+          id: 'wifi-band',
+          label: 'Band',
+          labels: { de: 'Band', fr: 'Bande', es: 'Banda' },
+          unit: 'text',
+          text: '5 GHz',
+          texts: { de: '5 GHz', fr: '5 GHz', es: '5 GHz' },
+        },
+      ],
+    },
+    {
+      id: 'mobile-signal',
+      title: 'Mobile signal',
+      titles: { de: 'Mobilfunksignal', fr: 'Signal mobile', es: 'Señal móvil' },
+      description:
+        "How good the phone's mobile signal is: Android's signal bars from 0 to 4 as a percentage, the strength in dBm and the kind of network. At 0 % the phone has no service.",
+      descriptions: {
+        de: 'Wie gut das Mobilfunksignal des Handys ist: Androids Signalbalken von 0 bis 4 in Prozent, die Stärke in dBm und die Art des Netzes. Bei 0 % hat das Handy keinen Empfang.',
+        fr: "La qualité du signal mobile du téléphone : les barres de signal d'Android de 0 à 4 en pourcentage, la puissance en dBm et le type de réseau. À 0 %, le téléphone n'a pas de réseau.",
+        es: 'La calidad de la señal móvil del teléfono: las barras de señal de Android de 0 a 4 en porcentaje, la intensidad en dBm y el tipo de red. Al 0 % el teléfono no tiene cobertura.',
+      },
+      items: [
+        addOnValue('level', 'percent', 'Signal bars', {
+          de: 'Signalbalken',
+          fr: 'Barres de signal',
+          es: 'Barras de señal',
+        }),
+        {
+          id: 'network',
+          label: 'Network',
+          labels: { de: 'Netz', fr: 'Réseau', es: 'Red' },
+          unit: 'text',
+          text: '5G',
+          texts: { de: '5G', fr: '5G', es: '5G' },
+        },
+        {
+          id: 'signal',
+          label: 'Signal (dBm)',
+          labels: { de: 'Signal (dBm)', fr: 'Signal (dBm)', es: 'Señal (dBm)' },
+          unit: 'number',
+        },
+      ],
+    },
+  ];
+}
+
 /** A phone that sends the hub its usage when it is back on the home Wi-Fi; at home now. */
 const androidPhone: DemoMachine = {
   device: { id: 'android-phone', kind: 'phone', name: 'Android phone', removable: true },
@@ -2110,7 +2197,7 @@ const androidPhone: DemoMachine = {
   // Its user chose not to collect the storage in the app, so its page shows no disks.
   disks: [],
   network: [{ name: 'wlan0', addresses: ['192.168.1.52'] }],
-  extras: [...wifiAddOn('wlan0'), ...phoneHealth(), ...phoneAppData()],
+  extras: [...phoneSignal(), ...phoneHealth(), ...phoneAppData()],
   bootedDaysAgo: 6.1,
   values: (t, step) => {
     // How busy the phone is, which only warms its battery: the app cannot read it.
@@ -2131,7 +2218,11 @@ const androidPhone: DemoMachine = {
       'temperature:battery': 29 + cpu * 0.12,
       'network.receive:wlan0': vary(t, step, 146, 120e3, 0, 1e9, [100e3, 60]),
       'network.send:wlan0': vary(t, step, 147, 14e3, 0, 1e9, [12e3, 60]),
-      ...wifiValues('wlan0', vary(t, step, 148, -55, -80, -35, [6, 120], [5, 3600])),
+      ...wifiValues('wifi', vary(t, step, 148, -55, -80, -35, [6, 120], [5, 3600])),
+      'extra:wifi/wifi-speed': 866,
+      // Indoors the 5G signal comes and goes between two and four bars.
+      'extra:mobile-signal/level': 25 * Math.round(vary(t, step, 149, 3, 1, 4, [1.4, 600])),
+      'extra:mobile-signal/signal': Math.round(vary(t, step, 150, -98, -115, -80, [4, 300])),
     };
   },
 };

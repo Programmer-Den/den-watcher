@@ -4,7 +4,7 @@ package den.watcher
  * Which data the app collects, as chosen under Which data do you want to
  * collect, in the same groups as den-watcher's installers: System basics
  * (the battery, memory and storage, and the phone's heat) and Network (the
- * traffic of Wi-Fi and mobile data, the Wi-Fi networks nearby, and the Wi-Fi
+ * traffic and signal of Wi-Fi and mobile data, the Wi-Fi networks nearby, and the Wi-Fi
  * networks the phone was connected to and when), and App usage (the screen
  * time, which apps were used and how long, the unlocks and the data each
  * app used), which a phone
@@ -44,6 +44,7 @@ data class DataChoice(
         name == "memory" -> collectsMemory
         name.startsWith("disk:") -> collectsStorage
         name.startsWith("network.") -> collectsTraffic
+        name.startsWith("extra:${Signal.WIFI}/") || name.startsWith("extra:${Signal.MOBILE}/") -> collectsTraffic
         else -> true
     }
 }
@@ -65,4 +66,6 @@ fun Reading.limitedTo(choice: DataChoice): Reading = copy(
     storageTotalBytes = if (choice.collectsStorage) storageTotalBytes else 0,
     storageFreeBytes = if (choice.collectsStorage) storageFreeBytes else 0,
     traffic = if (choice.collectsTraffic) traffic else emptyMap(),
+    wifiLink = wifiLink.takeIf { choice.collectsTraffic },
+    mobileSignal = mobileSignal.takeIf { choice.collectsTraffic },
 )
