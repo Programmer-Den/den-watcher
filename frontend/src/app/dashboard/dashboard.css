@@ -218,6 +218,30 @@ progress {
   border-style: dashed;
 }
 
+/* Fewer numbers: a card one card wide that has a chart shows its names, bars and chart, and leaves
+   its numbers and the chart's axes to the chart's readout. A wider or opened card (.full) shows all
+   its values, and so does a card with an alert, so the alert reads without pointing at it. A word
+   that tells a state, such as "Normal" for the power, stays. A row's number shows while the pointer
+   is on the row. */
+.categories.quiet .slot:not(.full) > .card:not(.alerting):has(> app-card-charts .chart) {
+  --y-axis: none;
+  --x-axis: none;
+
+  .value:not(.state),
+  .detail:not(.state),
+  .interface > :not(.label) {
+    display: none;
+  }
+
+  .sensor > :not(.label) {
+    visibility: hidden;
+  }
+
+  .sensor:hover > :not(.label) {
+    visibility: visible;
+  }
+}
+
 /* While a card is dragged, its place shows where it goes, and the others make room smoothly. */
 .slot.cdk-drag-placeholder {
   opacity: 0.4;

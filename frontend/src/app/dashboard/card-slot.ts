@@ -1,4 +1,4 @@
-import { Directive, computed, inject, input } from '@angular/core';
+import { Directive, computed, inject, input, signal } from '@angular/core';
 
 import { EvenColumns } from '../layout/even-columns';
 import { Arrangement } from './arrangement';
@@ -6,13 +6,16 @@ import { CARD_WIDTHS, CardWidths } from './card-widths';
 
 /**
  * The place of a card in its category's grid, as many cards wide as it is set, but no wider than
- * the grid's columns. The card's buttons step it through the widths that fit side by side.
+ * the grid's columns. The card's buttons step it through the widths that fit side by side. A card
+ * one card wide shows its chart without its numbers; wider, or opened where no wider one fits (as on
+ * a phone), it shows all its values.
  */
 @Directive({
   selector: '[appCardSlot]',
   host: {
     '[attr.data-width]': 'width()',
     '[style.grid-column]': "shown() > 1 ? 'span ' + shown() : null",
+    '[class.full]': 'full()',
   },
 })
 export class CardSlot {
@@ -36,8 +39,22 @@ export class CardSlot {
     return CARD_WIDTHS.find((w) => w > width && w <= fit) ?? 1;
   });
 
+  /** Whether the card was opened to show all its values where no wider card fits, until it closes. */
+  readonly opened = signal(false);
+  /** Whether the card shows all its values: as it is wider than one card, or opened. */
+  readonly full = computed(() => this.shown() > 1 || (this.opened() && !this.widens()));
+
   /** Steps the card to its next width, kept on the host while the page is arranged. */
   step(): void {
     this.widths.set(this.card(), this.next(), this.arranging());
+  }
+
+  /** Steps the card to its next width, or where no wider card fits, opens or closes it. */
+  toggle(): void {
+    if (this.widens()) {
+      this.step();
+    } else {
+      this.opened.update((opened) => !opened);
+    }
   }
 }

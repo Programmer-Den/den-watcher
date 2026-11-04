@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CardSlot } from '../dashboard/card-slot';
 import { WidthIcon } from '../dashboard/width-icon';
 import { I18n } from '../i18n/i18n';
+import { MessageKey } from '../i18n/messages/en';
 import { ChartEvents } from './chart-events';
 import { HistoryStore } from './history-store';
 import { Chart } from './history';
@@ -12,7 +13,8 @@ import { LineChart } from './line-chart';
 /**
  * The chart of one dashboard card, over the range picked at the top of the page, at the bottom of
  * the card, taller as the card is wider. Outside the arrange mode, a button in the card's corner
- * steps the card to 2 and 4 cards wide, as far as they fit, and back, until the page loads again.
+ * steps the card to 2 and 4 cards wide, as far as they fit, and back, until the page loads again;
+ * where no wider card fits, as on a phone, it opens the card to show all its values instead.
  */
 @Component({
   selector: 'app-card-charts',
@@ -31,16 +33,16 @@ import { LineChart } from './line-chart';
         </div>
       }
       @if (slot; as slot) {
-        @if (chart() && slot.widens() && !slot.arranging()) {
-          @let label = i18n.t(slot.next() > 1 ? 'history.wider' : 'history.narrower');
+        @if (chart() && !slot.arranging()) {
+          @let label = i18n.t(buttonLabel(slot));
           <button
             type="button"
             class="widen"
-            [attr.aria-pressed]="slot.shown() > 1"
+            [attr.aria-pressed]="slot.full()"
             [title]="label"
-            (click)="slot.step()"
+            (click)="slot.toggle()"
           >
-            <app-width-icon [narrower]="slot.next() === 1" />
+            <app-width-icon [narrower]="slot.full()" />
             <span class="visually-hidden">{{ label }}</span>
           </button>
         }
@@ -62,6 +64,14 @@ export class CardCharts {
   protected readonly slot = inject(CardSlot, { optional: true });
   /** How many cards wide the card shows, which sets how tall its chart is. */
   protected readonly width = computed(() => this.slot?.shown() ?? 1);
+
+  /** What the corner button does next: make the card wider or narrow, or open or close it. */
+  protected buttonLabel(slot: CardSlot): MessageKey {
+    if (!slot.widens()) {
+      return slot.full() ? 'history.fewerValues' : 'history.allValues';
+    }
+    return slot.next() > 1 ? 'history.wider' : 'history.narrower';
+  }
 
   constructor() {
     this.events.watch.pipe(takeUntilDestroyed()).subscribe();
