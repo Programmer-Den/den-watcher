@@ -105,6 +105,7 @@ class Settings(context: Context) {
             battery = prefs.getBoolean(COLLECT_BATTERY, true),
             memory = prefs.getBoolean(COLLECT_MEMORY, true),
             storage = prefs.getBoolean(COLLECT_STORAGE, true),
+            thermal = prefs.getBoolean(COLLECT_THERMAL, true),
             network = prefs.getBoolean(COLLECT_NETWORK, true),
             traffic = prefs.getBoolean(COLLECT_TRAFFIC, true),
             nearby = prefs.getBoolean(COLLECT_NEARBY, true),
@@ -116,6 +117,7 @@ class Settings(context: Context) {
             .putBoolean(COLLECT_BATTERY, value.battery)
             .putBoolean(COLLECT_MEMORY, value.memory)
             .putBoolean(COLLECT_STORAGE, value.storage)
+            .putBoolean(COLLECT_THERMAL, value.thermal)
             .putBoolean(COLLECT_NETWORK, value.network)
             .putBoolean(COLLECT_TRAFFIC, value.traffic)
             .putBoolean(COLLECT_NEARBY, value.nearby)
@@ -196,6 +198,7 @@ class Settings(context: Context) {
         const val COLLECT_BATTERY = "collectBattery"
         const val COLLECT_MEMORY = "collectMemory"
         const val COLLECT_STORAGE = "collectStorage"
+        const val COLLECT_THERMAL = "collectThermal"
         const val COLLECT_NETWORK = "collectNetwork"
         const val COLLECT_TRAFFIC = "collectTraffic"
         const val COLLECT_NEARBY = "collectNearby"

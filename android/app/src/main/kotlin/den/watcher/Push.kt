@@ -44,6 +44,14 @@ object Push {
     }
 
     /**
+     * How the extras among the minutes are described, by the name the
+     * history keeps them under, so the hub can draw them also when it has
+     * not had a reading with them yet.
+     */
+    fun describe(minutes: List<Minute>): Map<String, JSONObject> =
+        Health.descriptions().filterKeys { metric -> minutes.any { metric in it.values } }
+
+    /**
      * The body of a push sent at now, with the newest reading when there is
      * one, the scans of the networks nearby, the uses of apps and the
      * connections to a Wi-Fi, asking for the phone's key when needKey is set.
@@ -63,6 +71,9 @@ object Push {
         if (uses.isNotEmpty()) put("uses", JSONArray().apply { uses.forEach { put(it) } })
         if (connections.isNotEmpty()) put("connections", JSONArray().apply { connections.forEach { put(it) } })
         snapshot?.let { put("snapshot", it) }
+        describe(minutes).takeIf { it.isNotEmpty() }?.let { extras ->
+            put("extras", JSONObject().apply { extras.toSortedMap().forEach { (metric, info) -> put(metric, info) } })
+        }
         put(
             "minutes",
             JSONArray().apply {

@@ -52,9 +52,10 @@
     <string name="collect_hint">Dans les mêmes groupes que les installateurs de Den-Watcher. Ce qui est désactivé n\'est ni lu ni envoyé.</string>
     <string name="collect_locked">Verrouillé par le hub, comme l\'adresse du hub.</string>
     <string name="collect_system">Bases du système</string>
-    <string name="collect_battery">Batterie : charge et température</string>
+    <string name="collect_battery">Batterie : charge, température et état</string>
     <string name="collect_memory">Mémoire utilisée</string>
     <string name="collect_storage">Stockage utilisé</string>
+    <string name="collect_thermal">Chaleur et ralentissement</string>
     <string name="collect_network">Réseau</string>
     <string name="collect_traffic">Trafic Wi-Fi et données mobiles</string>
     <string name="collect_nearby">Réseaux Wi-Fi à proximité</string>

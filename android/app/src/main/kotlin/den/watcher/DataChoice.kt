@@ -3,9 +3,9 @@ package den.watcher
 /**
  * Which data the app collects, as chosen under Which data do you want to
  * collect, in the same groups as den-watcher's installers: System basics
- * (the battery, memory and storage) and Network (the traffic of Wi-Fi and
- * mobile data, the Wi-Fi networks nearby, and the Wi-Fi networks the phone
- * was connected to and when), and App usage (the screen
+ * (the battery, memory and storage, and the phone's heat) and Network (the
+ * traffic of Wi-Fi and mobile data, the Wi-Fi networks nearby, and the Wi-Fi
+ * networks the phone was connected to and when), and App usage (the screen
  * time, which apps were used and how long, and the unlocks), which a phone
  * has and a PC's installer does not offer. A value is collected when its
  * group and its own switch are on; everything is on until switched off.
@@ -15,6 +15,7 @@ data class DataChoice(
     val battery: Boolean = true,
     val memory: Boolean = true,
     val storage: Boolean = true,
+    val thermal: Boolean = true,
     val network: Boolean = true,
     val traffic: Boolean = true,
     val nearby: Boolean = true,
@@ -24,6 +25,7 @@ data class DataChoice(
     val collectsBattery: Boolean get() = system && battery
     val collectsMemory: Boolean get() = system && memory
     val collectsStorage: Boolean get() = system && storage
+    val collectsThermal: Boolean get() = system && thermal
     val collectsTraffic: Boolean get() = network && traffic
     val collectsNearby: Boolean get() = network && nearby
     val collectsConnected: Boolean get() = network && connected
@@ -36,6 +38,8 @@ data class DataChoice(
      */
     fun keeps(name: String): Boolean = when {
         name == "battery" || name == "temperature:${Reading.BATTERY_SENSOR}" -> collectsBattery
+        name.startsWith("extra:${Health.BATTERY}/") -> collectsBattery
+        name.startsWith("extra:${Health.THERMAL}/") -> collectsThermal
         name == "memory" -> collectsMemory
         name.startsWith("disk:") -> collectsStorage
         name.startsWith("network.") -> collectsTraffic
@@ -52,6 +56,8 @@ fun Reading.limitedTo(choice: DataChoice): Reading = copy(
     batteryPercent = batteryPercent.takeIf { choice.collectsBattery },
     pluggedIn = pluggedIn && choice.collectsBattery,
     batteryCelsius = batteryCelsius.takeIf { choice.collectsBattery },
+    batteryDetails = batteryDetails.takeIf { choice.collectsBattery },
+    thermal = thermal.takeIf { choice.collectsThermal },
     memoryTotalBytes = if (choice.collectsMemory) memoryTotalBytes else 0,
     memoryAvailableBytes = if (choice.collectsMemory) memoryAvailableBytes else 0,
     storageTotalBytes = if (choice.collectsStorage) storageTotalBytes else 0,

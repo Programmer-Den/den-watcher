@@ -52,9 +52,10 @@
     <string name="collect_hint">In denselben Gruppen wie in den Installern von Den-Watcher. Was ausgeschaltet ist, wird weder gelesen noch geschickt.</string>
     <string name="collect_locked">Vom Hub gesperrt, wie die Adresse des Hubs.</string>
     <string name="collect_system">System-Grundwerte</string>
-    <string name="collect_battery">Akku: Ladung und Temperatur</string>
+    <string name="collect_battery">Akku: Ladung, Temperatur und Zustand</string>
     <string name="collect_memory">Belegter Arbeitsspeicher</string>
     <string name="collect_storage">Belegter Speicher</string>
+    <string name="collect_thermal">Wärme und Drosselung</string>
     <string name="collect_network">Netzwerk</string>
     <string name="collect_traffic">Datenverkehr über WLAN und mobile Daten</string>
     <string name="collect_nearby">WLANs in der Nähe</string>
