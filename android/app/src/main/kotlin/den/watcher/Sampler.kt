@@ -8,6 +8,7 @@ import android.net.TrafficStats
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
+import android.os.PowerManager
 import android.os.StatFs
 import android.os.SystemClock
 import android.provider.Settings
@@ -15,8 +16,8 @@ import java.util.TimeZone
 
 /**
  * Reads the phone's usage through what Android gives every app without a
- * permission: the battery, memory, storage and the traffic of Wi-Fi and
- * mobile data. Android lets no app read how busy the processor is.
+ * permission: the battery, memory, storage, the phone's heat and the traffic
+ * of Wi-Fi and mobile data. Android lets no app read how busy the processor is.
  */
 object Sampler {
     fun read(context: Context): Reading {
@@ -43,6 +44,8 @@ object Sampler {
             storageTotalBytes = storage.totalBytes,
             storageFreeBytes = storage.availableBytes,
             traffic = traffic(),
+            batteryDetails = Health.battery(battery, context.getSystemService(BatteryManager::class.java)),
+            thermal = Health.thermal(context.getSystemService(PowerManager::class.java)),
         )
     }
 

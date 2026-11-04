@@ -253,6 +253,11 @@
                 android:text="@string/collect_storage" />
 
             <Switch
+                android:id="@+id/collect_thermal"
+                style="@style/CollectItem"
+                android:text="@string/collect_thermal" />
+
+            <Switch
                 android:id="@+id/collect_network"
                 style="@style/CollectGroup"
                 android:text="@string/collect_network" />

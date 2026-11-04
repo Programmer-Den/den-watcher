@@ -27,6 +27,10 @@ data class Reading(
     val storageFreeBytes: Long,
     /** The traffic of each network, by its name: wifi and mobile. */
     val traffic: Map<String, Traffic>,
+    /** What the battery tells beyond its charge and temperature. */
+    val batteryDetails: BatteryDetails? = null,
+    /** How hot the phone runs. */
+    val thermal: Thermal? = null,
 ) {
     val memoryUsedBytes: Long get() = (memoryTotalBytes - memoryAvailableBytes).coerceAtLeast(0)
     val memoryUsedPercent: Double get() = percent(memoryUsedBytes, memoryTotalBytes)
@@ -69,6 +73,13 @@ data class Reading(
             put("network.receive:$name", rate.receive)
             put("network.send:$name", rate.send)
         }
+        extras().forEach { putAll(it.historyValues()) }
+    }
+
+    /** The values beyond the fields every device tells, as den-watcher's extras. */
+    fun extras(): List<Extra> = buildList {
+        batteryDetails?.let { add(Health.batteryExtra(it)) }
+        thermal?.let { add(Health.thermalExtra(it)) }
     }
 
     /**
@@ -128,7 +139,17 @@ data class Reading(
             },
         )
         put("gpus", JSONArray())
-        batteryPercent?.let { put("battery", JSONObject().put("percent", it).put("pluggedIn", pluggedIn)) }
+        batteryPercent?.let {
+            put(
+                "battery",
+                JSONObject().put("percent", it).put("pluggedIn", pluggedIn).apply {
+                    batteryDetails?.watts?.let { watts -> put("watts", watts) }
+                },
+            )
+        }
+        extras().takeIf { it.isNotEmpty() }?.let { extras ->
+            put("extras", JSONArray().apply { extras.forEach { put(it.json()) } })
+        }
         put(
             "system",
             JSONObject()

@@ -1924,6 +1924,101 @@ const linuxLaptop: DemoMachine = {
   },
 };
 
+/**
+ * What the Android app tells of the battery and the phone's heat beyond the fixed values, as it
+ * does; the power and the headroom come from values() as "extra:battery-health/power" and
+ * "extra:thermal/headroom", and the cycles, voltage and current as "extra:battery-health/cycles",
+ * "extra:battery-health/voltage" and "extra:battery-health/current".
+ */
+function phoneHealth(): Extra[] {
+  return [
+    {
+      id: 'battery-health',
+      title: 'Battery health',
+      titles: { de: 'Akkuzustand', fr: 'État de la batterie', es: 'Estado de la batería' },
+      description:
+        "What the phone's battery tells: whether it charges and from what, its health, how often it was charged in full, and the power it takes in or gives out.",
+      descriptions: {
+        de: 'Was der Akku des Handys meldet: ob und woran er lädt, sein Zustand, wie oft er voll geladen wurde, und die Leistung, die er aufnimmt oder abgibt.',
+        fr: "Ce que la batterie du téléphone indique : si elle charge et sur quoi, son état, combien de fois elle a été chargée à fond, et la puissance qu'elle reçoit ou fournit.",
+        es: 'Lo que indica la batería del teléfono: si se carga y con qué, su estado, cuántas veces se cargó por completo y la potencia que recibe o entrega.',
+      },
+      items: [
+        addOnValue('power', 'watts', 'Power', { de: 'Leistung', fr: 'Puissance', es: 'Potencia' }),
+        {
+          id: 'state',
+          label: 'State',
+          labels: { de: 'Status', fr: 'État', es: 'Estado' },
+          unit: 'text',
+          text: 'Discharging',
+          texts: { de: 'Entlädt', fr: 'En décharge', es: 'Descargando' },
+        },
+        {
+          id: 'charger',
+          label: 'Charger',
+          labels: { de: 'Ladegerät', fr: 'Chargeur', es: 'Cargador' },
+          unit: 'text',
+          text: 'Not plugged in',
+          texts: { de: 'Nicht angesteckt', fr: 'Non branché', es: 'No conectado' },
+        },
+        {
+          id: 'health',
+          label: 'Health',
+          labels: { de: 'Zustand', fr: 'Santé', es: 'Salud' },
+          unit: 'text',
+          text: 'Good',
+          texts: { de: 'Gut', fr: 'Bonne', es: 'Buena' },
+        },
+        {
+          id: 'cycles',
+          label: 'Charge cycles',
+          labels: { de: 'Ladezyklen', fr: 'Cycles de charge', es: 'Ciclos de carga' },
+          unit: 'number',
+        },
+        {
+          id: 'voltage',
+          label: 'Voltage (V)',
+          labels: { de: 'Spannung (V)', fr: 'Tension (V)', es: 'Tensión (V)' },
+          unit: 'number',
+        },
+        {
+          id: 'current',
+          label: 'Current (mA)',
+          labels: { de: 'Strom (mA)', fr: 'Courant (mA)', es: 'Corriente (mA)' },
+          unit: 'number',
+        },
+      ],
+    },
+    {
+      id: 'thermal',
+      title: 'Heat',
+      titles: { de: 'Wärme', fr: 'Chaleur', es: 'Calor' },
+      description:
+        'How hot the phone runs as Android judges it, and how close it is to slowing itself down for the heat: at 100 % it throttles hard.',
+      descriptions: {
+        de: 'Wie heiß das Handy läuft, wie Android es einschätzt, und wie nah es daran ist, sich wegen der Wärme zu drosseln: bei 100 % drosselt es stark.',
+        fr: 'À quel point le téléphone chauffe selon Android, et à quel point il est proche de ralentir à cause de la chaleur : à 100 %, il ralentit fortement.',
+        es: 'Lo caliente que va el teléfono según Android, y lo cerca que está de frenarse por el calor: al 100 % se frena mucho.',
+      },
+      items: [
+        addOnValue('headroom', 'percent', 'Toward throttling', {
+          de: 'Bis zur Drosselung',
+          fr: 'Vers le ralentissement',
+          es: 'Hacia la limitación',
+        }),
+        {
+          id: 'status',
+          label: 'Throttling',
+          labels: { de: 'Drosselung', fr: 'Ralentissement', es: 'Limitación' },
+          unit: 'text',
+          text: 'None',
+          texts: { de: 'Keine', fr: 'Aucun', es: 'Ninguna' },
+        },
+      ],
+    },
+  ];
+}
+
 /** A phone that sends the hub its usage when it is back on the home Wi-Fi; at home now. */
 const androidPhone: DemoMachine = {
   device: { id: 'android-phone', kind: 'phone', name: 'Android phone', removable: true },
@@ -1942,12 +2037,21 @@ const androidPhone: DemoMachine = {
   // Its user chose not to collect the storage in the app, so its page shows no disks.
   disks: [],
   network: [{ name: 'wlan0', addresses: ['192.168.1.52'] }],
-  extras: wifiAddOn('wlan0'),
+  extras: [...wifiAddOn('wlan0'), ...phoneHealth()],
   bootedDaysAgo: 6.1,
   values: (t, step) => {
     // How busy the phone is, which only warms its battery: the app cannot read it.
     const cpu = vary(t, step, 141, 6, 1, 100, [4, 30], [8, 1800]);
+    const plugged = charging(t);
+    // Some phone makers turn the sign of the current around; this one tells it as Android defines it.
+    const milliamps = plugged ? 1800 : -(180 + cpu * 9);
+    const volts = 3.7 + (batteryPercent(t + 1500) / 100) * 0.6;
     return {
+      'extra:battery-health/power': (volts * Math.abs(milliamps)) / 1000,
+      'extra:battery-health/voltage': Math.round(volts * 1000) / 1000,
+      'extra:battery-health/current': Math.round(milliamps),
+      'extra:battery-health/cycles': 312,
+      'extra:thermal/headroom': 18 + cpu * 0.5,
       memory: vary(t, step, 142, 68, 0, 100, [5, 900]),
       battery: batteryPercent(t + 1500),
       'temperature:battery': 29 + cpu * 0.12,
