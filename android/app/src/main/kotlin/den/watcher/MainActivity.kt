@@ -95,6 +95,8 @@ class MainActivity : Activity() {
 
         findViewById<Button>(R.id.apps).setOnClickListener { openUsageAccess() }
 
+        findViewById<Button>(R.id.bluetooth).setOnClickListener { allowBluetooth() }
+
         for ((id, change) in dataSwitches) {
             findViewById<Switch>(id).setOnCheckedChangeListener { _, on ->
                 // Only the user changes it, not showDataChoice setting the switches.
@@ -121,6 +123,7 @@ class MainActivity : Activity() {
         R.id.collect_nearby to { on -> copy(nearby = on) },
         R.id.collect_connected to { on -> copy(connected = on) },
         R.id.collect_apps to { on -> copy(apps = on) },
+        R.id.collect_bluetooth to { on -> copy(bluetooth = on) },
     )
 
     /**
@@ -142,6 +145,7 @@ class MainActivity : Activity() {
             R.id.collect_nearby to (choice.nearby to choice.network),
             R.id.collect_connected to (choice.connected to choice.network),
             R.id.collect_apps to (choice.apps to true),
+            R.id.collect_bluetooth to (choice.bluetooth to true),
         )
         showingDataChoice = true
         for ((id, state) in switches) {
@@ -210,6 +214,28 @@ class MainActivity : Activity() {
         if (!opened) {
             Toast.makeText(this, R.string.apps_no_settings, Toast.LENGTH_LONG).show()
         }
+    }
+
+    /**
+     * Asks for the Nearby devices permission the connected Bluetooth devices
+     * need from Android 12 on, or opens the app's settings once it was given
+     * or Android asks no more.
+     */
+    private fun allowBluetooth() {
+        if (!Bluetooth.allowed(this) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_CONNECT), BLUETOOTH_REQUEST)
+        } else {
+            runCatching {
+                startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
+            }
+        }
+    }
+
+    /** Whether the connected Bluetooth devices are read: allowed, or not. */
+    private fun showBluetooth() {
+        val allowed = Bluetooth.allowed(this)
+        findViewById<TextView>(R.id.bluetooth_state).setText(if (allowed) R.string.bluetooth_on else R.string.bluetooth_off)
+        findViewById<Button>(R.id.bluetooth).setText(if (allowed) R.string.nearby_settings else R.string.nearby_allow)
     }
 
     /** Whether the uses of apps are read: allowed in Android's settings, or not. */
@@ -335,6 +361,7 @@ class MainActivity : Activity() {
         openHub.visibility = if (HubAddress.pageUrl(settings.hubAddress) == null) View.GONE else View.VISIBLE
         showNearby()
         showApps()
+        showBluetooth()
         showDataChoice()
     }
 
@@ -407,6 +434,7 @@ class MainActivity : Activity() {
     private companion object {
         const val REFRESH_MILLIS = 5_000L
         const val NEARBY_REQUEST = 1
+        const val BLUETOOTH_REQUEST = 2
         const val DISABLED_ALPHA = 0.5f
     }
 }

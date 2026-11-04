@@ -72,4 +72,9 @@
     <string name="apps_settings">Usage access settings</string>
     <string name="apps_no_settings">This phone has no settings for usage access.</string>
     <string name="collect_apps">App usage: screen time, apps, unlocks and data per app</string>
+    <string name="collect_bluetooth">Bluetooth: connected devices</string>
+    <string name="bluetooth_title">Bluetooth</string>
+    <string name="bluetooth_hint">Which Bluetooth devices are connected to the phone, such as headphones, a watch or the car, with their names and kinds, and how many over the day. Android asks for the Nearby devices permission for it from Android 12 on. It costs no battery: the app only asks Android what is connected.</string>
+    <string name="bluetooth_off">Not read. Allow Nearby devices for Den-Watcher.</string>
+    <string name="bluetooth_on">Read, also while the phone is away.</string>
 </resources>

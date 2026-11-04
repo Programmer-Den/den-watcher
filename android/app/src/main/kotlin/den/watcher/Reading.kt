@@ -39,6 +39,8 @@ data class Reading(
     val mobileSignal: MobileSignal? = null,
     /** The storage each app takes. */
     val appStorage: List<AppBytes>? = null,
+    /** The Bluetooth devices connected to the phone. */
+    val bluetooth: List<BluetoothDevice>? = null,
 ) {
     val memoryUsedBytes: Long get() = (memoryTotalBytes - memoryAvailableBytes).coerceAtLeast(0)
     val memoryUsedPercent: Double get() = percent(memoryUsedBytes, memoryTotalBytes)
@@ -92,6 +94,7 @@ data class Reading(
         mobileSignal?.let { add(Signal.mobileExtra(it)) }
         appTraffic?.let { addAll(AppData.extras(it)) }
         appStorage?.takeIf { it.isNotEmpty() }?.let { add(AppStorage.extra(it)) }
+        bluetooth?.let { add(Bluetooth.extra(it)) }
     }
 
     /**

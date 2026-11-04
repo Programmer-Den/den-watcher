@@ -111,6 +111,7 @@ class Settings(context: Context) {
             nearby = prefs.getBoolean(COLLECT_NEARBY, true),
             connected = prefs.getBoolean(COLLECT_CONNECTED, true),
             apps = prefs.getBoolean(COLLECT_APPS, true),
+            bluetooth = prefs.getBoolean(COLLECT_BLUETOOTH, true),
         )
         set(value) = prefs.edit()
             .putBoolean(COLLECT_SYSTEM, value.system)
@@ -123,6 +124,7 @@ class Settings(context: Context) {
             .putBoolean(COLLECT_NEARBY, value.nearby)
             .putBoolean(COLLECT_CONNECTED, value.connected)
             .putBoolean(COLLECT_APPS, value.apps)
+            .putBoolean(COLLECT_BLUETOOTH, value.bluetooth)
             .apply()
 
     /**
@@ -215,6 +217,7 @@ class Settings(context: Context) {
         const val COLLECT_CONNECTED = "collectConnected"
         const val LAST_SCAN_REQUEST = "lastScanRequest"
         const val COLLECT_APPS = "collectApps"
+        const val COLLECT_BLUETOOTH = "collectBluetooth"
         const val USES_READ_UNTIL = "usesReadUntil"
     }
 }

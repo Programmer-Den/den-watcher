@@ -71,4 +71,9 @@
     <string name="apps_settings">Ajustes de acceso a datos de uso</string>
     <string name="apps_no_settings">Este teléfono no tiene ajustes de acceso a datos de uso.</string>
     <string name="collect_apps">Uso de apps: tiempo de pantalla, apps, desbloqueos y datos por app</string>
+    <string name="collect_bluetooth">Bluetooth: dispositivos conectados</string>
+    <string name="bluetooth_title">Bluetooth</string>
+    <string name="bluetooth_hint">Qué dispositivos Bluetooth están conectados al teléfono, como auriculares, un reloj o el coche, con su nombre y tipo, y cuántos a lo largo del día. Android pide para ello el permiso Dispositivos cercanos desde Android 12. No gasta batería: la app solo pregunta a Android qué está conectado.</string>
+    <string name="bluetooth_off">No se leen. Permite Dispositivos cercanos para Den-Watcher.</string>
+    <string name="bluetooth_on">Se leen, también con el teléfono fuera de casa.</string>
 </resources>

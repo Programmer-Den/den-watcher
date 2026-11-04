@@ -71,4 +71,9 @@
     <string name="apps_settings">Einstellungen für Nutzungsdatenzugriff</string>
     <string name="apps_no_settings">Dieses Handy hat keine Einstellungen für den Nutzungsdatenzugriff.</string>
     <string name="collect_apps">App-Nutzung: Bildschirmzeit, Apps, Entsperrungen und Daten pro App</string>
+    <string name="collect_bluetooth">Bluetooth: verbundene Geräte</string>
+    <string name="bluetooth_title">Bluetooth</string>
+    <string name="bluetooth_hint">Welche Bluetooth-Geräte mit dem Handy verbunden sind, etwa Kopfhörer, eine Uhr oder das Auto, mit Namen und Geräteart, und wie viele über den Tag. Android fragt dafür ab Android 12 nach der Berechtigung Geräte in der Nähe. Es kostet keinen Akku: Die App fragt Android nur, was verbunden ist.</string>
+    <string name="bluetooth_off">Wird nicht gelesen. Erlaube Den-Watcher Geräte in der Nähe.</string>
+    <string name="bluetooth_on">Wird gelesen, auch wenn das Handy unterwegs ist.</string>
 </resources>
