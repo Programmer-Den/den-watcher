@@ -57,7 +57,7 @@
     <string name="collect_storage">Stockage utilisé</string>
     <string name="collect_thermal">Chaleur et ralentissement</string>
     <string name="collect_network">Réseau</string>
-    <string name="collect_traffic">Trafic Wi-Fi et données mobiles</string>
+    <string name="collect_traffic">Trafic et signal du Wi-Fi et des données mobiles</string>
     <string name="collect_nearby">Réseaux Wi-Fi à proximité</string>
     <string name="collect_connected">Wi-Fi connecté, avec les heures</string>
     <string name="apps_title">Utilisation des apps</string>

@@ -58,7 +58,7 @@
     <string name="collect_storage">Storage used</string>
     <string name="collect_thermal">Heat and throttling</string>
     <string name="collect_network">Network</string>
-    <string name="collect_traffic">Traffic of Wi-Fi and mobile data</string>
+    <string name="collect_traffic">Traffic and signal of Wi-Fi and mobile data</string>
     <string name="collect_nearby">Wi-Fi networks nearby</string>
     <string name="collect_connected">Wi-Fi connected to, with times</string>
     <string name="apps_title">App usage</string>

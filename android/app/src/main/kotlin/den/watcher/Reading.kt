@@ -33,6 +33,10 @@ data class Reading(
     val thermal: Thermal? = null,
     /** The data each app used today. */
     val appTraffic: AppTraffic? = null,
+    /** The Wi-Fi the phone is connected to. */
+    val wifiLink: WifiLink? = null,
+    /** The mobile network's signal. */
+    val mobileSignal: MobileSignal? = null,
 ) {
     val memoryUsedBytes: Long get() = (memoryTotalBytes - memoryAvailableBytes).coerceAtLeast(0)
     val memoryUsedPercent: Double get() = percent(memoryUsedBytes, memoryTotalBytes)
@@ -82,6 +86,8 @@ data class Reading(
     fun extras(): List<Extra> = buildList {
         batteryDetails?.let { add(Health.batteryExtra(it)) }
         thermal?.let { add(Health.thermalExtra(it)) }
+        wifiLink?.let { add(Signal.wifiExtra(it)) }
+        mobileSignal?.let { add(Signal.mobileExtra(it)) }
         appTraffic?.let { addAll(AppData.extras(it)) }
     }
 
