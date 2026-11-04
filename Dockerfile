@@ -3,7 +3,7 @@
 # machine's own architecture and the binary is cross-compiled for the target,
 # so building for a Pi never runs the Angular build on the Pi.
 
-FROM --platform=$BUILDPLATFORM node:26-alpine AS frontend
+FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS frontend
 WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
@@ -11,7 +11,7 @@ COPY frontend/ ./
 # Writes the website into /src/backend/internal/web/files/build.
 RUN npm run build
 
-FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS backend
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb AS backend
 ARG TARGETOS
 ARG TARGETARCH
 # The version the program reports: 1.2.3 for a release, see the Docker image workflow.
@@ -46,7 +46,7 @@ RUN cd /out/addons && ln -s den-watcher usage-control && for addon in den-watche
 RUN mkdir /out/data
 
 # A minimal image without a shell or package manager, running as a non-root user.
-FROM gcr.io/distroless/static-debian13:nonroot
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:25ac8f0c3b2334a9eb05452266bd4697864a8c8ef0ef71e5e6480d7f92868329
 COPY --from=backend /out/den-watcher /out/addons/ /
 # Owned by the nonroot user (65532), so a new volume mounted here is writable.
 COPY --from=backend --chown=65532:65532 /out/data /data
