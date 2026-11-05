@@ -77,4 +77,9 @@
     <string name="bluetooth_hint">Which Bluetooth devices are connected to the phone, such as headphones, a watch or the car, with their names and kinds, and how many over the day. Android asks for the Nearby devices permission for it from Android 12 on. It costs no battery: the app only asks Android what is connected.</string>
     <string name="bluetooth_off">Not read. Allow Nearby devices for Den-Watcher.</string>
     <string name="bluetooth_on">Read, also while the phone is away.</string>
+    <string name="collect_steps">Steps</string>
+    <string name="steps_title">Steps</string>
+    <string name="steps_hint">The steps the phone counts today, from its step counter, a chip that counts them by itself, so it costs almost no battery. Android asks for the Physical activity permission for it from Android 10 on.</string>
+    <string name="steps_off">Not counted. Allow Physical activity for Den-Watcher.</string>
+    <string name="steps_on">Counted, also while the phone is away.</string>
 </resources>

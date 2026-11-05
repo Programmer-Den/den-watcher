@@ -2214,6 +2214,41 @@ function phoneAppStorage(): Extra[] {
   ];
 }
 
+/** The steps the Android app counts today, from values() as "extra:steps/today". */
+function phoneSteps(): Extra[] {
+  return [
+    {
+      id: 'steps',
+      title: 'Steps',
+      titles: { de: 'Schritte', fr: 'Pas', es: 'Pasos' },
+      description:
+        'The steps the phone counted today, from its step counter, which starts again at midnight.',
+      descriptions: {
+        de: 'Die Schritte, die das Handy heute gezählt hat, von seinem Schrittzähler, der um Mitternacht neu beginnt.',
+        fr: "Les pas que le téléphone a comptés aujourd'hui, par son podomètre, qui repart de zéro à minuit.",
+        es: 'Los pasos que el teléfono contó hoy, con su podómetro, que vuelve a empezar a medianoche.',
+      },
+      items: [
+        addOnValue('today', 'number', 'Steps today', {
+          de: 'Schritte heute',
+          fr: "Pas aujourd'hui",
+          es: 'Pasos hoy',
+        }),
+      ],
+    },
+  ];
+}
+
+/** The steps of the day at t: none at night, a walk in the morning and the evening, a few in between. */
+function phoneStepsToday(t: number): number {
+  const hours = hourOf(t);
+  const walk = (from: number, to: number, steps: number) =>
+    steps * Math.min(1, Math.max(0, (hours - from) / (to - from)));
+  return Math.round(
+    walk(7, 8, 2600) + walk(8, 18, 2400) + walk(18, 19.5, 3100) + walk(19.5, 23, 600),
+  );
+}
+
 /** A phone that sends the hub its usage when it is back on the home Wi-Fi; at home now. */
 const androidPhone: DemoMachine = {
   device: { id: 'android-phone', kind: 'phone', name: 'Android phone', removable: true },
@@ -2236,6 +2271,7 @@ const androidPhone: DemoMachine = {
     ...phoneHealth(),
     ...phoneAppData(),
     ...phoneAppStorage(),
+    ...phoneSteps(),
     // The Android app tells the connected devices as the Bluetooth add-on does.
     ...bluetoothAddOn([
       ['4b1e9a07', 'Pixel Buds Pro', bluetoothKinds.headphones],
@@ -2262,6 +2298,7 @@ const androidPhone: DemoMachine = {
       ),
       // The watch is on all day, the earbuds join in the evening, as now.
       'extra:bluetooth/connected': t >= openedAt - 50 * 60 ? 2 : 1,
+      'extra:steps/today': phoneStepsToday(t),
       memory: vary(t, step, 142, 68, 0, 100, [5, 900]),
       'disk:/data': 61.4,
       battery: batteryPercent(t + 1500),
