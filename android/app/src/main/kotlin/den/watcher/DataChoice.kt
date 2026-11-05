@@ -7,7 +7,8 @@ package den.watcher
  * traffic and signal of Wi-Fi and mobile data, the Wi-Fi networks nearby, and the Wi-Fi
  * networks the phone was connected to and when), and App usage (the screen
  * time, which apps were used and how long, the unlocks and the data each
- * app used), Bluetooth (the devices connected to the phone) and Steps, which a phone
+ * app used), Bluetooth (the devices connected to the phone), Steps and the
+ * Location route, which a phone
  * has and a PC's installer does not offer. A value is collected when its
  * group and its own switch are on; everything is on until switched off.
  */
@@ -24,6 +25,7 @@ data class DataChoice(
     val apps: Boolean = true,
     val bluetooth: Boolean = true,
     val steps: Boolean = true,
+    val route: Boolean = true,
 ) {
     val collectsBattery: Boolean get() = system && battery
     val collectsMemory: Boolean get() = system && memory
@@ -35,6 +37,7 @@ data class DataChoice(
     val collectsApps: Boolean get() = apps
     val collectsBluetooth: Boolean get() = bluetooth
     val collectsSteps: Boolean get() = steps
+    val collectsRoute: Boolean get() = route
 
     /**
      * Whether a value kept under name, as Reading.values names it, is

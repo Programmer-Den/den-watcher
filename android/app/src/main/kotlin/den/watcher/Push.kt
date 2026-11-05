@@ -23,6 +23,9 @@ object Push {
     /** The most connections to a Wi-Fi one push may hold, as many as the hub takes. */
     const val MAX_CONNECTIONS = 500
 
+    /** The most points of the location route one push may hold, as many as the hub takes. */
+    const val MAX_ROUTE = 500
+
     /** The header the pairing code is sent in, as a hub sends it to a device. */
     const val CODE_HEADER = "Usage-Control-Pairing-Code"
 
@@ -53,8 +56,9 @@ object Push {
 
     /**
      * The body of a push sent at now, with the newest reading when there is
-     * one, the scans of the networks nearby, the uses of apps and the
-     * connections to a Wi-Fi, asking for the phone's key when needKey is set.
+     * one, the scans of the networks nearby, the uses of apps, the
+     * connections to a Wi-Fi and the points of the location route, asking
+     * for the phone's key when needKey is set.
      */
     fun body(
         now: Long,
@@ -64,12 +68,14 @@ object Push {
         scans: List<JSONObject> = emptyList(),
         uses: List<JSONObject> = emptyList(),
         connections: List<JSONObject> = emptyList(),
+        route: List<JSONObject> = emptyList(),
     ): JSONObject = JSONObject().apply {
         put("now", now)
         if (needKey) put("needKey", true)
         if (scans.isNotEmpty()) put("wifi", JSONArray().apply { scans.forEach { put(it) } })
         if (uses.isNotEmpty()) put("uses", JSONArray().apply { uses.forEach { put(it) } })
         if (connections.isNotEmpty()) put("connections", JSONArray().apply { connections.forEach { put(it) } })
+        if (route.isNotEmpty()) put("route", JSONArray().apply { route.forEach { put(it) } })
         snapshot?.let { put("snapshot", it) }
         describe(minutes).takeIf { it.isNotEmpty() }?.let { extras ->
             put("extras", JSONObject().apply { extras.toSortedMap().forEach { (metric, info) -> put(metric, info) } })

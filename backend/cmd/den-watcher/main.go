@@ -471,6 +471,7 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 		WiFi:            store,
 		AppUses:         store,
 		WiFiConnections: store,
+		Route:           store,
 		Routers:         others,
 	}
 	if checker := update.NewChecker(version.Version); checker != nil && checkUpdates {

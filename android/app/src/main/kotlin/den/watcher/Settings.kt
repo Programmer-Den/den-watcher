@@ -113,6 +113,7 @@ class Settings(context: Context) {
             apps = prefs.getBoolean(COLLECT_APPS, true),
             bluetooth = prefs.getBoolean(COLLECT_BLUETOOTH, true),
             steps = prefs.getBoolean(COLLECT_STEPS, true),
+            route = prefs.getBoolean(COLLECT_ROUTE, true),
         )
         set(value) = prefs.edit()
             .putBoolean(COLLECT_SYSTEM, value.system)
@@ -127,6 +128,7 @@ class Settings(context: Context) {
             .putBoolean(COLLECT_APPS, value.apps)
             .putBoolean(COLLECT_BLUETOOTH, value.bluetooth)
             .putBoolean(COLLECT_STEPS, value.steps)
+            .putBoolean(COLLECT_ROUTE, value.route)
             .apply()
 
     /**
@@ -165,6 +167,16 @@ class Settings(context: Context) {
         get() = prefs.getString(STEP_COUNT, null)?.split(',')?.mapNotNull { it.toLongOrNull() }
             ?.takeIf { it.size == 3 }?.let { (day, today, counter) -> StepCount(day, today, counter) }
         set(value) = prefs.edit().putString(STEP_COUNT, value?.let { "${it.day},${it.today},${it.counter}" }).apply()
+
+    /** The point of the location route kept last, which the next one is measured from; null for none. */
+    var lastRoutePoint: RoutePoint?
+        get() = RoutePoint.parse(prefs.getString(LAST_ROUTE_POINT, null))
+        set(value) = prefs.edit().putString(LAST_ROUTE_POINT, value?.text()).apply()
+
+    /** When the app last asked Android for a position, in Unix milliseconds; 0 until it did. */
+    var lastRouteAsk: Long
+        get() = prefs.getLong(LAST_ROUTE_ASK, 0)
+        set(value) = prefs.edit().putLong(LAST_ROUTE_ASK, value).apply()
 
     /** The reading before the newest, whose traffic the speeds are measured from. */
     var lastReading: Reading?
@@ -228,6 +240,9 @@ class Settings(context: Context) {
         const val COLLECT_BLUETOOTH = "collectBluetooth"
         const val COLLECT_STEPS = "collectSteps"
         const val STEP_COUNT = "stepCount"
+        const val COLLECT_ROUTE = "collectRoute"
+        const val LAST_ROUTE_POINT = "lastRoutePoint"
+        const val LAST_ROUTE_ASK = "lastRouteAsk"
         const val USES_READ_UNTIL = "usesReadUntil"
     }
 }

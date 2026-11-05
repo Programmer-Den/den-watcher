@@ -31,7 +31,7 @@
     <string name="battery_hint">Manche Handys beenden Apps im Hintergrund, um Akku zu sparen. Fehlen dem Hub Stunden, lass Den-Watcher ohne Akku-Einschränkungen laufen.</string>
     <string name="battery">Akku-Einstellungen</string>
     <string name="save_battery">Akku sparen</string>
-    <string name="save_battery_hint">Pausiert die eigenen WLAN-Scans der App, und bei ausgeschaltetem Bildschirm liest sie alle 5 Minuten statt jede halbe Minute. Die Sperre des Hubs blockiert das nie, du kannst es also immer einschalten. Der Hub hat dann für diese Zeit weniger Punkte und weniger WLANs.</string>
+    <string name="save_battery_hint">Pausiert die eigenen WLAN-Scans und Standortabfragen der App, und bei ausgeschaltetem Bildschirm liest sie alle 5 Minuten statt jede halbe Minute. Die Sperre des Hubs blockiert das nie, du kannst es also immer einschalten. Der Hub hat dann für diese Zeit weniger Punkte, weniger WLANs und einen gröberen Verlauf.</string>
     <string name="save_battery_auto">Gerade von selbst an, da Androids Energiesparmodus an ist.</string>
     <string name="data_title">Was geschickt wird</string>
     <string name="data_hint">Nur die Daten, die du oben zum Sammeln gewählt hast, und nur an den Hub in deinem Netz. Android lässt keine App lesen, wie ausgelastet der Prozessor ist.</string>
@@ -44,7 +44,7 @@
     <string name="network_channel_name">Andere Netze</string>
     <string name="network_channel_description">Wenn der Hub in einem anderen als dem üblichen Netz antwortet.</string>
     <string name="nearby_title">WLANs</string>
-    <string name="nearby_hint">Damit sieht der Hub, wo dieses Handy über den Tag war: mit welchem WLAN es wann verbunden war, in welchem Raum zu Hause und an Orten, die du benennst, etwa Arbeit. Android gibt die Namen der WLANs nur mit der Standortberechtigung; die App liest nie deinen Standort. Alle 5 Minuten lässt sie Android nach den WLANs in Reichweite suchen, was kaum Akku kostet. Sie werden aufbewahrt, bis das Handy wieder zu Hause ist.</string>
+    <string name="nearby_hint">Damit sieht der Hub, wo dieses Handy über den Tag war: mit welchem WLAN es wann verbunden war, in welchem Raum zu Hause und an Orten, die du benennst, etwa Arbeit. Android gibt die Namen der WLANs nur mit der Standortberechtigung; die App liest deinen Standort nur für den Standortverlauf, den du unten ausschalten kannst. Alle 5 Minuten lässt sie Android nach den WLANs in Reichweite suchen, was kaum Akku kostet. Sie werden aufbewahrt, bis das Handy wieder zu Hause ist.</string>
     <string name="nearby_off">Werden nicht gelesen.</string>
     <string name="nearby_open">Werden nur gelesen, solange die App offen ist. Erlaube es immer, damit sie auch gelesen werden, wenn das Handy in der Tasche ist.</string>
     <string name="nearby_always">Werden immer gelesen, auch wenn das Handy unterwegs ist.</string>
@@ -77,6 +77,7 @@
     <string name="bluetooth_off">Wird nicht gelesen. Erlaube Den-Watcher Geräte in der Nähe.</string>
     <string name="bluetooth_on">Wird gelesen, auch wenn das Handy unterwegs ist.</string>
     <string name="collect_steps">Schritte</string>
+    <string name="collect_route">Standortverlauf: wo das Handy war, mit der Standortberechtigung</string>
     <string name="steps_title">Schritte</string>
     <string name="steps_hint">Die Schritte, die das Handy heute zählt, von seinem Schrittzähler, einem Chip, der sie selbst zählt, deshalb kostet es fast keinen Akku. Android fragt dafür ab Android 10 nach der Berechtigung Körperliche Aktivität.</string>
     <string name="steps_off">Werden nicht gezählt. Erlaube Den-Watcher Körperliche Aktivität.</string>

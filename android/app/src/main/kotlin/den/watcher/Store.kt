@@ -10,13 +10,13 @@ import org.json.JSONObject
  * Keeps the values of every reading until the hub has them, one row per
  * value, as a data-only device keeps its minutes for the hub, the scans
  * of the Wi-Fi networks nearby, the Wi-Fi networks the phone was connected
- * to, and the uses of apps and unlocks, which
+ * to, the points of its location route, and the uses of apps and unlocks, which
  * Android keeps in its own log only for a few days. Only the newest KEEP scans and about the
  * newest KEEP readings are kept, so a phone that does not reach the hub for a
  * long time does not fill up. They are counted rather than dated: a clock set far ahead for a moment
  * would make every reading before it look too old to keep.
  */
-class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 4) {
+class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 5) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
             """
@@ -31,6 +31,7 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 4
         createScans(db)
         createUses(db)
         createConnections(db)
+        createRoute(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -43,6 +44,61 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 4
         if (oldVersion < 4) {
             createConnections(db)
         }
+        if (oldVersion < 5) {
+            createRoute(db)
+        }
+    }
+
+    private fun createRoute(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE route (
+                id       INTEGER PRIMARY KEY AUTOINCREMENT, -- the number the hub answers up to
+                time     INTEGER NOT NULL, -- Unix milliseconds on the phone's clock
+                lat      REAL    NOT NULL, -- degrees north
+                lon      REAL    NOT NULL, -- degrees east
+                accuracy REAL    NOT NULL  -- meters
+            )
+            """.trimIndent(),
+        )
+    }
+
+    /** Keeps a point of the location route, and deletes the oldest beyond KEEP_ROUTE. */
+    fun addRoutePoint(point: RoutePoint) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            val row = ContentValues().apply {
+                put("time", point.time)
+                put("lat", point.lat)
+                put("lon", point.lon)
+                put("accuracy", point.accuracy)
+            }
+            db.insert("route", null, row)
+            db.delete("route", "id <= (SELECT MAX(id) FROM route) - ?", arrayOf(KEEP_ROUTE.toString()))
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /** The oldest points of the route the hub does not have yet, at most Push.MAX_ROUTE, in JSON. */
+    fun routePoints(): List<JSONObject> {
+        val points = mutableListOf<JSONObject>()
+        readableDatabase.rawQuery(
+            "SELECT id, time, lat, lon, accuracy FROM route ORDER BY id LIMIT ?",
+            arrayOf(Push.MAX_ROUTE.toString()),
+        ).use { rows ->
+            while (rows.moveToNext()) {
+                points += RoutePoint(rows.getLong(1), rows.getDouble(2), rows.getDouble(3), rows.getDouble(4)).json(rows.getLong(0))
+            }
+        }
+        return points
+    }
+
+    /** Deletes the points of the route with the number after and the ones before, which the hub has. */
+    fun deleteRouteUpTo(after: Long) {
+        writableDatabase.delete("route", "id <= ?", arrayOf(after.toString()))
     }
 
     private fun createConnections(db: SQLiteDatabase) {
@@ -312,6 +368,12 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 4
          * kept: far more than a week of them.
          */
         const val KEEP_CONNECTIONS = 10_000
+
+        /**
+         * How many points of the route the hub does not have yet are kept:
+         * more than a week of a phone that moves all day.
+         */
+        const val KEEP_ROUTE = 20_000
 
         /** How many readings are added between two looks for the ones too old to keep: an hour's. */
         const val PRUNE_EVERY = 120

@@ -270,6 +270,13 @@ export class MetricsService {
     });
   }
 
+  /** Where a phone was from `from` to `to`, both Unix seconds. */
+  phoneRoute(from: number, to: number, device: string): Observable<PhoneRoute> {
+    return this.http.get<PhoneRoute>('/api/phone/route', {
+      params: { from, to, ...deviceParam(device) },
+    });
+  }
+
   /** The places named on the page, by what a device's Wi-Fi hears there. */
   wifiPlaces(): Observable<WiFiPlace[]> {
     return this.http
@@ -322,6 +329,24 @@ export interface PhoneWifi {
   from: number;
   to: number;
   connections: { ssid: string; start: number; end: number }[];
+}
+
+/**
+ * What GET /api/phone/route answers: where a phone was, from what its app reads with the location
+ * permission, oldest first. Times are Unix seconds, lat and lon degrees, accuracy meters.
+ */
+export interface PhoneRoute {
+  from: number;
+  to: number;
+  points: RoutePoint[];
+}
+
+/** One point of a phone's location route. */
+export interface RoutePoint {
+  time: number;
+  lat: number;
+  lon: number;
+  accuracy: number;
 }
 
 /** This computer's time in whole Unix seconds, as the history is asked for. */
