@@ -105,11 +105,14 @@ export class CardCharts {
   }
 
   constructor() {
+    // The zoom is let go when the card shows fewer values, or another range is picked.
+    let span: number | undefined;
     effect(() => {
-      this.store.span();
-      if (!this.slot?.full()) {
+      const picked = this.store.span();
+      if (!this.slot?.full() || (span !== undefined && span !== picked)) {
         this.zoom.set(null);
       }
+      span = picked;
     });
     this.events.watch.pipe(takeUntilDestroyed()).subscribe();
   }
