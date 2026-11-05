@@ -71,4 +71,9 @@
     <string name="apps_settings">Paramètres d\'accès aux données d\'utilisation</string>
     <string name="apps_no_settings">Ce téléphone n\'a pas de paramètres d\'accès aux données d\'utilisation.</string>
     <string name="collect_apps">Utilisation des apps : temps d\'écran, apps, déverrouillages et données par app</string>
+    <string name="collect_bluetooth">Bluetooth : appareils connectés</string>
+    <string name="bluetooth_title">Bluetooth</string>
+    <string name="bluetooth_hint">Les appareils Bluetooth connectés au téléphone, comme un casque, une montre ou la voiture, avec leur nom et leur type, et combien au fil de la journée. Android demande pour cela l\'autorisation Appareils à proximité à partir d\'Android 12. Cela ne coûte pas de batterie : l\'app demande seulement à Android ce qui est connecté.</string>
+    <string name="bluetooth_off">Non lus. Autorisez Appareils à proximité pour Den-Watcher.</string>
+    <string name="bluetooth_on">Lus, même quand le téléphone est ailleurs.</string>
 </resources>

@@ -450,6 +450,7 @@ type BluetoothDevice = [
 
 const bluetoothKinds = {
   headphones: { en: 'Headphones', de: 'Kopfhörer', fr: 'Casque', es: 'Auriculares' },
+  watch: { en: 'Watch', de: 'Uhr', fr: 'Montre', es: 'Reloj' },
   keyboard: { en: 'Keyboard', de: 'Tastatur', fr: 'Clavier', es: 'Teclado' },
   gameController: {
     en: 'Game controller',
@@ -2230,7 +2231,17 @@ const androidPhone: DemoMachine = {
   memoryBytes: 8 * GB,
   disks: [{ path: '/data', totalBytes: 128 * GB }],
   network: [{ name: 'wlan0', addresses: ['192.168.1.52'] }],
-  extras: [...phoneSignal(), ...phoneHealth(), ...phoneAppData(), ...phoneAppStorage()],
+  extras: [
+    ...phoneSignal(),
+    ...phoneHealth(),
+    ...phoneAppData(),
+    ...phoneAppStorage(),
+    // The Android app tells the connected devices as the Bluetooth add-on does.
+    ...bluetoothAddOn([
+      ['4b1e9a07', 'Pixel Buds Pro', bluetoothKinds.headphones],
+      ['c2d85f31', 'Pixel Watch 2', bluetoothKinds.watch],
+    ]),
+  ],
   bootedDaysAgo: 6.1,
   values: (t, step) => {
     // How busy the phone is, which only warms its battery: the app cannot read it.
@@ -2249,6 +2260,8 @@ const androidPhone: DemoMachine = {
       ...Object.fromEntries(
         phoneStorageApps.map((app) => [`extra:app-storage/${app.id}`, app.bytes]),
       ),
+      // The watch is on all day, the earbuds join in the evening, as now.
+      'extra:bluetooth/connected': t >= openedAt - 50 * 60 ? 2 : 1,
       memory: vary(t, step, 142, 68, 0, 100, [5, 900]),
       'disk:/data': 61.4,
       battery: batteryPercent(t + 1500),

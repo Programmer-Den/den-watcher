@@ -27,11 +27,12 @@ object Recorder {
         val settings = Settings(app)
         val choice = settings.dataChoice
         val reading = Sampler.read(app).limitedTo(choice).let {
-            // Read only while collected, as they take a moment.
+            // Read only while collected, as they take a moment or open Android's Bluetooth profiles.
             val now = System.currentTimeMillis()
             it.copy(
                 appTraffic = if (choice.collectsApps) AppData.read(app, now) else null,
                 appStorage = if (choice.collectsStorage) AppStorage.read(app, now) else null,
+                bluetooth = if (choice.collectsBluetooth) Bluetooth.read(app) else null,
             )
         }
         val rates = reading.ratesSince(settings.lastReading)
