@@ -105,11 +105,12 @@ const maxAppUseMillis = 24 * 60 * 60 * 1000
 
 // AppUses returns how the phone stored as device was used from from up to
 // (not including) to, in steps of step rounded up to whole hours, starting
-// at the hour from falls in. A use that reaches over the edge of a step or
-// the range counts in each with the part in it.
+// at the hour from falls in. Only the time from from on counts, so the first
+// step holds just its part in the range. A use that reaches over the edge of
+// a step or the range counts in each with the part in it.
 func (s *Store) AppUses(ctx context.Context, device string, from, to time.Time, step time.Duration) (AppUsage, error) {
 	stepSeconds := max(1, int64((step+time.Hour-1)/time.Hour)) * int64(time.Hour/time.Second)
-	first, last := from.Truncate(time.Hour).UnixMilli(), to.UnixMilli()
+	first, last := from.UnixMilli(), to.UnixMilli()
 	result := AppUsage{StepSeconds: stepSeconds, Steps: []AppUsageStep{}, Apps: []AppTime{}}
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT app, label, time, millis FROM app_uses
