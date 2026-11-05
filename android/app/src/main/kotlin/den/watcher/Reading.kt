@@ -37,6 +37,8 @@ data class Reading(
     val wifiLink: WifiLink? = null,
     /** The mobile network's signal. */
     val mobileSignal: MobileSignal? = null,
+    /** The storage each app takes. */
+    val appStorage: List<AppBytes>? = null,
 ) {
     val memoryUsedBytes: Long get() = (memoryTotalBytes - memoryAvailableBytes).coerceAtLeast(0)
     val memoryUsedPercent: Double get() = percent(memoryUsedBytes, memoryTotalBytes)
@@ -89,6 +91,7 @@ data class Reading(
         wifiLink?.let { add(Signal.wifiExtra(it)) }
         mobileSignal?.let { add(Signal.mobileExtra(it)) }
         appTraffic?.let { addAll(AppData.extras(it)) }
+        appStorage?.takeIf { it.isNotEmpty() }?.let { add(AppStorage.extra(it)) }
     }
 
     /**

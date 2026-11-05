@@ -2179,6 +2179,40 @@ function phoneSignal(): Extra[] {
   ];
 }
 
+/** The apps whose storage the demo phone tells, most first as the app lists them, in bytes. */
+const phoneStorageApps: { id: string; label: string; bytes: number }[] = [
+  { id: 'org-telegram-messenger', label: 'Telegram', bytes: 3.4 * GB },
+  { id: 'org-mozilla-firefox', label: 'Firefox', bytes: 1.1 * GB },
+  { id: 'org-thoughtcrime-securesms', label: 'Signal', bytes: 0.9 * GB },
+  { id: 'org-schabi-newpipe', label: 'NewPipe', bytes: 0.4 * GB },
+  { id: 'org-fossify-camera', label: 'Camera', bytes: 0.1 * GB },
+  { id: 'other', label: 'Other apps', bytes: 2.7 * GB },
+];
+
+/** The storage each app on the phone takes, as the Android app tells it; the bytes come from values() as "extra:app-storage/<id>". */
+function phoneAppStorage(): Extra[] {
+  return [
+    {
+      id: 'app-storage',
+      title: 'Storage per app',
+      titles: { de: 'Speicher pro App', fr: 'Stockage par app', es: 'Almacenamiento por app' },
+      description:
+        'How much storage each app takes, with its data and cache, as Android counts it.',
+      descriptions: {
+        de: 'Wie viel Speicher jede App belegt, mit ihren Daten und dem Cache, wie Android es zählt.',
+        fr: "L'espace de stockage de chaque app, avec ses données et son cache, selon le décompte d'Android.",
+        es: 'Cuánto almacenamiento ocupa cada app, con sus datos y su caché, según lo cuenta Android.',
+      },
+      items: phoneStorageApps.map((app) => ({
+        id: app.id,
+        label: app.label,
+        labels: phoneDataLabels[app.id] ?? { de: app.label, fr: app.label, es: app.label },
+        unit: 'bytes' as const,
+      })),
+    },
+  ];
+}
+
 /** A phone that sends the hub its usage when it is back on the home Wi-Fi; at home now. */
 const androidPhone: DemoMachine = {
   device: { id: 'android-phone', kind: 'phone', name: 'Android phone', removable: true },
@@ -2194,10 +2228,9 @@ const androidPhone: DemoMachine = {
   cores: 0,
   maxClockMHz: 2910,
   memoryBytes: 8 * GB,
-  // Its user chose not to collect the storage in the app, so its page shows no disks.
-  disks: [],
+  disks: [{ path: '/data', totalBytes: 128 * GB }],
   network: [{ name: 'wlan0', addresses: ['192.168.1.52'] }],
-  extras: [...phoneSignal(), ...phoneHealth(), ...phoneAppData()],
+  extras: [...phoneSignal(), ...phoneHealth(), ...phoneAppData(), ...phoneAppStorage()],
   bootedDaysAgo: 6.1,
   values: (t, step) => {
     // How busy the phone is, which only warms its battery: the app cannot read it.
@@ -2213,7 +2246,11 @@ const androidPhone: DemoMachine = {
       'extra:battery-health/cycles': 312,
       'extra:thermal/headroom': 18 + cpu * 0.5,
       ...phoneAppDataValues(t),
+      ...Object.fromEntries(
+        phoneStorageApps.map((app) => [`extra:app-storage/${app.id}`, app.bytes]),
+      ),
       memory: vary(t, step, 142, 68, 0, 100, [5, 900]),
+      'disk:/data': 61.4,
       battery: batteryPercent(t + 1500),
       'temperature:battery': 29 + cpu * 0.12,
       'network.receive:wlan0': vary(t, step, 146, 120e3, 0, 1e9, [100e3, 60]),

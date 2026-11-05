@@ -61,6 +61,7 @@ fun Reading.limitedTo(choice: DataChoice): Reading = copy(
     batteryDetails = batteryDetails.takeIf { choice.collectsBattery },
     thermal = thermal.takeIf { choice.collectsThermal },
     appTraffic = appTraffic.takeIf { choice.collectsApps },
+    appStorage = appStorage.takeIf { choice.collectsStorage },
     memoryTotalBytes = if (choice.collectsMemory) memoryTotalBytes else 0,
     memoryAvailableBytes = if (choice.collectsMemory) memoryAvailableBytes else 0,
     storageTotalBytes = if (choice.collectsStorage) storageTotalBytes else 0,

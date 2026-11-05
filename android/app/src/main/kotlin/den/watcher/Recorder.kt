@@ -27,8 +27,12 @@ object Recorder {
         val settings = Settings(app)
         val choice = settings.dataChoice
         val reading = Sampler.read(app).limitedTo(choice).let {
-            // Read only while collected, as it is the one value that takes a moment.
-            if (choice.collectsApps) it.copy(appTraffic = AppData.read(app, System.currentTimeMillis())) else it
+            // Read only while collected, as they take a moment.
+            val now = System.currentTimeMillis()
+            it.copy(
+                appTraffic = if (choice.collectsApps) AppData.read(app, now) else null,
+                appStorage = if (choice.collectsStorage) AppStorage.read(app, now) else null,
+            )
         }
         val rates = reading.ratesSince(settings.lastReading)
         settings.lastReading = reading
