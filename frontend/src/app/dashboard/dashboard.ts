@@ -32,6 +32,13 @@ import {
   switchedOff,
   readByHub,
 } from '../devices/devices';
+import {
+  EnergyPriceService,
+  energyCost,
+  energyUsed,
+  formatEnergy,
+  formatMoney,
+} from '../energy/energy-price';
 import { I18n } from '../i18n/i18n';
 import { MessageKey } from '../i18n/messages/en';
 import { KioskMode } from '../kiosk/kiosk';
@@ -107,7 +114,10 @@ export function coreColumns(cores: number): number {
 }
 
 /** The groups of extras whose values are shown largest first, such as what each part draws. */
-const LARGEST_FIRST = new Set(['power']);
+/** The group of extras of the power add-on, whose values the energy price turns into costs. */
+const POWER_GROUP = 'power';
+
+const LARGEST_FIRST = new Set([POWER_GROUP]);
 
 /**
  * A value as the card shows it, to a tenth, so values that look the same compare equal and keep
@@ -540,8 +550,15 @@ export class Dashboard {
   protected readonly usedOfTotal = usedOfTotal;
   protected readonly cpuDetail = cpuDetail;
   protected readonly loadAverageText = loadAverageText;
+  private readonly energy = inject(EnergyPriceService);
 
   constructor() {
+    // The price of energy is read only once a device reports its power, which it turns into costs.
+    effect(() => {
+      if (this.snapshot()?.extras?.some((group) => group.id === POWER_GROUP)) {
+        this.energy.load();
+      }
+    });
     // Cards are arranged only where they show as cards.
     effect(() => {
       if (this.pageView.view() !== 'cards' && this.arrangement.arranging()) {
@@ -873,6 +890,51 @@ export class Dashboard {
     return item.unit === 'text' || item.value === undefined
       ? localized(item.text ?? '', item.texts, this.i18n.language())
       : formatExtra(item.value, item.unit, this.i18n.language());
+  }
+
+  /**
+   * The energy a value of the power add-on used in the range picked at the top of the page, or in
+   * the stretch its card's chart is zoomed into, and what it cost, with a hint that tells how it was
+   * worked out; null for other values, while no price was entered, and while the range's history is
+   * not there. The energy is worked out from the value's history, the same the chart draws.
+   */
+  protected powerCost(
+    group: Extra,
+    item: ExtraItem,
+    zoom: { from: number; to: number } | null,
+  ): { cost: string; hint: string } | null {
+    const price = this.energy.price();
+    const history = this.history.history();
+    if (group.id !== POWER_GROUP || item.unit !== 'watts' || !price || !history) {
+      return null;
+    }
+    const metric = `extra:${POWER_GROUP}/${item.id}`;
+    const series = history.series.find((s) => s.metric === metric);
+    if (!series || history.stepSeconds <= 0) {
+      return null;
+    }
+    const used = energyUsed(
+      series.points,
+      history.stepSeconds,
+      zoom?.from ?? history.from,
+      zoom?.to ?? history.to,
+    );
+    const cost = energyCost(used, price);
+    if (cost === null) {
+      return null;
+    }
+    const language = this.i18n.language();
+    const energy = formatEnergy(used, language);
+    return {
+      cost: this.i18n.t('energy.inRange', {
+        energy,
+        cost: formatMoney(cost, price.currency, language),
+      }),
+      hint: this.i18n.t(zoom ? 'energy.inZoomHint' : 'energy.inRangeHint', {
+        energy,
+        price: formatMoney(price.perKwh ?? 0, price.currency, language),
+      }),
+    };
   }
 
   /** A number in the page's language, for text parameters (the number pipe may return null). */

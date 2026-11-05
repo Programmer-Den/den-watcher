@@ -196,6 +196,21 @@ export const fr: Messages = {
   'devicesDialog.statusSet': 'Définir le mot de passe',
   'devicesDialog.statusChange': 'Changer le mot de passe',
   'devicesDialog.statusSaved': 'Le mot de passe de la page d’état est défini.',
+  'energy.title': 'Prix de l’électricité',
+  'energy.hint':
+    'Ce que vous coûte un kilowattheure. Les cartes de consommation montrent alors l’énergie consommée par chaque valeur sur la période choisie en haut de la page, et ce qu’elle a coûté. Laissez le prix vide pour ne montrer aucun coût.',
+  'energy.inRange': '{energy} · {cost}',
+  'energy.inRangeHint':
+    'A consommé {energy} sur la période choisie en haut de la page, à {price} par kWh',
+  'energy.inZoomHint': 'A consommé {energy} sur la partie du graphique agrandie, à {price} par kWh',
+  'energy.perKwh': 'Prix par kWh',
+  'energy.currency': 'Devise',
+  'energy.save': 'Enregistrer le prix',
+  'energy.saved': 'Le prix de l’électricité est enregistré.',
+  'energy.removed': 'Aucun prix n’est défini, aucun coût n’est donc affiché.',
+  'energy.failed': 'Le prix n’a pas pu être enregistré. Réessayez.',
+  'energy.range': 'Saisissez un prix de 0 à {max}.',
+  'energy.example': '100 W en continu coûtent {cost} par mois',
   'devices.problem.wrongPassword': 'Le mot de passe est incorrect.',
   'devices.problem.passwordLength': 'Le mot de passe doit comporter de {count} à {max} caractères.',
   'devices.problem.name':

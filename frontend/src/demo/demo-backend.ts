@@ -49,6 +49,12 @@ export const LAYOUT_STORAGE_KEY = 'demoLayout';
 /** Where the demo keeps the places a visitor named, as it keeps the layout. */
 export const PLACES_STORAGE_KEY = 'demoWifiPlaces';
 
+/** Where the demo keeps the energy price a visitor entered, as it keeps the layout. */
+export const ENERGY_PRICE_STORAGE_KEY = 'demoEnergyPrice';
+
+/** The demo's energy price until a visitor changes it, so its Power cards show costs. */
+export const DEMO_ENERGY_PRICE = { perKwh: 0.32, currency: 'EUR' };
+
 /** How long the made-up devices take to answer, so the page loads like it does on a real hub. */
 const LATENCY_MS = 60;
 
@@ -143,6 +149,9 @@ export class DemoBackend implements HttpBackend {
     }
     if (url.pathname === '/api/wifi/places') {
       return this.places(request);
+    }
+    if (url.pathname === '/api/energy-price') {
+      return this.energyPrice(request);
     }
     const release = /^\/api\/phones\/([^/]+)\/release$/.exec(url.pathname);
     if (request.method === 'POST' && release) {
@@ -254,6 +263,21 @@ export class DemoBackend implements HttpBackend {
       return respond(request, stored ? (JSON.parse(stored) as unknown) : { places: DEMO_PLACES });
     } catch {
       return fail(request, 500, 'could not keep the places');
+    }
+  }
+
+  /** GET and PUT /api/energy-price, kept in the visitor's browser like the layout. */
+  private energyPrice(request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> {
+    try {
+      const storage = this.window?.localStorage;
+      if (request.method === 'PUT') {
+        storage?.setItem(ENERGY_PRICE_STORAGE_KEY, JSON.stringify(request.body));
+        return respond(request, null);
+      }
+      const stored = storage?.getItem(ENERGY_PRICE_STORAGE_KEY);
+      return respond(request, stored ? (JSON.parse(stored) as unknown) : DEMO_ENERGY_PRICE);
+    } catch {
+      return fail(request, 500, 'could not keep the energy price');
     }
   }
 }

@@ -7,6 +7,7 @@ import { HubConnection } from '../connection/connection';
 import { PageView, VIEW_STORAGE_KEY } from './page-view';
 import { DeviceService, LOCAL_DEVICE } from '../devices/devices';
 import { I18n, LANGUAGE_STORAGE_KEY } from '../i18n/i18n';
+import { Extra } from '../metrics/extras';
 import { Snapshot } from '../metrics/metrics';
 import {
   Dashboard,
@@ -16,6 +17,7 @@ import {
   extraSections,
   hottestFirst,
 } from './dashboard';
+import { CardSlot } from './card-slot';
 import { FitLabels } from './fit-labels';
 import { Arrangement } from './arrangement';
 import { EMPTY_LAYOUT } from './page-layout';
@@ -71,6 +73,8 @@ describe('Dashboard', () => {
     http.match((r) => r.url === '/api/phone/usage');
     http.match((r) => r.url === '/api/phone/wifi');
     http.match((r) => r.url === '/api/phone/route');
+    // The price of energy is read for the power add-on, which its own tests cover.
+    http.match((r) => r.url === '/api/energy-price');
     http.verify();
     vi.useRealTimers();
     vi.restoreAllMocks();
@@ -382,6 +386,95 @@ describe('Dashboard', () => {
 
     expect(rows('Temperature')).toEqual(['cpu61.5 °C', 'gpu52 °C', 'nvme38 °C']);
     expect(rows('Power')).toEqual(['CPU package24.5 W', 'GPU9 W', 'Memory2.1 W']);
+  });
+
+  it('shows the energy each value of the power add-on used in the picked range, and its cost', () => {
+    const power: Extra = {
+      id: 'power',
+      title: 'Power',
+      items: [
+        { id: 'package-0', label: 'CPU package', unit: 'watts', value: 24.5 },
+        { id: 'gpu', label: 'GPU', unit: 'watts', value: 10 },
+        { id: 'new', label: 'New sensor', unit: 'watts', value: 3 },
+      ],
+    };
+    const fans: Extra = {
+      id: 'fans',
+      title: 'Fans',
+      items: [{ id: 'fan', label: 'Fan', unit: 'watts', value: 3 }],
+    };
+    respond({ ...snapshot, extras: [power, fans] });
+    http.expectOne('/api/energy-price').flush({ perKwh: 0.3, currency: 'EUR' });
+    const watts = (label: string) => ({ title: 'Power', label, unit: 'watts' });
+    http
+      .expectOne((r) => r.url === '/api/history')
+      .flush({
+        from: 0,
+        to: 1800,
+        stepSeconds: 600,
+        retentionDays: 30,
+        // 100 W for the whole half hour, and 600 W for two of its three steps, with one not read.
+        series: [
+          {
+            metric: 'extra:power/package-0',
+            points: [0, 600, 1200].map((time) => ({ time, value: 100 })),
+          },
+          {
+            metric: 'extra:power/gpu',
+            points: [0, 1200].map((time) => ({ time, value: 600 })),
+          },
+          { metric: 'extra:fans/fan', points: [{ time: 0, value: 3 }] },
+        ],
+        extras: {
+          'extra:power/package-0': watts('CPU package'),
+          'extra:power/gpu': watts('GPU'),
+          'extra:fans/fan': { title: 'Fans', label: 'Fan', unit: 'watts' },
+        },
+      });
+    fixture.detectChanges();
+
+    expect(rows('Power')).toEqual([
+      'CPU package24.5 W50 Wh · €0.02',
+      'GPU10 W200 Wh · €0.06',
+      'New sensor3 W',
+    ]);
+    expect(rows('Fans')).toEqual(['Fan3 W']);
+    const cost = fixture.debugElement.queryAll(By.css('.cost'))[0].nativeElement as HTMLElement;
+    expect(cost.title).toBe(
+      'Used 50 Wh in the time frame picked at the top of the page, at €0.30 per kWh',
+    );
+
+    // Zoomed into the first step of its chart, the card counts only that stretch.
+    const slot = fixture.debugElement
+      .queryAll(By.directive(CardSlot))
+      .find((s) => (s.nativeElement as HTMLElement).textContent!.includes('CPU package'))!;
+    slot.injector.get(CardSlot).zoom.set({ from: 0, to: 600 });
+    fixture.detectChanges();
+    expect(rows('Power')).toEqual([
+      'CPU package24.5 W17 Wh · €0.01',
+      'GPU10 W100 Wh · €0.03',
+      'New sensor3 W',
+    ]);
+    expect(
+      (fixture.debugElement.queryAll(By.css('.cost'))[0].nativeElement as HTMLElement).title,
+    ).toBe('Used 17 Wh in the stretch the chart is zoomed into, at €0.30 per kWh');
+  });
+
+  it('shows no costs while no energy price is entered', () => {
+    respond({
+      ...snapshot,
+      extras: [
+        {
+          id: 'power',
+          title: 'Power',
+          items: [{ id: 'gpu', label: 'GPU', unit: 'watts', value: 10 }],
+        },
+      ],
+    });
+    http.expectOne('/api/energy-price').flush({ perKwh: null, currency: 'EUR' });
+    fixture.detectChanges();
+
+    expect(rows('Power')).toEqual(['GPU10 W']);
   });
 
   it('shows the values of each section under it, without the section in their labels', () => {

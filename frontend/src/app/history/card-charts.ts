@@ -86,8 +86,9 @@ export class CardCharts {
   /**
    * The stretch of the range a card showing all its values is zoomed into by a drag across its
    * chart; null for the whole range, and again when the card shows fewer values or the range changes.
+   * It is the slot's, so the card's values follow it.
    */
-  protected readonly zoom = signal<{ from: number; to: number } | null>(null);
+  protected readonly zoom = this.slot?.zoom ?? signal<{ from: number; to: number } | null>(null);
 
   /** The time format of the zoomed stretch, with seconds for a short one. */
   protected readonly zoomFormat = computed(() => {

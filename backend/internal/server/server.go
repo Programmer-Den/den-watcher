@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/alerts"
+	"github.com/Programmer-Den/den-watcher/backend/internal/energy"
 	"github.com/Programmer-Den/den-watcher/backend/internal/events"
 	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 	"github.com/Programmer-Den/den-watcher/backend/internal/lan"
@@ -116,6 +117,9 @@ type Site struct {
 	// Places keeps the places named on the page; nil leaves out GET and PUT
 	// /api/wifi/places.
 	Places PlaceStore
+	// EnergyPrice keeps what a kilowatt-hour costs; nil leaves out GET and
+	// PUT /api/energy-price.
+	EnergyPrice EnergyPriceStore
 	// Prometheus adds GET /metrics, the usage of every device for
 	// Prometheus, from PROMETHEUS.
 	Prometheus bool
@@ -160,6 +164,14 @@ type LayoutStore interface {
 type PlaceStore interface {
 	Read(ctx context.Context) ([]places.Place, error)
 	Write(ctx context.Context, named []places.Place) error
+}
+
+// EnergyPriceStore keeps what a kilowatt-hour costs, for every browser that
+// opens the page. A price that is not valid is refused with an
+// *energy.InputError.
+type EnergyPriceStore interface {
+	Read(ctx context.Context) (energy.Price, error)
+	Write(ctx context.Context, price energy.Price) error
 }
 
 // AlertLog tells the newest alerts of every device.
@@ -249,6 +261,10 @@ func New(site Site) http.Handler {
 	if site.Places != nil {
 		mux.HandleFunc("GET /api/wifi/places", readPlaces(site.Places))
 		mux.HandleFunc("PUT /api/wifi/places", writePlaces(site.Places))
+	}
+	if site.EnergyPrice != nil {
+		mux.HandleFunc("GET /api/energy-price", readEnergyPrice(site.EnergyPrice))
+		mux.HandleFunc("PUT /api/energy-price", writeEnergyPrice(site.EnergyPrice))
 	}
 	if site.Update != nil {
 		mux.HandleFunc("GET /api/update", func(w http.ResponseWriter, _ *http.Request) {

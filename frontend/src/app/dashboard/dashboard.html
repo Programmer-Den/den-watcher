@@ -196,6 +196,7 @@
                     class="slot"
                     cdkDrag
                     [appCardSlot]="card.id"
+                    #slot="appCardSlot"
                     [class.arranging]="arranging"
                     [attr.data-card]="card.id"
                   >
@@ -734,6 +735,9 @@
                                     [attr.title]="item.unit === 'text' ? extraValue(item) : null"
                                     >{{ extraValue(item) }}</span
                                   >
+                                  @if (powerCost(group, item, slot.zoom()); as c) {
+                                    <span class="cost" [title]="c.hint">{{ c.cost }}</span>
+                                  }
                                 </p>
                               }
                             }
@@ -747,6 +751,9 @@
                           <p class="value" [title]="extraValue(card.item)">
                             {{ extraValue(card.item) }}
                           </p>
+                          @if (powerCost(card.group, card.item, slot.zoom()); as c) {
+                            <p class="detail" [title]="c.hint">{{ c.cost }}</p>
+                          }
                           <app-card-charts [chart]="chartOf(card)" />
                         </div>
                       }

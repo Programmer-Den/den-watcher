@@ -200,6 +200,21 @@ export const en = {
   'devicesDialog.statusSet': 'Set password',
   'devicesDialog.statusChange': 'Change password',
   'devicesDialog.statusSaved': 'The password of the status page is set.',
+  'energy.title': 'Energy price',
+  'energy.hint':
+    'What a kilowatt-hour costs you. The Power cards then show the energy each value used in the time frame picked at the top of the page, and what it cost. Leave the price empty to show no costs.',
+  'energy.inRange': '{energy} · {cost}',
+  'energy.inRangeHint':
+    'Used {energy} in the time frame picked at the top of the page, at {price} per kWh',
+  'energy.inZoomHint': 'Used {energy} in the stretch the chart is zoomed into, at {price} per kWh',
+  'energy.perKwh': 'Price per kWh',
+  'energy.currency': 'Currency',
+  'energy.save': 'Save price',
+  'energy.saved': 'The energy price is saved.',
+  'energy.removed': 'No price is set, so no costs are shown.',
+  'energy.failed': 'The price could not be saved. Try again.',
+  'energy.range': 'Enter a price from 0 to {max}.',
+  'energy.example': '100 W around the clock cost {cost} a month',
   'devices.problem.wrongPassword': 'The password is wrong.',
   'devices.problem.passwordLength': 'The password needs {count} to {max} characters.',
   'devices.problem.name':

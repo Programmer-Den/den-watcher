@@ -198,6 +198,21 @@ export const es: Messages = {
   'devicesDialog.statusSet': 'Establecer contraseña',
   'devicesDialog.statusChange': 'Cambiar contraseña',
   'devicesDialog.statusSaved': 'La contraseña de la página de estado está establecida.',
+  'energy.title': 'Precio de la electricidad',
+  'energy.hint':
+    'Lo que te cuesta un kilovatio hora. Las tarjetas de consumo muestran entonces la energía que consumió cada valor en el periodo elegido arriba de la página y lo que costó. Deja el precio vacío para no mostrar costes.',
+  'energy.inRange': '{energy} · {cost}',
+  'energy.inRangeHint':
+    'Consumió {energy} en el periodo elegido arriba de la página, a {price} por kWh',
+  'energy.inZoomHint': 'Consumió {energy} en el tramo ampliado del gráfico, a {price} por kWh',
+  'energy.perKwh': 'Precio por kWh',
+  'energy.currency': 'Moneda',
+  'energy.save': 'Guardar precio',
+  'energy.saved': 'El precio de la electricidad está guardado.',
+  'energy.removed': 'No hay precio, así que no se muestran costes.',
+  'energy.failed': 'No se pudo guardar el precio. Inténtalo de nuevo.',
+  'energy.range': 'Introduce un precio de 0 a {max}.',
+  'energy.example': '100 W día y noche cuestan {cost} al mes',
   'devices.problem.wrongPassword': 'La contraseña no es correcta.',
   'devices.problem.passwordLength': 'La contraseña necesita de {count} a {max} caracteres.',
   'devices.problem.name':
