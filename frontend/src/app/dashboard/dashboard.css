@@ -53,7 +53,8 @@ progress {
   white-space: nowrap;
 }
 
-/* What a value of the power add-on costs in a month, after the value and less prominent. */
+/* What a value of the power add-on costs in a month, after the value and less prominent, in a card
+   that shows all its values. */
 .sensor > .label:has(+ * + .cost) {
   margin-right: auto;
 }
@@ -248,6 +249,11 @@ progress {
 
   .sensor:hover > :not(.label) {
     visibility: visible;
+  }
+
+  /* The costs of the power add-on would leave the names too little room; a wider card shows them. */
+  .sensor > .cost {
+    display: none;
   }
 }
 
