@@ -17,6 +17,7 @@ import {
   extraSections,
   hottestFirst,
 } from './dashboard';
+import { CardSlot } from './card-slot';
 import { FitLabels } from './fit-labels';
 import { Arrangement } from './arrangement';
 import { EMPTY_LAYOUT } from './page-layout';
@@ -441,6 +442,21 @@ describe('Dashboard', () => {
     expect(cost.title).toBe(
       'Used 50 Wh in the time frame picked at the top of the page, at €0.30 per kWh',
     );
+
+    // Zoomed into the first step of its chart, the card counts only that stretch.
+    const slot = fixture.debugElement
+      .queryAll(By.directive(CardSlot))
+      .find((s) => (s.nativeElement as HTMLElement).textContent!.includes('CPU package'))!;
+    slot.injector.get(CardSlot).zoom.set({ from: 0, to: 600 });
+    fixture.detectChanges();
+    expect(rows('Power')).toEqual([
+      'CPU package24.5 W17 Wh · €0.01',
+      'GPU10 W100 Wh · €0.03',
+      'New sensor3 W',
+    ]);
+    expect(
+      (fixture.debugElement.queryAll(By.css('.cost'))[0].nativeElement as HTMLElement).title,
+    ).toBe('Used 17 Wh in the stretch the chart is zoomed into, at €0.30 per kWh');
   });
 
   it('shows no costs while no energy price is entered', () => {

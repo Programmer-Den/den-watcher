@@ -204,6 +204,7 @@ export const es: Messages = {
   'energy.inRange': '{energy} · {cost}',
   'energy.inRangeHint':
     'Consumió {energy} en el periodo elegido arriba de la página, a {price} por kWh',
+  'energy.inZoomHint': 'Consumió {energy} en el tramo ampliado del gráfico, a {price} por kWh',
   'energy.perKwh': 'Precio por kWh',
   'energy.currency': 'Moneda',
   'energy.save': 'Guardar precio',

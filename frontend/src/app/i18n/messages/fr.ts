@@ -202,6 +202,7 @@ export const fr: Messages = {
   'energy.inRange': '{energy} · {cost}',
   'energy.inRangeHint':
     'A consommé {energy} sur la période choisie en haut de la page, à {price} par kWh',
+  'energy.inZoomHint': 'A consommé {energy} sur la partie du graphique agrandie, à {price} par kWh',
   'energy.perKwh': 'Prix par kWh',
   'energy.currency': 'Devise',
   'energy.save': 'Enregistrer le prix',

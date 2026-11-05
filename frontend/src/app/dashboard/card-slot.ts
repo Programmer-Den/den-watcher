@@ -12,6 +12,7 @@ import { CARD_WIDTHS, CardWidths } from './card-widths';
  */
 @Directive({
   selector: '[appCardSlot]',
+  exportAs: 'appCardSlot',
   host: {
     '[attr.data-width]': 'width()',
     '[style.grid-column]': "shown() > 1 ? 'span ' + shown() : null",
@@ -41,6 +42,12 @@ export class CardSlot {
 
   /** Whether the card was opened to show all its values where no wider card fits, until it closes. */
   readonly opened = signal(false);
+  /**
+   * The stretch of the range the card's chart is zoomed into by a drag across it; null for the
+   * whole range. Kept here so the card's values, such as the costs of the power, follow the chart.
+   */
+  readonly zoom = signal<{ from: number; to: number } | null>(null);
+
   /** Whether the card shows all its values: as it is wider than one card, or opened. */
   readonly full = computed(() => this.shown() > 1 || (this.opened() && !this.widens()));
 

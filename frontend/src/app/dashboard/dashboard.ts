@@ -891,39 +891,34 @@ export class Dashboard {
   }
 
   /**
-   * The energy each value of the power add-on used in the range picked at the top of the page, in
-   * watt-hours, by its metric, such as "extra:power/rapl-0"; worked out from its history.
+   * The energy a value of the power add-on used in the range picked at the top of the page, or in
+   * the stretch its card's chart is zoomed into, and what it cost, with a hint that tells how it was
+   * worked out; null for other values, while no price was entered, and while the range's history is
+   * not there. The energy is worked out from the value's history, the same the chart draws.
    */
-  private readonly energyInRange = computed(() => {
-    const used = new Map<string, number>();
-    const history = this.history.history();
-    if (!history || history.stepSeconds <= 0) {
-      return used;
-    }
-    for (const series of history.series) {
-      if (series.metric.startsWith(`extra:${POWER_GROUP}/`)) {
-        used.set(
-          series.metric,
-          energyUsed(series.points, history.stepSeconds, history.from, history.to),
-        );
-      }
-    }
-    return used;
-  });
-
-  /**
-   * The energy a value of the power add-on used in the picked range and what it cost, with a hint
-   * that tells how it was worked out; null for other values, while no price was entered, and while
-   * the range's history is not there.
-   */
-  protected powerCost(group: Extra, item: ExtraItem): { cost: string; hint: string } | null {
+  protected powerCost(
+    group: Extra,
+    item: ExtraItem,
+    zoom: { from: number; to: number } | null,
+  ): { cost: string; hint: string } | null {
     const price = this.energy.price();
-    if (group.id !== POWER_GROUP || item.unit !== 'watts' || !price) {
+    const history = this.history.history();
+    if (group.id !== POWER_GROUP || item.unit !== 'watts' || !price || !history) {
       return null;
     }
-    const used = this.energyInRange().get(`extra:${POWER_GROUP}/${item.id}`);
-    const cost = used === undefined ? null : energyCost(used, price);
-    if (used === undefined || cost === null) {
+    const metric = `extra:${POWER_GROUP}/${item.id}`;
+    const series = history.series.find((s) => s.metric === metric);
+    if (!series || history.stepSeconds <= 0) {
+      return null;
+    }
+    const used = energyUsed(
+      series.points,
+      history.stepSeconds,
+      zoom?.from ?? history.from,
+      zoom?.to ?? history.to,
+    );
+    const cost = energyCost(used, price);
+    if (cost === null) {
       return null;
     }
     const language = this.i18n.language();
@@ -933,7 +928,7 @@ export class Dashboard {
         energy,
         cost: formatMoney(cost, price.currency, language),
       }),
-      hint: this.i18n.t('energy.inRangeHint', {
+      hint: this.i18n.t(zoom ? 'energy.inZoomHint' : 'energy.inRangeHint', {
         energy,
         price: formatMoney(price.perKwh ?? 0, price.currency, language),
       }),

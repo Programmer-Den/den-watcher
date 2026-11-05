@@ -206,6 +206,7 @@ export const en = {
   'energy.inRange': '{energy} · {cost}',
   'energy.inRangeHint':
     'Used {energy} in the time frame picked at the top of the page, at {price} per kWh',
+  'energy.inZoomHint': 'Used {energy} in the stretch the chart is zoomed into, at {price} per kWh',
   'energy.perKwh': 'Price per kWh',
   'energy.currency': 'Currency',
   'energy.save': 'Save price',
