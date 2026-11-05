@@ -127,6 +127,9 @@ func (s *Store) AppUses(ctx context.Context, device string, from, to time.Time, 
 		return steps[t]
 	}
 	apps := map[string]*AppTime{}
+	// The times are added up in whole milliseconds and made seconds at the
+	// end, so the parts of a use split at the steps add up exactly.
+	stepMillis, appMillis, screenMillis := map[int64]int64{}, map[string]int64{}, int64(0)
 	err = scanRows(rows, func() error {
 		var app, label string
 		var start, millis int64
@@ -159,10 +162,10 @@ func (s *Store) AppUses(ctx context.Context, device string, from, to time.Time, 
 		// Split at the steps' edges.
 		for begin < end {
 			edge := min(end, (begin/1000/stepSeconds+1)*stepSeconds*1000)
-			seconds := float64(edge-begin) / 1000
-			stepAt(begin).ScreenSeconds += seconds
-			a.Seconds += seconds
-			result.ScreenSeconds += seconds
+			stepAt(begin) // Lists the step; its time is added up below.
+			stepMillis[begin/1000/stepSeconds*stepSeconds] += edge - begin
+			appMillis[app] += edge - begin
+			screenMillis += edge - begin
 			begin = edge
 		}
 		return nil
@@ -170,11 +173,14 @@ func (s *Store) AppUses(ctx context.Context, device string, from, to time.Time, 
 	if err != nil {
 		return AppUsage{}, err
 	}
-	for _, st := range steps {
+	result.ScreenSeconds = float64(screenMillis) / 1000
+	for t, st := range steps {
+		st.ScreenSeconds = float64(stepMillis[t]) / 1000
 		result.Steps = append(result.Steps, *st)
 	}
 	slices.SortFunc(result.Steps, func(a, b AppUsageStep) int { return cmp.Compare(a.Time, b.Time) })
-	for _, a := range apps {
+	for app, a := range apps {
+		a.Seconds = float64(appMillis[app]) / 1000
 		result.Apps = append(result.Apps, *a)
 	}
 	slices.SortFunc(result.Apps, func(a, b AppTime) int {

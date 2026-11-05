@@ -89,6 +89,28 @@ func TestAppUsesCountOnlyFromTheRangesStart(t *testing.T) {
 	}
 }
 
+func TestAppUsesSplitAtAStepAddUpExactly(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	hour := time.Date(2026, 11, 2, 10, 0, 0, 0, time.UTC)
+	// A minute, then five over the edge of an hour, split into parts of no
+	// whole second, whose sum as seconds is not exactly 360.
+	uses := []AppUse{
+		{App: "chat", PhoneStart: 1, Start: hour.Add(-30 * time.Minute).UnixMilli(), Millis: 60 * 1000},
+		{App: "chat", PhoneStart: 2, Start: hour.UnixMilli() - 196_008, Millis: 5 * 60 * 1000},
+	}
+	if err := store.AddAppUses(ctx, "pixel", uses); err != nil {
+		t.Fatal(err)
+	}
+	usage, err := store.AppUses(ctx, "pixel", hour.Add(-time.Hour), hour.Add(time.Hour), time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if usage.ScreenSeconds != 360 || len(usage.Apps) != 1 || usage.Apps[0].Seconds != 360 {
+		t.Errorf("screen time %v s, apps %+v; want 360 s", usage.ScreenSeconds, usage.Apps)
+	}
+}
+
 func TestOldAppUsesAreDeleted(t *testing.T) {
 	ctx := context.Background()
 	store := openTestStore(t)
