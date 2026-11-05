@@ -1,8 +1,10 @@
+import { formatNumber } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 
 import { LanguageCode } from '../i18n/i18n';
+import { Point } from '../metrics/metrics';
 
 /** What a kilowatt-hour costs, as GET and PUT /api/energy-price carry it. */
 export interface EnergyPrice {
@@ -93,4 +95,36 @@ export function currencyName(currency: string, language: LanguageCode): string {
   } catch {
     return currency;
   }
+}
+
+/**
+ * The energy a value of the power add-on used from `from` to `to`, in watt-hours, from its history:
+ * each point is the average power of a step of `stepSeconds` that starts at its time, counted as far
+ * as the step lies in the range. A step without a point, while the device was off or not read, used
+ * nothing that was measured, and a value below zero counts as none.
+ */
+export function energyUsed(points: Point[], stepSeconds: number, from: number, to: number): number {
+  let wattSeconds = 0;
+  for (const point of points) {
+    const seconds = Math.min(point.time + stepSeconds, to) - Math.max(point.time, from);
+    if (seconds > 0 && Number.isFinite(point.value)) {
+      wattSeconds += Math.max(point.value, 0) * seconds;
+    }
+  }
+  return wattSeconds / 3600;
+}
+
+/** What `wattHours` of energy cost at the price; null without a price. */
+export function energyCost(wattHours: number, price: EnergyPrice | null): number | null {
+  if (price?.perKwh === null || price?.perKwh === undefined) {
+    return null;
+  }
+  return (wattHours / 1000) * price.perKwh;
+}
+
+/** An amount of energy in the page's language: in Wh below 1 kWh, such as "350 Wh", else "1.25 kWh". */
+export function formatEnergy(wattHours: number, language: LanguageCode): string {
+  return wattHours < 1000
+    ? `${formatNumber(wattHours, language, '1.0-0')} Wh`
+    : `${formatNumber(wattHours / 1000, language, '1.0-2')} kWh`;
 }

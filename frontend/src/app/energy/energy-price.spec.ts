@@ -6,6 +6,9 @@ import {
   EnergyPriceService,
   HOURS_PER_MONTH,
   currencyName,
+  energyCost,
+  energyUsed,
+  formatEnergy,
   formatMoney,
   monthlyCost,
 } from './energy-price';
@@ -26,6 +29,49 @@ describe('monthlyCost', () => {
   it('counts no power as free, and a value below zero as none', () => {
     expect(monthlyCost(0, { perKwh: 0.3, currency: 'EUR' })).toBe(0);
     expect(monthlyCost(-5, { perKwh: 0.3, currency: 'EUR' })).toBe(0);
+  });
+});
+
+describe('energyUsed', () => {
+  it('adds up the power of each step over the time it lasted, in watt-hours', () => {
+    const points = [
+      { time: 0, value: 100 },
+      { time: 60, value: 200 },
+    ];
+    expect(energyUsed(points, 60, 0, 120)).toBeCloseTo((100 * 60 + 200 * 60) / 3600);
+  });
+
+  it('counts a step only as far as it lies in the range', () => {
+    const points = [
+      { time: 0, value: 3600 },
+      { time: 3600, value: 3600 },
+    ];
+    expect(energyUsed(points, 3600, 1800, 5400)).toBeCloseTo(1800 + 1800);
+  });
+
+  it('counts a step without a point, and a value below zero, as nothing used', () => {
+    const points = [
+      { time: 0, value: 360 },
+      { time: 120, value: -50 },
+    ];
+    expect(energyUsed(points, 60, 0, 180)).toBeCloseTo(6);
+    expect(energyUsed([], 60, 0, 180)).toBe(0);
+  });
+});
+
+describe('energyCost', () => {
+  it('is what the energy cost at the price, and null without one', () => {
+    expect(energyCost(2500, { perKwh: 0.3, currency: 'EUR' })).toBeCloseTo(0.75);
+    expect(energyCost(2500, { perKwh: null, currency: 'EUR' })).toBeNull();
+    expect(energyCost(2500, null)).toBeNull();
+  });
+});
+
+describe('formatEnergy', () => {
+  it('shows watt-hours below a kilowatt-hour, and kilowatt-hours from there', () => {
+    expect(formatEnergy(349.6, 'en-GB')).toBe('350 Wh');
+    expect(formatEnergy(1250, 'en-GB')).toBe('1.25 kWh');
+    expect(formatEnergy(1250, 'de')).toBe('1,25 kWh');
   });
 });
 

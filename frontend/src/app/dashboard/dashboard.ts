@@ -32,7 +32,13 @@ import {
   switchedOff,
   readByHub,
 } from '../devices/devices';
-import { EnergyPriceService, formatMoney, monthlyCost } from '../energy/energy-price';
+import {
+  EnergyPriceService,
+  energyCost,
+  energyUsed,
+  formatEnergy,
+  formatMoney,
+} from '../energy/energy-price';
 import { I18n } from '../i18n/i18n';
 import { MessageKey } from '../i18n/messages/en';
 import { KioskMode } from '../kiosk/kiosk';
@@ -885,22 +891,50 @@ export class Dashboard {
   }
 
   /**
-   * What a value of the power add-on would cost in a month at its current draw, with a hint that
-   * tells how it was worked out; null for other values, and while no price was entered.
+   * The energy each value of the power add-on used in the range picked at the top of the page, in
+   * watt-hours, by its metric, such as "extra:power/rapl-0"; worked out from its history.
+   */
+  private readonly energyInRange = computed(() => {
+    const used = new Map<string, number>();
+    const history = this.history.history();
+    if (!history || history.stepSeconds <= 0) {
+      return used;
+    }
+    for (const series of history.series) {
+      if (series.metric.startsWith(`extra:${POWER_GROUP}/`)) {
+        used.set(
+          series.metric,
+          energyUsed(series.points, history.stepSeconds, history.from, history.to),
+        );
+      }
+    }
+    return used;
+  });
+
+  /**
+   * The energy a value of the power add-on used in the picked range and what it cost, with a hint
+   * that tells how it was worked out; null for other values, while no price was entered, and while
+   * the range's history is not there.
    */
   protected powerCost(group: Extra, item: ExtraItem): { cost: string; hint: string } | null {
     const price = this.energy.price();
-    if (group.id !== POWER_GROUP || item.unit !== 'watts' || item.value === undefined || !price) {
+    if (group.id !== POWER_GROUP || item.unit !== 'watts' || !price) {
       return null;
     }
-    const cost = monthlyCost(item.value, price);
-    if (cost === null) {
+    const used = this.energyInRange().get(`extra:${POWER_GROUP}/${item.id}`);
+    const cost = used === undefined ? null : energyCost(used, price);
+    if (used === undefined || cost === null) {
       return null;
     }
     const language = this.i18n.language();
+    const energy = formatEnergy(used, language);
     return {
-      cost: this.i18n.t('energy.perMonth', { cost: formatMoney(cost, price.currency, language) }),
-      hint: this.i18n.t('energy.perMonthHint', {
+      cost: this.i18n.t('energy.inRange', {
+        energy,
+        cost: formatMoney(cost, price.currency, language),
+      }),
+      hint: this.i18n.t('energy.inRangeHint', {
+        energy,
         price: formatMoney(price.perKwh ?? 0, price.currency, language),
       }),
     };

@@ -386,13 +386,14 @@ describe('Dashboard', () => {
     expect(rows('Power')).toEqual(['CPU package24.5 W', 'GPU9 W', 'Memory2.1 W']);
   });
 
-  it('shows what each value of the power add-on costs in a month at the price entered', () => {
+  it('shows the energy each value of the power add-on used in the picked range, and its cost', () => {
     const power: Extra = {
       id: 'power',
       title: 'Power',
       items: [
         { id: 'package-0', label: 'CPU package', unit: 'watts', value: 24.5 },
         { id: 'gpu', label: 'GPU', unit: 'watts', value: 10 },
+        { id: 'new', label: 'New sensor', unit: 'watts', value: 3 },
       ],
     };
     const fans: Extra = {
@@ -402,12 +403,44 @@ describe('Dashboard', () => {
     };
     respond({ ...snapshot, extras: [power, fans] });
     http.expectOne('/api/energy-price').flush({ perKwh: 0.3, currency: 'EUR' });
+    const watts = (label: string) => ({ title: 'Power', label, unit: 'watts' });
+    http
+      .expectOne((r) => r.url === '/api/history')
+      .flush({
+        from: 0,
+        to: 1800,
+        stepSeconds: 600,
+        retentionDays: 30,
+        // 100 W for the whole half hour, and 600 W for two of its three steps, with one not read.
+        series: [
+          {
+            metric: 'extra:power/package-0',
+            points: [0, 600, 1200].map((time) => ({ time, value: 100 })),
+          },
+          {
+            metric: 'extra:power/gpu',
+            points: [0, 1200].map((time) => ({ time, value: 600 })),
+          },
+          { metric: 'extra:fans/fan', points: [{ time: 0, value: 3 }] },
+        ],
+        extras: {
+          'extra:power/package-0': watts('CPU package'),
+          'extra:power/gpu': watts('GPU'),
+          'extra:fans/fan': { title: 'Fans', label: 'Fan', unit: 'watts' },
+        },
+      });
     fixture.detectChanges();
 
-    expect(rows('Power')).toEqual(['CPU package24.5 W€5.37/month', 'GPU10 W€2.19/month']);
+    expect(rows('Power')).toEqual([
+      'CPU package24.5 W50 Wh · €0.02',
+      'GPU10 W200 Wh · €0.06',
+      'New sensor3 W',
+    ]);
     expect(rows('Fans')).toEqual(['Fan3 W']);
     const cost = fixture.debugElement.queryAll(By.css('.cost'))[0].nativeElement as HTMLElement;
-    expect(cost.title).toBe('What this draw costs in a month around the clock, at €0.30 per kWh');
+    expect(cost.title).toBe(
+      'Used 50 Wh in the time frame picked at the top of the page, at €0.30 per kWh',
+    );
   });
 
   it('shows no costs while no energy price is entered', () => {

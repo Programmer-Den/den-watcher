@@ -200,7 +200,10 @@ export const de: Messages = {
   'devicesDialog.statusSaved': 'Das Passwort der Statusseite ist gesetzt.',
   'energy.title': 'Strompreis',
   'energy.hint':
-    'Was eine Kilowattstunde kostet. Die Karten zur Leistungsaufnahme zeigen dann, was jeder Wert bei der aktuellen Leistung im Monat kosten würde. Ohne Preis werden keine Kosten gezeigt.',
+    'Was eine Kilowattstunde kostet. Die Karten zur Leistungsaufnahme zeigen dann die Energie, die jeder Wert im oben auf der Seite gewählten Zeitraum verbraucht hat, und was sie gekostet hat. Ohne Preis werden keine Kosten gezeigt.',
+  'energy.inRange': '{energy} · {cost}',
+  'energy.inRangeHint':
+    'Im oben auf der Seite gewählten Zeitraum {energy} verbraucht, bei {price} pro kWh',
   'energy.perKwh': 'Preis pro kWh',
   'energy.currency': 'Währung',
   'energy.save': 'Preis speichern',
@@ -209,8 +212,6 @@ export const de: Messages = {
   'energy.failed': 'Der Preis konnte nicht gespeichert werden. Bitte erneut versuchen.',
   'energy.range': 'Gib einen Preis von 0 bis {max} ein.',
   'energy.example': '100 W rund um die Uhr kosten {cost} im Monat',
-  'energy.perMonth': '{cost}/Monat',
-  'energy.perMonthHint': 'Was diese Leistung rund um die Uhr im Monat kostet, bei {price} pro kWh',
   'devices.problem.wrongPassword': 'Das Passwort ist falsch.',
   'devices.problem.passwordLength': 'Das Passwort braucht {count} bis {max} Zeichen.',
   'devices.problem.name':
