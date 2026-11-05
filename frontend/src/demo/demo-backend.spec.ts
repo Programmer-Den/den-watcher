@@ -110,6 +110,23 @@ describe('DemoBackend', () => {
     await expect(firstValueFrom(metrics.phoneWifi(to - 86400, to, 'local-x'))).rejects.toBeTruthy();
   });
 
+  it("shows the phone's route between the places its Wi-Fi was on, oldest first", async () => {
+    const to = Math.floor(Date.now() / 1000);
+    const route = await firstValueFrom(metrics.phoneRoute(to - 7 * 86400, to, DEMO_PHONE));
+    expect(route.points.length).toBeGreaterThan(100);
+    for (const [i, p] of route.points.entries()) {
+      expect(p.time).toBeGreaterThanOrEqual(route.from);
+      expect(p.time).toBeLessThan(route.to);
+      expect(Math.abs(p.lat - 53.56)).toBeLessThan(0.05);
+      if (i > 0) {
+        expect(p.time).toBeGreaterThan(route.points[i - 1].time);
+      }
+    }
+    await expect(
+      firstValueFrom(metrics.phoneRoute(to - 86400, to, 'local-x')),
+    ).rejects.toBeTruthy();
+  });
+
   it('shows a remote status page whose password cannot be changed', async () => {
     expect(await firstValueFrom(devices.statusPage())).toEqual(DEMO_STATUS_PAGE);
     const refused = await firstValueFrom(devices.setStatusPassword('new password', 'hub')).catch(

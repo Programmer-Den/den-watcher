@@ -129,6 +129,7 @@
 @if (isPhone() && !kiosk.on) {
   <app-phone-usage />
   <app-phone-wifi />
+  <app-phone-route />
 }
 
 @let timeline = pageView.view() === 'timeline' && !kiosk.on;

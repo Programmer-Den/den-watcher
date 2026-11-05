@@ -346,6 +346,11 @@
                 android:id="@+id/collect_steps"
                 style="@style/CollectGroup"
                 android:text="@string/collect_steps" />
+
+            <Switch
+                android:id="@+id/collect_route"
+                style="@style/CollectGroup"
+                android:text="@string/collect_route" />
         </LinearLayout>
 
         <LinearLayout style="@style/Card">

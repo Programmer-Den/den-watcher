@@ -66,7 +66,34 @@ type Push struct {
 	// away. The one that goes on is sent again every few minutes with its
 	// new end, and once more when it is over.
 	Connections []PhoneConnection `json:"connections,omitempty"`
+	// Route are the points of the phone's location route, which it kept,
+	// oldest first, at most RoutePerPush of them, also from while it was
+	// away.
+	Route []PhonePoint `json:"route,omitempty"`
 }
+
+// PhonePoint is where a phone was at one time, as its app read it from
+// Android with the location permission.
+type PhonePoint struct {
+	// ID is the phone's number for it, up to which the answer's RouteAfter
+	// tells the hub has them.
+	ID int64 `json:"id"`
+	// Time is when the phone was there, Unix milliseconds on its clock.
+	Time int64 `json:"time"`
+	// Lat and Lon are degrees north and east.
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
+	// Accuracy is how far off the point may be, in meters, as Android
+	// tells it.
+	Accuracy float64 `json:"accuracy"`
+}
+
+// RoutePerPush is how many points of the route one push may have.
+const RoutePerPush = 500
+
+// maxAccuracy is the vaguest point of a route kept, in meters: one Android
+// made from a far cell tower tells nothing of the way.
+const maxAccuracy = 2000
 
 // PhoneConnection is one time a phone was connected to a Wi-Fi. Times are
 // Unix milliseconds on the phone's clock.
@@ -156,6 +183,10 @@ type PushAnswer struct {
 	// the push, once the hub has them: the phone may delete the ones that
 	// are over, up to it.
 	ConnectionsAfter int64 `json:"connectionsAfter,omitempty"`
+	// RouteAfter is the largest ID of the points of the route of the push,
+	// once the hub has them: the phone may delete them and the ones with
+	// smaller IDs.
+	RouteAfter int64 `json:"routeAfter,omitempty"`
 }
 
 // ErrUnknownPhone is a push with a code no phone added on the hub has.
@@ -163,7 +194,7 @@ var ErrUnknownPhone = errors.New("no phone added on the hub has this pairing cod
 
 // ErrPushTooLarge is a push with more minutes or values than one push may
 // have.
-var ErrPushTooLarge = fmt.Errorf("a push may have at most %d minutes, %d values, %d scans, %d uses of apps and %d connections to a Wi-Fi; send the rest in another push", MinutesPerAnswer, ValuesPerAnswer, ScansPerPush, UsesPerPush, ConnectionsPerPush)
+var ErrPushTooLarge = fmt.Errorf("a push may have at most %d minutes, %d values, %d scans, %d uses of apps, %d connections to a Wi-Fi and %d points of the route; send the rest in another push", MinutesPerAnswer, ValuesPerAnswer, ScansPerPush, UsesPerPush, ConnectionsPerPush, RoutePerPush)
 
 // phone keeps what a phone pushed: its newest reading, which the hub's
 // recorder of it reads as it reads a router, and up to which minute it has
@@ -270,7 +301,7 @@ func (h *Hub) Receive(ctx context.Context, code string, push Push) (PushAnswer, 
 	for _, minute := range push.Minutes {
 		values += len(minute.Values)
 	}
-	if len(push.Minutes) > MinutesPerAnswer || values > ValuesPerAnswer && len(push.Minutes) > 1 || len(push.WiFi) > ScansPerPush || len(push.Uses) > UsesPerPush || len(push.Connections) > ConnectionsPerPush {
+	if len(push.Minutes) > MinutesPerAnswer || values > ValuesPerAnswer && len(push.Minutes) > 1 || len(push.WiFi) > ScansPerPush || len(push.Uses) > UsesPerPush || len(push.Connections) > ConnectionsPerPush || len(push.Route) > RoutePerPush {
 		return PushAnswer{}, ErrPushTooLarge
 	}
 	h.mu.Lock()
@@ -320,6 +351,9 @@ func (p *phone) receive(ctx context.Context, push Push, now time.Time, key []byt
 	}
 	if err == nil {
 		answer.ConnectionsAfter, err = p.receiveConnections(ctx, push, now)
+	}
+	if err == nil {
+		answer.RouteAfter, err = p.receiveRoute(ctx, push, now)
 	}
 	if until := p.released(now); !until.IsZero() {
 		// Rounded up, so the last moments are not lost to the rounding.
@@ -420,6 +454,33 @@ func (p *phone) receiveConnections(ctx context.Context, push Push, now time.Time
 		})
 	}
 	if err := f.store.AddWiFiConnections(ctx, f.device, connections); err != nil {
+		return 0, err
+	}
+	return after, nil
+}
+
+// receiveRoute stores the points of the route of a push, at their times on
+// the hub's clock, as the minutes are moved (see fetcher.receive), and
+// returns the largest ID among them, or 0 when it has none. A point from
+// before the retention or the future is left out, but counts as had, so the
+// phone deletes it, and so does one that makes no sense, such as one off the
+// globe or vaguer than maxAccuracy. The caller holds pushing.
+func (p *phone) receiveRoute(ctx context.Context, push Push, now time.Time) (int64, error) {
+	f := p.minutes
+	var after int64
+	latest := now.Add(maxClockJitter).UnixMilli()
+	points := make([]history.RoutePoint, 0, len(push.Route))
+	for _, r := range push.Route {
+		after = max(after, r.ID)
+		at := r.Time + f.offset*1000
+		if r.Time <= 0 || at > latest || f.retention > 0 && at < now.Add(-f.retention).UnixMilli() ||
+			!(r.Lat >= -90 && r.Lat <= 90) || !(r.Lon >= -180 && r.Lon <= 180) ||
+			!(r.Accuracy >= 0 && r.Accuracy <= maxAccuracy) {
+			continue
+		}
+		points = append(points, history.RoutePoint{PhoneTime: r.Time, Time: at, Lat: r.Lat, Lon: r.Lon, Accuracy: r.Accuracy})
+	}
+	if err := f.store.AddRoutePoints(ctx, f.device, points); err != nil {
 		return 0, err
 	}
 	return after, nil

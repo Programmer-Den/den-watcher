@@ -72,6 +72,7 @@ describe('Dashboard', () => {
     // A phone's page also reads its app usage, which its own card's tests check.
     http.match((r) => r.url === '/api/phone/usage');
     http.match((r) => r.url === '/api/phone/wifi');
+    http.match((r) => r.url === '/api/phone/route');
     // The price of energy is read for the power add-on, which its own tests cover.
     http.match((r) => r.url === '/api/energy-price');
     http.verify();

@@ -535,6 +535,55 @@ func TestThePhonesWiFiConnectionsAreStoredAtTheHubsTime(t *testing.T) {
 	}
 }
 
+func TestThePhonesRouteIsStoredAtTheHubsTime(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	h := openTestHub(t, store, nil)
+	if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+		t.Fatalf("AddPhone() error = %v", err)
+	}
+	// The phone's clock is an hour behind. It kept two points of its way,
+	// one from before the retention, one off the globe and one too vague.
+	now := time.Now()
+	phoneNow := now.Add(-time.Hour)
+	ms := func(t time.Time) int64 { return t.UnixMilli() }
+	push := Push{Now: phoneNow.Unix(), Route: []PhonePoint{
+		{ID: 5, Time: ms(phoneNow.Add(-10 * time.Minute)), Lat: 53.56, Lon: 10.01, Accuracy: 25},
+		{ID: 4, Time: ms(phoneNow.Add(-40 * time.Minute)), Lat: 53.55, Lon: 9.99, Accuracy: 12},
+		{ID: 1, Time: ms(phoneNow.Add(-61 * 24 * time.Hour)), Lat: 53.5, Lon: 9.9, Accuracy: 10},
+		{ID: 2, Time: ms(phoneNow.Add(-30 * time.Minute)), Lat: 91, Lon: 9.9, Accuracy: 10},
+		{ID: 3, Time: ms(phoneNow.Add(-20 * time.Minute)), Lat: 53.5, Lon: 9.9, Accuracy: 5000},
+	}}
+	answer, err := h.Receive(ctx, "7KQM-X2RP", push)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if answer.RouteAfter != 5 {
+		t.Errorf("RouteAfter = %d, want the largest ID of the push, 5", answer.RouteAfter)
+	}
+	got, err := store.RoutePoints(ctx, "pixel", now.Add(-5*time.Hour), now.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []history.PhonePoint{
+		{Time: now.Add(-40 * time.Minute).Unix(), Lat: 53.55, Lon: 9.99, Accuracy: 12},
+		{Time: now.Add(-10 * time.Minute).Unix(), Lat: 53.56, Lon: 10.01, Accuracy: 25},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("points = %+v, want %+v", got, want)
+	}
+	for i := range want {
+		// Moved by the clock offset, which is measured to the second.
+		if got[i].Lat != want[i].Lat || got[i].Lon != want[i].Lon || abs(got[i].Time-want[i].Time) > 2 {
+			t.Errorf("point %d = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+
+	if _, err := h.Receive(ctx, "7KQM-X2RP", Push{Now: phoneNow.Unix(), Route: make([]PhonePoint, RoutePerPush+1)}); !errors.Is(err, ErrPushTooLarge) {
+		t.Errorf("Receive() with %d points error = %v, want %v", RoutePerPush+1, err, ErrPushTooLarge)
+	}
+}
+
 func abs(n int64) int64 {
 	if n < 0 {
 		return -n

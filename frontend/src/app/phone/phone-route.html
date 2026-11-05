@@ -1,0 +1,64 @@
+<section class="card" aria-labelledby="phone-route-title" [class.stale]="connection.lost()">
+  <h3 id="phone-route-title">{{ i18n.t('phoneRoute.title') }}</h3>
+  @if (route(); as r) {
+    @if (map(); as m) {
+      <p class="value">{{ i18n.t('phoneRoute.distance', { km: distance() }) }}</p>
+      <p class="detail">
+        {{ i18n.plural(r.points.length, 'phoneRoute.points.one', 'phoneRoute.points.other') }}
+      </p>
+      <figure class="map">
+        <svg
+          [attr.viewBox]="'0 0 ' + MAP_WIDTH + ' ' + MAP_HEIGHT"
+          role="img"
+          [attr.aria-label]="i18n.t('phoneRoute.map')"
+        >
+          <!-- A tile that does not load, as on a hub without internet access, leaves the plain background. -->
+          @for (t of m.tiles; track t.href) {
+            @if (!failedTiles().has(t.href)) {
+              <image
+                [attr.href]="t.href"
+                [attr.x]="t.x"
+                [attr.y]="t.y"
+                width="256"
+                height="256"
+                (error)="tileFailed(t.href)"
+              />
+            }
+          }
+          <path class="line" [attr.d]="m.path" />
+          @for (s of m.places; track $index) {
+            <g class="stop" [attr.transform]="'translate(' + s.x + ' ' + s.y + ')'">
+              <circle r="9" />
+              <text dy="0.35em">{{ $index + 1 }}</text>
+            </g>
+          }
+          <circle class="start" [attr.cx]="m.start.x" [attr.cy]="m.start.y" r="6" />
+          <circle class="end" [attr.cx]="m.end.x" [attr.cy]="m.end.y" r="6" />
+        </svg>
+        <figcaption class="detail">{{ i18n.t('phoneRoute.attribution') }}</figcaption>
+      </figure>
+      <div class="legend detail">
+        <span><span class="dot start"></span>{{ i18n.t('phoneRoute.start') }}</span>
+        <span><span class="dot end"></span>{{ i18n.t('phoneRoute.end') }}</span>
+      </div>
+      @if (places().length > 0) {
+        <h4>{{ i18n.t('phoneRoute.places') }}</h4>
+        <ol class="list">
+          @for (p of places(); track $index) {
+            <li>
+              <span class="number">{{ $index + 1 }}</span>
+              <span class="time">{{ duration(p.seconds) }}</span>
+              <span class="count">{{
+                i18n.plural(p.visits, 'phoneRoute.visits.one', 'phoneRoute.visits.other')
+              }}</span>
+            </li>
+          }
+        </ol>
+      }
+    } @else {
+      <p class="detail">{{ i18n.t('phoneRoute.none') }}</p>
+    }
+  } @else {
+    <p class="detail">{{ i18n.t('dashboard.loading') }}</p>
+  }
+</section>

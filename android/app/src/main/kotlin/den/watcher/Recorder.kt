@@ -6,7 +6,7 @@ import android.net.NetworkCapabilities
 
 /**
  * Takes a reading, keeps its values, the networks nearby, the Wi-Fi the
- * phone is connected to and the uses of apps, and sends what
+ * phone is connected to, the location route and the uses of apps, and sends what
  * the hub does not have yet. RecordAlarm does this every half minute, and
  * SyncJob every quarter of an hour, so one reading is taken at a time.
  */
@@ -65,8 +65,33 @@ object Recorder {
             } else {
                 store.deleteConnections()
             }
+            recordRoute(app, settings, store, choice)
             recordUses(app, settings, store, choice)
             push(app, settings, store) { reading.snapshot(rates, Sampler.device(app)) }
+        }
+    }
+
+    /**
+     * Keeps the newest position Android has as a point of the route when the
+     * phone moved since the point before or stayed for a while, and asks
+     * Android for a new one every Route.ASK_EVERY_MILLIS, which the next
+     * reading finds; while saving battery it asks for none. While the route
+     * is not collected, none is kept and the ones kept before are not sent
+     * any more.
+     */
+    private fun recordRoute(context: Context, settings: Settings, store: Store, choice: DataChoice) {
+        if (!choice.collectsRoute) {
+            store.deleteRouteUpTo(Long.MAX_VALUE)
+            settings.lastRoutePoint = null
+            return
+        }
+        val now = System.currentTimeMillis()
+        Route.latest(context, now)?.takeIf { Route.keeps(settings.lastRoutePoint, it) }?.let {
+            store.addRoutePoint(it)
+            settings.lastRoutePoint = it
+        }
+        if (!Saving.on(context) && Route.askDue(settings.lastRouteAsk, now) && Route.ask(context)) {
+            settings.lastRouteAsk = now
         }
     }
 
@@ -133,8 +158,9 @@ object Recorder {
             val scans = store.scans()
             val uses = if (choice.collectsApps) store.uses() else emptyList()
             val connections = if (choice.collectsConnected) store.connections() else emptyList()
+            val route = if (choice.collectsRoute) store.routePoints() else emptyList()
             val needKey = settings.hubKey.isEmpty()
-            val answer = Hub.push(url, settings.code, Push.body(now, newest, minutes, needKey, scans, uses, connections))
+            val answer = Hub.push(url, settings.code, Push.body(now, newest, minutes, needKey, scans, uses, connections, route))
             synchronized(hubLock) {
                 // Another hub was scanned meanwhile, whose pairing starts anew.
                 if (settings.hubAddress != address) {
@@ -188,11 +214,17 @@ object Recorder {
                         if (answer.connectionsAfter > 0) {
                             store.connectionsTaken(minOf(answer.connectionsAfter, lastConnection))
                         }
+                        // A hub that takes no route answers none; the points are kept until one does.
+                        val lastPoint = route.lastOrNull()?.optLong("id") ?: 0L
+                        if (answer.routeAfter > 0) {
+                            store.deleteRouteUpTo(minOf(answer.routeAfter, lastPoint))
+                        }
                         val moreMinutes = minutes.size < stored.size || stored.size == Push.MAX_MINUTES
                         val moreScans = scans.size == Push.MAX_SCANS && answer.wifiAfter > 0
                         val moreUses = uses.size == Push.MAX_USES && answer.usesAfter > 0
                         val moreConnections = connections.size == Push.MAX_CONNECTIONS && answer.connectionsAfter > 0
-                        if (!moreMinutes && !moreScans && !moreUses && !moreConnections) {
+                        val moreRoute = route.size == Push.MAX_ROUTE && answer.routeAfter > 0
+                        if (!moreMinutes && !moreScans && !moreUses && !moreConnections && !moreRoute) {
                             return
                         }
                     }

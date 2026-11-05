@@ -126,6 +126,7 @@ class MainActivity : Activity() {
         R.id.collect_apps to { on -> copy(apps = on) },
         R.id.collect_bluetooth to { on -> copy(bluetooth = on) },
         R.id.collect_steps to { on -> copy(steps = on) },
+        R.id.collect_route to { on -> copy(route = on) },
     )
 
     /**
@@ -149,6 +150,7 @@ class MainActivity : Activity() {
             R.id.collect_apps to (choice.apps to true),
             R.id.collect_bluetooth to (choice.bluetooth to true),
             R.id.collect_steps to (choice.steps to true),
+            R.id.collect_route to (choice.route to true),
         )
         showingDataChoice = true
         for ((id, state) in switches) {
