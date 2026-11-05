@@ -26,7 +26,8 @@ object AppData {
     /** How long a read is used again, in milliseconds. */
     private const val KEEP_MILLIS = 10 * 60 * 1000L
 
-    private var last: Pair<Long, AppTraffic>? = null
+    /** The read used again: when it was made, the midnight it counts from, and what it read. */
+    private var last: Triple<Long, Long, AppTraffic>? = null
 
     /** The data each app used today at now, in Unix milliseconds, or null when the count may not be read. */
     @Synchronized
@@ -34,9 +35,9 @@ object AppData {
         if (!Usage.allowed(context)) {
             return null
         }
-        last?.let { (at, traffic) -> if (now - at in 0 until KEEP_MILLIS) return traffic }
-        val manager = context.getSystemService(NetworkStatsManager::class.java) ?: return null
         val start = midnight(now)
+        last?.let { (at, since, traffic) -> if (reusable(at, since, now, start)) return traffic }
+        val manager = context.getSystemService(NetworkStatsManager::class.java) ?: return null
         val pm = context.packageManager
         fun of(type: Int): List<AppBytes> {
             val bytes = mutableMapOf<Int, Long>()
@@ -68,7 +69,7 @@ object AppData {
         }
         @Suppress("DEPRECATION")
         val traffic = AppTraffic(of(ConnectivityManager.TYPE_WIFI), of(ConnectivityManager.TYPE_MOBILE))
-        last = now to traffic
+        last = Triple(now, start, traffic)
         return traffic
     }
 
@@ -136,6 +137,14 @@ object AppData {
         }
         return candidate
     }
+
+    /**
+     * Whether a read made at at, counting from the midnight since, may be
+     * used again at now, whose day starts at today: it is young enough and of
+     * the same day, so a read from before midnight is not shown as today's.
+     */
+    fun reusable(at: Long, since: Long, now: Long, today: Long): Boolean =
+        now - at in 0 until KEEP_MILLIS && since == today
 
     private fun midnight(now: Long): Long = Calendar.getInstance().apply {
         timeInMillis = now
