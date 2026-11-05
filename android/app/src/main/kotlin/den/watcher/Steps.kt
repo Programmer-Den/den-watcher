@@ -19,9 +19,14 @@ data class StepCount(val day: Long, val today: Long, val counter: Long) {
      * The count after the step counter told counter on day: the steps since
      * the reading before are added to today, or start a new day. The
      * counter starts at 0 again when the phone restarts, so a smaller value
-     * than before counts as the steps since then.
+     * than before counts as the steps since then. After a day or more
+     * without a reading the steps since are not all today's, so today
+     * starts at 0.
      */
     fun next(counter: Long, day: Long): StepCount {
+        if (day > this.day + 1 || day < this.day) {
+            return StepCount(day, 0, counter)
+        }
         val steps = if (counter >= this.counter) counter - this.counter else counter
         return StepCount(day, if (day == this.day) today + steps else steps, counter)
     }
