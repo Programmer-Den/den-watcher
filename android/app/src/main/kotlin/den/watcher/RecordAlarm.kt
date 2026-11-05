@@ -23,7 +23,7 @@ class RecordAlarm : BroadcastReceiver() {
         if (!Settings(app).recording) {
             return
         }
-        schedule(app, INTERVAL_MILLIS)
+        schedule(app, Saving.interval(app, INTERVAL_MILLIS))
         // While a long sync runs, the alarms meanwhile add no readings that
         // would all be taken one after another once it is done.
         if (!running.compareAndSet(false, true)) {

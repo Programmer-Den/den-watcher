@@ -44,8 +44,9 @@ object Recorder {
                     settings.lastScan = it.time
                 }
                 // Its results are read at the next reading, half a minute later.
+                // While saving battery, only the scans Android makes on its own are read.
                 val now = System.currentTimeMillis()
-                if (Nearby.scanDue(settings.lastScanRequest, (scan?.time ?: 0) * 1000, now) && Nearby.requestScan(app)) {
+                if (!Saving.on(app) && Nearby.scanDue(settings.lastScanRequest, (scan?.time ?: 0) * 1000, now) && Nearby.requestScan(app)) {
                     settings.lastScanRequest = now
                 }
             } else {

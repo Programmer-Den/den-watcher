@@ -82,6 +82,17 @@ class MainActivity : Activity() {
 
         findViewById<Button>(R.id.nearby).setOnClickListener { allowNearby() }
 
+        // Never locked by the hub: the user can always spare the battery.
+        findViewById<Switch>(R.id.save_battery).setOnCheckedChangeListener { _, on ->
+            if (on != settings.saveBattery) {
+                settings.saveBattery = on
+                if (settings.recording) {
+                    // Takes the next reading at the new pace.
+                    RecordAlarm.start(this)
+                }
+            }
+        }
+
         findViewById<Button>(R.id.apps).setOnClickListener { openUsageAccess() }
 
         for ((id, change) in dataSwitches) {
@@ -314,6 +325,9 @@ class MainActivity : Activity() {
         problemLine.setTextColor(if (recording) color else getColor(R.color.on_surface_variant))
         problemLine.visibility = if (problem == null) View.GONE else View.VISIBLE
         findViewById<View>(R.id.battery_group).visibility = if (recording) View.VISIBLE else View.GONE
+        findViewById<Switch>(R.id.save_battery).isChecked = settings.saveBattery
+        findViewById<TextView>(R.id.save_battery_state).visibility =
+            if (!settings.saveBattery && Saving.on(this)) View.VISIBLE else View.GONE
         showAddress(recording)
         val other = settings.otherNetwork
         findViewById<View>(R.id.network_group).visibility = if (other == null) View.GONE else View.VISIBLE

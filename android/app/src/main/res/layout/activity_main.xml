@@ -181,6 +181,21 @@
                 android:id="@+id/battery"
                 style="@style/Button.Outlined"
                 android:text="@string/battery" />
+
+            <Switch
+                android:id="@+id/save_battery"
+                style="@style/CollectGroup"
+                android:text="@string/save_battery" />
+
+            <TextView
+                style="@style/Hint"
+                android:text="@string/save_battery_hint" />
+
+            <TextView
+                android:id="@+id/save_battery_state"
+                style="@style/Hint"
+                android:text="@string/save_battery_auto"
+                android:visibility="gone" />
         </LinearLayout>
 
         <LinearLayout style="@style/Card">

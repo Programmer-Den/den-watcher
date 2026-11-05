@@ -125,6 +125,15 @@ class Settings(context: Context) {
             .putBoolean(COLLECT_APPS, value.apps)
             .apply()
 
+    /**
+     * Whether the user asked to save battery: the app then makes no Wi-Fi
+     * scans of its own and reads less often while the screen is off. Never
+     * locked by the hub, so the user can always spare the battery.
+     */
+    var saveBattery: Boolean
+        get() = prefs.getBoolean(SAVE_BATTERY, false)
+        set(value) = prefs.edit().putBoolean(SAVE_BATTERY, value).apply()
+
     /** When the newest scan of the networks nearby that was kept was made, in Unix seconds. */
     var lastScan: Long
         get() = prefs.getLong(LAST_SCAN, 0)
@@ -195,6 +204,7 @@ class Settings(context: Context) {
         const val OTHER_NETWORK = "otherNetwork"
         const val LAST_SCAN = "lastScan"
         const val COLLECT_SYSTEM = "collectSystem"
+        const val SAVE_BATTERY = "saveBattery"
         const val COLLECT_BATTERY = "collectBattery"
         const val COLLECT_MEMORY = "collectMemory"
         const val COLLECT_STORAGE = "collectStorage"

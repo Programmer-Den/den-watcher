@@ -31,6 +31,9 @@
     <string name="battery_title">Battery</string>
     <string name="battery_hint">Some phones stop apps in the background to save battery. If the hub misses hours, let Den-Watcher run without battery restrictions.</string>
     <string name="battery">Battery settings</string>
+    <string name="save_battery">Save battery</string>
+    <string name="save_battery_hint">Pauses the app\'s own Wi-Fi scans, and while the screen is off it reads every 5 minutes instead of every half minute. The hub\'s lock never blocks this, so you can always switch it on. The hub then has fewer points and fewer Wi-Fi networks for the time.</string>
+    <string name="save_battery_auto">On by itself now, as Android\'s battery saver is on.</string>
     <string name="data_title">What is sent</string>
     <string name="data_hint">Only the data you chose to collect above, and only to the hub on your network. Android lets no app read how busy the processor is.</string>
     <string name="channel_name">Recording</string>
