@@ -32,7 +32,7 @@
     <string name="battery_hint">Some phones stop apps in the background to save battery. If the hub misses hours, let Den-Watcher run without battery restrictions.</string>
     <string name="battery">Battery settings</string>
     <string name="save_battery">Save battery</string>
-    <string name="save_battery_hint">Pauses the app\'s own Wi-Fi scans, and while the screen is off it reads every 5 minutes instead of every half minute. The hub\'s lock never blocks this, so you can always switch it on. The hub then has fewer points and fewer Wi-Fi networks for the time.</string>
+    <string name="save_battery_hint">Pauses the app\'s own Wi-Fi scans and position requests, and while the screen is off it reads every 5 minutes instead of every half minute. The hub\'s lock never blocks this, so you can always switch it on. The hub then has fewer points, fewer Wi-Fi networks and a coarser route for the time.</string>
     <string name="save_battery_auto">On by itself now, as Android\'s battery saver is on.</string>
     <string name="data_title">What is sent</string>
     <string name="data_hint">Only the data you chose to collect above, and only to the hub on your network. Android lets no app read how busy the processor is.</string>
@@ -45,7 +45,7 @@
     <string name="network_channel_name">Other networks</string>
     <string name="network_channel_description">When the hub answers on a network other than the usual one.</string>
     <string name="nearby_title">Wi-Fi networks</string>
-    <string name="nearby_hint">With them the hub can tell where this phone was over the day: which Wi-Fi it was connected to and when, which room at home, and places you name, such as Work. Android gives the networks\' names only with the location permission; the app never reads your position. Every 5 minutes it asks Android to scan for the networks in reach, which costs little battery. They are kept until the phone is home again.</string>
+    <string name="nearby_hint">With them the hub can tell where this phone was over the day: which Wi-Fi it was connected to and when, which room at home, and places you name, such as Work. Android gives the networks\' names only with the location permission; the app reads your position only for the location route, which you can switch off below. Every 5 minutes it asks Android to scan for the networks in reach, which costs little battery. They are kept until the phone is home again.</string>
     <string name="nearby_off">Not read.</string>
     <string name="nearby_open">Read only while the app is open. Allow it all the time to also read them while the phone is in your pocket.</string>
     <string name="nearby_always">Read all the time, also while the phone is away.</string>
@@ -78,6 +78,7 @@
     <string name="bluetooth_off">Not read. Allow Nearby devices for Den-Watcher.</string>
     <string name="bluetooth_on">Read, also while the phone is away.</string>
     <string name="collect_steps">Steps</string>
+    <string name="collect_route">Location route: where the phone was, with the location permission</string>
     <string name="steps_title">Steps</string>
     <string name="steps_hint">The steps the phone counts today, from its step counter, a chip that counts them by itself, so it costs almost no battery. Android asks for the Physical activity permission for it from Android 10 on.</string>
     <string name="steps_off">Not counted. Allow Physical activity for Den-Watcher.</string>

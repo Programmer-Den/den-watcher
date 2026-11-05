@@ -1,0 +1,134 @@
+:host {
+  display: block;
+  margin-bottom: 1.25rem;
+}
+
+.value {
+  margin: 0;
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail {
+  margin: 0.25rem 0 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+/* The map keeps its shape and scales to the card. */
+.map {
+  margin: 1rem 0 0;
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  figcaption {
+    font-size: 0.75em;
+    text-align: right;
+  }
+}
+
+.line {
+  fill: none;
+  stroke: var(--mat-sys-primary);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The start is a ring, the latest point a filled dot, both apart from the line's color. */
+.start,
+.end {
+  stroke: var(--mat-sys-on-surface);
+  stroke-width: 3;
+}
+
+.start {
+  fill: var(--mat-sys-surface);
+}
+
+.end {
+  fill: var(--mat-sys-on-surface);
+}
+
+.stop circle {
+  fill: var(--mat-sys-surface);
+  stroke: var(--mat-sys-primary);
+  stroke-width: 2;
+}
+
+.stop text {
+  fill: var(--mat-sys-on-surface);
+  font-size: 11px;
+  font-weight: 600;
+  text-anchor: middle;
+}
+
+.legend {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875em;
+}
+
+.dot {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-right: 0.375rem;
+  border: 2px solid var(--mat-sys-on-surface);
+  border-radius: 50%;
+
+  &.start {
+    background: var(--mat-sys-surface);
+  }
+
+  &.end {
+    background: var(--mat-sys-on-surface);
+  }
+}
+
+h4 {
+  margin: 1rem 0 0.5rem;
+  font: var(--mat-sys-title-small);
+}
+
+.list {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 0.75rem;
+  align-items: baseline;
+}
+
+.number {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--mat-sys-primary);
+  border-radius: 50%;
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+}
+
+.count {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875em;
+}

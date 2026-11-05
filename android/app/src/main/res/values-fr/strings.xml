@@ -31,7 +31,7 @@
     <string name="battery_hint">Certains téléphones arrêtent les apps en arrière-plan pour économiser la batterie. S\'il manque des heures au hub, laissez Den-Watcher fonctionner sans restriction de batterie.</string>
     <string name="battery">Réglages de la batterie</string>
     <string name="save_battery">Économiser la batterie</string>
-    <string name="save_battery_hint">Met en pause les scans Wi-Fi de l\'app, et écran éteint, elle lit toutes les 5 minutes au lieu de toutes les demi-minutes. Le verrou du hub ne le bloque jamais : vous pouvez toujours l\'activer. Le hub a alors moins de points et moins de réseaux Wi-Fi pour cette période.</string>
+    <string name="save_battery_hint">Met en pause les scans Wi-Fi et les demandes de position de l\'app, et écran éteint, elle lit toutes les 5 minutes au lieu de toutes les demi-minutes. Le verrou du hub ne le bloque jamais : vous pouvez toujours l\'activer. Le hub a alors moins de points, moins de réseaux Wi-Fi et un trajet plus grossier pour cette période.</string>
     <string name="save_battery_auto">Activé de lui-même, car l\'économiseur de batterie d\'Android est activé.</string>
     <string name="data_title">Ce qui est envoyé</string>
     <string name="data_hint">Uniquement les données que vous avez choisi de collecter ci-dessus, et uniquement au hub de votre réseau. Android ne laisse aucune app lire la charge du processeur.</string>
@@ -44,7 +44,7 @@
     <string name="network_channel_name">Autres réseaux</string>
     <string name="network_channel_description">Quand le hub répond sur un autre réseau que l\'habituel.</string>
     <string name="nearby_title">Réseaux Wi-Fi</string>
-    <string name="nearby_hint">Avec eux, le hub sait où était ce téléphone au fil de la journée : à quel Wi-Fi il était connecté et quand, dans quelle pièce de la maison, et dans les lieux que vous nommez, comme Travail. Android ne donne les noms des réseaux qu\'avec l\'autorisation de localisation ; l\'app ne lit jamais votre position. Toutes les 5 minutes, elle demande à Android de rechercher les réseaux à portée, ce qui consomme peu de batterie. Ils sont gardés jusqu\'au retour du téléphone à la maison.</string>
+    <string name="nearby_hint">Avec eux, le hub sait où était ce téléphone au fil de la journée : à quel Wi-Fi il était connecté et quand, dans quelle pièce de la maison, et dans les lieux que vous nommez, comme Travail. Android ne donne les noms des réseaux qu\'avec l\'autorisation de localisation ; l\'app ne lit votre position que pour le trajet, que vous pouvez désactiver plus bas. Toutes les 5 minutes, elle demande à Android de rechercher les réseaux à portée, ce qui consomme peu de batterie. Ils sont gardés jusqu\'au retour du téléphone à la maison.</string>
     <string name="nearby_off">Non lus.</string>
     <string name="nearby_open">Lus seulement quand l\'app est ouverte. Autorisez-les tout le temps pour les lire aussi quand le téléphone est dans votre poche.</string>
     <string name="nearby_always">Lus tout le temps, même quand le téléphone est ailleurs.</string>
@@ -77,6 +77,7 @@
     <string name="bluetooth_off">Non lus. Autorisez Appareils à proximité pour Den-Watcher.</string>
     <string name="bluetooth_on">Lus, même quand le téléphone est ailleurs.</string>
     <string name="collect_steps">Pas</string>
+    <string name="collect_route">Trajet : où était le téléphone, avec l\'autorisation de localisation</string>
     <string name="steps_title">Pas</string>
     <string name="steps_hint">Les pas que le téléphone compte aujourd\'hui, par son podomètre, une puce qui les compte elle-même, donc presque sans batterie. Android demande pour cela l\'autorisation Activité physique à partir d\'Android 10.</string>
     <string name="steps_off">Non comptés. Autorisez Activité physique pour Den-Watcher.</string>
