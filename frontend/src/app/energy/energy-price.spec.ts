@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import {
   EnergyPriceService,
   HOURS_PER_MONTH,
+  RETRY_MILLIS,
   currencyName,
   energyCost,
   energyUsed,
@@ -112,12 +113,19 @@ describe('EnergyPriceService', () => {
     expect(service.price()).toEqual({ perKwh: 0.3, currency: 'EUR' });
   });
 
-  it('tries again at the next call when the price could not be read', () => {
+  it('tries again a while after the price could not be read, not at every call', () => {
+    vi.useFakeTimers();
     service.load();
     http.expectOne('/api/energy-price').flush('gone', { status: 404, statusText: 'Not Found' });
     expect(service.price()).toBeNull();
     service.load();
+    vi.advanceTimersByTime(RETRY_MILLIS - 1);
+    service.load();
+    http.expectNone('/api/energy-price');
+    vi.advanceTimersByTime(1);
+    service.load();
     http.expectOne('/api/energy-price').flush({ perKwh: null, currency: 'EUR' });
+    vi.useRealTimers();
     expect(service.price()).toEqual({ perKwh: null, currency: 'EUR' });
   });
 
