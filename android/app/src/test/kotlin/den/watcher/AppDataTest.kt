@@ -1,10 +1,23 @@
 package den.watcher
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AppDataTest {
+    @Test
+    fun usesAReadAgainOnlyWhileYoungAndOfTheSameDay() {
+        val day = 86_400_000L
+        val minute = 60_000L
+        assertTrue(AppData.reusable(day - 20 * minute, 0, day - 15 * minute, 0))
+        // Read at 23:55, asked at 00:02: yesterday's count is not today's.
+        assertFalse(AppData.reusable(day - 5 * minute, 0, day + 2 * minute, day))
+        assertFalse(AppData.reusable(0, 0, 10 * minute, 0))
+        // After the clock went back.
+        assertFalse(AppData.reusable(10 * minute, 0, 5 * minute, 0))
+    }
+
     @Test
     fun listsTheAppsMostFirstAndAddsUpTheRest() {
         val apps = (1..15).map { AppBytes("org.example.app$it", "App $it", it * 1_000L) } +
