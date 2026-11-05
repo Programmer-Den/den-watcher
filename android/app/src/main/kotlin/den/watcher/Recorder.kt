@@ -26,6 +26,10 @@ object Recorder {
         val app = context.applicationContext
         val settings = Settings(app)
         val choice = settings.dataChoice
+        // While steps are off, the count is let go, so switching them on again starts today at 0.
+        if (!choice.collectsSteps) {
+            settings.stepCount = null
+        }
         val reading = Sampler.read(app).limitedTo(choice).let {
             // Read only while collected, as they take a moment or open Android's Bluetooth profiles or start the step counter.
             val now = System.currentTimeMillis()

@@ -19,6 +19,18 @@ class StepsTest {
     }
 
     @Test
+    fun startsAtZeroAfterADayOrMoreWithoutAReading() {
+        val count = StepCount(day = 20_000, today = 9_800, counter = 50_000)
+        assertEquals(StepCount(20_003, 0, 80_000), count.next(80_000, 20_003))
+    }
+
+    @Test
+    fun startsAtZeroWhenTheClockWentBackADay() {
+        val count = StepCount(day = 20_001, today = 300, counter = 50_000)
+        assertEquals(StepCount(20_000, 0, 50_100), count.next(50_100, 20_000))
+    }
+
+    @Test
     fun countsTheStepsSinceARestart() {
         val count = StepCount(day = 20_000, today = 4_000, counter = 50_000)
         assertEquals(StepCount(20_000, 4_120, 120), count.next(120, 20_000))

@@ -34,6 +34,9 @@ export const CURRENCIES = [
 /** The highest price per kilowatt-hour the hub takes, so a price in cents is caught. */
 export const MAX_PER_KWH = 1000;
 
+/** How long a price that could not be read waits before it is asked for again: 5 minutes. */
+export const RETRY_MILLIS = 5 * 60 * 1000;
+
 /** The hours of an average month: a year, leap days included, in twelve. */
 export const HOURS_PER_MONTH = (365.25 * 24) / 12;
 
@@ -46,12 +49,17 @@ export const HOURS_PER_MONTH = (365.25 * 24) / 12;
 export class EnergyPriceService {
   private readonly http = inject(HttpClient);
   private loading = false;
+  /** When the price could not be read last, in Unix milliseconds; 0 until then. */
+  private failedAt = 0;
 
   readonly price = signal<EnergyPrice | null>(null);
 
-  /** Reads the price once; one that cannot be read is tried again at the next call. */
+  /**
+   * Reads the price once. One that cannot be read is tried again at a call
+   * from RETRY_MILLIS on, so a hub without it is not asked at every reading.
+   */
   load(): void {
-    if (this.loading || this.price()) {
+    if (this.loading || this.price() || Date.now() - this.failedAt < RETRY_MILLIS) {
       return;
     }
     this.loading = true;
@@ -60,7 +68,10 @@ export class EnergyPriceService {
         this.loading = false;
         this.price.set(price);
       },
-      error: () => (this.loading = false),
+      error: () => {
+        this.loading = false;
+        this.failedAt = Date.now();
+      },
     });
   }
 
