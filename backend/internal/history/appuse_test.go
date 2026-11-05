@@ -57,6 +57,60 @@ func TestAppUsesAreSplitAtTheStepsAndTheRange(t *testing.T) {
 	}
 }
 
+func TestAppUsesCountOnlyFromTheRangesStart(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	hour := time.Date(2026, 11, 2, 10, 0, 0, 0, time.UTC)
+	ms := func(t time.Time) int64 { return t.UnixMilli() }
+	uses := []AppUse{
+		// From 10:00 to 10:45, of which 15 minutes are in the range from 10:30.
+		{App: "chat", PhoneStart: 1, Start: ms(hour), Millis: 45 * 60 * 1000},
+		{App: "maps", PhoneStart: 2, Start: ms(hour.Add(40 * time.Minute)), Millis: 5 * 60 * 1000},
+		{PhoneStart: 3, Start: ms(hour.Add(10 * time.Minute))},
+		{PhoneStart: 4, Start: ms(hour.Add(35 * time.Minute))},
+	}
+	if err := store.AddAppUses(ctx, "pixel", uses); err != nil {
+		t.Fatal(err)
+	}
+	usage, err := store.AppUses(ctx, "pixel", hour.Add(30*time.Minute), hour.Add(time.Hour), time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if usage.Unlocks != 1 || usage.ScreenSeconds != (15+5)*60 {
+		t.Errorf("unlocks %d, screen time %v s; want 1 and 1200 s", usage.Unlocks, usage.ScreenSeconds)
+	}
+	want := []AppTime{{App: "chat", Seconds: 15 * 60}, {App: "maps", Seconds: 5 * 60, Opens: 1}}
+	if len(usage.Apps) != 2 || usage.Apps[0] != want[0] || usage.Apps[1] != want[1] {
+		t.Errorf("apps %+v, want %+v", usage.Apps, want)
+	}
+	steps := []AppUsageStep{{Time: hour.Unix(), ScreenSeconds: 20 * 60, Unlocks: 1}}
+	if len(usage.Steps) != 1 || usage.Steps[0] != steps[0] {
+		t.Errorf("steps %+v, want %+v", usage.Steps, steps)
+	}
+}
+
+func TestAppUsesSplitAtAStepAddUpExactly(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	hour := time.Date(2026, 11, 2, 10, 0, 0, 0, time.UTC)
+	// A minute, then five over the edge of an hour, split into parts of no
+	// whole second, whose sum as seconds is not exactly 360.
+	uses := []AppUse{
+		{App: "chat", PhoneStart: 1, Start: hour.Add(-30 * time.Minute).UnixMilli(), Millis: 60 * 1000},
+		{App: "chat", PhoneStart: 2, Start: hour.UnixMilli() - 196_008, Millis: 5 * 60 * 1000},
+	}
+	if err := store.AddAppUses(ctx, "pixel", uses); err != nil {
+		t.Fatal(err)
+	}
+	usage, err := store.AppUses(ctx, "pixel", hour.Add(-time.Hour), hour.Add(time.Hour), time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if usage.ScreenSeconds != 360 || len(usage.Apps) != 1 || usage.Apps[0].Seconds != 360 {
+		t.Errorf("screen time %v s, apps %+v; want 360 s", usage.ScreenSeconds, usage.Apps)
+	}
+}
+
 func TestOldAppUsesAreDeleted(t *testing.T) {
 	ctx := context.Background()
 	store := openTestStore(t)
