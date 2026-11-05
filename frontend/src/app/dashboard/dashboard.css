@@ -53,6 +53,15 @@ progress {
   white-space: nowrap;
 }
 
+/* What a value of the power add-on costs in a month, after the value and less prominent. */
+.sensor > .label:has(+ * + .cost) {
+  margin-right: auto;
+}
+
+.sensor > .cost {
+  color: var(--mat-sys-on-surface-variant);
+}
+
 /* A fact of the System card: its name above its value, which wraps when it is long, such as the
    CPU's model, so the card shows all of it however narrow it is. */
 .fact {

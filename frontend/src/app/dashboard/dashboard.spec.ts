@@ -7,6 +7,7 @@ import { HubConnection } from '../connection/connection';
 import { PageView, VIEW_STORAGE_KEY } from './page-view';
 import { DeviceService, LOCAL_DEVICE } from '../devices/devices';
 import { I18n, LANGUAGE_STORAGE_KEY } from '../i18n/i18n';
+import { Extra } from '../metrics/extras';
 import { Snapshot } from '../metrics/metrics';
 import {
   Dashboard,
@@ -70,6 +71,8 @@ describe('Dashboard', () => {
     // A phone's page also reads its app usage, which its own card's tests check.
     http.match((r) => r.url === '/api/phone/usage');
     http.match((r) => r.url === '/api/phone/wifi');
+    // The price of energy is read for the power add-on, which its own tests cover.
+    http.match((r) => r.url === '/api/energy-price');
     http.verify();
     vi.useRealTimers();
     vi.restoreAllMocks();
@@ -381,6 +384,47 @@ describe('Dashboard', () => {
 
     expect(rows('Temperature')).toEqual(['cpu61.5 °C', 'gpu52 °C', 'nvme38 °C']);
     expect(rows('Power')).toEqual(['CPU package24.5 W', 'GPU9 W', 'Memory2.1 W']);
+  });
+
+  it('shows what each value of the power add-on costs in a month at the price entered', () => {
+    const power: Extra = {
+      id: 'power',
+      title: 'Power',
+      items: [
+        { id: 'package-0', label: 'CPU package', unit: 'watts', value: 24.5 },
+        { id: 'gpu', label: 'GPU', unit: 'watts', value: 10 },
+      ],
+    };
+    const fans: Extra = {
+      id: 'fans',
+      title: 'Fans',
+      items: [{ id: 'fan', label: 'Fan', unit: 'watts', value: 3 }],
+    };
+    respond({ ...snapshot, extras: [power, fans] });
+    http.expectOne('/api/energy-price').flush({ perKwh: 0.3, currency: 'EUR' });
+    fixture.detectChanges();
+
+    expect(rows('Power')).toEqual(['CPU package24.5 W€5.37/month', 'GPU10 W€2.19/month']);
+    expect(rows('Fans')).toEqual(['Fan3 W']);
+    const cost = fixture.debugElement.queryAll(By.css('.cost'))[0].nativeElement as HTMLElement;
+    expect(cost.title).toBe('What this draw costs in a month around the clock, at €0.30 per kWh');
+  });
+
+  it('shows no costs while no energy price is entered', () => {
+    respond({
+      ...snapshot,
+      extras: [
+        {
+          id: 'power',
+          title: 'Power',
+          items: [{ id: 'gpu', label: 'GPU', unit: 'watts', value: 10 }],
+        },
+      ],
+    });
+    http.expectOne('/api/energy-price').flush({ perKwh: null, currency: 'EUR' });
+    fixture.detectChanges();
+
+    expect(rows('Power')).toEqual(['GPU10 W']);
   });
 
   it('shows the values of each section under it, without the section in their labels', () => {

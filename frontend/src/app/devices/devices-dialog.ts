@@ -38,6 +38,7 @@ import {
 } from 'rxjs';
 
 import { saveFile } from '../browser';
+import { EnergyPriceForm } from '../energy/energy-price-form';
 import { I18n } from '../i18n/i18n';
 import {
   ADD_KINDS,
@@ -67,6 +68,7 @@ const DEFAULT_PORT = 9393;
 @Component({
   selector: 'app-devices-dialog',
   imports: [
+    EnergyPriceForm,
     FormsModule,
     MatButtonModule,
     MatDialogActions,

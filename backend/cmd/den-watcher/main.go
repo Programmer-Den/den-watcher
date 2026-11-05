@@ -90,6 +90,7 @@ import (
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/addons"
 	"github.com/Programmer-Den/den-watcher/backend/internal/alerts"
+	"github.com/Programmer-Den/den-watcher/backend/internal/energy"
 	"github.com/Programmer-Den/den-watcher/backend/internal/events"
 	"github.com/Programmer-Den/den-watcher/backend/internal/history"
 	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
@@ -410,6 +411,11 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 		return server.Site{}, nil, err
 	}
 
+	energyPrice, err := energy.Open(ctx, store.DB())
+	if err != nil {
+		return server.Site{}, nil, err
+	}
+
 	// The alerts and events are opened before the hub, which deletes them for
 	// every device it forgets, also while it starts. They look at the hub's
 	// devices only once they run.
@@ -466,6 +472,7 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 		Alerts:          watcher,
 		Layout:          pageLayout,
 		Places:          wifiPlaces,
+		EnergyPrice:     energyPrice,
 		Backups:         store,
 		Events:          happenings,
 		WiFi:            store,

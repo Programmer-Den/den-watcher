@@ -32,6 +32,7 @@ import {
   switchedOff,
   readByHub,
 } from '../devices/devices';
+import { EnergyPriceService, formatMoney, monthlyCost } from '../energy/energy-price';
 import { I18n } from '../i18n/i18n';
 import { MessageKey } from '../i18n/messages/en';
 import { KioskMode } from '../kiosk/kiosk';
@@ -106,7 +107,10 @@ export function coreColumns(cores: number): number {
 }
 
 /** The groups of extras whose values are shown largest first, such as what each part draws. */
-const LARGEST_FIRST = new Set(['power']);
+/** The group of extras of the power add-on, whose values the energy price turns into costs. */
+const POWER_GROUP = 'power';
+
+const LARGEST_FIRST = new Set([POWER_GROUP]);
 
 /**
  * A value as the card shows it, to a tenth, so values that look the same compare equal and keep
@@ -538,8 +542,15 @@ export class Dashboard {
   protected readonly usedOfTotal = usedOfTotal;
   protected readonly cpuDetail = cpuDetail;
   protected readonly loadAverageText = loadAverageText;
+  private readonly energy = inject(EnergyPriceService);
 
   constructor() {
+    // The price of energy is read only once a device reports its power, which it turns into costs.
+    effect(() => {
+      if (this.snapshot()?.extras?.some((group) => group.id === POWER_GROUP)) {
+        this.energy.load();
+      }
+    });
     // Cards are arranged only where they show as cards.
     effect(() => {
       if (this.pageView.view() !== 'cards' && this.arrangement.arranging()) {
@@ -871,6 +882,28 @@ export class Dashboard {
     return item.unit === 'text' || item.value === undefined
       ? localized(item.text ?? '', item.texts, this.i18n.language())
       : formatExtra(item.value, item.unit, this.i18n.language());
+  }
+
+  /**
+   * What a value of the power add-on would cost in a month at its current draw, with a hint that
+   * tells how it was worked out; null for other values, and while no price was entered.
+   */
+  protected powerCost(group: Extra, item: ExtraItem): { cost: string; hint: string } | null {
+    const price = this.energy.price();
+    if (group.id !== POWER_GROUP || item.unit !== 'watts' || item.value === undefined || !price) {
+      return null;
+    }
+    const cost = monthlyCost(item.value, price);
+    if (cost === null) {
+      return null;
+    }
+    const language = this.i18n.language();
+    return {
+      cost: this.i18n.t('energy.perMonth', { cost: formatMoney(cost, price.currency, language) }),
+      hint: this.i18n.t('energy.perMonthHint', {
+        price: formatMoney(price.perKwh ?? 0, price.currency, language),
+      }),
+    };
   }
 
   /** A number in the page's language, for text parameters (the number pipe may return null). */

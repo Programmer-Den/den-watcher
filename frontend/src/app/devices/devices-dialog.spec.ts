@@ -63,6 +63,8 @@ describe('DevicesDialog', () => {
       .match('/api/status-page')
       .filter((r) => !r.cancelled)
       .forEach((r) => r.flush({ enabled: false, passwordSet: false }));
+    // The energy price has a form of its own, which its own tests cover.
+    http.match('/api/energy-price');
     // The marks of the charts are read alongside the history; these tests leave them unanswered.
     http.match((r) => r.url === '/api/events');
     http.verify();

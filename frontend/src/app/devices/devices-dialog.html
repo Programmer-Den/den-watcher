@@ -186,6 +186,8 @@
     {{ i18n.t('devicesDialog.backup') }}
   </button>
 
+  <app-energy-price-form />
+
   @if (statusPage(); as status) {
     <form class="status-page" (ngSubmit)="setStatusPassword()">
       <h3>{{ i18n.t('devicesDialog.statusTitle') }}</h3>

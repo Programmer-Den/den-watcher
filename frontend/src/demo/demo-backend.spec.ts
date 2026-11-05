@@ -13,6 +13,8 @@ import {
   DEMO_RETENTION_DAYS,
   DEMO_STATUS_PAGE,
   DemoBackend,
+  DEMO_ENERGY_PRICE,
+  ENERGY_PRICE_STORAGE_KEY,
   LAYOUT_STORAGE_KEY,
   PLACES_STORAGE_KEY,
   csvFileName,
@@ -44,6 +46,18 @@ describe('DemoBackend', () => {
       expect(await firstValueFrom(http.get('/api/layout'))).toEqual(layout);
     } finally {
       localStorage.removeItem(LAYOUT_STORAGE_KEY);
+    }
+  });
+
+  it('shows costs at a price of its own, and keeps the price a visitor enters', async () => {
+    const http = TestBed.inject(HttpClient);
+    try {
+      expect(await firstValueFrom(http.get('/api/energy-price'))).toEqual(DEMO_ENERGY_PRICE);
+      const price = { perKwh: 0.25, currency: 'CHF' };
+      await firstValueFrom(http.put('/api/energy-price', price));
+      expect(await firstValueFrom(http.get('/api/energy-price'))).toEqual(price);
+    } finally {
+      localStorage.removeItem(ENERGY_PRICE_STORAGE_KEY);
     }
   });
 
