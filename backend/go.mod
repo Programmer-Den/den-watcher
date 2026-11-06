@@ -7,7 +7,7 @@ require (
 	github.com/godbus/dbus/v5 v5.2.4
 	github.com/shirou/gopsutil/v4 v4.26.9
 	golang.org/x/sys v0.49.0
-	modernc.org/sqlite v1.61.0
+	modernc.org/sqlite v1.61.1
 )
 
 require (
