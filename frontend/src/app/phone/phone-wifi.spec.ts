@@ -138,6 +138,24 @@ describe('PhoneWifiCard', () => {
     expect(fixture.nativeElement.textContent).toContain('allow the Wi-Fi networks');
   });
 
+  it('keeps the connections open and does not read again when the list of devices is read', () => {
+    const busy = day();
+    busy.connections = Array.from({ length: FIRST_CONNECTIONS + 3 }, (_, i) => ({
+      ssid: i % 2 ? 'Home' : 'Office',
+      start: 8 * HOUR + i * 600,
+      end: 8 * HOUR + i * 600 + 300,
+    }));
+    answer(busy);
+    (fixture.nativeElement.querySelector('.more') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    // The list of devices is read every few seconds, each time with new objects.
+    const devices = TestBed.inject(DeviceService);
+    devices.devices.set(devices.devices().map((d) => ({ ...d })));
+    fixture.detectChanges();
+    vi.advanceTimersByTime(0);
+    expect(fixture.nativeElement.querySelectorAll('.times li').length).toBe(FIRST_CONNECTIONS + 3);
+  });
+
   it('reads it again after a while and for another range', () => {
     answer(day());
     vi.advanceTimersByTime(WIFI_REFRESH_MS);

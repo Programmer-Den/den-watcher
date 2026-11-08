@@ -99,7 +99,8 @@ export class PhoneUsageCard {
   );
 
   constructor() {
-    const asked = computed(() => ({ device: this.devices.selected().id, span: this.store.span() }));
+    // The id, not the device: the list is read every few seconds, which would read the card again.
+    const asked = computed(() => ({ device: this.devices.selectedId(), span: this.store.span() }));
     toObservable(asked)
       .pipe(
         switchMap(({ device, span }) => {

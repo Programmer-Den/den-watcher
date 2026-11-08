@@ -109,6 +109,18 @@ describe('PhoneUsageCard', () => {
     expect(fixture.nativeElement.textContent).toContain('allow usage access');
   });
 
+  it('keeps the apps open and does not read again when the list of devices is read', () => {
+    answer(usage(FIRST_APPS + 2));
+    (fixture.nativeElement.querySelector('.more') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    // The list of devices is read every few seconds, each time with new objects.
+    const devices = TestBed.inject(DeviceService);
+    devices.devices.set(devices.devices().map((d) => ({ ...d })));
+    fixture.detectChanges();
+    vi.advanceTimersByTime(0);
+    expect(fixture.nativeElement.querySelectorAll('.apps li').length).toBe(FIRST_APPS + 2);
+  });
+
   it('reads it again after a while and for another range', () => {
     answer(usage(1));
     vi.advanceTimersByTime(USAGE_REFRESH_MS);

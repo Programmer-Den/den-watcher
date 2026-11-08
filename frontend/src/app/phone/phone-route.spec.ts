@@ -155,6 +155,16 @@ describe('PhoneRouteCard', () => {
     expect(fixture.nativeElement.querySelector('svg')).toBeNull();
   });
 
+  it('keeps the map and does not read again when the list of devices is read', () => {
+    answer(day());
+    // The list of devices is read every few seconds, each time with new objects.
+    const devices = TestBed.inject(DeviceService);
+    devices.devices.set(devices.devices().map((d) => ({ ...d })));
+    fixture.detectChanges();
+    vi.advanceTimersByTime(0);
+    expect(fixture.nativeElement.querySelector('path.line')).not.toBeNull();
+  });
+
   it('reads it again after a while and for another range', () => {
     answer(day());
     vi.advanceTimersByTime(ROUTE_REFRESH_MS);
