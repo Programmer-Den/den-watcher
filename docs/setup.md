@@ -43,6 +43,8 @@ docker compose up -d
 
 This runs the published image `ghcr.io/programmer-den/den-watcher` for arm64 and amd64; the Pi builds nothing. Open `http://<the Pi's address>:9393` from a phone or PC on the same network.
 
+Every published image carries a signed build provenance attestation, which says that the Docker image workflow of this repository built it from a given commit. To check an image before you run it, with the GitHub CLI: `gh attestation verify oci://ghcr.io/programmer-den/den-watcher:latest --owner Programmer-Den`.
+
 What `compose.yaml` sets up:
 
 - the host's `/proc` and `/sys` mounted read-only, so the container measures the Pi, not itself
