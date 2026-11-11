@@ -200,6 +200,7 @@ func New(site Site) http.Handler {
 		mux.HandleFunc("POST /api/devices", changes.add)
 		mux.HandleFunc("DELETE /api/devices/{id}", changes.remove)
 		mux.HandleFunc("PUT /api/devices/{id}/kind", changes.setKind)
+		mux.HandleFunc("PUT /api/devices/{id}/name", changes.rename)
 		mux.HandleFunc("PUT /api/devices/{id}/pairing", changes.setCode)
 		mux.HandleFunc("POST /api/phones", changes.addPhone)
 		mux.HandleFunc("POST /api/phones/{id}/release", changes.releasePhone)

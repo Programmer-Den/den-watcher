@@ -119,6 +119,38 @@ form.pairing button {
   margin-left: 0;
 }
 
+/* A text button after the name, quieter than the buttons that change the device. */
+.who .rename-button {
+  margin-left: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--mat-sys-primary);
+  font: var(--mat-sys-label-medium);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.who .rename-button:disabled {
+  color: var(--mat-sys-on-surface-variant);
+  cursor: default;
+}
+
+/* The field for the new name takes the name's line, with saving and cancelling next to it. */
+form.rename {
+  flex-basis: 100%;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+form.rename mat-form-field {
+  flex: 1 1 12rem;
+}
+
+form.rename button {
+  margin-left: 0;
+}
+
 /* Whether a phone may change its hub, and the button to let it, below its name. */
 .release {
   display: flex;

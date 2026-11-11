@@ -34,6 +34,8 @@ type fakeHub struct {
 	pushes    []hub.Push
 	// released are the phones let change their hub.
 	released []string
+	// renamed is every rename, as "id=name".
+	renamed []string
 }
 
 func (f *fakeHub) AddPhone(_ context.Context, name, code string) (hub.Device, error) {
@@ -81,6 +83,14 @@ func (f *fakeHub) SetKind(_ context.Context, id string, kind hub.Kind) error {
 		return f.err
 	}
 	f.kinds = append(f.kinds, id+"="+string(kind))
+	return nil
+}
+
+func (f *fakeHub) Rename(_ context.Context, id, name string) error {
+	if f.err != nil {
+		return f.err
+	}
+	f.renamed = append(f.renamed, id+"="+name)
 	return nil
 }
 
@@ -182,6 +192,30 @@ func TestAddAndChangeTheKind(t *testing.T) {
 	}
 	if got := strings.Join(devices.kinds, " "); got != "laptop=pc pi=pc" {
 		t.Errorf("kinds = %s, want laptop=pc pi=pc", got)
+	}
+}
+
+func TestRename(t *testing.T) {
+	devices := &fakeHub{}
+	handler := newChangeHandler(devices, &fakePassword{password: "correct horse"})
+
+	renamed := send(handler, http.MethodPut, "/api/devices/pi/name", `{"name":"Kitchen Pi","password":"correct horse"}`)
+	wrong := send(handler, http.MethodPut, "/api/devices/pi/name", `{"name":"Garage","password":"wrong"}`)
+
+	if renamed.Code != http.StatusNoContent {
+		t.Errorf("rename: status = %d, want 204: %s", renamed.Code, renamed.Body)
+	}
+	if wrong.Code != http.StatusForbidden {
+		t.Errorf("with a wrong password: status = %d, want 403", wrong.Code)
+	}
+	if got := strings.Join(devices.renamed, " "); got != "pi=Kitchen Pi" {
+		t.Errorf("renamed = %s, want only pi=Kitchen Pi", got)
+	}
+
+	devices.err = &hub.InputError{Problem: hub.ProblemNameTaken, Message: "taken"}
+	taken := send(handler, http.MethodPut, "/api/devices/pi/name", `{"name":"Laptop","password":"correct horse"}`)
+	if taken.Code != http.StatusConflict || !strings.Contains(taken.Body.String(), `"problem":"nameTaken"`) {
+		t.Errorf("a taken name: status = %d, body = %s; want 409 nameTaken", taken.Code, taken.Body)
 	}
 }
 

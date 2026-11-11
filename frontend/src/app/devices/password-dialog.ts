@@ -18,9 +18,12 @@ import { DeviceKind, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, kindName } from '
 
 /** What the password is asked for. */
 export interface PasswordDialogData {
-  action: 'add' | 'remove' | 'kind' | 'pairing' | 'release' | 'backup' | 'statusPassword';
+  action:
+    'add' | 'remove' | 'rename' | 'kind' | 'pairing' | 'release' | 'backup' | 'statusPassword';
   /** The name of the device that is changed; empty for a backup and the status page's password. */
   deviceName: string;
+  /** For renaming: the new name. */
+  newName?: string;
   /** For changing the kind: the new kind. */
   kind?: DeviceKind;
   /** Whether the password has been chosen; if not, this change chooses it. */
@@ -35,7 +38,7 @@ export interface PasswordDialogResult {
 }
 
 /**
- * Asks for the password before a device is added, removed or changed, a phone may change its hub, a
+ * Asks for the password before a device is added, removed, renamed or changed, a phone may change its hub, a
  * backup is downloaded or the status
  * page's password is set. Before the first
  * change it asks to choose one instead, twice, since it cannot be changed later.
@@ -88,6 +91,8 @@ export class PasswordDialog {
         return this.i18n.t('passwordDialog.add', { device });
       case 'remove':
         return this.i18n.t('passwordDialog.remove', { device });
+      case 'rename':
+        return this.i18n.t('passwordDialog.rename', { device, name: this.data.newName ?? '' });
       case 'kind':
         return this.i18n.t('passwordDialog.kind', {
           device,
@@ -110,6 +115,8 @@ export class PasswordDialog {
         return this.i18n.t('passwordDialog.confirmAdd');
       case 'remove':
         return this.i18n.t('passwordDialog.confirmRemove');
+      case 'rename':
+        return this.i18n.t('passwordDialog.confirmRename');
       case 'kind':
       case 'pairing':
         return this.i18n.t('passwordDialog.confirmKind');

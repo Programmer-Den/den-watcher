@@ -119,7 +119,7 @@ func (h *Hub) SetCode(ctx context.Context, id, code string) error {
 		if input := pairingInputError(err); input != nil {
 			return input
 		}
-		slog.Info("keeping a pairing code a device could not be asked about", "name", remote.Name, "error", err)
+		slog.Info("keeping a pairing code a device could not be asked about", "name", remote.ShownName(), "error", err)
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -130,7 +130,7 @@ func (h *Hub) SetCode(ctx context.Context, id, code string) error {
 		return err
 	}
 	remote.Agent.setPairingCode(code)
-	slog.Info("changed the pairing code of another device", "name", remote.Name)
+	slog.Info("changed the pairing code of another device", "name", remote.ShownName())
 	return nil
 }
 
@@ -162,6 +162,6 @@ func (h *Hub) setPhoneCode(ctx context.Context, remote *Remote, code string) err
 		return err
 	}
 	remote.Agent.setPairingCode(code)
-	slog.Info("changed the pairing code of a phone", "name", remote.Name)
+	slog.Info("changed the pairing code of a phone", "name", remote.ShownName())
 	return nil
 }

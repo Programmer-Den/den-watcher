@@ -515,7 +515,7 @@ func (h *Hub) ReleasePhone(id string) (time.Time, error) {
 	remote.phone.releasedUntil = now.Add(ReleaseTime)
 	remote.phone.regive = true
 	remote.phone.mu.Unlock()
-	slog.Info("let a phone change its hub", "name", remote.Name, "for", ReleaseTime)
+	slog.Info("let a phone change its hub", "name", remote.ShownName(), "for", ReleaseTime)
 	return remote.phone.released(now), nil
 }
 

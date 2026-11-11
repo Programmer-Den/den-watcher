@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/netip"
 	"slices"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -133,9 +134,11 @@ type Remote struct {
 	stop     context.CancelFunc
 	recorded chan struct{}
 
-	// mu guards kind, which the page can change.
+	// mu guards kind and name, which the page can change. Device.Name
+	// stays the name the device was started with; name is the one shown.
 	mu   sync.Mutex
 	kind Kind
+	name string
 
 	// phone keeps what a phone pushed; nil for any other device.
 	phone *phone
@@ -585,7 +588,52 @@ func (h *Hub) SetKind(ctx context.Context, id string, kind Kind) error {
 	remote.mu.Lock()
 	remote.kind = kind
 	remote.mu.Unlock()
-	slog.Info("changed the kind of another device", "name", remote.Name, "kind", kind)
+	slog.Info("changed the kind of another device", "name", remote.ShownName(), "kind", kind)
+	return nil
+}
+
+// Rename gives a device added on the page another name. Its id stays, and
+// with it its history, kind and pairing code; only the name shown changes.
+// A name another device has, or had before it was renamed, is refused, as
+// is one of a device that is not collected from for having the address of
+// another (see taken).
+func (h *Hub) Rename(ctx context.Context, id, name string) error {
+	name = strings.TrimSpace(name)
+	newID, err := checkName(name)
+	if err != nil {
+		return err
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if err := h.stopping(); err != nil {
+		return err
+	}
+	remote := h.find(id)
+	if remote == nil {
+		return &InputError{Problem: ProblemNotFound, Message: "there is no device with this id"}
+	}
+	if remote.Fixed {
+		return &InputError{Problem: ProblemFixed, Message: "the device is set in HUB_DEVICES, HUB_ROUTERS or HUB_CHECKS, or found in a router's mesh; rename it there"}
+	}
+	old := remote.ShownName()
+	if name == old {
+		return nil
+	}
+	if other := h.find(newID); (other != nil && other != remote) || h.findName(newID, remote) != nil {
+		return &InputError{Problem: ProblemNameTaken, Message: "another device has the same name, or had it before it was renamed; give each device its own name"}
+	}
+	if h.hidden[newID] {
+		return &InputError{Problem: ProblemNameTaken, Message: "a device added earlier has the same name; it is not collected from, as another device has its address and port, but it stays saved; give each device its own name"}
+	}
+	// Saved even when the page that asked has gone away, so the name shown
+	// is the one saved.
+	if _, err := h.store.DB().ExecContext(context.WithoutCancel(ctx), `UPDATE hub_devices SET name = ? WHERE id = ?`, name, id); err != nil {
+		return err
+	}
+	remote.mu.Lock()
+	remote.name = name
+	remote.mu.Unlock()
+	slog.Info("renamed another device", "from", old, "to", name)
 	return nil
 }
 
@@ -651,7 +699,7 @@ func (h *Hub) removeRemote(ctx context.Context, remote *Remote, keepHistory bool
 			remote.phone.gone = true
 			remote.phone.pushing.Unlock()
 		}
-		slog.Info("stopped collecting from another device", "name", remote.Name, "historyKept", keepHistory)
+		slog.Info("stopped collecting from another device", "name", remote.ShownName(), "historyKept", keepHistory)
 		if !keepHistory {
 			h.deleteData(remote)
 		}
@@ -760,11 +808,11 @@ func (h *Hub) deleteData(remote *Remote) {
 	}
 	switch {
 	case err == nil:
-		slog.Info("deleted the data of a removed device", "name", remote.Name)
+		slog.Info("deleted the data of a removed device", "name", remote.ShownName())
 	case h.ctx.Err() != nil:
-		slog.Warn("stopped deleting the history of a removed device, as the program stops; the rest is deleted with the retention", "name", remote.Name)
+		slog.Warn("stopped deleting the history of a removed device, as the program stops; the rest is deleted with the retention", "name", remote.ShownName())
 	default:
-		slog.Error("delete the data of a removed device; its history is deleted with the retention", "name", remote.Name, "error", err)
+		slog.Error("delete the data of a removed device; its history is deleted with the retention", "name", remote.ShownName(), "error", err)
 	}
 }
 
@@ -842,6 +890,13 @@ func (r *Remote) Kind() Kind {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.kind
+}
+
+// ShownName returns the device's name, as it was last renamed to.
+func (r *Remote) ShownName() string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.name
 }
 
 // Availability tells how long the device did not answer since it was added.
@@ -952,6 +1007,7 @@ func (h *Hub) start(device Device, fixed bool, own []netip.Addr) {
 		stop:     stop,
 		recorded: make(chan struct{}),
 		kind:     kind,
+		name:     device.Name,
 		phone:    pushed,
 	}
 	recorder := &history.Recorder{Store: h.store, Recent: recent, Device: device.ID, Collector: watched, MaxEntries: h.historyEntries, WiFi: h.store}
@@ -980,8 +1036,8 @@ func (h *Hub) start(device Device, fixed bool, own []netip.Addr) {
 // taken refuses a device whose name or whose address and port another
 // device has, a hidden one's name too. The caller holds mu.
 func (h *Hub) taken(device Device) error {
-	if h.find(device.ID) != nil {
-		return &InputError{Problem: ProblemNameTaken, Message: "another device has the same name; give each device its own name"}
+	if h.find(device.ID) != nil || h.findName(device.ID, nil) != nil {
+		return &InputError{Problem: ProblemNameTaken, Message: "another device has the same name, or had it before it was renamed; give each device its own name"}
 	}
 	if h.hidden[device.ID] {
 		return &InputError{Problem: ProblemNameTaken, Message: "a device added earlier has the same name; it is not collected from, as another device has its address and port, but it stays saved; give each device its own name"}
@@ -990,7 +1046,7 @@ func (h *Hub) taken(device Device) error {
 		return errRemoving
 	}
 	if other := h.findAddress(device.Address); other != nil {
-		return &InputError{Problem: ProblemAddressTaken, Message: fmt.Sprintf("%s is already collected from at this address and port", other.Name)}
+		return &InputError{Problem: ProblemAddressTaken, Message: fmt.Sprintf("%s is already collected from at this address and port", other.ShownName())}
 	}
 	return nil
 }
@@ -1004,6 +1060,18 @@ func (h *Hub) findAddress(address string) *Remote {
 	}
 	for _, r := range h.remotes {
 		if SameAddress(r.Address, address) {
+			return r
+		}
+	}
+	return nil
+}
+
+// findName returns the device other than except whose shown name has the
+// id; after a rename, that is no longer the device's own id. The caller
+// holds mu.
+func (h *Hub) findName(id string, except *Remote) *Remote {
+	for _, r := range h.remotes {
+		if r != except && IDOf(r.ShownName()) == id {
 			return r
 		}
 	}

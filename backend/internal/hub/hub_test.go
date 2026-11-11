@@ -1000,6 +1000,62 @@ func TestKindIsKeptAndCanBeChanged(t *testing.T) {
 	}
 }
 
+func TestRenameKeepsTheIDAndIsKept(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	pi := Device{ID: "pi", Name: "Pi", Address: startDevice(t)}
+	h := openTestHub(t, store, []Device{pi})
+	for _, name := range []string{"Laptop", "NAS"} {
+		if _, err := h.Add(ctx, name, startDevice(t), KindPC, ""); err != nil {
+			t.Fatalf("Add(%s) error = %v", name, err)
+		}
+	}
+
+	if err := h.Rename(ctx, "laptop", "  Work Laptop "); err != nil {
+		t.Fatalf("Rename(laptop) error = %v", err)
+	}
+	if err := h.Rename(ctx, "laptop", "Work Laptop"); err != nil {
+		t.Errorf("Rename(laptop) to its own name error = %v, want none", err)
+	}
+	refused := []struct {
+		id, name string
+		want     Problem
+	}{
+		{"nas", "pi", ProblemNameTaken},          // a device from the settings
+		{"nas", "work-laptop", ProblemNameTaken}, // the shown name of another
+		{"nas", "Laptop", ProblemNameTaken},      // what another was named before
+		{"nas", "", ProblemName},                 // no name
+		{"nas", LocalID, ProblemNameTaken},       // the hub's own
+		{"pi", "Garage", ProblemFixed},           // set in the settings
+		{"tablet", "Garage", ProblemNotFound},    // no such device
+	}
+	for _, c := range refused {
+		if err := h.Rename(ctx, c.id, c.name); problemOf(err) != c.want {
+			t.Errorf("Rename(%s, %q) error = %v, want problem %q", c.id, c.name, err, c.want)
+		}
+	}
+	// A new device may neither take the shown name nor the one the id keeps.
+	for _, name := range []string{"Work Laptop", "Laptop"} {
+		if _, err := h.Add(ctx, name, startDevice(t), KindPC, ""); problemOf(err) != ProblemNameTaken {
+			t.Errorf("Add(%s) error = %v, want problem %q", name, err, ProblemNameTaken)
+		}
+	}
+
+	again := openTestHub(t, store, []Device{pi})
+	names := map[string]string{}
+	for _, remote := range again.Remotes() {
+		names[remote.ID] = remote.ShownName()
+	}
+	if names["laptop"] != "Work Laptop" || names["nas"] != "NAS" {
+		t.Errorf("names after a restart = %v, want laptop named Work Laptop and nas NAS", names)
+	}
+	for _, remote := range again.Remotes() {
+		if remote.ID == "laptop" && remote.Kind() != KindPC {
+			t.Errorf("kind of the renamed laptop = %q, want it kept", remote.Kind())
+		}
+	}
+}
+
 func TestRemoveForgetsTheKind(t *testing.T) {
 	ctx := context.Background()
 	store := openTestStore(t)

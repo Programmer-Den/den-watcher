@@ -618,6 +618,71 @@ describe('DevicesDialog', () => {
       .flush({ devices: [{ id: 'local', name: '' }], passwordSet: true });
   });
 
+  it('renames a device added on the page with the password', async () => {
+    const open = vi.spyOn(TestBed.inject(MatDialog), 'open');
+    expect(element().querySelectorAll('.rename-button')).toHaveLength(1);
+    button('Rename').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(input('new-name').value).toBe('Office PC');
+
+    await type('new-name', '  Desk PC ');
+    button('Save').click();
+
+    expect(open.mock.lastCall?.[1]?.data).toEqual(
+      expect.objectContaining({ action: 'rename', deviceName: 'Office PC', newName: 'Desk PC' }),
+    );
+    const rename = http.expectOne('/api/devices/office-pc/name');
+    expect(rename.request.method).toBe('PUT');
+    expect(rename.request.body).toEqual({ name: 'Desk PC', password: 'correct horse' });
+    rename.flush(null, { status: 204, statusText: 'No Content' });
+    http
+      .expectOne((r) => r.method === 'GET' && r.url === '/api/devices')
+      .flush({ devices: [{ id: 'local', name: '' }], passwordSet: true });
+    fixture.detectChanges();
+    expect(input('new-name')).toBeNull();
+  });
+
+  it('keeps the field to rename open and says why when the name is taken', async () => {
+    button('Rename').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await type('new-name', 'Pi');
+    button('Save').click();
+
+    http
+      .expectOne('/api/devices/office-pc/name')
+      .flush({ problem: 'nameTaken' }, { status: 409, statusText: 'Conflict' });
+    http
+      .expectOne((r) => r.method === 'GET' && r.url === '/api/devices')
+      .flush({
+        devices: TestBed.inject(DeviceService).devices(),
+        passwordSet: true,
+      });
+    fixture.detectChanges();
+
+    expect(input('new-name').value).toBe('Pi');
+    expect(element().textContent).toContain('Another device already has this name.');
+  });
+
+  it('asks nothing when the name is left as it was or the renaming is cancelled', async () => {
+    button('Rename').click();
+    fixture.detectChanges();
+    button('Save').click();
+    fixture.detectChanges();
+    expect(input('new-name')).toBeNull();
+
+    button('Rename').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await type('new-name', 'Desk PC');
+    button('Cancel').click();
+    fixture.detectChanges();
+
+    expect(input('new-name')).toBeNull();
+    http.expectNone('/api/devices/office-pc/name');
+  });
+
   it('asks nothing when the kind the device has is picked again', () => {
     const pi = element().querySelectorAll('li')[0];
     Array.from(pi.querySelectorAll('button'))
