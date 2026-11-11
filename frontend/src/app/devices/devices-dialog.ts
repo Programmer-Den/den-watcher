@@ -1,4 +1,14 @@
-import { Component, DOCUMENT, DestroyRef, Injector, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DOCUMENT,
+  DestroyRef,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { formatDate } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -77,7 +87,9 @@ export class DevicesDialog {
   private readonly devices = inject(DeviceService);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
 
   /** Every device but the one the website runs on. */
   protected readonly others = computed(() =>
@@ -94,6 +106,10 @@ export class DevicesDialog {
   protected readonly code = signal('');
   /** The pairing codes typed in for the devices that wait for one, by their id. */
   protected readonly codes = signal<Record<string, string>>({});
+  /** The id of the device being renamed, whose name shows as a field; null while none is. */
+  protected readonly renaming = signal<string | null>(null);
+  /** The new name typed in for the device being renamed. */
+  protected readonly newName = signal('');
   /** This device's own pairing code, for a hub that collects from it; empty until it is read. */
   protected readonly ownCode = signal('');
   protected readonly kinds = DEVICE_KINDS;
@@ -239,6 +255,40 @@ export class DevicesDialog {
     const field = event.target as HTMLInputElement;
     this.groups.setGroup(device, field.value);
     field.value = this.groups.groupOf(device);
+  }
+
+  /** Shows the device's name as a field to type its new name in. */
+  protected startRename(device: Device): void {
+    this.newName.set(device.name);
+    this.renaming.set(device.id);
+    afterNextRender(
+      () => {
+        const field =
+          this.host.nativeElement.querySelector<HTMLInputElement>('input[name="new-name"]');
+        field?.focus();
+        field?.select();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  protected cancelRename(): void {
+    this.renaming.set(null);
+  }
+
+  /** Gives the device being renamed the name typed in, with the password; the same name changes nothing. */
+  protected rename(device: Device): void {
+    const name = this.newName().trim();
+    if (!name) {
+      return;
+    }
+    if (name === device.name) {
+      this.renaming.set(null);
+      return;
+    }
+    this.change({ action: 'rename', deviceName: device.name, newName: name }, (result) =>
+      this.devices.rename(device.id, name, result.password),
+    ).subscribe(() => this.renaming.set(null));
   }
 
   protected setKind(device: Device, kind: DeviceKind): void {

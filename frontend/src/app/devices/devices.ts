@@ -309,6 +309,11 @@ export class DeviceService {
     return this.http.get<{ code: string }>('/api/pairing').pipe(map((answer) => answer.code));
   }
 
+  /** Gives a device added on the page another name; its history stays. */
+  rename(id: string, name: string, password: string): Observable<void> {
+    return this.http.put<void>(`/api/devices/${encodeURIComponent(id)}/name`, { name, password });
+  }
+
   /** Changes what a device is used as, one from the hub's .env file too. */
   setKind(id: string, kind: DeviceKind, password: string): Observable<void> {
     return this.http.put<void>(`/api/devices/${encodeURIComponent(id)}/kind`, { kind, password });

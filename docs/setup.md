@@ -232,7 +232,7 @@ Leaving its website on does no harm: the hub only reads its usage, and the machi
 
 ## 4. Add the devices on the hub
 
-On the hub's page, click *Devices*, then add each device with a name and its address and port, such as *Office PC* at `192.168.1.30:9393`. The hub checks that a den-watcher answers there before it adds the device, and starts collecting right away, with no restart. Each address and port can be added only once; the same IP address with another port counts as another device.
+On the hub's page, click *Devices*, then add each device with a name and its address and port, such as *Office PC* at `192.168.1.30:9393`. The hub checks that a den-watcher answers there before it adds the device, and starts collecting right away, with no restart. Each address and port can be added only once; the same IP address with another port counts as another device. *Rename* next to a device's name in the list gives it another name, with the same password; its history stays. A new device can take neither the new name nor the one it was added with.
 
 Each device has a pairing code, such as `7KQM-X2RP`, which the dialog asks for too, so a hub collects a device's usage only once someone who can see the device gave it the code. The device shows it:
 

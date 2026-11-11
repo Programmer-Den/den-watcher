@@ -610,7 +610,7 @@ func (d hubDevices) List() []server.Device {
 		}
 		devices = append(devices, server.Device{
 			ID:               remote.ID,
-			Name:             remote.Name,
+			Name:             remote.ShownName(),
 			Address:          remote.Address,
 			Kind:             remote.Kind(),
 			Removable:        !remote.Fixed,
@@ -638,7 +638,7 @@ func alertTargets(localName string, local metrics.Source, others *hub.Hub) []ale
 		since, unreachable := remote.Unreachable()
 		targets = append(targets, alerts.Target{
 			ID:               remote.ID,
-			Name:             remote.Name,
+			Name:             remote.ShownName(),
 			PC:               remote.Kind() == hub.KindPC || remote.Kind() == hub.KindPhone,
 			Unreachable:      unreachable,
 			UnreachableSince: since,

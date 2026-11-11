@@ -32,6 +32,8 @@ type Hub interface {
 	Receive(ctx context.Context, code string, push hub.Push) (hub.PushAnswer, error)
 	// SetKind changes what a device is used as.
 	SetKind(ctx context.Context, id string, kind hub.Kind) error
+	// Rename gives a device added on the page another name; its id stays.
+	Rename(ctx context.Context, id, name string) error
 	// SetCode changes the pairing code sent to a device.
 	SetCode(ctx context.Context, id, code string) error
 	// ReleasePhone lets a phone change its hub for a while, and returns
@@ -112,6 +114,11 @@ type kindRequest struct {
 	Password string `json:"password"`
 }
 
+type renameRequest struct {
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
 type passwordRequest struct {
 	Password string `json:"password"`
 }
@@ -161,6 +168,18 @@ func (c *deviceChanges) setKind(w http.ResponseWriter, r *http.Request) {
 			return nil, err
 		}
 		return nil, c.hub.SetKind(r.Context(), r.PathValue("id"), kind)
+	})
+}
+
+// rename serves PUT /api/devices/{id}/name: gives a device added on the
+// page another name.
+func (c *deviceChanges) rename(w http.ResponseWriter, r *http.Request) {
+	var request renameRequest
+	if !readJSON(w, r, &request) {
+		return
+	}
+	c.change(w, r, request.Password, true, func() (any, error) {
+		return nil, c.hub.Rename(r.Context(), r.PathValue("id"), request.Name)
 	})
 }
 

@@ -21,10 +21,42 @@
   <ul id="devices-dialog-list" [hidden]="!listOpen()">
     @for (device of others(); track device.id) {
       <li>
-        <span class="who">
-          <span class="name">{{ device.name }}</span>
-          <span class="hint">{{ device.address }}</span>
-        </span>
+        @if (renaming() === device.id) {
+          <form class="rename" (ngSubmit)="rename(device)">
+            <mat-form-field subscriptSizing="dynamic">
+              <mat-label>{{ i18n.t('devicesDialog.newName', { device: device.name }) }}</mat-label>
+              <input
+                matInput
+                name="new-name"
+                maxlength="64"
+                autocomplete="off"
+                [(ngModel)]="newName"
+              />
+            </mat-form-field>
+            <button mat-stroked-button type="submit" [disabled]="busy() || !newName().trim()">
+              {{ i18n.t('devicesDialog.saveName') }}
+            </button>
+            <button mat-button type="button" (click)="cancelRename()">
+              {{ i18n.t('devicesDialog.cancelRename') }}
+            </button>
+          </form>
+        } @else {
+          <span class="who">
+            <span class="name">{{ device.name }}</span>
+            <span class="hint">{{ device.address }}</span>
+            @if (device.removable) {
+              <button
+                type="button"
+                class="rename-button"
+                [attr.aria-label]="i18n.t('devicesDialog.renameDevice', { device: device.name })"
+                [disabled]="busy()"
+                (click)="startRename(device)"
+              >
+                {{ i18n.t('devicesDialog.rename') }}
+              </button>
+            }
+          </span>
+        }
         @if (device.router) {
           <span class="router hint">{{ i18n.t('devicesDialog.router') }}</span>
         } @else if (device.kind === 'phone') {

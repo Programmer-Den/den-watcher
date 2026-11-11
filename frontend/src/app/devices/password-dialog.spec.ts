@@ -84,6 +84,19 @@ describe('PasswordDialog', () => {
     expect(confirmButton().textContent?.trim()).toBe('Change');
   });
 
+  it('asks for the password to rename a device', async () => {
+    await open({
+      action: 'rename',
+      deviceName: 'Office PC',
+      newName: 'Desk PC',
+      passwordSet: true,
+    });
+
+    expect(element().textContent).toContain('Rename Office PC to Desk PC?');
+    expect(element().querySelector('mat-checkbox')).toBeNull();
+    expect(confirmButton().textContent?.trim()).toBe('Rename');
+  });
+
   it('asks for the password to let a phone change its hub', async () => {
     await open({ action: 'release', deviceName: 'Pixel', passwordSet: true });
 
