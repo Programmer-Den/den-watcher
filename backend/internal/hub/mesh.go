@@ -231,7 +231,8 @@ func (h *Hub) syncMesh(ctx context.Context, router Device, missing map[string]ti
 
 // nodeDevice returns a new device for a node of router's mesh, named as in
 // the main router's settings, or with " (AiMesh)" and then the end of its
-// key added where another device has that name. The caller holds mu.
+// key added where another device has that name, also one it was renamed
+// to. The caller holds mu.
 func (h *Hub) nodeDevice(router Device, node MeshNode) (Device, bool) {
 	name := strings.TrimSpace(node.Name)
 	key := strings.NewReplacer(":", "", "-", "").Replace(node.Key)
@@ -243,7 +244,7 @@ func (h *Hub) nodeDevice(router Device, node MeshNode) (Device, bool) {
 		if err != nil {
 			continue
 		}
-		if h.find(device.ID) == nil && !h.hidden[device.ID] && h.removing[device.ID] == nil && !h.nodeTaken(device.ID) {
+		if h.find(device.ID) == nil && h.findName(device.ID, nil) == nil && !h.hidden[device.ID] && h.removing[device.ID] == nil && !h.nodeTaken(device.ID) {
 			return device, true
 		}
 	}

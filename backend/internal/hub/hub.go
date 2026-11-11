@@ -242,8 +242,10 @@ func newHub(ctx context.Context, store *history.Store, fixed []Device, complete 
 		own = h.ownAddresses()
 	}
 	for _, device := range saved {
-		if h.find(device.ID) != nil {
-			slog.Warn("a device added on the page has the same name as one in HUB_DEVICES; using the one in HUB_DEVICES", "name", device.Name)
+		// Its id is that of the name it was added with; the name it was
+		// renamed to may be another device's too.
+		if h.find(device.ID) != nil || h.findName(IDOf(device.Name), nil) != nil {
+			slog.Warn("a device added on the page has the same name as one in HUB_DEVICES, HUB_ROUTERS or HUB_CHECKS, or found in a router's mesh, or had it before it was renamed; using that one", "name", device.Name, "id", device.ID)
 			continue
 		}
 		// Devices added before each address and port could be added only once.

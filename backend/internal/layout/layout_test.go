@@ -139,7 +139,7 @@ func TestRefusesGroupsThatAreNotValid(t *testing.T) {
 	}
 	for name, groups := range map[string]map[string]string{
 		"empty device": {"": "Office"},
-		"long device":  {strings.Repeat("a", MaxNameBytes+1): "Office"},
+		"long device":  {strings.Repeat("a", MaxDeviceBytes+1): "Office"},
 		"too many":     tooMany,
 		"empty group":  {"pi": ""},
 		"long group":   {"pi": strings.Repeat("a", MaxGroupBytes+1)},
@@ -162,9 +162,11 @@ func TestRefusesGroupsThatAreNotValid(t *testing.T) {
 	}
 }
 
-func TestTakesTheLongestGroupWithSpacesInside(t *testing.T) {
+func TestTakesTheLongestGroupAndDeviceWithSpacesInside(t *testing.T) {
 	s := openTestStore(t)
-	groups := map[string]string{"pi": strings.Repeat("ü", MaxGroupBytes/2), "nas": "Living room"}
+	// A device named with 64 letters of 4 bytes each, the longest name, has the longest id.
+	longest := strings.Repeat("𠀀", 64)
+	groups := map[string]string{"pi": strings.Repeat("ü", MaxGroupBytes/2), "nas": "Living room", longest: "Office"}
 	if err := s.Write(context.Background(), Layout{Groups: groups}); err != nil {
 		t.Fatalf("Write() error = %v", err)
 	}

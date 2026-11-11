@@ -598,3 +598,45 @@ func abs(n int64) int64 {
 	}
 	return n
 }
+
+func TestAScanThatWasNotStoredComesAgain(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	h := openTestHub(t, store, nil)
+	if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+		t.Fatalf("AddPhone() error = %v", err)
+	}
+	now := time.Now()
+	ap := metrics.NearbyAccessPoint{ID: "0000000000aa", Box: "0000000000bb", SSID: "Office", SignalPercent: 60}
+	push := Push{Now: now.Unix(), WiFi: []PhoneScan{{Time: now.Unix(), AccessPoints: []metrics.NearbyAccessPoint{ap}}}}
+	// The scans cannot be stored, as when the database is busy.
+	if _, err := store.DB().ExecContext(ctx, `ALTER TABLE phone_scans RENAME TO phone_scans_away`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.Receive(ctx, "7KQM-X2RP", push); err == nil {
+		t.Fatal("Receive() error = nil, want the failed insert")
+	}
+	if _, err := store.DB().ExecContext(ctx, `ALTER TABLE phone_scans_away RENAME TO phone_scans`); err != nil {
+		t.Fatal(err)
+	}
+	answer, err := h.Receive(ctx, "7KQM-X2RP", push)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if answer.WiFiAfter != now.Unix() {
+		t.Errorf("WiFiAfter = %d, want %d", answer.WiFiAfter, now.Unix())
+	}
+	if scan, err := store.PhoneScanNear(ctx, "pixel", now, time.Minute); err != nil || scan == nil {
+		t.Errorf("PhoneScanNear() = %+v, %v; want the scan sent again", scan, err)
+	}
+	if err := store.Flush(ctx); err != nil {
+		t.Fatal(err)
+	}
+	seen, err := store.WiFi(ctx, now.Add(-time.Hour), now.Add(time.Minute), time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(seen.AccessPoints) != 1 || seen.AccessPoints[0].SeenBy[0].Points[0].Seen != 1 {
+		t.Errorf("access points %+v, want the scan counted once", seen.AccessPoints)
+	}
+}

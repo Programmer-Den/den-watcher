@@ -695,6 +695,22 @@ describe('DevicesDialog', () => {
     http.expectNone('/api/devices/pi/kind');
   });
 
+  it('takes a removed device out of its group', () => {
+    http
+      .expectOne('/api/layout')
+      .flush({ ...EMPTY_LAYOUT, groups: { pi: 'Rack', 'office-pc': 'Office' } });
+    button('Remove').click();
+
+    http.expectOne('/api/devices/office-pc').flush(null, { status: 204, statusText: 'No Content' });
+
+    const sent = http.expectOne((r) => r.method === 'PUT' && r.url === '/api/layout');
+    expect(sent.request.body.groups).toEqual({ pi: 'Rack' });
+    sent.flush(null);
+    http
+      .expectOne((r) => r.method === 'GET' && r.url === '/api/devices')
+      .flush({ devices: [{ id: 'local', name: '' }], passwordSet: true });
+  });
+
   it('puts each device, the hub too, in a group without asking for the password', () => {
     http.expectOne('/api/layout').flush({ ...EMPTY_LAYOUT, groups: { pi: 'Rack' } });
     fixture.detectChanges();

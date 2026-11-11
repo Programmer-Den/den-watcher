@@ -274,3 +274,30 @@ func TestANodeKeepsItsNewAddressFromTheNextStart(t *testing.T) {
 		t.Errorf("after a restart the node is %+v, want it at its new address", node)
 	}
 }
+
+func TestANodeNamedLikeARenamedDeviceGetsANameOfItsOwn(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	mesh := &fakeMesh{fresh: true}
+	router := meshRouter(t, mesh)
+	h, _ := stoppedHub(t, store, []Device{router})
+	if _, err := h.Add(ctx, "Laptop", startDevice(t), KindPC, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.Rename(ctx, "laptop", "Living room"); err != nil {
+		t.Fatal(err)
+	}
+	mesh.mu.Lock()
+	mesh.nodes = []MeshNode{{Key: "AA:00:00:00:00:02", Name: "Living room", Address: "192.168.1.2"}}
+	mesh.mu.Unlock()
+	if err := h.syncMesh(ctx, router, map[string]time.Time{}, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	var shown []string
+	for _, r := range h.Remotes() {
+		shown = append(shown, r.ShownName())
+	}
+	if want := []string{"Main router", "Living room", "Living room (AiMesh)"}; !slices.Equal(shown, want) {
+		t.Errorf("devices %q, want %q", shown, want)
+	}
+}

@@ -17,14 +17,11 @@ func TestPhoneScansAreReadClosestToATime(t *testing.T) {
 		{ID: "a", SSID: "Cafe", SignalPercent: 40, FrequencyMHz: 2437, Security: "Open"},
 		{ID: "b", SSID: "Den", SignalPercent: 80, SignalDBm: &dbm, FrequencyMHz: 5180, Security: "WPA2/WPA3", Generation: 6, Connected: true},
 	}
-	if err := store.AddPhoneScan(ctx, "pixel", hour, first); err != nil {
-		t.Fatal(err)
-	}
-	if err := store.AddPhoneScan(ctx, "pixel", hour.Add(5*time.Minute), first[:1]); err != nil {
+	if err := store.AddPhoneScans(ctx, "pixel", []FoundScan{{At: hour, Found: first}, {At: hour.Add(5 * time.Minute), Found: first[:1]}}); err != nil {
 		t.Fatal(err)
 	}
 	// One sent again is kept as it is.
-	if err := store.AddPhoneScan(ctx, "pixel", hour, nil); err != nil {
+	if err := store.AddPhoneScans(ctx, "pixel", []FoundScan{{At: hour}}); err != nil {
 		t.Fatal(err)
 	}
 

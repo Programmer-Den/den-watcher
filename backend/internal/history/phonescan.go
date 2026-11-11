@@ -46,10 +46,46 @@ type PhoneScan struct {
 	Networks []ScannedNetwork `json:"networks"`
 }
 
-// AddPhoneScan stores the networks a phone's scan at at found, as
-// metrics.CleanNearbyWiFi left them. A scan stored already at the same
-// second is kept as it is.
-func (s *Store) AddPhoneScan(ctx context.Context, device string, at time.Time, found []metrics.NearbyAccessPoint) error {
+// FoundScan is one scan of a phone to store: when it was made, on the hub's
+// clock, and the networks it found, as metrics.CleanNearbyWiFi left them.
+type FoundScan struct {
+	At    time.Time
+	Found []metrics.NearbyAccessPoint
+}
+
+// AddPhoneScans stores the scans of the phone stored as device, all in one
+// transaction, so either all of them are stored or none is. A scan stored
+// already at the same second is kept as it is.
+func (s *Store) AddPhoneScans(ctx context.Context, device string, scans []FoundScan) error {
+	if len(scans) == 0 {
+		return nil
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	insert, err := tx.PrepareContext(ctx, `
+		INSERT INTO phone_scans (device, time, networks) VALUES (?, ?, ?)
+		ON CONFLICT (device, time) DO NOTHING`)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = insert.Close() }()
+	for _, scan := range scans {
+		data, err := json.Marshal(scannedNetworks(scan.Found))
+		if err != nil {
+			return err
+		}
+		if _, err := insert.ExecContext(ctx, device, scan.At.Unix(), string(data)); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+// scannedNetworks are the networks a scan found, the strongest first.
+func scannedNetworks(found []metrics.NearbyAccessPoint) []ScannedNetwork {
 	networks := make([]ScannedNetwork, 0, len(found))
 	for _, ap := range found {
 		networks = append(networks, ScannedNetwork{
@@ -63,14 +99,7 @@ func (s *Store) AddPhoneScan(ctx context.Context, device string, at time.Time, f
 		})
 	}
 	slices.SortStableFunc(networks, func(a, b ScannedNetwork) int { return cmp.Compare(b.SignalPercent, a.SignalPercent) })
-	data, err := json.Marshal(networks)
-	if err != nil {
-		return err
-	}
-	_, err = s.db.ExecContext(ctx, `
-		INSERT INTO phone_scans (device, time, networks) VALUES (?, ?, ?)
-		ON CONFLICT (device, time) DO NOTHING`, device, at.Unix(), string(data))
-	return err
+	return networks
 }
 
 // PhoneScanNear returns the scan of the phone stored as device closest to

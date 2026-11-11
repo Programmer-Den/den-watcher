@@ -380,21 +380,31 @@ func (p *phone) receiveWiFi(ctx context.Context, push Push, now time.Time) (int6
 	}
 	scans := slices.Clone(push.WiFi)
 	slices.SortStableFunc(scans, func(a, b PhoneScan) int { return cmp.Compare(a.Time, b.Time) })
+	after := p.wifiAfter
+	var found []history.FoundScan
+	var nearby []*metrics.NearbyWiFi
 	for _, scan := range scans {
-		if scan.Time <= p.wifiAfter {
+		if scan.Time <= after {
 			continue
 		}
-		p.wifiAfter = scan.Time
+		after = scan.Time
 		at := time.Unix(scan.Time+f.offset, 0)
 		if at.After(now.Add(maxClockJitter)) || f.retention > 0 && at.Before(now.Add(-f.retention)) {
 			continue
 		}
-		nearby := metrics.CleanNearbyWiFi(&metrics.NearbyWiFi{AccessPoints: scan.AccessPoints})
-		f.store.AddWiFi(f.device, at, nearby)
-		if err := f.store.AddPhoneScan(ctx, f.device, at, nearby.AccessPoints); err != nil {
-			return 0, err
-		}
+		cleaned := metrics.CleanNearbyWiFi(&metrics.NearbyWiFi{AccessPoints: scan.AccessPoints})
+		found = append(found, history.FoundScan{At: at, Found: cleaned.AccessPoints})
+		nearby = append(nearby, cleaned)
 	}
+	// Stored first, so scans that could not be stored are neither counted
+	// nor taken as had, and come again with the next push.
+	if err := f.store.AddPhoneScans(ctx, f.device, found); err != nil {
+		return 0, err
+	}
+	for i, scan := range found {
+		f.store.AddWiFi(f.device, scan.At, nearby[i])
+	}
+	p.wifiAfter = after
 	return p.wifiAfter, nil
 }
 
