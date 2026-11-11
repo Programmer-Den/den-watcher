@@ -365,6 +365,40 @@ scrape_configs:
 
 On Windows, the installer has no option for it; set it on a Linux hub.
 
+### Show the values in Home Assistant
+
+Home Assistant reads the hub's API with its [RESTful integration](https://www.home-assistant.io/integrations/rest/); den-watcher needs no setting for it. `GET /api/metrics?device=<id>` answers with one device's current usage as JSON (the fields are in [The snapshot](data.md#the-snapshot)); the ids are in `GET /api/devices`, and the hub itself is `local`. In Home Assistant's `configuration.yaml`, with the hub at `192.168.1.20`:
+
+```yaml
+rest:
+  - resource: http://192.168.1.20:9393/api/metrics?device=local
+    scan_interval: 30
+    sensor:
+      - name: "Hub CPU"
+        unique_id: den_watcher_local_cpu
+        value_template: "{{ value_json.cpu.usagePercent | round(1) }}"
+        unit_of_measurement: "%"
+        state_class: measurement
+      - name: "Hub memory"
+        unique_id: den_watcher_local_memory
+        value_template: "{{ value_json.memory.usedPercent | round(1) }}"
+        unit_of_measurement: "%"
+        state_class: measurement
+      - name: "Hub temperature"
+        unique_id: den_watcher_local_temperature
+        value_template: "{{ value_json.temperatures[0].celsius | round(1) if value_json.temperatures else none }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+      - name: "Hub disk"
+        unique_id: den_watcher_local_disk
+        value_template: "{{ (value_json.disks | selectattr('path', 'eq', '/') | first).usedPercent | round(1) }}"
+        unit_of_measurement: "%"
+        state_class: measurement
+```
+
+Add a `resource` block like it for each device, with its id after `device=`. While the hub cannot reach a device, its address answers `503`, and Home Assistant shows that device's sensors as unavailable, which an automation can watch for. Home Assistant must reach the hub by IP address or by a name in `ALLOWED_HOSTS` (see [Open the page by name](#open-the-page-by-name)), from the local network. To keep the values longer than Home Assistant does, use [Prometheus](#7-show-the-usage-in-grafana) instead. The hub's page cannot be shown in a Home Assistant iframe card (see [Troubleshooting](#troubleshooting)); link to it instead.
+
 ## 8. Check the devices from outside
 
 With `STATUS_ADDR`, the hub also serves the status page: a minimal page on a port of its own that tells whether each device is online, offline or switched off and how many alerts it has, and nothing else: no values, no addresses, no version. It is the only part of den-watcher meant to be reachable from the internet, so you can check on your devices from anywhere. In Docker, set the port on the host in `.env`:
