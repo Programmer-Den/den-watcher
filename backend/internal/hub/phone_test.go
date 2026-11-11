@@ -203,6 +203,14 @@ func TestThePhonesScansCountAtTheirOwnTime(t *testing.T) {
 	if len(hours) != 2 || hours[now.Add(-3*time.Hour).Truncate(time.Hour).Unix()] != 1 || hours[now.Truncate(time.Hour).Unix()] != 1 {
 		t.Errorf("seen by hour %v, want %v: each scan once, at the hub's time", hours, want)
 	}
+	// Each scan is kept on its own too, at the hub's time, with only the valid networks.
+	scan, err := store.PhoneScanNear(ctx, "pixel", now.Add(-3*time.Hour), time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if scan == nil || len(scan.Networks) != 1 || scan.Networks[0].SSID != "Office" {
+		t.Errorf("scan from three hours ago = %+v, want the one with Office", scan)
+	}
 
 	if _, err := h.Receive(ctx, "7KQM-X2RP", Push{Now: phoneNow.Unix(), WiFi: make([]PhoneScan, ScansPerPush+1)}); !errors.Is(err, ErrPushTooLarge) {
 		t.Errorf("Receive() with %d scans error = %v, want %v", ScansPerPush+1, err, ErrPushTooLarge)

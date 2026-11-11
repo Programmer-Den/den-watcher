@@ -70,6 +70,13 @@ describe('the route', () => {
     ]);
   });
 
+  it('gives the points a dot each, only the newest of those drawn on top of each other', () => {
+    const map = routeMap(day().points)!;
+    expect(map.points.length).toBe(8);
+    // The three at home, the two on the way and the three at work, each drawn at the same spot.
+    expect(map.dots).toEqual([2, 3, 7]);
+  });
+
   it('draws the route centered on a map that holds all of it', () => {
     const map = routeMap(day().points, places(stops(day().points)))!;
     expect(map.zoom).toBeGreaterThan(10);
@@ -163,6 +170,58 @@ describe('PhoneRouteCard', () => {
     fixture.detectChanges();
     vi.advanceTimersByTime(0);
     expect(fixture.nativeElement.querySelector('path.line')).not.toBeNull();
+  });
+
+  it('shows the Wi-Fi networks scanned at a point clicked on the map', () => {
+    answer(day());
+    const hits = fixture.nativeElement.querySelectorAll('circle.hit');
+    expect(hits.length).toBe(3);
+    hits[1].dispatchEvent(new Event('click'));
+    fixture.detectChanges();
+    const request = http.expectOne((r) => r.url === '/api/phone/scan');
+    expect(request.request.params.get('device')).toBe('pixel');
+    expect(request.request.params.get('time')).toBe(String(35 * MINUTE));
+    request.flush({
+      time: 35 * MINUTE,
+      scan: {
+        time: 33 * MINUTE,
+        networks: [
+          { ssid: 'Den', signalPercent: 80, frequencyMHz: 5180, security: 'WPA2', connected: true },
+          { signalPercent: 20, frequencyMHz: 2412, security: 'Open' },
+        ],
+      },
+    });
+    fixture.detectChanges();
+    const scan = fixture.nativeElement.querySelector('.scan') as HTMLElement;
+    expect(scan.textContent).toContain('2 Wi-Fi networks');
+    expect(scan.textContent).toContain('scanned 2 minutes before');
+    const listed = scan.querySelectorAll('.networks li');
+    expect(listed[0].textContent).toContain('Den');
+    expect(listed[0].textContent).toContain('connected');
+    expect(listed[0].textContent).toContain('36 · 5 GHz · WPA2');
+    expect(listed[0].textContent).toContain('80 %');
+    expect(listed[1].textContent).toContain('Hidden network');
+    expect(listed[1].textContent).toContain('Open');
+    expect(fixture.nativeElement.querySelector('circle.selected')).not.toBeNull();
+
+    // The next point is read in turn, and one without a scan says so.
+    (scan.querySelectorAll('.step')[1] as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const next = http.expectOne((r) => r.url === '/api/phone/scan');
+    expect(next.request.params.get('time')).toBe(String(40 * MINUTE));
+    next.flush({ time: 40 * MINUTE, scan: null });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.scan').textContent).toContain('no Wi-Fi scan');
+
+    // Closed again, it offers the newest point.
+    (fixture.nativeElement.querySelectorAll('.scan .step')[2] as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('circle.selected')).toBeNull();
+    (fixture.nativeElement.querySelector('.scan .link') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    http.expectOne(
+      (r) => r.url === '/api/phone/scan' && r.params.get('time') === String(75 * MINUTE),
+    );
   });
 
   it('reads it again after a while and for another range', () => {

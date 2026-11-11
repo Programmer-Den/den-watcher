@@ -277,6 +277,13 @@ export class MetricsService {
     });
   }
 
+  /** Which Wi-Fi networks a phone's scan closest to `time`, in Unix seconds, found. */
+  phoneScan(time: number, device: string): Observable<PhoneScanAnswer> {
+    return this.http.get<PhoneScanAnswer>('/api/phone/scan', {
+      params: { time, ...deviceParam(device) },
+    });
+  }
+
   /** The places named on the page, by what a device's Wi-Fi hears there. */
   wifiPlaces(): Observable<WiFiPlace[]> {
     return this.http
@@ -347,6 +354,32 @@ export interface RoutePoint {
   lat: number;
   lon: number;
   accuracy: number;
+}
+
+/**
+ * What GET /api/phone/scan answers: the phone's scan of the Wi-Fi networks nearby closest to
+ * `time`, within a few minutes of it, or null when it made none then. Times are Unix seconds.
+ */
+export interface PhoneScanAnswer {
+  time: number;
+  scan: PhoneScan | null;
+}
+
+/** One scan of a phone: when, and the networks it found, the strongest first. */
+export interface PhoneScan {
+  time: number;
+  networks: ScannedNetwork[];
+}
+
+/** One network a phone's scan found. The SSID is left out for a hidden network. */
+export interface ScannedNetwork {
+  ssid?: string;
+  signalPercent: number;
+  signalDBm?: number;
+  frequencyMHz?: number;
+  security?: string;
+  generation?: number;
+  connected?: boolean;
 }
 
 /** This computer's time in whole Unix seconds, as the history is asked for. */
