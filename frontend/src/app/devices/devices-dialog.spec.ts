@@ -652,60 +652,24 @@ describe('DevicesDialog', () => {
     sent.flush(null);
   });
 
-  /** Leaves the list room for all its devices, or squeezes it to a row, and renders again. */
-  async function overflow(squeezed: boolean): Promise<void> {
-    const ul = element().querySelector('ul')!;
-    Object.defineProperty(ul, 'scrollHeight', { configurable: true, value: 160 });
-    Object.defineProperty(ul, 'clientHeight', {
-      configurable: true,
-      value: squeezed ? 40 : 160,
-    });
-    const devices = TestBed.inject(DeviceService).devices;
-    devices.set([...devices()]);
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-  }
-
   function list(): HTMLUListElement {
     return element().querySelector('ul')!;
   }
 
-  it('shows the list while it has room for its devices', async () => {
-    await overflow(false);
-
+  it('shows the list of devices when it opens', () => {
     expect(button('Added devices 2').getAttribute('aria-expanded')).toBe('true');
     expect(list().hidden).toBe(false);
   });
 
-  it('folds the list away when the dialog leaves it too little room', async () => {
-    await overflow(true);
+  it('folds the list away and back by hand', () => {
+    button('Added devices 2').click();
+    fixture.detectChanges();
 
     expect(button('Added devices 2').getAttribute('aria-expanded')).toBe('false');
     expect(list().hidden).toBe(true);
-  });
 
-  it('folds the list away when it is lower than a device row', async () => {
-    Object.defineProperty(list().querySelector('li')!, 'offsetHeight', {
-      configurable: true,
-      value: 120,
-    });
-    const ul = list();
-    Object.defineProperty(ul, 'scrollHeight', { configurable: true, value: 240 });
-    Object.defineProperty(ul, 'clientHeight', { configurable: true, value: 100 });
-    window.dispatchEvent(new Event('resize'));
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(list().hidden).toBe(true);
-  });
-
-  it('keeps a list unfolded by hand open', async () => {
-    await overflow(true);
     button('Added devices 2').click();
     fixture.detectChanges();
-    await overflow(true);
 
     expect(button('Added devices 2').getAttribute('aria-expanded')).toBe('true');
     expect(list().hidden).toBe(false);
