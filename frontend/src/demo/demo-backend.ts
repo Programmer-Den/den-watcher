@@ -21,7 +21,7 @@ import { History, Series } from '../app/metrics/metrics';
 import { DEMO_BUILD, demoVersion } from './demo-build';
 import { alertLog, fleetAlerts } from './alerts';
 import { demoEvents } from './events';
-import { DemoMachine, FLEET, extraInfoOf, offlineSince, snapshotOf } from './fleet';
+import { DEMO_GROUPS, DemoMachine, FLEET, extraInfoOf, offlineSince, snapshotOf } from './fleet';
 import { DEMO_PHONE, demoPhoneUsage } from './phone-usage';
 import { demoPhoneRoute } from './phone-route';
 import { demoPhoneWifi } from './phone-wifi';
@@ -230,7 +230,8 @@ export class DemoBackend implements HttpBackend {
 
   /**
    * GET and PUT /api/layout: the demo has no host, so the layout is kept in the visitor's browser,
-   * where it lasts as long as on a real hub for that visitor.
+   * where it lasts as long as on a real hub for that visitor. Until the visitor arranges the page,
+   * the devices are in the demo's groups.
    */
   private layout(request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> {
     try {
@@ -241,7 +242,10 @@ export class DemoBackend implements HttpBackend {
         return respond(request, null);
       }
       const stored = storage?.getItem(LAYOUT_STORAGE_KEY);
-      return respond(request, stored ? (JSON.parse(stored) as unknown) : EMPTY_LAYOUT);
+      return respond(
+        request,
+        stored ? (JSON.parse(stored) as unknown) : { ...EMPTY_LAYOUT, groups: DEMO_GROUPS },
+      );
     } catch {
       // Without storage (a private window, blocked site data) the layout lasts for this visit.
       return fail(request, 500, 'could not keep the layout');

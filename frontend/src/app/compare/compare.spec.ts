@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 
+import { EMPTY_LAYOUT } from '../dashboard/page-layout';
 import { DeviceService } from '../devices/devices';
 import { LineChart } from '../history/line-chart';
 import { History, Snapshot } from '../metrics/metrics';
@@ -177,6 +178,8 @@ describe('Compare', () => {
   });
 
   beforeEach(() => {
+    // The group compared is kept in the browser.
+    localStorage.clear();
     vi.useFakeTimers();
     vi.stubGlobal(
       'ResizeObserver',
@@ -204,6 +207,8 @@ describe('Compare', () => {
   afterEach(() => {
     // What the Wi-Fi saw has a test of its own (wifi-nearby.spec.ts).
     http.match((r) => r.url === '/api/wifi');
+    // The groups of the devices come with the page's layout; device-groups.spec.ts covers them.
+    http.match('/api/layout');
     http.verify();
     vi.useRealTimers();
     vi.unstubAllGlobals();
@@ -255,6 +260,28 @@ describe('Compare', () => {
       ['Office PC', 'Not in use', '–'],
       ['Printer', 'No values right now', '–'],
     ]);
+  });
+
+  it('compares only the devices of the group picked, and charts only them', () => {
+    answer();
+    http
+      .expectOne('/api/layout')
+      .flush({ ...EMPTY_LAYOUT, groups: { local: 'Rack', router: 'Rack', pc: 'Office' } });
+    fixture.detectChanges();
+
+    const office = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+        'app-group-filter button',
+      ),
+    ).find((b) => b.textContent!.trim() === 'Office')!;
+    office.click();
+    fixture.detectChanges();
+    vi.advanceTimersByTime(0);
+
+    expect(rows().map((r) => r[0])).toEqual(['Office PC']);
+    const requests = http.match((r) => r.url === '/api/history');
+    expect(requests.map((r) => r.request.params.get('device'))).toEqual(['pc']);
+    localStorage.clear();
   });
 
   it('lists what each device is that tells it', () => {

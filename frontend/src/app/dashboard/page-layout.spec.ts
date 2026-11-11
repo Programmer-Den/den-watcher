@@ -44,6 +44,18 @@ describe('PageLayout', () => {
     expect(writes().map((w) => w.request.body.pinned)).toEqual([['memory', 'cpu']]);
   });
 
+  it('reads the groups of the devices, without any that are not text, as from an older host', () => {
+    const page = TestBed.inject(PageLayout);
+    reads()[0].flush({ ...EMPTY_LAYOUT, groups: { pi: 'Rack', nas: 3, pc: null } });
+    expect(page.layout().groups).toEqual({ pi: 'Rack' });
+  });
+
+  it('reads no groups from a host that keeps none', () => {
+    const page = TestBed.inject(PageLayout);
+    reads()[0].flush({ folded: ['storage'] });
+    expect(page.layout().groups).toEqual({});
+  });
+
   it('does not read again while the page is hidden, and reads at once when it is shown', () => {
     TestBed.inject(PageLayout);
     reads()[0].flush('away', away);

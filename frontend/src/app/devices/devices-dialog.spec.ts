@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { of } from 'rxjs';
 
+import { EMPTY_LAYOUT } from '../dashboard/page-layout';
 import { DevicesDialog, phoneAddress } from './devices-dialog';
 import { DeviceService, Suggestion } from './devices';
 import { PasswordDialogResult } from './password-dialog';
@@ -67,6 +68,8 @@ describe('DevicesDialog', () => {
     http.match('/api/energy-price');
     // The marks of the charts are read alongside the history; these tests leave them unanswered.
     http.match((r) => r.url === '/api/events');
+    // The groups of the devices come with the page's layout; device-groups.spec.ts covers them.
+    http.match('/api/layout');
     http.verify();
   });
 
@@ -625,6 +628,28 @@ describe('DevicesDialog', () => {
       .click();
 
     http.expectNone('/api/devices/pi/kind');
+  });
+
+  it('puts each device, the hub too, in a group without asking for the password', () => {
+    http.expectOne('/api/layout').flush({ ...EMPTY_LAYOUT, groups: { pi: 'Rack' } });
+    fixture.detectChanges();
+    const field = (id: string) => input(`group-${id}`);
+    expect(field('local').value).toBe('');
+    expect(field('pi').value).toBe('Rack');
+    expect(
+      Array.from(element().querySelectorAll('#devices-dialog-groups option'), (o) =>
+        o.getAttribute('value'),
+      ),
+    ).toEqual(['Rack']);
+
+    field('local').value = ' Rack  ';
+    field('local').dispatchEvent(new Event('change'));
+
+    const sent = http.expectOne((r) => r.method === 'PUT' && r.url === '/api/layout');
+    expect(sent.request.body.groups).toEqual({ pi: 'Rack', local: 'Rack' });
+    expect(field('local').value).toBe('Rack');
+    expect(TestBed.inject(MatDialog).open).not.toHaveBeenCalled();
+    sent.flush(null);
   });
 
   /** Leaves the list room for all its devices, or squeezes it to a row, and renders again. */

@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { HubConnection } from '../connection/connection';
+import { EMPTY_LAYOUT } from '../dashboard/page-layout';
 import { Snapshot } from '../metrics/metrics';
 import { DevicePicker } from './device-picker';
 import { Device, DeviceService } from './devices';
@@ -12,6 +13,8 @@ describe('DevicePicker', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
+    // The group the list shows is kept in the browser.
+    localStorage.clear();
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       imports: [DevicePicker],
@@ -21,6 +24,8 @@ describe('DevicePicker', () => {
   });
 
   afterEach(() => {
+    // The groups of the devices come with the page's layout; device-groups.spec.ts covers them.
+    http.match('/api/layout');
     http.verify();
     vi.useRealTimers();
   });
@@ -73,6 +78,39 @@ describe('DevicePicker', () => {
     ]);
     expect(text(element().querySelector('.compare')!)).toBe('Compare devices');
     expect(text(element().querySelector('app-manage-button')!)).toBe('Devices');
+  });
+
+  it('offers no groups to pick until a device is put in one', () => {
+    show([
+      { id: 'local', name: '' },
+      { id: 'nas', name: 'NAS' },
+    ]);
+    http.expectOne('/api/layout').flush(EMPTY_LAYOUT);
+    fixture.detectChanges();
+
+    expect(element().querySelector('app-group-filter button')).toBeNull();
+  });
+
+  it('shows only the devices of the group picked', () => {
+    show([
+      { id: 'local', name: '' },
+      { id: 'nas', name: 'NAS' },
+      { id: 'laptop', name: 'Laptop', kind: 'pc' },
+    ]);
+    http
+      .expectOne('/api/layout')
+      .flush({ ...EMPTY_LAYOUT, groups: { nas: 'Rack', laptop: 'Office' } });
+    fixture.detectChanges();
+    const choices = () => Array.from(element().querySelectorAll('app-group-filter button'));
+    expect(choices().map(text)).toEqual(['All', 'Office', 'Rack']);
+    expect(choices()[0].getAttribute('aria-pressed')).toBe('true');
+
+    (choices()[2] as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(choices()[2].getAttribute('aria-pressed')).toBe('true');
+    expect(items().map((b) => text(b.querySelector('.name')!))).toEqual(['NAS']);
+    expect(Array.from(element().querySelectorAll('h2'), text)).toEqual(['Servers and IoT']);
   });
 
   it('lists phones last, in a group of their own', () => {

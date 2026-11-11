@@ -1,6 +1,7 @@
 <section aria-labelledby="compare-now">
   <h2 id="compare-now">{{ i18n.t('compare.title') }}</h2>
   <p class="detail">{{ i18n.t('compare.intro') }}</p>
+  <app-group-filter />
   <!-- On a phone the table scrolls sideways, with the names kept in view. -->
   <div class="table" [class.stale]="connection.lost()">
     <table>

@@ -23,6 +23,10 @@ const (
 	MaxNameBytes = 100
 )
 
+// MaxGroupBytes is the longest name of a group of devices, as long as the
+// longest name of a device.
+const MaxGroupBytes = 64
+
 // Layout is how the page is arranged.
 type Layout struct {
 	// Folded are the categories of cards that show only their title, such
@@ -45,6 +49,10 @@ type Layout struct {
 	// Ungrouped shows the cards in one section instead of grouped by their
 	// category; false, the page groups them.
 	Ungrouped bool `json:"ungrouped"`
+	// Groups are the groups the devices are put in, such as a room, by the
+	// device's id; a device that is in none is not listed. The page shows
+	// one group at a time when asked to.
+	Groups map[string]string `json:"groups"`
 }
 
 // list is one list of a layout, with its name in JSON.
@@ -87,7 +95,7 @@ func (s *Store) Read(ctx context.Context) (Layout, error) {
 	var stored string
 	err := s.db.QueryRowContext(ctx, `SELECT layout FROM page_layout WHERE id = 1`).Scan(&stored)
 	if errors.Is(err, sql.ErrNoRows) {
-		return Layout{Folded: []string{}, Order: []string{}, Hidden: []string{}, Pinned: []string{}, Made: []string{}, Widths: map[string]int{}}, nil
+		return Layout{Folded: []string{}, Order: []string{}, Hidden: []string{}, Pinned: []string{}, Made: []string{}, Widths: map[string]int{}, Groups: map[string]string{}}, nil
 	}
 	if err != nil {
 		return Layout{}, err
@@ -105,6 +113,9 @@ func (s *Store) Read(ctx context.Context) (Layout, error) {
 	if layout.Widths == nil {
 		layout.Widths = map[string]int{}
 	}
+	if layout.Groups == nil {
+		layout.Groups = map[string]string{}
+	}
 	return layout, nil
 }
 
@@ -117,6 +128,9 @@ func (s *Store) Write(ctx context.Context, layout Layout) error {
 		}
 	}
 	if err := checkWidths(layout.Widths); err != nil {
+		return err
+	}
+	if err := checkGroups(layout.Groups); err != nil {
 		return err
 	}
 	stored, err := json.Marshal(layout)
@@ -137,7 +151,7 @@ func check(field string, names []string) error {
 	}
 	seen := make(map[string]bool, len(names))
 	for _, name := range names {
-		if name == "" || len(name) > MaxNameBytes || !utf8.ValidString(name) || strings.ContainsFunc(name, func(r rune) bool { return !unicode.IsPrint(r) }) {
+		if !printable(name, MaxNameBytes) {
 			return &InputError{fmt.Sprintf("each entry of %s must be printable text of 1 to %d bytes", field, MaxNameBytes)}
 		}
 		if seen[name] {
@@ -161,4 +175,26 @@ func checkWidths(widths map[string]int) error {
 		}
 	}
 	return nil
+}
+
+// checkGroups checks the groups of the devices: the devices named like the
+// entries of a list, each group printable text without spaces around it.
+func checkGroups(groups map[string]string) error {
+	devices := slices.Sorted(maps.Keys(groups))
+	if err := check("groups", devices); err != nil {
+		return err
+	}
+	for _, device := range devices {
+		group := groups[device]
+		if !printable(group, MaxGroupBytes) || strings.TrimSpace(group) != group {
+			return &InputError{fmt.Sprintf("groups puts %q in %q, but a group must be printable text of 1 to %d bytes without spaces around it", device, group, MaxGroupBytes)}
+		}
+	}
+	return nil
+}
+
+// printable reports whether text is valid UTF-8 of 1 to limit bytes with
+// only printable characters.
+func printable(text string, limit int) bool {
+	return text != "" && len(text) <= limit && utf8.ValidString(text) && !strings.ContainsFunc(text, func(r rune) bool { return !unicode.IsPrint(r) })
 }

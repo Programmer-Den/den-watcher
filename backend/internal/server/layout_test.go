@@ -33,14 +33,14 @@ func TestKeepsTheLayoutForEveryBrowser(t *testing.T) {
 	store := &fakeLayout{stored: layout.Layout{Folded: []string{}}}
 	handler := newLayoutHandler(store)
 
-	if rec := send(handler, http.MethodPut, "/api/layout", `{"folded":["storage"],"order":["memory","cpu"],"hidden":["extra:wifi"],"pinned":["fans"],"made":["value:kernel/forks"],"widths":{"cpu":2},"ungrouped":true}`); rec.Code != http.StatusNoContent {
+	if rec := send(handler, http.MethodPut, "/api/layout", `{"folded":["storage"],"order":["memory","cpu"],"hidden":["extra:wifi"],"pinned":["fans"],"made":["value:kernel/forks"],"widths":{"cpu":2},"ungrouped":true,"groups":{"local":"Rack"}}`); rec.Code != http.StatusNoContent {
 		t.Fatalf("PUT status = %d, want %d: %s", rec.Code, http.StatusNoContent, rec.Body)
 	}
-	if want := (layout.Layout{Folded: []string{"storage"}, Order: []string{"memory", "cpu"}, Hidden: []string{"extra:wifi"}, Pinned: []string{"fans"}, Made: []string{"value:kernel/forks"}, Widths: map[string]int{"cpu": 2}, Ungrouped: true}); !reflect.DeepEqual(store.stored, want) {
+	if want := (layout.Layout{Folded: []string{"storage"}, Order: []string{"memory", "cpu"}, Hidden: []string{"extra:wifi"}, Pinned: []string{"fans"}, Made: []string{"value:kernel/forks"}, Widths: map[string]int{"cpu": 2}, Ungrouped: true, Groups: map[string]string{"local": "Rack"}}); !reflect.DeepEqual(store.stored, want) {
 		t.Errorf("stored = %#v, want %#v", store.stored, want)
 	}
 	rec := send(handler, http.MethodGet, "/api/layout", "")
-	if rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != `{"folded":["storage"],"order":["memory","cpu"],"hidden":["extra:wifi"],"pinned":["fans"],"made":["value:kernel/forks"],"widths":{"cpu":2},"ungrouped":true}` {
+	if rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != `{"folded":["storage"],"order":["memory","cpu"],"hidden":["extra:wifi"],"pinned":["fans"],"made":["value:kernel/forks"],"widths":{"cpu":2},"ungrouped":true,"groups":{"local":"Rack"}}` {
 		t.Errorf("GET = %d %s, want 200 with the stored layout", rec.Code, rec.Body)
 	}
 }
@@ -73,7 +73,11 @@ func TestTakesTheLongestValidLayout(t *testing.T) {
 	for _, name := range names {
 		widths[name] = 4
 	}
-	l := layout.Layout{Folded: names, Order: names, Hidden: names, Pinned: names, Made: names, Widths: widths}
+	groups := make(map[string]string, len(names))
+	for _, name := range names {
+		groups[name] = strings.Repeat("g", layout.MaxGroupBytes)
+	}
+	l := layout.Layout{Folded: names, Order: names, Hidden: names, Pinned: names, Made: names, Widths: widths, Groups: groups}
 	body, err := json.Marshal(l)
 	if err != nil {
 		t.Fatal(err)
