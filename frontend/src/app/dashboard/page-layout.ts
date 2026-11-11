@@ -21,6 +21,8 @@ export interface Layout {
   widths: Record<string, number>;
   /** Whether the cards show in one section instead of grouped by their category. */
   ungrouped: boolean;
+  /** The group each device is put in, such as a room, by the device's id. */
+  groups: Record<string, string>;
 }
 
 /** How many entries the host keeps in each list of the layout at most. */
@@ -35,6 +37,7 @@ export const EMPTY_LAYOUT: Layout = {
   made: [],
   widths: {},
   ungrouped: false,
+  groups: {},
 };
 
 /** The layout as the host answered it, with an empty list for each list it does not have. */
@@ -49,7 +52,19 @@ function fromHost(answer: Partial<Layout> | null): Layout {
     made: list(answer?.made),
     widths: widths(answer?.widths),
     ungrouped: answer?.ungrouped === true,
+    groups: groups(answer?.groups),
   };
+}
+
+/** The groups as the host answered them, without any that are not text. */
+function groups(value: unknown): Record<string, string> {
+  return value && typeof value === 'object'
+    ? Object.fromEntries(
+        Object.entries(value).filter(
+          (entry): entry is [string, string] => typeof entry[1] === 'string',
+        ),
+      )
+    : {};
 }
 
 /** The widths as the host answered them, without any that are not 2 or 4 cards. */
@@ -73,6 +88,7 @@ export function withinLimits(layout: Layout): Layout {
     pinned: newest(layout.pinned),
     made: newest(layout.made),
     widths: Object.fromEntries(newest(Object.entries(layout.widths))),
+    groups: Object.fromEntries(newest(Object.entries(layout.groups))),
   };
 }
 

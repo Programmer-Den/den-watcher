@@ -21,7 +21,7 @@ import {
   historyCsv,
 } from './demo-backend';
 import { demoVersion } from './demo-build';
-import { FLEET } from './fleet';
+import { DEMO_GROUPS, FLEET } from './fleet';
 import { DEMO_PHONE } from './phone-usage';
 import { DEMO_PLACES, demoWifi } from './wifi';
 
@@ -37,10 +37,13 @@ describe('DemoBackend', () => {
     devices = TestBed.inject(DeviceService);
   });
 
-  it("keeps the page's layout in the visitor's browser, as there is no host", async () => {
+  it("keeps the page's layout in the visitor's browser, as there is no host, with groups until then", async () => {
     const http = TestBed.inject(HttpClient);
     try {
-      expect(await firstValueFrom(http.get('/api/layout'))).toEqual(EMPTY_LAYOUT);
+      expect(await firstValueFrom(http.get('/api/layout'))).toEqual({
+        ...EMPTY_LAYOUT,
+        groups: DEMO_GROUPS,
+      });
       const layout = { folded: ['storage'], order: ['memory'], hidden: ['cpu'] };
       await firstValueFrom(http.put('/api/layout', layout));
       expect(await firstValueFrom(http.get('/api/layout'))).toEqual(layout);

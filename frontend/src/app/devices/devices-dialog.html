@@ -206,6 +206,33 @@
     }
   </form>
 
+  @if (others().length) {
+    <h3>{{ i18n.t('groups.title') }}</h3>
+    <p class="hint">{{ i18n.t('groups.hint') }}</p>
+    <datalist id="devices-dialog-groups">
+      @for (group of groups.names(); track group) {
+        <option [value]="group"></option>
+      }
+    </datalist>
+    <div class="groups">
+      @for (device of devices.devices(); track device.id) {
+        <mat-form-field subscriptSizing="dynamic">
+          <mat-label>{{ deviceName(device, i18n) }}</mat-label>
+          <input
+            matInput
+            list="devices-dialog-groups"
+            autocomplete="off"
+            [name]="'group-' + device.id"
+            [attr.maxlength]="maxGroupLength"
+            [placeholder]="i18n.t('groups.none')"
+            [value]="groups.groupOf(device)"
+            (change)="setGroup(device, $event)"
+          />
+        </mat-form-field>
+      }
+    </div>
+  }
+
   @if (ownCode()) {
     <h3>{{ i18n.t('devicesDialog.ownCodeTitle') }}</h3>
     <p class="hint">{{ i18n.t('devicesDialog.ownCodeHint') }}</p>
@@ -278,7 +305,7 @@
   }
 </mat-dialog-content>
 
-<!-- Adding sits next to closing, which keeps the dialog low enough for the list on a phone. -->
+<!-- Adding sits next to closing, so it stays in reach however long the list is. -->
 <mat-dialog-actions>
   <button mat-flat-button type="submit" form="devices-dialog-add" [disabled]="busy() || !canAdd()">
     {{ i18n.t('devicesDialog.add') }}

@@ -60,6 +60,10 @@ ul {
   fill: var(--mat-sys-primary);
 }
 
+app-group-filter {
+  margin: 0 0.75rem;
+}
+
 app-manage-button {
   align-self: flex-start;
   margin-left: 0.75rem;

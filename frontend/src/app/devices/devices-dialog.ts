@@ -5,14 +5,12 @@ import {
   ElementRef,
   Injector,
   afterNextRender,
-  afterRenderEffect,
   computed,
   inject,
   signal,
 } from '@angular/core';
 import { formatDate } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { fromEvent } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import {
@@ -52,9 +50,11 @@ import {
   MIN_PASSWORD_LENGTH,
   StatusPage,
   Suggestion,
+  deviceName,
   kindName,
   problemMessage,
 } from './devices';
+import { DeviceGroups, MAX_GROUP_LENGTH } from './device-groups';
 import { PasswordDialog, PasswordDialogData, PasswordDialogResult } from './password-dialog';
 import { qrPath } from './qr-code';
 
@@ -96,10 +96,8 @@ export class DevicesDialog {
     this.devices.devices().filter((d) => d.id !== LOCAL_DEVICE.id),
   );
 
-  /** Whether the list of devices is shown; folded when the dialog leaves it too little room. */
+  /** Whether the list of devices is shown; it can be folded away by hand. */
   protected readonly listOpen = signal(true);
-  /** Set once the list was folded or unfolded by hand, which then stays as it was set. */
-  private readonly listToggled = signal(false);
 
   protected readonly name = signal('');
   protected readonly address = signal('');
@@ -143,6 +141,9 @@ export class DevicesDialog {
     () => this.devices.pagePort() || this.document.location.port || String(DEFAULT_PORT),
   );
   protected readonly kindName = kindName;
+  protected readonly deviceName = deviceName;
+  protected readonly groups = inject(DeviceGroups);
+  protected readonly maxGroupLength = MAX_GROUP_LENGTH;
   /** The remote status page; null until it is read, and when the hub has none. */
   protected readonly statusPage = signal<StatusPage | null>(null);
   /** The new password typed in for the status page, and typed again. */
@@ -173,32 +174,6 @@ export class DevicesDialog {
   );
 
   constructor() {
-    // The list scrolls on its own, so the dialog does not. Until it is folded by hand, it folds
-    // away when that leaves it too low to show a whole device, such as on a small phone once the
-    // suggestion fills in a line more or the window gets smaller. It does not unfold again by
-    // itself.
-    const resized = signal(0);
-    fromEvent(window, 'resize')
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => resized.update((n) => n + 1));
-    afterRenderEffect(() => {
-      this.others();
-      this.suggested();
-      resized();
-      if (this.listToggled() || !this.listOpen()) {
-        return;
-      }
-      const list = this.host.nativeElement.querySelector('ul');
-      if (!list || list.scrollHeight <= list.clientHeight) {
-        return;
-      }
-      // A device's row, which is taller where its buttons wrap.
-      const row = list.querySelector('li')?.offsetHeight || remToPixels(5);
-      if (list.clientHeight < row) {
-        this.listOpen.set(false);
-      }
-    });
-
     this.devices
       .pairingCode()
       .pipe(
@@ -229,7 +204,6 @@ export class DevicesDialog {
   }
 
   protected toggleList(): void {
-    this.listToggled.set(true);
     this.listOpen.update((open) => !open);
   }
 
@@ -271,6 +245,16 @@ export class DevicesDialog {
     this.change({ action: 'pairing', deviceName: device.name }, (result) =>
       this.devices.setCode(device.id, code, result.password),
     ).subscribe(() => this.typeCode(device, ''));
+  }
+
+  /**
+   * Puts a device in the group typed in, or in none when it is left empty. A group is part of the
+   * page's layout, so it needs no password; the field shows the name as it was kept.
+   */
+  protected setGroup(device: Device, event: Event): void {
+    const field = event.target as HTMLInputElement;
+    this.groups.setGroup(device, field.value);
+    field.value = this.groups.groupOf(device);
   }
 
   /** Shows the device's name as a field to type its new name in. */
@@ -424,10 +408,6 @@ export class DevicesDialog {
         finalize(() => this.busy.set(false)),
       );
   }
-}
-
-function remToPixels(rem: number): number {
-  return rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
 }
 
 /** Opens the list of devices. */

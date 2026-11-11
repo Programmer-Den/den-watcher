@@ -141,6 +141,12 @@ export const en = {
   'devices.group.server': 'Servers and IoT',
   'devices.group.pc': 'PCs and laptops',
   'devices.group.phone': 'Phones',
+  'groups.all': 'All',
+  'groups.label': 'Show the devices of a group',
+  'groups.title': 'Groups',
+  'groups.hint':
+    'Put devices into groups such as rooms, to show only one group in the list of devices and the comparison. Every browser shows the same groups.',
+  'groups.none': 'No group',
   'sidebar.open': 'Show the devices',
   'sidebar.collapse': 'Collapse the sidebar',
   'sidebar.expand': 'Expand the sidebar',
