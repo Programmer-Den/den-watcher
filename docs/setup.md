@@ -296,7 +296,7 @@ Once the hub's code is scanned, *Open the hub's page* in the app opens the hub's
 
 **Wi-Fi networks**: under *Wi-Fi networks*, tap *Allow*, and then *Allow all the time*, which Android 11 and later ask for in the app's settings (*Location > Allow all the time*). The app then records two things over the day. The Wi-Fi networks nearby: each access point Android saw, under a hash of its hardware address, with its signal, channel and security, as the Wi-Fi add-on of a PC does, so the phone shows under *Compare devices*, *Wi-Fi nearby*. A phone with its screen off seldom scans on its own, so every 5 minutes, when Android made no scan since, the app asks it for one, which Android allows an app with a notification up to 4 times in 2 minutes and costs little battery; with Wi-Fi and Wi-Fi scanning switched off, or location off, Android makes none. And the Wi-Fi the phone is connected to: its name, from the first reading that found the phone on it to the last, so the hub shows on the phone's page under *Wi-Fi networks* which networks it was on and when, how long on each, and every connection. A reading that finds the phone on the same Wi-Fi within 20 minutes goes on with the same connection, so the half-minute readings and Android's deep sleep make one connection, not many; the times are as exact as the readings, about half a minute while the phone is awake. Android gives both only with the location permission, which is why it asks for it; the app reads the phone's position only for the *Location route* (see below). Only while the app is open, it reads them only then. It keeps them, also from while the phone is away, until the phone is on the home Wi-Fi again, up to its newest 20,160 scans and 10,000 connections, so the hub can tell where the phone was. Without the permission it reads none. *Wi-Fi networks nearby* and *Wi-Fi connected to, with times* under *Which data do you want to collect?* switch each off on its own; switched off, the ones not sent yet are deleted.
 
-**Location route**: with the location permission allowed all the time (see *Wi-Fi networks* above) and *Location route* on, the app keeps where the phone was over the day. At every reading it takes the newest position Android has, which other apps such as a navigation app may have asked for, at no cost, and every 5 minutes it asks Android for a position from the mobile and Wi-Fi networks (Android 11 and later), which costs little battery; it never switches on GPS by itself. A point is kept when the phone moved further than the position is vague, at least 50 m, and every quarter of an hour while it stays where it is; positions vaguer than 2 km are left out. While *Save battery* or Android's battery saver is on, the app asks for no positions and keeps only the ones Android has anyway. It keeps the points, also from while the phone is away, until the phone is on the home Wi-Fi again, up to its newest 20,000. The phone's page shows the route under *Location route*, drawn on a map from OpenStreetMap, with how far the phone went and the places it stayed at for 10 minutes or more, the longest first. The map's tiles are loaded by the browser from OpenStreetMap's servers, which so learn which area is looked at; the route itself stays on the hub. Without internet access the route is drawn on a plain background. Switched off, the points not sent yet are deleted.
+**Location route**: with the location permission allowed all the time (see *Wi-Fi networks* above) and *Location route* on, the app keeps where the phone was over the day. At every reading it takes the newest position Android has, which other apps such as a navigation app may have asked for, at no cost, and every 5 minutes it asks Android for a position from the mobile and Wi-Fi networks (Android 11 and later), which costs little battery; it never switches on GPS by itself. A point is kept when the phone moved further than the position is vague, at least 50 m, and every quarter of an hour while it stays where it is; positions vaguer than 2 km are left out. While *Save battery* or Android's battery saver is on, the app asks for no positions and keeps only the ones Android has anyway. It keeps the points, also from while the phone is away, until the phone is on the home Wi-Fi again, up to its newest 20,000. The phone's page shows the route under *Location route*, drawn on a map from OpenStreetMap, with how far the phone went and the places it stayed at for 10 minutes or more, the longest first. Each point has a dot on the map (of points drawn on top of each other, as while the phone stays at a place, only the newest); click one to see the Wi-Fi networks the phone's scan closest to it found, within 5 minutes, with their signal, channel and security and the one the phone was connected to, and step to the points before and after it. The hub keeps each scan of a phone on its own for this, besides the hourly sums *Wi-Fi nearby* uses; scans received before this version are only in those sums, so their points show none. The map's tiles are loaded by the browser from OpenStreetMap's servers, which so learn which area is looked at; the route itself stays on the hub. Without internet access the route is drawn on a plain background. Switched off, the points not sent yet are deleted.
 
 **App usage**: under *App usage*, tap *Allow usage access* and switch Den-Watcher on in Android's *Usage access* settings, as Android asks for it there only, without a popup. The app then reads Android's own usage log: when which app was in use and for how long (the time an app's screens were in front, from when it came to the front until another app did, or the screen went off or locked), and when the phone was unlocked. The home screen is no app's time. Android keeps that log only for a few days, so the app keeps the uses, also from while the phone is away, up to its newest 50,000, until the hub has them, and the first time it reads as far back as Android has them. The hub shows the phone's screen time, unlocks and the time in each app on the phone's page. With usage access, the app also reads how much data each app sent and received since midnight, over Wi-Fi and over mobile data, from Android's own count, at most every 10 minutes, and the hub shows them in the cards *Data per app today: Wi-Fi* and *Data per app today: mobile*: the 12 apps that used the most, the rest as *Other apps*, with the hotspot and removed apps on their own. Android counts it anyway, so it costs no battery. With *Storage used* on too, it reads how much storage each app takes, with its data and cache, once an hour, and the hub shows the 12 largest in the card *Storage per app*. Switching *App usage* off under *Which data do you want to collect?* stops reading the log and deletes the uses not sent yet; switched on again, it reads from then on.
 
@@ -364,6 +364,40 @@ scrape_configs:
 `/metrics` answers only the local network, and only to the names the page does (see [Open the page by name](#open-the-page-by-name)): a target by IP address works, a name from the router's DNS needs `ALLOWED_HOSTS`. Prometheus in Docker on the same machine reaches it at the machine's LAN address, not at `localhost`. Every value has the labels `device`, the device's name (*Host Hub* for this device without `DEVICE_NAME`), and `id`, its id in `GET /api/devices`. A device that does not answer has `denwatcher_device_up` 0 and no other values but its alerts. The metrics are listed in [The usage for Prometheus](data.md#the-usage-for-prometheus).
 
 On Windows, the installer has no option for it; set it on a Linux hub.
+
+### Show the values in Home Assistant
+
+Home Assistant reads the hub's API with its [RESTful integration](https://www.home-assistant.io/integrations/rest/); den-watcher needs no setting for it. `GET /api/metrics?device=<id>` answers with one device's current usage as JSON (the fields are in [The snapshot](data.md#the-snapshot)); the ids are in `GET /api/devices`, and the hub itself is `local`. In Home Assistant's `configuration.yaml`, with the hub at `192.168.1.20`:
+
+```yaml
+rest:
+  - resource: http://192.168.1.20:9393/api/metrics?device=local
+    scan_interval: 30
+    sensor:
+      - name: "Hub CPU"
+        unique_id: den_watcher_local_cpu
+        value_template: "{{ value_json.cpu.usagePercent | round(1) }}"
+        unit_of_measurement: "%"
+        state_class: measurement
+      - name: "Hub memory"
+        unique_id: den_watcher_local_memory
+        value_template: "{{ value_json.memory.usedPercent | round(1) }}"
+        unit_of_measurement: "%"
+        state_class: measurement
+      - name: "Hub temperature"
+        unique_id: den_watcher_local_temperature
+        value_template: "{{ value_json.temperatures[0].celsius | round(1) if value_json.temperatures else none }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+      - name: "Hub disk"
+        unique_id: den_watcher_local_disk
+        value_template: "{{ (value_json.disks | selectattr('path', 'eq', '/') | first).usedPercent | round(1) }}"
+        unit_of_measurement: "%"
+        state_class: measurement
+```
+
+Add a `resource` block like it for each device, with its id after `device=`. While the hub cannot reach a device, its address answers `503`, and Home Assistant shows that device's sensors as unavailable, which an automation can watch for. Home Assistant must reach the hub by IP address or by a name in `ALLOWED_HOSTS` (see [Open the page by name](#open-the-page-by-name)), from the local network. To keep the values longer than Home Assistant does, use [Prometheus](#7-show-the-usage-in-grafana) instead. The hub's page cannot be shown in a Home Assistant iframe card (see [Troubleshooting](#troubleshooting)); link to it instead.
 
 ## 8. Check the devices from outside
 

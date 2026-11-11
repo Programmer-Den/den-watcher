@@ -140,6 +140,9 @@ type Site struct {
 	WiFiConnections WiFiConnectionSource
 	// Route is where the phones were; nil leaves out GET /api/phone/route.
 	Route RouteSource
+	// PhoneScans are the phones' scans of the Wi-Fi networks nearby, each
+	// on its own; nil leaves out GET /api/phone/scan.
+	PhoneScans PhoneScanSource
 	// Routers tells which device each router seen on the Wi-Fi is, for GET
 	// /api/wifi; nil tells none.
 	Routers RouterBoxes
@@ -253,6 +256,11 @@ func New(site Site) http.Handler {
 	if site.Route != nil {
 		mux.HandleFunc("GET /api/phone/route", forDevice(site.Devices, func(d Device) http.HandlerFunc {
 			return routeHandler(d, site.Route, site.Retention)
+		}))
+	}
+	if site.PhoneScans != nil {
+		mux.HandleFunc("GET /api/phone/scan", forDevice(site.Devices, func(d Device) http.HandlerFunc {
+			return phoneScanHandler(d, site.PhoneScans)
 		}))
 	}
 	if site.Layout != nil {

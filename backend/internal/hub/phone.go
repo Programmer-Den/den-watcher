@@ -346,7 +346,9 @@ func (p *phone) receive(ctx context.Context, push Push, now time.Time, key []byt
 	after, err := p.minutes.receive(ctx, MinutesAnswer{Now: push.Now, Minutes: push.Minutes, Extras: push.Extras}, now)
 	answer := PushAnswer{After: after}
 	if err == nil {
-		answer.WiFiAfter = p.receiveWiFi(push, now)
+		answer.WiFiAfter, err = p.receiveWiFi(ctx, push, now)
+	}
+	if err == nil {
 		answer.UsesAfter, err = p.receiveUses(ctx, push, now)
 	}
 	if err == nil {
@@ -366,10 +368,11 @@ func (p *phone) receive(ctx context.Context, push Push, now time.Time, key []byt
 
 // receiveWiFi counts the scans of a push the hub does not have yet into the
 // Wi-Fi history, at their time on the hub's clock, as the minutes are moved
-// (see fetcher.receive), and returns the phone's time of the newest scan it
+// (see fetcher.receive), keeps each of them on its own too, for the points
+// of the phone's route, and returns the phone's time of the newest scan it
 // has. A scan older than the retention or from the future is left out, but
 // counts as had, so the phone deletes it. The caller holds pushing.
-func (p *phone) receiveWiFi(push Push, now time.Time) int64 {
+func (p *phone) receiveWiFi(ctx context.Context, push Push, now time.Time) (int64, error) {
 	f := p.minutes
 	if p.wifiAfter > push.Now {
 		// The phone's clock went back.
@@ -386,9 +389,13 @@ func (p *phone) receiveWiFi(push Push, now time.Time) int64 {
 		if at.After(now.Add(maxClockJitter)) || f.retention > 0 && at.Before(now.Add(-f.retention)) {
 			continue
 		}
-		f.store.AddWiFi(f.device, at, metrics.CleanNearbyWiFi(&metrics.NearbyWiFi{AccessPoints: scan.AccessPoints}))
+		nearby := metrics.CleanNearbyWiFi(&metrics.NearbyWiFi{AccessPoints: scan.AccessPoints})
+		f.store.AddWiFi(f.device, at, nearby)
+		if err := f.store.AddPhoneScan(ctx, f.device, at, nearby.AccessPoints); err != nil {
+			return 0, err
+		}
 	}
-	return p.wifiAfter
+	return p.wifiAfter, nil
 }
 
 // receiveUses stores the uses of apps of a push, at their start on the hub's

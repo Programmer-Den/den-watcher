@@ -22,6 +22,8 @@ import {
   WiFiHistory,
   WiFiPlace,
   Whereabout,
+  bandText,
+  channelText,
   channelUse,
   homeNetwork,
   homeRows,
@@ -31,6 +33,7 @@ import {
   placeSignals,
   places,
   sameSpot,
+  securityText,
   signalLevel,
   timeline,
   whereNow,
@@ -254,16 +257,11 @@ export class WifiNearby {
 
   /** The channel and band of a frequency, such as "36 · 5 GHz". */
   protected channel(mhz?: number): string {
-    if (!mhz) {
-      return '';
-    }
-    const band = wifiBand(mhz);
-    const parts = [wifiChannel(mhz) || undefined, band && this.band(band)];
-    return parts.filter((p) => p !== undefined).join(' · ');
+    return channelText(this.i18n, mhz);
   }
 
   protected band(band: 2.4 | 5 | 6): string {
-    return band === 2.4 ? this.i18n.t('wifi.band24') : `${band} GHz`;
+    return bandText(band, this.i18n);
   }
 
   protected bandOf(mhz?: number): string {
@@ -273,7 +271,7 @@ export class WifiNearby {
 
   /** How a network is secured, with "Open" in the page's language. */
   protected security(security?: string): string {
-    return security === 'Open' ? this.i18n.t('wifi.open') : (security ?? '');
+    return securityText(this.i18n, security);
   }
 
   /**

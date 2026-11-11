@@ -52,3 +52,45 @@ func routeHandler(d Device, source RouteSource, retention time.Duration) http.Ha
 		writeJSON(w, http.StatusOK, routeResponse{From: from, To: to, Points: points})
 	}
 }
+
+// PhoneScanSource reads which Wi-Fi networks a phone found at one time.
+type PhoneScanSource interface {
+	PhoneScanNear(ctx context.Context, device string, at time.Time, within time.Duration) (*history.PhoneScan, error)
+}
+
+// phoneScanWithin is how far before or after a point of the route a scan may
+// be to count as made there: the app scans and asks for a position every 5
+// minutes, so the scan of a point is at most a few minutes from it.
+const phoneScanWithin = 5 * time.Minute
+
+// phoneScanResponse is the body of GET /api/phone/scan; Scan is null when
+// the phone made none near the time.
+type phoneScanResponse struct {
+	Time int64              `json:"time"`
+	Scan *history.PhoneScan `json:"scan"`
+}
+
+// phoneScanHandler serves GET /api/phone/scan?device=<id>&time=<unix
+// seconds>: the Wi-Fi networks the phone's scan closest to that time found,
+// within phoneScanWithin, as for a point of its route. Any other device has
+// none.
+func phoneScanHandler(d Device, source PhoneScanSource) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		at, err := strconv.ParseInt(r.URL.Query().Get("time"), 10, 64)
+		if err != nil || at < 0 {
+			http.Error(w, "time must be a Unix time in seconds", http.StatusBadRequest)
+			return
+		}
+		if d.Kind != hub.KindPhone {
+			http.Error(w, "only a phone's app sends its scans", http.StatusNotFound)
+			return
+		}
+		scan, err := source.PhoneScanNear(r.Context(), d.ID, time.Unix(at, 0), phoneScanWithin)
+		if err != nil {
+			slog.Error("read a phone's scan", "device", d.ID, "error", err)
+			http.Error(w, "could not read the phone's scan", http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusOK, phoneScanResponse{Time: at, Scan: scan})
+	}
+}

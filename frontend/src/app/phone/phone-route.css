@@ -1,6 +1,12 @@
 :host {
   display: block;
   margin-bottom: 1.25rem;
+  /*
+   * The route's own color, a strong violet the map's roads, water and parks never use, the same in
+   * light and dark mode, as the map's tiles are.
+   */
+  --route: #7b1fa2;
+  --route-casing: #fff;
 }
 
 .value {
@@ -33,12 +39,45 @@
   }
 }
 
-.line {
+.line,
+.casing {
   fill: none;
-  stroke: var(--mat-sys-primary);
-  stroke-width: 4;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.casing {
+  stroke: var(--route-casing);
+  stroke-width: 7;
+  stroke-opacity: 0.85;
+}
+
+.line {
+  stroke: var(--route);
+  stroke-width: 3.5;
+}
+
+/* A point of the route: small, so the line stays readable, with a ring to tell it from the line. */
+.dot {
+  fill: var(--route-casing);
+  stroke: var(--route);
+  stroke-width: 2;
+}
+
+.selected {
+  fill: none;
+  stroke: var(--route);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 2px var(--route-casing));
+}
+
+.hit {
+  fill: transparent;
+  cursor: pointer;
+
+  &:hover {
+    fill: rgb(123 31 162 / 25%);
+  }
 }
 
 /* The start is a ring, the latest point a filled dot, both apart from the line's color. */
@@ -58,8 +97,8 @@
 
 .stop circle {
   fill: var(--mat-sys-surface);
-  stroke: var(--mat-sys-primary);
-  stroke-width: 2;
+  stroke: var(--route);
+  stroke-width: 2.5;
 }
 
 .stop text {
@@ -91,6 +130,11 @@
   &.end {
     background: var(--mat-sys-on-surface);
   }
+
+  &.point {
+    border-color: var(--route);
+    background: var(--route-casing);
+  }
 }
 
 h4 {
@@ -118,7 +162,7 @@ h4 {
   place-items: center;
   width: 1.25rem;
   height: 1.25rem;
-  border: 2px solid var(--mat-sys-primary);
+  border: 2px solid var(--route);
   border-radius: 50%;
   font-size: 0.75em;
   font-weight: 600;
@@ -131,4 +175,147 @@ h4 {
 .count {
   color: var(--mat-sys-on-surface-variant);
   font-size: 0.875em;
+}
+
+/* The Wi-Fi networks of the point picked on the map. */
+.scan {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container);
+}
+
+.scan-head {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+
+  .when {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 0 0.5rem;
+    align-items: baseline;
+    min-width: 0;
+  }
+
+  .detail {
+    margin: 0;
+  }
+}
+
+.step {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.38;
+    cursor: default;
+  }
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mat-sys-primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.networks {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 0.75rem;
+    align-items: center;
+  }
+
+  .name {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    min-width: 0;
+  }
+
+  .ssid {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hidden {
+    font-style: italic;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .meta {
+    grid-column: 1;
+    margin: 0;
+    font-size: 0.8125em;
+  }
+
+  .signal {
+    display: flex;
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 7.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.badge {
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  font-size: 0.75em;
+}
+
+.bar {
+  flex: 1;
+  height: 0.375rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--mat-sys-surface-container-highest);
+
+  span {
+    display: block;
+    height: 100%;
+    background: var(--level);
+  }
+}
+
+[data-level='great'] {
+  --level: light-dark(#1b7f3b, #2ea05a);
+}
+[data-level='good'] {
+  --level: light-dark(#4f8f2a, #5d9e3a);
+}
+[data-level='fair'] {
+  --level: light-dark(#a07a00, #b8901a);
+}
+[data-level='weak'] {
+  --level: light-dark(#c4561c, #c8642c);
+}
+[data-level='poor'] {
+  --level: light-dark(#b3261e, #b9443c);
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -48,5 +49,46 @@ func TestServesAPhonesRouteWithinTheRetention(t *testing.T) {
 	}
 	if rec := get(handler, "/api/phone/route?device=pixel&from=5&to=1", "192.168.1.20:5000"); rec.Code != http.StatusBadRequest {
 		t.Errorf("status of a range that ends before it starts = %d, want 400", rec.Code)
+	}
+}
+
+// fakePhoneScans has one scan at 100 and keeps what it was asked for.
+type fakePhoneScans struct {
+	device string
+	at     time.Time
+}
+
+func (f *fakePhoneScans) PhoneScanNear(_ context.Context, device string, at time.Time, within time.Duration) (*history.PhoneScan, error) {
+	f.device, f.at = device, at
+	if at.Unix() < 100-int64(within/time.Second) || at.Unix() > 100+int64(within/time.Second) {
+		return nil, nil
+	}
+	return &history.PhoneScan{Time: 100, Networks: []history.ScannedNetwork{{SSID: "Den", SignalPercent: 80}}}, nil
+}
+
+func TestServesThePhonesScanNearAPoint(t *testing.T) {
+	source := &fakePhoneScans{}
+	devices := append(device(fakeCollector{}, nil), Device{ID: "pixel", Kind: hub.KindPhone, Metrics: fakeCollector{}})
+	handler := New(Site{Devices: DeviceList(devices), Files: site, PhoneScans: source})
+	rec := get(handler, "/api/phone/scan?device=pixel&time=160", "192.168.1.20:5000")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body)
+	}
+	var got phoneScanResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if source.device != "pixel" || got.Time != 160 || got.Scan == nil || got.Scan.Time != 100 || got.Scan.Networks[0].SSID != "Den" {
+		t.Errorf("device %q, body = %s", source.device, rec.Body)
+	}
+	rec = get(handler, "/api/phone/scan?device=pixel&time=100000", "192.168.1.20:5000")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"scan":null`) {
+		t.Errorf("far from any scan: status %d, body %s; want scan null", rec.Code, rec.Body)
+	}
+	if rec := get(handler, "/api/phone/scan?device=local&time=100", "192.168.1.20:5000"); rec.Code != http.StatusNotFound {
+		t.Errorf("status for a device that is no phone = %d, want 404", rec.Code)
+	}
+	if rec := get(handler, "/api/phone/scan?device=pixel&time=soon", "192.168.1.20:5000"); rec.Code != http.StatusBadRequest {
+		t.Errorf("status of a time that is no number = %d, want 400", rec.Code)
 	}
 }
