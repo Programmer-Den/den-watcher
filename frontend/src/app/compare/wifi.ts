@@ -1,3 +1,5 @@
+import { I18n } from '../i18n/i18n';
+
 /** What GET /api/wifi answers: what the Wi-Fi of each device saw nearby, in steps of whole hours. */
 export interface WiFiHistory {
   from: number;
@@ -761,4 +763,24 @@ export function placeSignals(
   return strongest.length > 0
     ? Object.fromEntries(strongest.map(([id, signal]) => [id, Math.round(signal * 10) / 10]))
     : undefined;
+}
+
+/** A band as the page names it, such as "2.4 GHz" in the page's language. */
+export function bandText(band: 2.4 | 5 | 6, i18n: I18n): string {
+  return band === 2.4 ? i18n.t('wifi.band24') : `${band} GHz`;
+}
+
+/** The channel and band of a frequency in MHz, such as "36 · 5 GHz", or empty when unknown. */
+export function channelText(i18n: I18n, mhz?: number): string {
+  if (!mhz) {
+    return '';
+  }
+  const band = wifiBand(mhz);
+  const parts = [wifiChannel(mhz) || undefined, band && bandText(band, i18n)];
+  return parts.filter((p) => p !== undefined).join(' · ');
+}
+
+/** How a network is secured, with "Open" in the page's language. */
+export function securityText(i18n: I18n, security?: string): string {
+  return security === 'Open' ? i18n.t('wifi.open') : (security ?? '');
 }

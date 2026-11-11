@@ -25,7 +25,12 @@
               />
             }
           }
+          <!-- A light casing under the line keeps it apart from the roads of the map. -->
+          <path class="casing" [attr.d]="m.path" />
           <path class="line" [attr.d]="m.path" />
+          @for (i of m.dots; track i) {
+            <circle class="dot" [attr.cx]="m.points[i].x" [attr.cy]="m.points[i].y" r="3" />
+          }
           @for (s of m.places; track $index) {
             <g class="stop" [attr.transform]="'translate(' + s.x + ' ' + s.y + ')'">
               <circle r="9" />
@@ -34,12 +39,120 @@
           }
           <circle class="start" [attr.cx]="m.start.x" [attr.cy]="m.start.y" r="6" />
           <circle class="end" [attr.cx]="m.end.x" [attr.cy]="m.end.y" r="6" />
+          @if (selected() >= 0) {
+            <circle
+              class="selected"
+              [attr.cx]="m.points[selected()].x"
+              [attr.cy]="m.points[selected()].y"
+              r="8"
+            />
+          }
+          <!-- Larger, invisible targets on top, so a dot is easy to hit, also with a finger. -->
+          @for (i of m.dots; track i) {
+            <circle
+              class="hit"
+              [attr.cx]="m.points[i].x"
+              [attr.cy]="m.points[i].y"
+              r="14"
+              (click)="select(i)"
+            >
+              <title>{{ time(r.points[i].time) }}</title>
+            </circle>
+          }
         </svg>
         <figcaption class="detail">{{ i18n.t('phoneRoute.attribution') }}</figcaption>
       </figure>
       <div class="legend detail">
         <span><span class="dot start"></span>{{ i18n.t('phoneRoute.start') }}</span>
         <span><span class="dot end"></span>{{ i18n.t('phoneRoute.end') }}</span>
+        <span><span class="dot point"></span>{{ i18n.t('phoneRoute.point') }}</span>
+      </div>
+      <div class="scan" aria-live="polite">
+        @if (selectedPoint(); as p) {
+          <div class="scan-head">
+            <button
+              type="button"
+              class="step"
+              [disabled]="selected() <= 0"
+              [attr.aria-label]="i18n.t('phoneRoute.previous')"
+              [title]="i18n.t('phoneRoute.previous')"
+              (click)="step(-1)"
+            >
+              ‹
+            </button>
+            <div class="when">
+              <strong>{{ time(p.time) }}</strong>
+              <span class="detail">{{ accuracy(p.accuracy) }}</span>
+            </div>
+            <button
+              type="button"
+              class="step"
+              [disabled]="selected() >= r.points.length - 1"
+              [attr.aria-label]="i18n.t('phoneRoute.next')"
+              [title]="i18n.t('phoneRoute.next')"
+              (click)="step(1)"
+            >
+              ›
+            </button>
+            <button
+              type="button"
+              class="step"
+              [attr.aria-label]="i18n.t('phoneRoute.close')"
+              [title]="i18n.t('phoneRoute.close')"
+              (click)="selectedTime.set(null)"
+            >
+              ×
+            </button>
+          </div>
+          @if (scan(); as a) {
+            @if (a.scan; as s) {
+              <p class="detail">
+                {{
+                  i18n.plural(
+                    s.networks.length,
+                    'phoneRoute.networks.one',
+                    'phoneRoute.networks.other'
+                  )
+                }}
+                · {{ scanOffset(a) }}
+              </p>
+              <ul class="networks">
+                @for (n of s.networks; track $index) {
+                  <li>
+                    <span class="name">
+                      @if (n.ssid) {
+                        <span class="ssid">{{ n.ssid }}</span>
+                      } @else {
+                        <span class="ssid hidden">{{ i18n.t('phoneRoute.hiddenNetwork') }}</span>
+                      }
+                      @if (n.connected) {
+                        <span class="badge">{{ i18n.t('wifi.connected') }}</span>
+                      }
+                    </span>
+                    <span class="meta detail">{{ meta(n) }}</span>
+                    <span class="signal" [attr.data-level]="signalLevel(n.signalPercent)">
+                      <span class="bar"><span [style.width.%]="n.signalPercent"></span></span>
+                      {{ n.signalPercent | number: '1.0-0' : i18n.language() }} %
+                    </span>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="detail">{{ i18n.t('phoneRoute.noScan') }}</p>
+            }
+          } @else if (scanFailed()) {
+            <p class="detail">{{ i18n.t('phoneRoute.scanFailed') }}</p>
+          } @else {
+            <p class="detail">{{ i18n.t('dashboard.loading') }}</p>
+          }
+        } @else {
+          <p class="detail hint">
+            {{ i18n.t('phoneRoute.pickPoint') }}
+            <button type="button" class="link" (click)="latest()">
+              {{ i18n.t('phoneRoute.showLatest') }}
+            </button>
+          </p>
+        }
       </div>
       @if (places().length > 0) {
         <h4>{{ i18n.t('phoneRoute.places') }}</h4>

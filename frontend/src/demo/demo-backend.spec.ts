@@ -127,6 +127,30 @@ describe('DemoBackend', () => {
     ).rejects.toBeTruthy();
   });
 
+  it('tells the Wi-Fi networks the phone scanned at each point of its route, connected to one at a place', async () => {
+    const to = Math.floor(Date.now() / 1000);
+    const route = await firstValueFrom(metrics.phoneRoute(to - 2 * 86400, to, DEMO_PHONE));
+    let connected = 0;
+    for (const p of route.points.filter((_, i) => i % 10 === 0)) {
+      const answer = await firstValueFrom(metrics.phoneScan(p.time, DEMO_PHONE));
+      expect(answer.time).toBe(p.time);
+      expect(Math.abs(answer.scan!.time - p.time)).toBeLessThanOrEqual(150);
+      const networks = answer.scan!.networks;
+      expect(networks.length).toBeGreaterThan(0);
+      for (const [i, n] of networks.entries()) {
+        expect(n.signalPercent).toBeGreaterThan(0);
+        expect(n.signalPercent).toBeLessThanOrEqual(100);
+        if (i > 0) {
+          expect(n.signalPercent).toBeLessThanOrEqual(networks[i - 1].signalPercent);
+        }
+      }
+      expect(networks.filter((n) => n.connected).length).toBeLessThanOrEqual(1);
+      connected += networks.some((n) => n.connected) ? 1 : 0;
+    }
+    expect(connected).toBeGreaterThan(0);
+    await expect(firstValueFrom(metrics.phoneScan(to, 'local-x'))).rejects.toBeTruthy();
+  });
+
   it('shows a remote status page whose password cannot be changed', async () => {
     expect(await firstValueFrom(devices.statusPage())).toEqual(DEMO_STATUS_PAGE);
     const refused = await firstValueFrom(devices.setStatusPassword('new password', 'hub')).catch(

@@ -24,6 +24,7 @@ import { demoEvents } from './events';
 import { DemoMachine, FLEET, extraInfoOf, offlineSince, snapshotOf } from './fleet';
 import { DEMO_PHONE, demoPhoneUsage } from './phone-usage';
 import { demoPhoneRoute } from './phone-route';
+import { demoPhoneScan } from './phone-scan';
 import { demoPhoneWifi } from './phone-wifi';
 import { DEMO_PLACES, demoWifi } from './wifi';
 
@@ -134,6 +135,12 @@ export class DemoBackend implements HttpBackend {
       const to = Math.min(Number(url.searchParams.get('to')), Math.floor(now) + 1);
       const from = Math.max(Number(url.searchParams.get('from')), to - DEMO_RETENTION_DAYS * 86400);
       return respond(request, demoPhoneRoute(from, to));
+    }
+    if (request.method === 'GET' && url.pathname === '/api/phone/scan') {
+      if (device !== DEMO_PHONE) {
+        return fail(request, 404, null);
+      }
+      return respond(request, demoPhoneScan(Number(url.searchParams.get('time'))));
     }
     if (request.method === 'GET' && url.pathname === '/api/devices/suggestion') {
       return respond(request, DEMO_SUGGESTION);

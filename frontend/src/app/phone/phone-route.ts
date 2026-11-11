@@ -1,14 +1,22 @@
-import { formatNumber } from '@angular/common';
+import { DecimalPipe, formatDate, formatNumber } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { catchError, of, switchMap } from 'rxjs';
 
+import { channelText, securityText, signalLevel } from '../compare/wifi';
 import { HubConnection } from '../connection/connection';
 import { DeviceService } from '../devices/devices';
 import { HistoryStore } from '../history/history-store';
 import { I18n } from '../i18n/i18n';
 import { formatDuration } from '../metrics/format';
-import { MetricsService, PhoneRoute, RoutePoint, nowSeconds } from '../metrics/metrics';
+import {
+  MetricsService,
+  PhoneRoute,
+  PhoneScanAnswer,
+  RoutePoint,
+  ScannedNetwork,
+  nowSeconds,
+} from '../metrics/metrics';
 import { PageVisibility } from '../page-visibility';
 
 /** How often the route of a phone is read again. */
@@ -33,6 +41,9 @@ export const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 /** How close points must be to count as one place the phone stayed at, in meters. */
 export const STOP_METERS = 150;
+
+/** How close two points may be drawn, in map units, before only the newer of them gets a dot. */
+export const DOT_SPACING = 8;
 
 /** How long the phone must stay at a place for it to count as a stop, in seconds. */
 export const STOP_SECONDS = 10 * 60;
@@ -155,6 +166,13 @@ export interface RouteMap {
   start: { x: number; y: number };
   end: { x: number; y: number };
   places: { x: number; y: number }[];
+  /** Where each of the points is drawn, in their order. */
+  points: { x: number; y: number }[];
+  /**
+   * The points that get a dot, by their index, oldest first: of points closer together than
+   * DOT_SPACING, as while the phone stays at a place, only the newest, so the dots do not pile up.
+   */
+  dots: number[];
 }
 
 /**
@@ -206,6 +224,10 @@ export function routeMap(points: RoutePoint[], placesOf: Place[] = []): RouteMap
     }
   }
   const drawn = points.map((p) => at(p.lat, p.lon));
+  const cells = new Map<string, number>();
+  drawn.forEach((p, i) => {
+    cells.set(`${Math.round(p.x / DOT_SPACING)} ${Math.round(p.y / DOT_SPACING)}`, i);
+  });
   return {
     zoom,
     tiles,
@@ -213,6 +235,8 @@ export function routeMap(points: RoutePoint[], placesOf: Place[] = []): RouteMap
     start: drawn[0],
     end: drawn[drawn.length - 1],
     places: placesOf.map((p) => at(p.lat, p.lon)),
+    points: drawn,
+    dots: [...cells.values()].sort((a, b) => a - b),
   };
 }
 
@@ -222,12 +246,13 @@ function round(n: number): number {
 
 /**
  * Where a phone was over the picked range, from what its app reads with the location permission:
- * the route drawn on an OpenStreetMap map, how far the phone went, and the places it stayed at, the
- * one it stayed at longest first.
+ * the route drawn on an OpenStreetMap map, with a dot for its points, how far the phone went, and
+ * the places it stayed at, the one it stayed at longest first. A click on a dot shows the Wi-Fi
+ * networks the phone's scan found there.
  */
 @Component({
   selector: 'app-phone-route',
-  imports: [],
+  imports: [DecimalPipe],
   templateUrl: './phone-route.html',
   styleUrl: './phone-route.css',
 })
@@ -256,6 +281,76 @@ export class PhoneRouteCard {
 
   protected readonly duration = (seconds: number) => formatDuration(seconds, this.i18n);
 
+  /** The time of the point whose Wi-Fi networks are shown, kept by time as the route moves on. */
+  protected readonly selectedTime = signal<number | null>(null);
+
+  /** The index of that point among the route's points, or -1. */
+  protected readonly selected = computed(() => {
+    const time = this.selectedTime();
+    return time === null ? -1 : (this.route()?.points.findIndex((p) => p.time === time) ?? -1);
+  });
+
+  protected readonly selectedPoint = computed(() => this.route()?.points[this.selected()] ?? null);
+
+  /** The answer for the selected point, or null while it is read or when it could not be. */
+  protected readonly scan = signal<PhoneScanAnswer | null>(null);
+  protected readonly scanFailed = signal(false);
+
+  protected readonly signalLevel = signalLevel;
+
+  /** A network's channel, band and security, such as "36 · 5 GHz · WPA2/WPA3". */
+  protected meta(network: ScannedNetwork): string {
+    return [channelText(this.i18n, network.frequencyMHz), securityText(this.i18n, network.security)]
+      .filter((part) => part)
+      .join(' · ');
+  }
+
+  /** A time of the route, with the weekday and date, in the page's language. */
+  protected time(seconds: number): string {
+    return formatDate(seconds * 1000, this.i18n.t('format.dateTime'), this.i18n.language());
+  }
+
+  /** How vague a point is, such as "± 30 m". */
+  protected accuracy(meters: number): string {
+    return this.i18n.t('phoneRoute.accuracy', {
+      meters: formatNumber(meters, this.i18n.language(), '1.0-0'),
+    });
+  }
+
+  /** How far the scan was from the point: at its time, or minutes before or after it. */
+  protected scanOffset(answer: PhoneScanAnswer): string {
+    const minutes = Math.round(((answer.scan?.time ?? answer.time) - answer.time) / 60);
+    if (minutes === 0) {
+      return this.i18n.t('phoneRoute.scanAtPoint');
+    }
+    return this.i18n.plural(
+      Math.abs(minutes),
+      minutes < 0 ? 'phoneRoute.scanBefore.one' : 'phoneRoute.scanAfter.one',
+      minutes < 0 ? 'phoneRoute.scanBefore.other' : 'phoneRoute.scanAfter.other',
+    );
+  }
+
+  /** Shows the Wi-Fi networks of the point at index, or hides them when it is shown already. */
+  protected select(index: number): void {
+    const time = this.route()?.points[index]?.time ?? null;
+    this.selectedTime.set(time === this.selectedTime() ? null : time);
+  }
+
+  /** Shows the point before or after the selected one, by step. */
+  protected step(by: number): void {
+    const points = this.route()?.points ?? [];
+    const next = points[this.selected() + by];
+    if (next) {
+      this.selectedTime.set(next.time);
+    }
+  }
+
+  /** Shows the newest point. */
+  protected latest(): void {
+    const points = this.route()?.points ?? [];
+    this.selectedTime.set(points.at(-1)?.time ?? null);
+  }
+
   protected tileFailed(href: string): void {
     this.failedTiles.update((failed) => new Set([...failed, href]));
   }
@@ -267,6 +362,7 @@ export class PhoneRouteCard {
       .pipe(
         switchMap(({ device, span }) => {
           this.route.set(null);
+          this.selectedTime.set(null);
           return this.page.poll(ROUTE_REFRESH_MS, () => {
             const to = nowSeconds();
             return this.metrics.phoneRoute(to - span, to, device).pipe(catchError(() => of(null)));
@@ -279,5 +375,29 @@ export class PhoneRouteCard {
           this.route.set(route);
         }
       });
+
+    // The scan of the selected point, read again only when another point is picked.
+    const point = computed(() => ({
+      device: this.devices.selectedId(),
+      time: this.selectedTime(),
+    }));
+    toObservable(point)
+      .pipe(
+        switchMap(({ device, time }) => {
+          this.scan.set(null);
+          this.scanFailed.set(false);
+          if (time === null) {
+            return of(null);
+          }
+          return this.metrics.phoneScan(time, device).pipe(
+            catchError(() => {
+              this.scanFailed.set(true);
+              return of(null);
+            }),
+          );
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe((answer) => this.scan.set(answer));
   }
 }
