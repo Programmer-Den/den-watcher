@@ -139,6 +139,12 @@ export const es: Messages = {
   'devices.group.server': 'Servidores e IoT',
   'devices.group.pc': 'PC y portátiles',
   'devices.group.phone': 'Móviles',
+  'groups.all': 'Todos',
+  'groups.label': 'Mostrar los dispositivos de un grupo',
+  'groups.title': 'Grupos',
+  'groups.hint':
+    'Pon los dispositivos en grupos, como habitaciones, para mostrar solo un grupo en la lista de dispositivos y en la comparación. Todos los navegadores muestran los mismos grupos.',
+  'groups.none': 'Sin grupo',
   'sidebar.open': 'Mostrar los dispositivos',
   'sidebar.collapse': 'Contraer la barra lateral',
   'sidebar.expand': 'Expandir la barra lateral',

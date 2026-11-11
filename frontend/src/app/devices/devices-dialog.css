@@ -73,6 +73,14 @@ ul[hidden] {
   display: none;
 }
 
+/* A field for the group of each device, as many in a row as fit. */
+.groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
 form {
   display: flex;
   flex-wrap: wrap;

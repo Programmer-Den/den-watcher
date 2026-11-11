@@ -2641,6 +2641,26 @@ export const FLEET: readonly DemoMachine[] = [
   camera,
 ];
 
+/**
+ * The groups the demo's devices are put in, such as rooms, by their id; the phone is in none, as a
+ * device can be.
+ */
+export const DEMO_GROUPS: Readonly<Record<string, string>> = {
+  local: 'Rack',
+  'windows-server': 'Rack',
+  'linux-nas': 'Rack',
+  'linux-server': 'Rack',
+  'home-router': 'Rack',
+  'windows-pc': 'Office',
+  'linux-desktop': 'Office',
+  'windows-laptop': 'Office',
+  printer: 'Office',
+  'living-room': 'Living room',
+  'linux-laptop': 'Living room',
+  'garage-pi': 'Garage',
+  'ip-camera': 'Garage',
+};
+
 /** The values whose names start with kind and a colon, by what follows the colon. */
 function named(values: Values, kind: string): [string, number][] {
   return Object.entries(values)

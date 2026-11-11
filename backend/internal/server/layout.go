@@ -12,7 +12,7 @@ import (
 
 // maxLayoutBytes is the largest body of PUT /api/layout: room for every list
 // of the layout at its longest.
-const maxLayoutBytes = 128 << 10
+const maxLayoutBytes = 192 << 10
 
 // readLayout serves GET /api/layout: how the page is arranged.
 func readLayout(store LayoutStore) http.HandlerFunc {

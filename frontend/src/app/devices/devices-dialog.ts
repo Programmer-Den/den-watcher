@@ -51,9 +51,11 @@ import {
   MIN_PASSWORD_LENGTH,
   StatusPage,
   Suggestion,
+  deviceName,
   kindName,
   problemMessage,
 } from './devices';
+import { DeviceGroups, MAX_GROUP_LENGTH } from './device-groups';
 import { PasswordDialog, PasswordDialogData, PasswordDialogResult } from './password-dialog';
 import { qrPath } from './qr-code';
 
@@ -137,6 +139,9 @@ export class DevicesDialog {
     () => this.devices.pagePort() || this.document.location.port || String(DEFAULT_PORT),
   );
   protected readonly kindName = kindName;
+  protected readonly deviceName = deviceName;
+  protected readonly groups = inject(DeviceGroups);
+  protected readonly maxGroupLength = MAX_GROUP_LENGTH;
   /** The remote status page; null until it is read, and when the hub has none. */
   protected readonly statusPage = signal<StatusPage | null>(null);
   /** The new password typed in for the status page, and typed again. */
@@ -265,6 +270,16 @@ export class DevicesDialog {
     this.change({ action: 'pairing', deviceName: device.name }, (result) =>
       this.devices.setCode(device.id, code, result.password),
     ).subscribe(() => this.typeCode(device, ''));
+  }
+
+  /**
+   * Puts a device in the group typed in, or in none when it is left empty. A group is part of the
+   * page's layout, so it needs no password; the field shows the name as it was kept.
+   */
+  protected setGroup(device: Device, event: Event): void {
+    const field = event.target as HTMLInputElement;
+    this.groups.setGroup(device, field.value);
+    field.value = this.groups.groupOf(device);
   }
 
   protected setKind(device: Device, kind: DeviceKind): void {

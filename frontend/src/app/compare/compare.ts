@@ -7,7 +7,9 @@ import { AlertLevel } from '../alerts/alert';
 import { AlertIcon } from '../alerts/alert-icon';
 import { worstLevel } from '../alerts/alerts';
 import { HubConnection } from '../connection/connection';
+import { DeviceGroups } from '../devices/device-groups';
 import { Device, DeviceService, deviceName, deviceState, notInUse } from '../devices/devices';
+import { GroupFilter } from '../devices/group-filter';
 import { StatusDot } from '../devices/status-dot';
 import { FleetValues } from '../devices/fleet-values';
 import { I18n } from '../i18n/i18n';
@@ -175,7 +177,16 @@ interface Histories {
  */
 @Component({
   selector: 'app-compare',
-  imports: [AlertIcon, BytesPipe, DecimalPipe, EvenColumns, LineChart, StatusDot, WifiNearby],
+  imports: [
+    AlertIcon,
+    BytesPipe,
+    DecimalPipe,
+    EvenColumns,
+    GroupFilter,
+    LineChart,
+    StatusDot,
+    WifiNearby,
+  ],
   templateUrl: './compare.html',
   styleUrl: './compare.css',
 })
@@ -183,6 +194,8 @@ export class Compare {
   private readonly metrics = inject(MetricsService);
   private readonly page = inject(PageVisibility);
   protected readonly devices = inject(DeviceService);
+  /** The devices compared: those of the group shown, all of them when none is. */
+  private readonly shown = inject(DeviceGroups).visible;
   protected readonly i18n = inject(I18n);
   protected readonly connection = inject(HubConnection);
 
@@ -206,7 +219,7 @@ export class Compare {
   private readonly summaries = this.fleet.summaries;
   protected readonly rows = computed(() =>
     sortRows(
-      this.devices.devices().map((device) => ({
+      this.shown().map((device) => ({
         device,
         summary: this.summaries().get(device.id) ?? null,
       })),
@@ -219,7 +232,7 @@ export class Compare {
 
   /** The devices with a history to chart: all but checks, which keep only their response time. */
   private readonly charted = computed(
-    () => this.devices.devices().filter((d) => !d.checked),
+    () => this.shown().filter((d) => !d.checked),
     // The list is read again every few seconds; the charts load again only when it changes.
     { equal: (a, b) => a.map((d) => d.id).join('\n') === b.map((d) => d.id).join('\n') },
   );
