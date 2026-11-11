@@ -1302,3 +1302,26 @@ func TestTheNameOfASkippedSavedDeviceStaysTaken(t *testing.T) {
 		t.Errorf("devices without HUB_DEVICES = %q, want the saved pc", got)
 	}
 }
+
+func TestADeviceRenamedLikeOneFromTheSettingsIsNotShownTwice(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	h := openTestHub(t, store, nil)
+	if _, err := h.Add(ctx, "Laptop", startDevice(t), KindPC, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.Rename(ctx, "laptop", "NAS"); err != nil {
+		t.Fatal(err)
+	}
+
+	// HUB_DEVICES now has a device of that name.
+	nas := Device{ID: "nas", Name: "NAS", Address: startDevice(t)}
+	again := openTestHub(t, store, []Device{nas})
+	var shown []string
+	for _, remote := range again.Remotes() {
+		shown = append(shown, remote.ShownName())
+	}
+	if !slices.Equal(shown, []string{"NAS"}) {
+		t.Errorf("devices %q, want only the NAS from the settings", shown)
+	}
+}

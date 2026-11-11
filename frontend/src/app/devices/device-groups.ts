@@ -76,10 +76,10 @@ export class DeviceGroups {
     }
     this.layout.change((layout) => {
       const groups = { ...layout.groups };
+      // Taken out and put back, so the device is the newest entry and the last to be trimmed.
+      delete groups[device.id];
       if (name) {
         groups[device.id] = name;
-      } else {
-        delete groups[device.id];
       }
       return { ...layout, groups };
     });
@@ -91,8 +91,12 @@ export class DeviceGroups {
  * characters that do not print, and not longer than the host keeps.
  */
 export function cleanGroup(group: string): string {
-  // The host takes no other space than the plain one, and no control or format characters.
-  const printable = group.replace(/\p{Cf}/gu, '').replace(/[\s\p{Cc}\p{Z}]+/gu, ' ');
+  // The host takes no other space than the plain one, and only letters, marks, numbers,
+  // punctuation and symbols besides: no control, format, private-use or unassigned characters.
+  const printable = group
+    .replace(/\p{Cf}/gu, '')
+    .replace(/[\s\p{Cc}\p{Z}]+/gu, ' ')
+    .replace(/[^\p{L}\p{M}\p{N}\p{P}\p{S} ]/gu, '');
   let name = printable.trim();
   // Cut at a character, not in the middle of one, to fit the host's limit in bytes.
   const encoder = new TextEncoder();

@@ -302,7 +302,10 @@ export class DevicesDialog {
 
   protected remove(device: Device): void {
     this.change({ action: 'remove', deviceName: device.name }, (result) =>
-      this.devices.remove(device.id, result.password, result.keepHistory),
+      this.devices
+        .remove(device.id, result.password, result.keepHistory)
+        // Out of its group too, so a device added later under its name does not land in it.
+        .pipe(tap(() => this.groups.setGroup(device, ''))),
     ).subscribe();
   }
 

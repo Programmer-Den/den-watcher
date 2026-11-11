@@ -23,9 +23,12 @@ const (
 	MaxNameBytes = 100
 )
 
-// MaxGroupBytes is the longest name of a group of devices, as long as the
-// longest name of a device.
+// MaxGroupBytes is the longest name of a group of devices.
 const MaxGroupBytes = 64
+
+// MaxDeviceBytes is the longest id of a device a group is kept for: 64
+// letters or digits (the longest name of a device) of up to 4 bytes each.
+const MaxDeviceBytes = 256
 
 // Layout is how the page is arranged.
 type Layout struct {
@@ -146,13 +149,18 @@ func (s *Store) Write(ctx context.Context, layout Layout) error {
 // check checks one list of the layout: few enough, each short, printable and
 // named once.
 func check(field string, names []string) error {
+	return checkUpTo(field, names, MaxNameBytes)
+}
+
+// checkUpTo is check with names of up to limit bytes.
+func checkUpTo(field string, names []string, limit int) error {
 	if len(names) > MaxEntries {
 		return &InputError{fmt.Sprintf("%s has more than %d entries", field, MaxEntries)}
 	}
 	seen := make(map[string]bool, len(names))
 	for _, name := range names {
-		if !printable(name, MaxNameBytes) {
-			return &InputError{fmt.Sprintf("each entry of %s must be printable text of 1 to %d bytes", field, MaxNameBytes)}
+		if !printable(name, limit) {
+			return &InputError{fmt.Sprintf("each entry of %s must be printable text of 1 to %d bytes", field, limit)}
 		}
 		if seen[name] {
 			return &InputError{fmt.Sprintf("%s names %q twice", field, name)}
@@ -181,7 +189,7 @@ func checkWidths(widths map[string]int) error {
 // entries of a list, each group printable text without spaces around it.
 func checkGroups(groups map[string]string) error {
 	devices := slices.Sorted(maps.Keys(groups))
-	if err := check("groups", devices); err != nil {
+	if err := checkUpTo("groups", devices, MaxDeviceBytes); err != nil {
 		return err
 	}
 	for _, device := range devices {

@@ -104,6 +104,16 @@ describe('DeviceGroups', () => {
     sent.flush(null);
   });
 
+  it('makes a device whose group changed the newest entry, the last to be trimmed', () => {
+    const groups = groupsWith({ nas: 'Rack', printer: 'Office' });
+
+    groups.setGroup(DEVICES[1], 'Attic');
+
+    const sent = http.expectOne((r) => r.method === 'PUT' && r.url === '/api/layout');
+    expect(Object.keys(sent.request.body.groups)).toEqual(['printer', 'nas']);
+    sent.flush(null);
+  });
+
   it('sends nothing when the group a device has is typed again', () => {
     const groups = groupsWith({ nas: 'Rack' });
 
@@ -121,6 +131,11 @@ describe('cleanGroup', () => {
 
   it('makes other spaces and control characters plain spaces and leaves out format characters', () => {
     expect(cleanGroup('Office A\u0007B​')).toBe('Office A B');
+  });
+
+  it('leaves out private-use and unassigned characters, which the host does not take', () => {
+    expect(cleanGroup('Office \uF8FF\u{E0080}\u0378A')).toBe('Office A');
+    expect(cleanGroup('Küche 🍳 №2')).toBe('Küche 🍳 №2');
   });
 
   it('cuts a long name at a character to fit the host', () => {
