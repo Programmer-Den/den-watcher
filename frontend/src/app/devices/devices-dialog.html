@@ -273,7 +273,7 @@
   }
 </mat-dialog-content>
 
-<!-- Adding sits next to closing, which keeps the dialog low enough for the list on a phone. -->
+<!-- Adding sits next to closing, so it stays in reach however long the list is. -->
 <mat-dialog-actions>
   <button mat-flat-button type="submit" form="devices-dialog-add" [disabled]="busy() || !canAdd()">
     {{ i18n.t('devicesDialog.add') }}

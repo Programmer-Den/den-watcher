@@ -1,17 +1,6 @@
-import {
-  Component,
-  DOCUMENT,
-  DestroyRef,
-  ElementRef,
-  Injector,
-  afterRenderEffect,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, DOCUMENT, DestroyRef, Injector, computed, inject, signal } from '@angular/core';
 import { formatDate } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { fromEvent } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import {
@@ -88,7 +77,6 @@ export class DevicesDialog {
   private readonly devices = inject(DeviceService);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
 
   /** Every device but the one the website runs on. */
@@ -96,10 +84,8 @@ export class DevicesDialog {
     this.devices.devices().filter((d) => d.id !== LOCAL_DEVICE.id),
   );
 
-  /** Whether the list of devices is shown; folded when the dialog leaves it too little room. */
+  /** Whether the list of devices is shown; it can be folded away by hand. */
   protected readonly listOpen = signal(true);
-  /** Set once the list was folded or unfolded by hand, which then stays as it was set. */
-  private readonly listToggled = signal(false);
 
   protected readonly name = signal('');
   protected readonly address = signal('');
@@ -172,32 +158,6 @@ export class DevicesDialog {
   );
 
   constructor() {
-    // The list scrolls on its own, so the dialog does not. Until it is folded by hand, it folds
-    // away when that leaves it too low to show a whole device, such as on a small phone once the
-    // suggestion fills in a line more or the window gets smaller. It does not unfold again by
-    // itself.
-    const resized = signal(0);
-    fromEvent(window, 'resize')
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => resized.update((n) => n + 1));
-    afterRenderEffect(() => {
-      this.others();
-      this.suggested();
-      resized();
-      if (this.listToggled() || !this.listOpen()) {
-        return;
-      }
-      const list = this.host.nativeElement.querySelector('ul');
-      if (!list || list.scrollHeight <= list.clientHeight) {
-        return;
-      }
-      // A device's row, which is taller where its buttons wrap.
-      const row = list.querySelector('li')?.offsetHeight || remToPixels(5);
-      if (list.clientHeight < row) {
-        this.listOpen.set(false);
-      }
-    });
-
     this.devices
       .pairingCode()
       .pipe(
@@ -228,7 +188,6 @@ export class DevicesDialog {
   }
 
   protected toggleList(): void {
-    this.listToggled.set(true);
     this.listOpen.update((open) => !open);
   }
 
@@ -399,10 +358,6 @@ export class DevicesDialog {
         finalize(() => this.busy.set(false)),
       );
   }
-}
-
-function remToPixels(rem: number): number {
-  return rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
 }
 
 /** Opens the list of devices. */
