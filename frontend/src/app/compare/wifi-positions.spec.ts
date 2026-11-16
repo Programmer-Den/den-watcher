@@ -145,6 +145,8 @@ describe('the Wi-Fi networks by position', () => {
     vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
     const again = answer();
     again.places.reverse();
+    // A new scan there moved its middle a few meters.
+    again.places[0].lat += 0.0002;
     reply(again);
     expect(element.querySelector('.picked-place')?.textContent).toContain('Place 1');
     expect(element.querySelector('tbody tr')?.textContent).toContain('Cafe');

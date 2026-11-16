@@ -15,7 +15,7 @@ import {
   nowSeconds,
 } from '../metrics/metrics';
 import { PageVisibility } from '../page-visibility';
-import { MAP_HEIGHT, MAP_WIDTH, routeMap } from '../phone/phone-route';
+import { MAP_HEIGHT, MAP_WIDTH, meters, routeMap } from '../phone/phone-route';
 import { bandText, securityText, signalLevel, wifiBand } from './wifi';
 
 /** The ranges the places can be shown for. */
@@ -27,6 +27,12 @@ const RANGES: Range[] = [
 
 /** How often the places are read again: the phones send their scans every few minutes. */
 export const POSITIONS_REFRESH_MS = 5 * 60_000;
+
+/** How large a place is on the hub, in meters: the scans within it of its first count to it. */
+const PLACE_METERS = 100;
+
+/** A point at no time, to measure with. */
+const here = { time: 0, lat: 0, lon: 0, accuracy: 0 };
 
 /** How many places the list shows until all are asked for. */
 export const LIST_PLACES = 8;
@@ -90,8 +96,19 @@ export class WifiPositionsView {
   protected readonly selected = computed(() => {
     const places = this.places();
     const at = this.pickedAt();
-    const index = at ? places.findIndex((p) => p.lat === at.lat && p.lon === at.lon) : -1;
-    return index >= 0 ? index : places.length > 0 ? 0 : -1;
+    let index = places.length > 0 ? 0 : -1;
+    if (at) {
+      // Its middle moves a little with each new scan there, so the closest within a place's size.
+      let closest = PLACE_METERS;
+      places.forEach((p, i) => {
+        const away = meters({ ...here, lat: p.lat, lon: p.lon }, { ...here, ...at });
+        if (away <= closest) {
+          closest = away;
+          index = i;
+        }
+      });
+    }
+    return index;
   });
 
   protected readonly place = computed(() => this.places()[this.selected()] ?? null);
