@@ -284,6 +284,14 @@ export class MetricsService {
     });
   }
 
+  /**
+   * The places the phones scanned the Wi-Fi networks at from `from` to `to`, both Unix seconds, each
+   * with every network any of them heard there.
+   */
+  wifiPositions(from: number, to: number): Observable<WiFiPositions> {
+    return this.http.get<WiFiPositions>('/api/wifi/positions', { params: { from, to } });
+  }
+
   /** The places named on the page, by what a device's Wi-Fi hears there. */
   wifiPlaces(): Observable<WiFiPlace[]> {
     return this.http
@@ -373,6 +381,8 @@ export interface PhoneScan {
 
 /** One network a phone's scan found. The SSID is left out for a hidden network. */
 export interface ScannedNetwork {
+  /** Tells the access point apart; scans stored before it was kept have none. */
+  id?: string;
   ssid?: string;
   signalPercent: number;
   signalDBm?: number;
@@ -380,6 +390,65 @@ export interface ScannedNetwork {
   security?: string;
   generation?: number;
   connected?: boolean;
+}
+
+/** The places the phones scanned the Wi-Fi networks at, the one with the most scans first. */
+export interface WiFiPositions {
+  from: number;
+  to: number;
+  places: WiFiPosition[];
+}
+
+/** A place the phones scanned the Wi-Fi networks at, with all networks heard there. */
+export interface WiFiPosition {
+  lat: number;
+  lon: number;
+  scans: number;
+  /** When the first and the last scan there were made, in Unix seconds. */
+  first: number;
+  last: number;
+  /** The phones that scanned there, by id. */
+  devices: string[];
+  /** The networks heard there, the best heard first. */
+  networks: PositionNetwork[];
+  /** The other places that heard some of the same access points, the most alike first. */
+  related?: RelatedPosition[];
+}
+
+/** Another place that heard some of the same access points as a place. */
+export interface RelatedPosition {
+  /** Its index among the places. */
+  place: number;
+  /** How many access points both heard, and that share of all either heard, in percent. */
+  shared: number;
+  percent: number;
+}
+
+/**
+ * A network heard at a place, all access points of its name together. A hidden network has no SSID
+ * and is told apart by its id, if the scans had one.
+ */
+export interface PositionNetwork {
+  ssid?: string;
+  id?: string;
+  /** How many access points had the name; left out when the scans did not tell them apart. */
+  accessPoints?: number;
+  frequenciesMHz?: number[];
+  security?: string;
+  /** The best signal any phone heard it at, in percent. */
+  signalPercent: number;
+  last: number;
+  connected?: boolean;
+  /** The phones that heard it there, the one hearing it best first. */
+  devices: PositionSighting[];
+}
+
+/** How one phone heard a network at a place. */
+export interface PositionSighting {
+  device: string;
+  signalPercent: number;
+  last: number;
+  scans: number;
 }
 
 /** This computer's time in whole Unix seconds, as the history is asked for. */

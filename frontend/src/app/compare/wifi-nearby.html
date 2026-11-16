@@ -366,6 +366,9 @@
           }
         </ul>
       }
+      @case ('positions') {
+        <app-wifi-positions />
+      }
       @case ('changes') {
         <p class="detail">{{ i18n.t('wifi.changesIntro') }}</p>
         <div class="table" [class.stale]="connection.lost()">

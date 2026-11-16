@@ -92,3 +92,42 @@ func TestServesThePhonesScanNearAPoint(t *testing.T) {
 		t.Errorf("status of a time that is no number = %d, want 400", rec.Code)
 	}
 }
+
+// fakePositions has one place and keeps what it was asked for.
+type fakePositions struct{ from, to time.Time }
+
+func (f *fakePositions) WiFiPositions(_ context.Context, from, to time.Time) ([]history.WiFiPosition, error) {
+	f.from, f.to = from, to
+	return []history.WiFiPosition{{Lat: 53.57, Lon: 9.95, Scans: 2, Devices: []string{"pixel"}, Networks: []history.PositionNetwork{
+		{SSID: "Den", SignalPercent: 80, Devices: []history.PositionSighting{{Device: "pixel", SignalPercent: 80, Scans: 2}}},
+	}}}, nil
+}
+
+func TestServesTheWiFiNetworksOfAllPhonesByPlace(t *testing.T) {
+	source := &fakePositions{}
+	handler := New(Site{Devices: DeviceList(device(fakeCollector{}, nil)), Files: site, Positions: source, Retention: 30 * 24 * time.Hour})
+	now := time.Now()
+	rec := get(handler, "/api/wifi/positions?from=0&to="+strconv.FormatInt(now.Unix()+3600, 10), "192.168.1.20:5000")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body)
+	}
+	var got positionsResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Places) != 1 || got.Places[0].Networks[0].Devices[0].Device != "pixel" {
+		t.Errorf("body = %s", rec.Body)
+	}
+	if want := now.Add(-30 * 24 * time.Hour).Unix(); got.From < want-5 || source.from.Unix() != got.From {
+		t.Errorf("from = %d, want it moved to the start of the retention, %d", got.From, want)
+	}
+	if got.To > now.Unix()+5 || source.to.Unix() != got.To {
+		t.Errorf("to = %d, want it to end now", got.To)
+	}
+	if rec := get(handler, "/api/wifi/positions?from=5&to=1", "192.168.1.20:5000"); rec.Code != http.StatusBadRequest {
+		t.Errorf("status of a range that ends before it starts = %d, want 400", rec.Code)
+	}
+	if rec := get(New(Site{Devices: DeviceList(device(fakeCollector{}, nil)), Files: site}), "/api/wifi/positions?from=0&to=1", "192.168.1.20:5000"); rec.Code == http.StatusOK && strings.HasPrefix(rec.Body.String(), "{") {
+		t.Errorf("served without a source: %s", rec.Body)
+	}
+}
