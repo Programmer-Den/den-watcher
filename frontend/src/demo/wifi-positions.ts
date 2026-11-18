@@ -47,7 +47,8 @@ export function demoWifiPositions(anchorsFrom: number, from: number, to: number)
         place: {
           lat: 0,
           lon: 0,
-          id: `${DEMO_PHONE}@${scan.time}`,
+          // By the point's time: points close in time can share a scan.
+          id: `${DEMO_PHONE}@${point.time}`,
           scans: 0,
           first: scan.time,
           last: 0,

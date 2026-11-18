@@ -306,3 +306,15 @@ func TestPlaceAtTriesThePrecisePointOnTheOtherSide(t *testing.T) {
 func routePoint(at time.Time, lat, lon, accuracy float64) RoutePoint {
 	return RoutePoint{PhoneTime: at.UnixMilli(), Time: at.UnixMilli(), Lat: lat, Lon: lon, Accuracy: accuracy}
 }
+
+func TestPlaceAtDropsAScanWhenThePrecisePointIsOutsideTheVagueOne(t *testing.T) {
+	at := func(minutes int64) int64 { return minutes * 60_000 }
+	// Told within 260 m, 350 m off the precise point: the phone left.
+	route := []positionPoint{
+		{time: at(0), lat: 53.5755, lon: 9.953, accuracy: 20},
+		{time: at(15), lat: 53.57865, lon: 9.953, accuracy: 260},
+	}
+	if p, ok := placeAt(route, at(10)); ok {
+		t.Fatalf("placeAt = %+v, want the scan dropped", p)
+	}
+}

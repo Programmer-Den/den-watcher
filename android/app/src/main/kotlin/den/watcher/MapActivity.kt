@@ -156,7 +156,7 @@ class MapActivity : Activity() {
                 }
             } catch (e: SQLiteException) {
                 Log.w(TAG, "could not read the route for the map", e)
-                main.post { if (number == loads) failed() }
+                main.post { if (number == loads && !isDestroyed) failed() }
                 return@execute
             }
             val changed = read !== shown
