@@ -88,20 +88,22 @@ export class WifiPositionsView {
   );
 
   /**
-   * The picked place, kept by where it is as the places are read again: the one with the most
-   * scans until another is picked.
+   * The picked place, kept by its first scan's point as the places are read again: the one with the
+   * most scans until another is picked.
    */
   private readonly pickedAt = signal<{ lat: number; lon: number } | null>(null);
 
-  protected readonly selected = computed(() => {
+  /** The index of the picked place among those read, or -1 when none was picked or it is gone. */
+  private readonly matched = computed(() => {
     const places = this.places();
     const at = this.pickedAt();
-    let index = places.length > 0 ? 0 : -1;
+    let index = -1;
     if (at) {
-      // Its middle moves a little with each new scan there, so the closest within a place's size.
+      // The same point, or, once its first scan left the range, the closest within a place's
+      // size: the hub keeps those points more than a place's size apart.
       let closest = PLACE_METERS;
       places.forEach((p, i) => {
-        const away = meters({ ...here, lat: p.lat, lon: p.lon }, { ...here, ...at });
+        const away = meters({ ...here, lat: p.anchorLat, lon: p.anchorLon }, { ...here, ...at });
         if (away <= closest) {
           closest = away;
           index = i;
@@ -109,6 +111,12 @@ export class WifiPositionsView {
       });
     }
     return index;
+  });
+
+  /** The picked place, or the one with the most scans while none is (or the picked one is gone). */
+  protected readonly selected = computed(() => {
+    const matched = this.matched();
+    return matched >= 0 || this.places().length === 0 ? matched : 0;
   });
 
   protected readonly place = computed(() => this.places()[this.selected()] ?? null);
@@ -147,7 +155,7 @@ export class WifiPositionsView {
   protected select(index: number): void {
     const place = this.places()[index];
     if (place) {
-      this.pickedAt.set({ lat: place.lat, lon: place.lon });
+      this.pickedAt.set({ lat: place.anchorLat, lon: place.anchorLon });
     }
   }
 
@@ -209,6 +217,12 @@ export class WifiPositionsView {
         if (answer) {
           this.failed.set(false);
           this.answer.set(answer);
+          // The picked place's first scan moves on as old scans leave the range: keep the new one.
+          // A pick that is gone for now is kept, so it comes back with the place.
+          const place = this.places()[this.matched()];
+          if (place) {
+            this.pickedAt.set({ lat: place.anchorLat, lon: place.anchorLon });
+          }
         }
       });
   }

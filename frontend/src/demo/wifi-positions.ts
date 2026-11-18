@@ -20,8 +20,6 @@ const MAX_RELATED = 5;
 export function demoWifiPositions(from: number, to: number): WiFiPositions {
   const places: {
     place: WiFiPosition;
-    lat: number;
-    lon: number;
     sumLat: number;
     sumLon: number;
   }[] = [];
@@ -30,22 +28,29 @@ export function demoWifiPositions(from: number, to: number): WiFiPositions {
     if (!scan) {
       continue;
     }
-    let entry = places.find(
-      (e) => meters({ ...point, lat: e.lat, lon: e.lon }, point) <= PLACE_METERS,
-    );
+    // The closest place within its size, as the hub does.
+    let entry: (typeof places)[number] | undefined;
+    let closest = PLACE_METERS;
+    for (const e of places) {
+      const away = meters({ ...point, lat: e.place.anchorLat, lon: e.place.anchorLon }, point);
+      if (away <= closest) {
+        closest = away;
+        entry = e;
+      }
+    }
     if (!entry) {
       entry = {
         place: {
           lat: 0,
           lon: 0,
+          anchorLat: round6(point.lat),
+          anchorLon: round6(point.lon),
           scans: 0,
           first: scan.time,
           last: 0,
           devices: [DEMO_PHONE],
           networks: [],
         },
-        lat: point.lat,
-        lon: point.lon,
         sumLat: 0,
         sumLon: 0,
       };
@@ -56,8 +61,8 @@ export function demoWifiPositions(from: number, to: number): WiFiPositions {
     const place = entry.place;
     place.scans++;
     place.last = scan.time;
-    place.lat = Math.round((entry.sumLat / place.scans) * 1e6) / 1e6;
-    place.lon = Math.round((entry.sumLon / place.scans) * 1e6) / 1e6;
+    place.lat = round6(entry.sumLat / place.scans);
+    place.lon = round6(entry.sumLon / place.scans);
     for (const n of scan.networks) {
       let network = place.networks.find((m) => (m.ssid ?? '') === (n.ssid ?? ''));
       if (!network) {
@@ -120,4 +125,9 @@ function relate(places: WiFiPosition[]): void {
       places[i].related = related;
     }
   });
+}
+
+/** Degrees rounded to 6 places, about 10 cm, as the hub sends them. */
+function round6(degrees: number): number {
+  return Math.round(degrees * 1e6) / 1e6;
 }

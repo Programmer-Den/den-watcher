@@ -11,6 +11,8 @@ function place(lat: number, scans: number, extra: Partial<WiFiPosition> = {}): W
   return {
     lat,
     lon: 10,
+    anchorLat: lat,
+    anchorLon: 10,
     scans,
     first: 1000,
     last: 2000,
@@ -150,6 +152,81 @@ describe('the Wi-Fi networks by position', () => {
     reply(again);
     expect(element.querySelector('.picked-place')?.textContent).toContain('Place 1');
     expect(element.querySelector('tbody tr')?.textContent).toContain('Cafe');
+  });
+
+  it('keeps the picked place by its first scan when its middle moves next to another', () => {
+    reply(answer());
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
+    fixture.detectChanges();
+    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
+    const again = answer();
+    // Place 2's middle moved right onto place 1's; its first scan did not.
+    again.places[1].lat = again.places[0].lat;
+    reply(again);
+    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
+  });
+
+  it('follows the picked place as its first scans leave the range', () => {
+    reply(answer());
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
+    fixture.detectChanges();
+    // Each time its first scan leaves the range, the next one, about 80 m on, is its point.
+    for (const step of [1, 2, 3]) {
+      vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
+      const again = answer();
+      again.places[1].anchorLat += step * 0.0007;
+      reply(again);
+      expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
+    }
+  });
+
+  it('keeps a pick that is gone for a while, so it comes back with the place', () => {
+    reply(answer());
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
+    fixture.detectChanges();
+    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
+    const gone = answer();
+    gone.places.pop();
+    gone.places[0].related = [];
+    reply(gone);
+    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 1');
+    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
+    reply(answer());
+    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
+  });
+
+  it('picks the place drawn on top when places are close on the map', () => {
+    reply(answer());
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
+    fixture.detectChanges();
+    // The picked place is drawn last, so its click circle is the one on top.
+    const groups = element.querySelectorAll('g.place');
+    const top = groups[groups.length - 1];
+    expect(top.classList).toContain('picked');
+    expect(top.querySelector('circle.hit title')?.textContent).toContain('Place 2');
+    groups[0].querySelector<SVGCircleElement>('circle.hit')!.dispatchEvent(new MouseEvent('click'));
+    fixture.detectChanges();
+    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 1');
+  });
+
+  it('tells when the places could not be read again and greys out the old ones', () => {
+    reply(answer());
+    const element = fixture.nativeElement as HTMLElement;
+    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
+    http
+      .expectOne((r) => r.url === '/api/wifi/positions')
+      .flush('', { status: 500, statusText: 'Error' });
+    fixture.detectChanges();
+    expect(element.textContent).toContain('Could not read the places');
+    expect(element.querySelector('.overview')?.classList).toContain('stale');
+    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
+    reply(answer());
+    expect(element.textContent).not.toContain('Could not read the places');
+    expect(element.querySelector('.overview')?.classList).not.toContain('stale');
   });
 
   it('lists the first places until all are asked for', () => {
