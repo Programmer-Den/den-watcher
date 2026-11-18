@@ -103,9 +103,12 @@ type PositionSource interface {
 // positionsResponse is the body of GET /api/wifi/positions. Times are Unix
 // seconds.
 type positionsResponse struct {
-	From   int64                  `json:"from"`
-	To     int64                  `json:"to"`
-	Places []history.WiFiPosition `json:"places"`
+	From int64 `json:"from"`
+	To   int64 `json:"to"`
+	// PlacesFrom is when the places were found from: the IDs are of their
+	// first scan since.
+	PlacesFrom int64                  `json:"placesFrom"`
+	Places     []history.WiFiPosition `json:"places"`
 }
 
 // positionsAnchorsBefore is how long before the day a range ends on the
@@ -157,6 +160,6 @@ func positionsHandler(source PositionSource, retention time.Duration) http.Handl
 		if places == nil {
 			places = []history.WiFiPosition{}
 		}
-		writeJSON(w, http.StatusOK, positionsResponse{From: from, To: to, Places: places})
+		writeJSON(w, http.StatusOK, positionsResponse{From: from, To: to, PlacesFrom: min(anchorsFrom, from), Places: places})
 	}
 }

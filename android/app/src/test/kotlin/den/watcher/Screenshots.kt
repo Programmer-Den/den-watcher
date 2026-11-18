@@ -196,7 +196,8 @@ class Screenshots {
                 if (usageAccess) AppOpsManager.MODE_ALLOWED else AppOpsManager.MODE_DEFAULT,
             )
             Store(app).use(fill)
-            val activity = Robolectric.buildActivity(screen).setup().get()
+            val controller = Robolectric.buildActivity(screen).setup()
+            val activity = controller.get()
             // Runs the status refresh that onResume posts.
             shadowOf(Looper.getMainLooper()).idle()
             if (activity is MapActivity) {
@@ -230,6 +231,8 @@ class Screenshots {
             canvas.drawColor(activity.getColor(R.color.surface))
             content.draw(canvas)
             File(folder, "$name-$mode.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            // Closes a map's thread and database before the next one fills it.
+            controller.pause().stop().destroy()
         }
     }
 

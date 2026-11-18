@@ -90,8 +90,7 @@ export class WifiPositionsView {
   /**
    * The picked place: its id, which the hub keeps as the range changes or moves on, and its middle,
    * should the id change as the hub looks back from a day later or over 30 days, so it stays
-   * picked as the places are read again and comes back with the place when it was gone. A place
-   * found by its middle is never taken for it, as it may be a neighbour.
+   * picked as the places are read again and comes back with the place when it was gone.
    */
   private readonly picked = signal<{ id: string; lat: number; lon: number } | null>(null);
 
@@ -225,14 +224,20 @@ export class WifiPositionsView {
         if (answer) {
           this.failed.set(false);
           this.answer.set(answer);
-          // Keeps the picked place's middle as it is now. A place found by its middle only is not
-          // taken for it: it may be a neighbour, and the picked one may come back.
+          // Keeps the picked place's id and middle as they are now. A place found by its middle
+          // is taken for it only when the picked one's first scan is before the places were found
+          // from, so its id changed; else it may be a neighbour, and the picked one may come back.
           const picked = this.picked();
-          const place = this.places().find((p) => p.id === picked?.id);
-          if (place) {
+          const place = this.places()[this.matched()];
+          if (place && (place.id === picked?.id || firstScan(picked?.id) < answer.placesFrom)) {
             this.picked.set({ id: place.id, lat: place.lat, lon: place.lon });
           }
         }
       });
   }
+}
+
+/** The Unix time of a place's first scan, from its id (`<device>@<time>`), or NaN. */
+function firstScan(id: string | undefined): number {
+  return id ? Number(id.slice(id.lastIndexOf('@') + 1)) : NaN;
 }

@@ -127,6 +127,9 @@ func TestServesTheWiFiNetworksOfAllPhonesByPlace(t *testing.T) {
 	if want := got.From - got.From%86400; source.anchorsFrom.Unix() != want {
 		t.Errorf("places of the whole retention found from %v, want the start of its first day", source.anchorsFrom)
 	}
+	if got.PlacesFrom != source.anchorsFrom.Unix() {
+		t.Errorf("placesFrom = %d, want %d", got.PlacesFrom, source.anchorsFrom.Unix())
+	}
 	// A day's and a week's range find the places from the same time: the
 	// start of the day a week before the one they end on.
 	day := now.Unix() - now.Unix()%86400

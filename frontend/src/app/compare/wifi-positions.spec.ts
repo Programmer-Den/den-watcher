@@ -32,6 +32,7 @@ function answer(): WiFiPositions {
   return {
     from: 0,
     to: 86400,
+    placesFrom: 0,
     places: [
       place(53.57, 12, {
         devices: ['pixel', 'galaxy'],
@@ -191,8 +192,14 @@ describe('the Wi-Fi networks by position', () => {
     vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
     // The hub looks back from a day later, past its first scan: a new id, about 50 m on.
     const again = answer();
-    again.places[1].id = 'pixel@later';
+    again.placesFrom = 100;
+    again.places[1].id = 'pixel@200';
     again.places[1].lat += 0.0004;
+    reply(again);
+    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
+    // It is kept by its new id from then on, wherever its middle moves.
+    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
+    again.places[1].lat += 0.002;
     reply(again);
     expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
   });
@@ -203,7 +210,8 @@ describe('the Wi-Fi networks by position', () => {
     element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
     fixture.detectChanges();
     vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
-    // The picked place is gone; a neighbour's middle is 50 m from where it was, and is shown.
+    // The picked place has no scans now, its first scan still since the places were found from; a
+    // neighbour's middle is 50 m from where it was, and is shown.
     const gone = answer();
     gone.places[1].id = 'pixel@neighbour';
     gone.places[1].lat += 0.0004;
@@ -278,7 +286,7 @@ describe('the Wi-Fi networks by position', () => {
   });
 
   it('reads the picked range and tells when there are no places or they could not be read', () => {
-    reply({ from: 0, to: 1, places: [] });
+    reply({ from: 0, to: 1, placesFrom: 0, places: [] });
     const element = fixture.nativeElement as HTMLElement;
     expect(element.textContent).toContain('No Wi-Fi scans with a position');
     element.querySelectorAll<HTMLButtonElement>('.choices button')[1].click();

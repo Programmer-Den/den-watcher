@@ -127,6 +127,9 @@ class RouteMapTest {
             store.addMapScan(SeenScan(now / 1000 - i * Store.MAP_SCAN_EVERY_SECONDS, emptyList()))
         }
         assertEquals(day + 1, store.mapPoints(0).size)
+        // A point ahead of the clock deletes nothing more than one now would.
+        store.addMapPoint(home.copy(time = now + 2 * week))
+        assertEquals(day + 2, store.mapPoints(0).size)
         assertNull(store.mapScanNear(old.time / 1000))
         assertEquals(now / 1000, store.mapScanNear(now / 1000)?.time)
     }

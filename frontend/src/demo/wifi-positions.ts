@@ -93,7 +93,7 @@ export function demoWifiPositions(anchorsFrom: number, from: number, to: number)
     place.networks.sort((a, b) => b.signalPercent - a.signalPercent);
   }
   relate(all);
-  return { from, to, places: all };
+  return { from, to, placesFrom: Math.min(anchorsFrom, from), places: all };
 }
 
 function addSighting(

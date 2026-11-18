@@ -56,6 +56,7 @@ class MapActivityTest {
         // the range; after, it tells there are none.
         val activity = open()
         waitFor { activity.findViewById<View>(R.id.none).visibility == View.VISIBLE }
+        assertEquals(activity.getString(R.string.map_none), activity.findViewById<TextView>(R.id.none).text.toString())
         assertEquals(View.GONE, activity.findViewById<View>(R.id.route_group).visibility)
         assertEquals(View.GONE, activity.findViewById<View>(R.id.places_group).visibility)
     }
