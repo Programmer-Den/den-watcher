@@ -205,7 +205,7 @@ class Screenshots {
                 waitFor { activity.findViewById<View>(R.id.route_group).visibility == View.VISIBLE }
             }
             tap(activity)
-            if (activity is MapActivity) {
+            if (activity is MapActivity && activity.findViewById<View>(R.id.point_group).visibility == View.VISIBLE) {
                 // And the picked point's networks.
                 waitFor { activity.findViewById<android.widget.TextView>(R.id.scan_summary).text.isNotEmpty() }
             }
