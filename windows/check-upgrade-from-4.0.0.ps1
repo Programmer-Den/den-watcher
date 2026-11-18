@@ -91,8 +91,6 @@ Invoke-Installer "/x `"$Msi`" DELETE_HISTORY=1"
 if (Test-Path $folder) {
     Get-ChildItem -Recurse -Force $folder | Format-List FullName
     Select-String -Path msiexec.log -Pattern 'DeleteHistory|WixQuietExec|StopServices' | ForEach-Object Line
-    icacls "$folder\den-watcher.db"
-    Get-Process | Where-Object { $_.Path -like '*Den-Watcher*' } | Format-List Name, Path
     throw 'The data folder is still there'
 }
 Write-Host 'The update from 4.0.0 keeps the options and the power add-on and moves the history to the new names.'
