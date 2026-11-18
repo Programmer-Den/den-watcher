@@ -24,16 +24,22 @@ if (report.error) {
   process.exit(1);
 }
 const found = new Map();
+const fixable = new Set();
 for (const v of Object.values(report.vulnerabilities ?? {})) {
   for (const via of v.via) {
     if (typeof via === "object" && ["high", "critical"].includes(via.severity)) {
+      if (v.fixAvailable) {
+        fixable.add((via.url ?? `${via.name} ${via.source}`).split("/").pop());
+      }
       found.set((via.url ?? `${via.name} ${via.source}`).split("/").pop(), `${via.severity}: ${via.name} ${via.range}, ${via.title} (${via.url})`);
     }
   }
 }
 let failed = false;
 for (const [id, text] of found) {
-  if (allowed.has(id)) {
+  if (allowed.has(id) && fixable.has(id)) {
+    console.log(`::warning::a fix is available now, run npm audit fix and remove ${id} from frontend/audit-allow.txt: ${text}`);
+  } else if (allowed.has(id)) {
     console.log(`allowed until fixed: ${text}`);
   } else {
     console.log(`::error::${text}`);

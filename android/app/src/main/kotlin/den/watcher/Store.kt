@@ -97,6 +97,11 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
         db.delete("map_route", "time < (SELECT time FROM map_route ORDER BY time DESC LIMIT 1 OFFSET ?)", arrayOf((KEEP_MAP_ROUTE - 1).toString()))
     }
 
+    /** The time of the newest point of the route kept for the map, Unix milliseconds, or null. */
+    fun newestMapPoint(): Long? = readableDatabase.rawQuery("SELECT MAX(time) FROM map_route", null).use { rows ->
+        if (rows.moveToFirst() && !rows.isNull(0)) rows.getLong(0) else null
+    }
+
     /** The points of the route kept for the map from since on, Unix milliseconds, oldest first. */
     fun mapPoints(since: Long): List<RoutePoint> {
         val points = mutableListOf<RoutePoint>()

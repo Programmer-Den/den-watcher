@@ -182,6 +182,22 @@ describe('the Wi-Fi networks by position', () => {
     }
   });
 
+  it('keeps a pick that is gone for a while, so it comes back with the place', () => {
+    reply(answer());
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
+    fixture.detectChanges();
+    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
+    const gone = answer();
+    gone.places.pop();
+    gone.places[0].related = [];
+    reply(gone);
+    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 1');
+    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
+    reply(answer());
+    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
+  });
+
   it('picks the place drawn on top when places are close on the map', () => {
     reply(answer());
     const element = fixture.nativeElement as HTMLElement;

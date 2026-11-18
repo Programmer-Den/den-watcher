@@ -93,10 +93,11 @@ export class WifiPositionsView {
    */
   private readonly pickedAt = signal<{ lat: number; lon: number } | null>(null);
 
-  protected readonly selected = computed(() => {
+  /** The index of the picked place among those read, or -1 when none was picked or it is gone. */
+  private readonly matched = computed(() => {
     const places = this.places();
     const at = this.pickedAt();
-    let index = places.length > 0 ? 0 : -1;
+    let index = -1;
     if (at) {
       // The same point, or, once its first scan left the range, the closest within a place's
       // size: the hub keeps those points more than a place's size apart.
@@ -110,6 +111,12 @@ export class WifiPositionsView {
       });
     }
     return index;
+  });
+
+  /** The picked place, or the one with the most scans while none is (or the picked one is gone). */
+  protected readonly selected = computed(() => {
+    const matched = this.matched();
+    return matched >= 0 || this.places().length === 0 ? matched : 0;
   });
 
   protected readonly place = computed(() => this.places()[this.selected()] ?? null);
@@ -211,8 +218,9 @@ export class WifiPositionsView {
           this.failed.set(false);
           this.answer.set(answer);
           // The picked place's first scan moves on as old scans leave the range: keep the new one.
-          const place = this.place();
-          if (place && this.pickedAt()) {
+          // A pick that is gone for now is kept, so it comes back with the place.
+          const place = this.places()[this.matched()];
+          if (place) {
             this.pickedAt.set({ lat: place.anchorLat, lon: place.anchorLon });
           }
         }

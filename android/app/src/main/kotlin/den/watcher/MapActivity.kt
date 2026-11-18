@@ -41,7 +41,7 @@ class MapActivity : Activity() {
 
     /** Counts the reads, so the answer of one the range changed after is dropped. */
     private var loads = 0
-    private val reload = Runnable { load() }
+    private val reload = Runnable { load(again = true) }
 
     /** The time of the point whose networks are shown, kept by time as the route moves on, or null. */
     private var selectedTime: Long? = null
@@ -109,15 +109,23 @@ class MapActivity : Activity() {
     /**
      * Reads the points of the range again, off the main thread, with the
      * places and distance worked out from them, and again after
-     * RELOAD_MILLIS while the map is shown.
+     * RELOAD_MILLIS while the map is shown, when the recorder kept a new
+     * point since.
      */
-    private fun load() {
+    private fun load(again: Boolean = false) {
         main.removeCallbacks(reload)
         val number = ++loads
         val since = System.currentTimeMillis() - days * DAY_MILLIS
+        val shownNewest = points.lastOrNull()?.time
         val context = applicationContext
         background.execute {
-            val read = Store(context).use { it.mapPoints(since) }
+            val read = Store(context).use { store ->
+                if (again && store.newestMapPoint() == shownNewest) null else store.mapPoints(since)
+            }
+            if (read == null) {
+                main.post { if (number == loads && resumed) main.postDelayed(reload, RELOAD_MILLIS) }
+                return@execute
+            }
             val stayed = RouteMap.places(RouteMap.stops(read))
             val went = RouteMap.distance(read)
             main.post {
@@ -177,8 +185,7 @@ class MapActivity : Activity() {
         findViewById<View>(R.id.point_group).visibility = if (point == null) View.GONE else View.VISIBLE
         if (point?.time != scanShownFor) {
             // Another point: its networks are read anew. The same one keeps
-            // the list it shows while it is read again with the route, as a
-            // scan may have come in since.
+            // the list it shows.
             findViewById<LinearLayout>(R.id.networks).removeAllViews()
             findViewById<TextView>(R.id.scan_summary).text = ""
             scanShownFor = null
@@ -189,6 +196,10 @@ class MapActivity : Activity() {
             getString(R.string.map_accuracy, NumberFormat.getIntegerInstance().format(point.accuracy.roundToInt()))
         findViewById<Button>(R.id.previous).isEnabled = index > 0
         findViewById<Button>(R.id.next).isEnabled = index < points.size - 1
+        // A scan may come in only near the newest point.
+        if (point.time == scanShownFor && index < points.size - 1) {
+            return
+        }
         val context = applicationContext
         background.execute {
             val scan = Store(context).use { it.mapScanNear(point.time / 1000) }
