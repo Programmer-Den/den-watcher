@@ -229,3 +229,32 @@ func TestWiFiPositionsPlaceAScanByAPrecisePointInsideAVagueOne(t *testing.T) {
 		t.Fatalf("got %+v, want both scans at home", got)
 	}
 }
+
+func TestWiFiPositionsDropAScanAtAVeryVaguePointThatCoversTheOldOne(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	hour := time.Date(2026, 11, 5, 10, 0, 0, 0, time.UTC)
+	point := func(at time.Time, lat, lon, accuracy float64) RoutePoint {
+		return RoutePoint{PhoneTime: at.UnixMilli(), Time: at.UnixMilli(), Lat: lat, Lon: lon, Accuracy: accuracy}
+	}
+	// Home at 10:00, then 1 km away at 10:14, told within 1,500 m: home is
+	// inside, but too far off to tell the phone stayed.
+	if err := store.AddRoutePoints(ctx, "pixel", []RoutePoint{
+		point(hour, 53.5755, 9.9530, 20),
+		point(hour.Add(14*time.Minute), 53.5845, 9.9530, 1500),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.AddPhoneScans(ctx, "pixel", []FoundScan{
+		{At: hour.Add(13 * time.Minute), Found: []metrics.NearbyAccessPoint{{ID: "cafe", SSID: "Cafe", SignalPercent: 80}}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := store.WiFiPositions(ctx, hour, hour.Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("got %+v, want the café scan left out", got)
+	}
+}

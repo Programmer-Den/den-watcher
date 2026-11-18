@@ -210,6 +210,11 @@ export class WifiPositionsView {
         if (answer) {
           this.failed.set(false);
           this.answer.set(answer);
+          // The picked place's first scan moves on as old scans leave the range: keep the new one.
+          const place = this.place();
+          if (place && this.pickedAt()) {
+            this.pickedAt.set({ lat: place.anchorLat, lon: place.anchorLon });
+          }
         }
       });
   }

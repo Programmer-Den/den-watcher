@@ -167,6 +167,21 @@ describe('the Wi-Fi networks by position', () => {
     expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
   });
 
+  it('follows the picked place as its first scans leave the range', () => {
+    reply(answer());
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
+    fixture.detectChanges();
+    // Each time its first scan leaves the range, the next one, about 80 m on, is its point.
+    for (const step of [1, 2, 3]) {
+      vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
+      const again = answer();
+      again.places[1].anchorLat += step * 0.0007;
+      reply(again);
+      expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
+    }
+  });
+
   it('picks the place drawn on top when places are close on the map', () => {
     reply(answer());
     const element = fixture.nativeElement as HTMLElement;

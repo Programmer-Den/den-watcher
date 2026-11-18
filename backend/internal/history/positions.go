@@ -27,6 +27,10 @@ const (
 	// positionAfter is how long after a scan the point may be, when it is
 	// closer in time than the one before.
 	positionAfter = 5 * time.Minute
+	// positionVagueMeters is how far a precise point may be from a vague one
+	// closer in time to a scan to place it nonetheless: a vaguer one says too
+	// little of whether the phone stayed.
+	positionVagueMeters = 2 * PositionMaxAccuracy
 	// MaxPositionScans is how many scans WiFiPositions reads at most: the
 	// newest, a month of a few phones.
 	MaxPositionScans = 20000
@@ -223,23 +227,33 @@ func pointAt(route []positionPoint, t int64) (positionPoint, bool) {
 // t, Unix milliseconds: the one pointAt finds, if it is not vaguer than
 // PositionMaxAccuracy. If it is, the closest in time of the others that are
 // not, within the same time, places it only if it lies within the vague
-// one's accuracy: the phone may have stayed where it was, but it may also
-// have moved, and a scan of another place must not count at the old one.
+// one's accuracy, and no further from it than positionVagueMeters: the phone
+// may have stayed where it was, as when Android told only a vague position
+// while it did, but it may also have moved, and a scan of another place must
+// not count at the old one.
 func placeAt(route []positionPoint, t int64) (positionPoint, bool) {
 	p, ok := pointAt(route, t)
 	if !ok || p.accuracy <= PositionMaxAccuracy {
 		return p, ok
 	}
-	from := sort.Search(len(route), func(i int) bool { return route[i].time >= t-positionBefore.Milliseconds() })
-	to := sort.Search(len(route), func(i int) bool { return route[i].time > t+positionAfter.Milliseconds() })
-	var precise []positionPoint
-	for _, q := range route[from:to] {
-		if q.accuracy <= PositionMaxAccuracy {
-			precise = append(precise, q)
+	i := sort.Search(len(route), func(i int) bool { return route[i].time > t })
+	var q positionPoint
+	found := false
+	for j := i - 1; j >= 0 && t-route[j].time <= positionBefore.Milliseconds(); j-- {
+		if route[j].accuracy <= PositionMaxAccuracy {
+			q, found = route[j], true
+			break
 		}
 	}
-	q, ok := pointAt(precise, t)
-	if !ok || distanceMeters(q.lat, q.lon, p.lat, p.lon) > p.accuracy {
+	for j := i; j < len(route) && route[j].time-t <= positionAfter.Milliseconds(); j++ {
+		if route[j].accuracy <= PositionMaxAccuracy {
+			if !found || route[j].time-t < t-q.time {
+				q, found = route[j], true
+			}
+			break
+		}
+	}
+	if !found || distanceMeters(q.lat, q.lon, p.lat, p.lon) > min(p.accuracy, positionVagueMeters) {
 		return positionPoint{}, false
 	}
 	return q, true
