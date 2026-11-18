@@ -422,3 +422,25 @@ func (s *Store) shrinkLog(ctx context.Context, deleted int64) {
 func (s *Store) DB() *sql.DB {
 	return s.db
 }
+
+// Checkpoint writes what the write-ahead log of the database at path holds
+// into the database file itself and closes it, so the file alone is the
+// whole database and can be renamed on its own. It leaves the database out
+// of WAL, which the next Open sets again, and fails when another program
+// has the database open.
+func Checkpoint(ctx context.Context, path string) error {
+	db, err := openDB(path)
+	if err != nil {
+		return err
+	}
+	db.SetMaxOpenConns(1)
+	// Leaving WAL writes the log into the database and deletes it, and
+	// needs the database to itself: SQLite stays in WAL while another
+	// connection, even an idle one, has it open.
+	var mode string
+	err = db.QueryRowContext(ctx, "PRAGMA journal_mode=DELETE").Scan(&mode)
+	if err == nil && !strings.EqualFold(mode, "delete") {
+		err = fmt.Errorf("another program has %s open, so its log could not be written into it", path)
+	}
+	return errors.Join(err, db.Close())
+}

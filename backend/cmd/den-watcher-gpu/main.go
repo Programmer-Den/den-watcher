@@ -9,7 +9,7 @@
 //
 //	ADDONS_DIR  the add-on folder den-watcher reads (default
 //	            /run/den-watcher-addons, the folder the systemd service
-//	            makes; on Windows C:\ProgramData\Usage Control\addons)
+//	            makes; on Windows C:\ProgramData\Den-Watcher\addons)
 package main
 
 import (
@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	addons.Main("gpu", "UsageControlGPU", func() addons.Read {
+	addons.Main("gpu", "DenWatcherGPU", func() addons.Read {
 		return gpu.NewReader().Read
 	})
 }

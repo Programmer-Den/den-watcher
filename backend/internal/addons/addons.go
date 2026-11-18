@@ -133,7 +133,7 @@ func serve(ctx context.Context, name string, read ReadReport) error {
 // DefaultDir is the add-on folder the installers set up.
 func DefaultDir() string {
 	if runtime.GOOS == "windows" {
-		return filepath.Join(os.Getenv("ProgramData"), "Usage Control", "addons")
+		return filepath.Join(os.Getenv("ProgramData"), "Den-Watcher", "addons")
 	}
 	return "/run/den-watcher-addons"
 }

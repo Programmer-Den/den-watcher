@@ -43,7 +43,7 @@ const (
 // PagePortHeader is sent with every request a hub makes, with the port its
 // page is reachable on. The device combines it with the address the request
 // came from, so its tray icon can link to the hub's page.
-const PagePortHeader = "Usage-Control-Hub-Port"
+const PagePortHeader = "Den-Watcher-Hub-Port"
 
 // ErrUnreachable is returned when a device has not answered recently.
 var ErrUnreachable = errors.New("the device has not answered recently")
@@ -226,13 +226,13 @@ func (a *Agent) get(ctx context.Context, url string, limit int64, answer any) (t
 		return 0, err
 	}
 	if a.pagePort != "" {
-		request.Header.Set(PagePortHeader, a.pagePort)
+		pairing.SetHeader(request.Header, PagePortHeader, a.pagePort)
 	}
 	if a.hubID != "" {
-		request.Header.Set(HubIDHeader, a.hubID)
+		pairing.SetHeader(request.Header, HubIDHeader, a.hubID)
 	}
 	if code := a.pairingCode(); code != "" {
-		request.Header.Set(pairing.CodeHeader, code)
+		pairing.SetHeader(request.Header, pairing.CodeHeader, code)
 	}
 	if a.ownGeneration != nil {
 		// A connection kept open is checked against the hub's own addresses
@@ -266,7 +266,7 @@ func (a *Agent) get(ctx context.Context, url string, limit int64, answer any) (t
 		_ = response.Body.Close()
 	}()
 	if response.StatusCode == http.StatusForbidden {
-		switch response.Header.Get(pairing.ProblemHeader) {
+		switch pairing.Header(response.Header, pairing.ProblemHeader) {
 		case "needed":
 			return 0, fmt.Errorf("ask %s: %w", url, errPairingNeeded)
 		case "wrong":

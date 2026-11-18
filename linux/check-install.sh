@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Checks the Linux release archive on a machine with systemd, as root: installs
 # it, checks the service answers with the archive's version, updates it and
-# checks the settings were kept, then uninstalls it. Given an archive from
-# before the rename to den-watcher, it first installs that one and checks the
-# new archive takes it over with its settings, add-ons and history.
+# checks the settings were kept, then uninstalls it. Given the archive of
+# 4.0.0, it first installs that one and checks the new archive updates it
+# with its settings and add-ons and renames its history to den-watcher.db.
 #
-#   sudo linux/check-install.sh den-watcher-1.2.3-linux-amd64.tar.gz 1.2.3 [usage-control-2.0.7a-linux-amd64.tar.gz]
+#   sudo linux/check-install.sh den-watcher-1.2.3-linux-amd64.tar.gz 1.2.3 [den-watcher-4.0.0-linux-amd64.tar.gz]
 set -euo pipefail
 
 archive="$(realpath "$1")"
@@ -62,42 +62,20 @@ if [[ -n "$old_archive" ]]; then
   tar -xzf "$old_archive" -C "$old"
   old_folder="$(find "$old" -mindepth 1 -maxdepth 1 -type d)"
   "$old_folder/install.sh" --addons=power < /dev/null
-  sed -i 's/^DEVICE_NAME=.*/DEVICE_NAME=Before the rename/' /etc/usage-control.env
-  systemctl restart usage-control
-  answer /api/devices | grep -q '"name":"Before the rename"' || { echo "the old archive did not take DEVICE_NAME" >&2; exit 1; }
-  test -f /var/lib/usage-control/usage-control.db
-  # A mistyped option stops before the move, and the old install keeps running.
-  if "$folder/install.sh" --addons=nosuch < /dev/null; then
-    echo "install.sh took an add-on that does not exist" >&2
-    exit 1
-  fi
-  systemctl is-active --quiet usage-control || { echo "a mistyped option stopped usage-control" >&2; exit 1; }
+  sed -i 's/^DEVICE_NAME=.*/DEVICE_NAME=Up to 4.0.0/' /etc/den-watcher.env
+  systemctl restart den-watcher
+  answer /api/devices | grep -q '"name":"Up to 4.0.0"' || { echo "the old archive did not take DEVICE_NAME" >&2; exit 1; }
+  test -f /var/lib/den-watcher/usage-control.db
   # Without --addons and without a terminal, as an unattended update.
   "$folder/install.sh" < /dev/null
-  answer /api/metrics | grep -q "\"version\":\"$version\"" || { echo "the service does not report version $version after the move" >&2; exit 1; }
-  answer /api/devices | grep -q '"name":"Before the rename"' || { echo "the move lost DEVICE_NAME" >&2; exit 1; }
-  test -f /var/lib/den-watcher/usage-control.db || { echo "the move lost the history" >&2; exit 1; }
-  systemctl is-active --quiet den-watcher-power || { echo "the move lost the power add-on" >&2; exit 1; }
-  if systemctl cat usage-control > /dev/null 2>&1 || systemctl cat usage-control-power > /dev/null 2>&1 ||
-    compgen -G '/usr/local/bin/usage-control*' > /dev/null || [[ -e /etc/usage-control.env || -e /var/lib/usage-control || -e /var/lib/private/usage-control ]]; then
-    echo "the move left usage-control behind" >&2
+  answer /api/metrics | grep -q "\"version\":\"$version\"" || { echo "the service does not report version $version after the update" >&2; exit 1; }
+  answer /api/devices | grep -q '"name":"Up to 4.0.0"' || { echo "the update lost DEVICE_NAME" >&2; exit 1; }
+  test -f /var/lib/den-watcher/den-watcher.db || { echo "the update did not rename the history to den-watcher.db" >&2; exit 1; }
+  if compgen -G '/var/lib/den-watcher/usage-control.db*' > /dev/null; then
+    echo "the update left the history under its old name" >&2
     exit 1
   fi
-  # An install removed with the old --uninstall kept its settings and
-  # history, which move too.
-  "$folder/install.sh" --uninstall --purge
-  "$old_folder/install.sh" --addons= < /dev/null
-  sed -i 's/^DEVICE_NAME=.*/DEVICE_NAME=Uninstalled before the rename/' /etc/usage-control.env
-  systemctl restart usage-control
-  answer /api/devices | grep -q '"name":"Uninstalled before the rename"' || { echo "the old archive did not take DEVICE_NAME" >&2; exit 1; }
-  "$old_folder/install.sh" --uninstall
-  "$folder/install.sh" --addons= < /dev/null
-  answer /api/devices | grep -q '"name":"Uninstalled before the rename"' || { echo "the move after the old --uninstall lost DEVICE_NAME" >&2; exit 1; }
-  test -f /var/lib/den-watcher/usage-control.db || { echo "the move after the old --uninstall lost the history" >&2; exit 1; }
-  if [[ -e /etc/usage-control.env || -e /var/lib/usage-control || -e /var/lib/private/usage-control ]]; then
-    echo "the move after the old --uninstall left usage-control behind" >&2
-    exit 1
-  fi
+  systemctl is-active --quiet den-watcher-power || { echo "the update lost the power add-on" >&2; exit 1; }
   sed -i 's/^DEVICE_NAME=.*/DEVICE_NAME=/' /etc/den-watcher.env
 fi
 
@@ -109,7 +87,7 @@ systemctl is-enabled --quiet den-watcher
 sed -i 's/^DEVICE_NAME=.*/DEVICE_NAME=Install check/' /etc/den-watcher.env
 "$folder/install.sh"
 answer /api/devices | grep -q '"name":"Install check"' || { echo "the update lost DEVICE_NAME" >&2; exit 1; }
-test -f /var/lib/den-watcher/usage-control.db
+test -f /var/lib/den-watcher/den-watcher.db
 
 # The power add-on runs as a service of its own and writes to the add-on
 # folder; an update without --addons keeps it.

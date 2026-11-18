@@ -10,7 +10,7 @@
   REINSTALLMODE=m WEBSITE=1).
 
   Add-ons are optional programs that collect more data, each writing to
-  C:\ProgramData\Usage Control\addons, which den-watcher shows. The service
+  C:\ProgramData\Den-Watcher\addons, which den-watcher shows. The service
   starts the installed add-ons through the add-on host, a den-watcher.exe of
   its own, so Task Manager groups them under it, except the smart add-on,
   which needs more rights and is a service of its own. The Edition page
@@ -168,25 +168,37 @@
     <Upgrade Id="C226A238-37CF-4C24-85FE-A29D04C94172">
       <UpgradeVersion Minimum="$(Version)" Maximum="$(Version)" IncludeMinimum="yes" IncludeMaximum="yes"
                       OnlyDetect="yes" Property="SAMEVERSION" />
+      <!-- usage-control, the name up to 2.0.7a, which this version no longer takes over.
+           From 0.1.0, so the 0.0.x builds of pull requests are not taken for it. -->
+      <UpgradeVersion Minimum="0.1.0" IncludeMinimum="yes" Maximum="2.0.8" IncludeMaximum="no"
+                      OnlyDetect="yes" Property="USAGECONTROL" />
     </Upgrade>
+    <Launch Condition="Installed OR NOT USAGECONTROL"
+            Message="This PC still runs usage-control, which this version no longer takes over. Install Den-Watcher 4.0.0 over it first, then this version." />
     <Property Id="INSTALLEDBUGFIX">
-      <RegistrySearch Id="RememberedBugfix" Root="HKLM" Key="SOFTWARE\Usage Control" Name="Bugfix" Type="raw" />
+      <RegistrySearch Id="RememberedBugfix" Root="HKLM" Key="SOFTWARE\Den-Watcher" Name="Bugfix" Type="raw" />
+      <RegistrySearch Id="RememberedOldBugfix" Root="HKLM" Key="SOFTWARE\Usage Control" Name="Bugfix" Type="raw" />
     </Property>
     <Launch Condition="Installed OR NOT SAMEVERSION OR NOT INSTALLEDBUGFIX OR INSTALLEDBUGFIX &lt;= $(Bugfix)"
             Message="A newer bugfix of this version of Den-Watcher is already installed." />
     <MediaTemplate EmbedCab="yes" />
     <!-- The mascot, in Apps and Features. -->
-    <Icon Id="UsageControl.ico" SourceFile="$(Icon)" />
-    <Property Id="ARPPRODUCTICON" Value="UsageControl.ico" />
+    <Icon Id="DenWatcher.ico" SourceFile="$(Icon)" />
+    <Property Id="ARPPRODUCTICON" Value="DenWatcher.ico" />
 
     <!--
       Each option is remembered in the registry. AppSearch reads the remembered
       value, which would overwrite one given on the command line, so that one
       is saved before and put back after, in both the UI and the install.
+      Up to 4.0.0 the key was SOFTWARE\Usage Control, which an update from
+      such a version reads instead (only one of them is there: the update
+      removes the old version, and its key, after reading it). The service
+      moves that version's data folder itself (see renameOldDatabase).
     -->
     <?foreach Setting in PORT;WEBSITE;DEVICE_NAME;HUB_DEVICES;HUB_ROUTERS;HUB_CHECKS;RETENTION_DAYS;HISTORY_MAX_ENTRIES;BUFFER_HOURS;ALLOWED_HOSTS;DISK_PATHS;UPDATE_CHECK;POWER;GPU;PRESSURE;KERNEL;WIFI;WIFI_SCAN;MEMORY;PORTS;SMART;PROCESSES;BLUETOOTH ?>
     <Property Id="$(Setting)" Secure="yes">
-      <RegistrySearch Id="Remembered$(Setting)" Root="HKLM" Key="SOFTWARE\Usage Control" Name="$(Setting)" Type="raw" />
+      <RegistrySearch Id="Remembered$(Setting)" Root="HKLM" Key="SOFTWARE\Den-Watcher" Name="$(Setting)" Type="raw" />
+      <RegistrySearch Id="RememberedOld$(Setting)" Root="HKLM" Key="SOFTWARE\Usage Control" Name="$(Setting)" Type="raw" />
     </Property>
     <SetProperty Action="Save$(Setting)" Id="CMDLINE_$(Setting)" Value="[$(Setting)]" Before="AppSearch" Sequence="both" Condition="$(Setting)" />
     <SetProperty Action="Restore$(Setting)" Id="$(Setting)" Value="[CMDLINE_$(Setting)]" After="AppSearch" Sequence="both" Condition="CMDLINE_$(Setting)" />
@@ -198,7 +210,8 @@
     -->
     <?foreach Setting in WIFI_NEARBY;BLUETOOTH_NAMES ?>
     <Property Id="$(Setting)" Secure="yes">
-      <RegistrySearch Id="Remembered$(Setting)" Root="HKLM" Key="SOFTWARE\Usage Control" Name="$(Setting)" Type="raw" />
+      <RegistrySearch Id="Remembered$(Setting)" Root="HKLM" Key="SOFTWARE\Den-Watcher" Name="$(Setting)" Type="raw" />
+      <RegistrySearch Id="RememberedOld$(Setting)" Root="HKLM" Key="SOFTWARE\Usage Control" Name="$(Setting)" Type="raw" />
     </Property>
     <SetProperty Action="Save$(Setting)" Id="CMDLINE_$(Setting)" Value="[$(Setting)]" Before="FindRelatedProducts" Sequence="both" Condition="$(Setting)" />
     <SetProperty Action="Restore$(Setting)" Id="$(Setting)" Value="[CMDLINE_$(Setting)]" After="AppSearch" Sequence="both" Condition="CMDLINE_$(Setting)" />
@@ -293,7 +306,7 @@
     <Launch Condition='REMOVE = "ALL" OR NOT ROUTER_PASSWORDS OR NOT ROUTER_PASSWORDS &gt;&lt; Quote'
             Message='ROUTER_PASSWORDS cannot hold a double quote ("). Give each router a password without one.' />
     <SetProperty Id="StoreRouterPasswords" Before="StoreRouterPasswords" Sequence="execute"
-                 Value='"[System64Folder]reg.exe" add "HKLM\SOFTWARE\Usage Control\Router" /v Passwords /t REG_MULTI_SZ /d "[ROUTER_PASSWORDS]\0" /f /reg:64'
+                 Value='"[System64Folder]reg.exe" add "HKLM\SOFTWARE\Den-Watcher\Router" /v Passwords /t REG_MULTI_SZ /d "[ROUTER_PASSWORDS]\0" /f /reg:64'
                  Condition='ROUTER_PASSWORDS AND WEBSITE = "1" AND REMOVE &lt;&gt; "ALL"' />
     <CustomAction Id="StoreRouterPasswords" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixSilentExec"
                   Execute="deferred" Impersonate="no" HideTarget="yes" Return="check" />
@@ -310,7 +323,10 @@
       before it (UPGRADINGPRODUCTCODE), which keeps them all, so an empty
       password in an update still keeps the one stored for that name. The
       path is spelled out from CommonAppDataFolder rather than DATAFOLDER,
-      which a command line could point elsewhere.
+      which a command line could point elsewhere. The history and passwords
+      also go from the folder of 4.0.0 and before, which the service still
+      uses while it cannot move them, with a del of their own: one del with
+      a path in a folder that is gone deletes nothing.
     -->
     <Property Id="DELETE_HISTORY" Secure="yes" />
     <Property Id="DELETE_ROUTER_PASSWORDS" Value="1" Secure="yes" />
@@ -319,13 +335,13 @@
                   Execute="deferred" Impersonate="no" Return="ignore" />
     <?endforeach?>
     <SetProperty Id="DeleteAddOnReports" Before="DeleteAddOnReports" Sequence="execute"
-                 Value='"[System64Folder]cmd.exe" /d /c del /f /q "[CommonAppDataFolder]Usage Control\addons\*.json"'
+                 Value='"[System64Folder]cmd.exe" /d /c del /f /q "[CommonAppDataFolder]Den-Watcher\addons\*.json"'
                  Condition='REMOVE = "ALL" AND NOT UPGRADINGPRODUCTCODE' />
     <SetProperty Id="DeleteRouterPasswords" Before="DeleteRouterPasswords" Sequence="execute"
-                 Value='"[System64Folder]cmd.exe" /d /c del /f /q "[CommonAppDataFolder]Usage Control\router-passwords.dpapi"'
+                 Value='"[System64Folder]cmd.exe" /d /c del /f /q "[CommonAppDataFolder]Den-Watcher\router-passwords.dpapi" &amp; del /f /q "[CommonAppDataFolder]Usage Control\router-passwords.dpapi"'
                  Condition='REMOVE = "ALL" AND NOT UPGRADINGPRODUCTCODE AND DELETE_ROUTER_PASSWORDS = "1"' />
     <SetProperty Id="DeleteHistory" Before="DeleteHistory" Sequence="execute"
-                 Value='"[System64Folder]cmd.exe" /d /c del /f /q "[CommonAppDataFolder]Usage Control\usage-control.db*"'
+                 Value='"[System64Folder]cmd.exe" /d /c del /f /q "[CommonAppDataFolder]Den-Watcher\den-watcher.db*" &amp; del /f /q "[CommonAppDataFolder]Usage Control\usage-control.db*"'
                  Condition='REMOVE = "ALL" AND NOT UPGRADINGPRODUCTCODE AND DELETE_HISTORY = "1"' />
     <InstallExecuteSequence>
       <Custom Action="DeleteAddOnReports" After="StopServices" Condition='REMOVE = "ALL" AND NOT UPGRADINGPRODUCTCODE' />
@@ -356,7 +372,8 @@
             Message='$(AddOn) must be 0 or 1. To give it, run the installer from a command prompt run as administrator: msiexec /i "[OriginalDatabase]" [$(AddOn)Fix], or with $(AddOn)=0 to remove the add-on' />
     <!-- The remembered value once more, kept as it is, to tell whether a repair changes the add-on (AddOnFiles). -->
     <Property Id="REMEMBERED_$(AddOn)">
-      <RegistrySearch Id="RememberedAgain$(AddOn)" Root="HKLM" Key="SOFTWARE\Usage Control" Name="$(AddOn)" Type="raw" />
+      <RegistrySearch Id="RememberedAgain$(AddOn)" Root="HKLM" Key="SOFTWARE\Den-Watcher" Name="$(AddOn)" Type="raw" />
+      <RegistrySearch Id="RememberedOldAgain$(AddOn)" Root="HKLM" Key="SOFTWARE\Usage Control" Name="$(AddOn)" Type="raw" />
     </Property>
     <?endforeach?>
 
@@ -435,7 +452,7 @@
       <Directory Id="INSTALLFOLDER" Name="Den-Watcher" />
     </StandardDirectory>
     <StandardDirectory Id="CommonAppDataFolder">
-      <Directory Id="DATAFOLDER" Name="Usage Control">
+      <Directory Id="DATAFOLDER" Name="Den-Watcher">
         <!-- Where add-ons write what they read, for the service to show. -->
         <Directory Id="ADDONSFOLDER" Name="addons" />
       </Directory>
@@ -445,7 +462,7 @@
       <File Source="$(Binary)" Name="den-watcher.exe" KeyPath="yes" />
 
       <!-- A low-privilege account: reading the usage needs no administrator rights. -->
-      <ServiceInstall Name="UsageControl"
+      <ServiceInstall Name="DenWatcher"
                       DisplayName="Den-Watcher"
                       Description="Serves the usage of this computer on the local network."
                       Type="ownProcess"
@@ -463,13 +480,13 @@
                             RestartServiceDelayInSeconds="10"
                             ResetPeriodInDays="1" />
       </ServiceInstall>
-      <ServiceControl Name="UsageControl" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
+      <ServiceControl Name="DenWatcher" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
 
       <!-- The service's settings, read by the program as environment variables. -->
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\UsageControl" Name="Environment" Type="multiString">
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\DenWatcher" Name="Environment" Type="multiString">
         <MultiStringValue Value="LISTEN_ADDR=:[PORT]" />
         <MultiStringValue Value="DATA_ONLY=[DataOnly]" />
-        <MultiStringValue Value="DATABASE_PATH=[DATAFOLDER]usage-control.db" />
+        <MultiStringValue Value="DATABASE_PATH=[DATAFOLDER]den-watcher.db" />
         <MultiStringValue Value="DEVICE_NAME=[DEVICE_NAME]" />
         <MultiStringValue Value="HUB_DEVICES=[ServiceHubDevices]" />
         <MultiStringValue Value="HUB_ROUTERS=[ServiceHubRouters]" />
@@ -488,25 +505,32 @@
       </RegistryValue>
 
       <!--
+        The key of 4.0.0 and before, which the removal of that version
+        deletes; this deletes what may be left of it, so later updates read
+        only the new one.
+      -->
+      <RemoveRegistryKey Root="HKLM" Key="SOFTWARE\Usage Control" Action="removeOnInstall" />
+
+      <!--
         Where StoreRouterPasswords hands the router passwords to the service:
         only the system, administrators and the service's account can read
         the key, and the service may also delete the value in it. It is
         locked down as it is created.
       -->
-      <RegistryKey Root="HKLM" Key="SOFTWARE\Usage Control\Router" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
+      <RegistryKey Root="HKLM" Key="SOFTWARE\Den-Watcher\Router" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
         <PermissionEx Sddl="D:P(A;;KA;;;SY)(A;;KA;;;BA)(A;;0x2001b;;;LS)" />
       </RegistryKey>
 
       <!-- The options, read back by the next update, and the bugfix number (see Upgrade). -->
-      <RegistryValue Root="HKLM" Key="SOFTWARE\Usage Control" Name="Bugfix" Type="string" Value="$(Bugfix)" />
+      <RegistryValue Root="HKLM" Key="SOFTWARE\Den-Watcher" Name="Bugfix" Type="string" Value="$(Bugfix)" />
       <?foreach Setting in PORT;WEBSITE;DEVICE_NAME;HUB_DEVICES;HUB_ROUTERS;HUB_CHECKS;RETENTION_DAYS;HISTORY_MAX_ENTRIES;BUFFER_HOURS;ALLOWED_HOSTS;DISK_PATHS;UPDATE_CHECK;POWER;GPU;PRESSURE;KERNEL;WIFI;WIFI_SCAN;WIFI_NEARBY;MEMORY;PORTS;SMART;PROCESSES;BLUETOOTH;BLUETOOTH_NAMES ?>
-      <RegistryValue Root="HKLM" Key="SOFTWARE\Usage Control" Name="$(Setting)" Type="string" Value="[$(Setting)]" />
+      <RegistryValue Root="HKLM" Key="SOFTWARE\Den-Watcher" Name="$(Setting)" Type="string" Value="[$(Setting)]" />
       <?endforeach?>
 
       <!-- Lets errors the service writes to the Application event log show as plain text. -->
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControl"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcher"
                      Name="EventMessageFile" Type="expandable" Value="%SystemRoot%\System32\EventCreate.exe" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControl"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcher"
                      Name="TypesSupported" Type="integer" Value="7" />
 
       <!-- The program itself also refuses requests from outside the local network. -->
@@ -527,9 +551,6 @@
       closes them.
     -->
     <util:CloseApplication Target="den-watcher-tray.exe" CloseMessage="yes" ElevatedCloseMessage="yes" RebootPrompt="no"
-                           Condition='NOT (REINSTALL AND REINSTALLMODE = "m")' />
-    <!-- The tray icon from before the rename, which an update from usage-control closes. -->
-    <util:CloseApplication Target="usage-control-tray.exe" CloseMessage="yes" ElevatedCloseMessage="yes" RebootPrompt="no"
                            Condition='NOT (REINSTALL AND REINSTALLMODE = "m")' />
 
     <!--
@@ -552,9 +573,9 @@
     -->
     <Component Directory="INSTALLFOLDER" Condition='POWER = "1"' Transitive="yes">
       <File Source="$(AddOns)\den-watcher-power.exe" Name="den-watcher-power.exe" KeyPath="yes" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlPower"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherPower"
                      Name="EventMessageFile" Type="expandable" Value="%SystemRoot%\System32\EventCreate.exe" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlPower"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherPower"
                      Name="TypesSupported" Type="integer" Value="7" />
     </Component>
 
@@ -563,9 +584,9 @@
     -->
     <Component Directory="INSTALLFOLDER" Condition='GPU = "1"' Transitive="yes">
       <File Source="$(AddOns)\den-watcher-gpu.exe" Name="den-watcher-gpu.exe" KeyPath="yes" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlGPU"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherGPU"
                      Name="EventMessageFile" Type="expandable" Value="%SystemRoot%\System32\EventCreate.exe" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlGPU"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherGPU"
                      Name="TypesSupported" Type="integer" Value="7" />
     </Component>
 
@@ -575,9 +596,9 @@
     -->
     <Component Directory="INSTALLFOLDER" Condition='PRESSURE = "1"' Transitive="yes">
       <File Source="$(AddOns)\den-watcher-pressure.exe" Name="den-watcher-pressure.exe" KeyPath="yes" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlPressure"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherPressure"
                      Name="EventMessageFile" Type="expandable" Value="%SystemRoot%\System32\EventCreate.exe" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlPressure"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherPressure"
                      Name="TypesSupported" Type="integer" Value="7" />
     </Component>
 
@@ -588,9 +609,9 @@
     -->
     <Component Directory="INSTALLFOLDER" Condition='KERNEL = "1"' Transitive="yes">
       <File Source="$(AddOns)\den-watcher-kernel.exe" Name="den-watcher-kernel.exe" KeyPath="yes" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlKernel"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherKernel"
                      Name="EventMessageFile" Type="expandable" Value="%SystemRoot%\System32\EventCreate.exe" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlKernel"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherKernel"
                      Name="TypesSupported" Type="integer" Value="7" />
     </Component>
 
@@ -600,27 +621,27 @@
     -->
     <Component Directory="INSTALLFOLDER" Condition='WIFI = "1"' Transitive="yes">
       <File Source="$(AddOns)\den-watcher-wifi.exe" Name="den-watcher-wifi.exe" KeyPath="yes" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlWifi"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherWifi"
                      Name="EventMessageFile" Type="expandable" Value="%SystemRoot%\System32\EventCreate.exe" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlWifi"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherWifi"
                      Name="TypesSupported" Type="integer" Value="7" />
     </Component>
 
     <!-- The memory add-on, with MEMORY=1, set up like the power add-on. -->
     <Component Directory="INSTALLFOLDER" Condition='MEMORY = "1"' Transitive="yes">
       <File Source="$(AddOns)\den-watcher-memory.exe" Name="den-watcher-memory.exe" KeyPath="yes" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlMemory"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherMemory"
                      Name="EventMessageFile" Type="expandable" Value="%SystemRoot%\System32\EventCreate.exe" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlMemory"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherMemory"
                      Name="TypesSupported" Type="integer" Value="7" />
     </Component>
 
     <!-- The ports add-on, with PORTS=1, like the power add-on. -->
     <Component Directory="INSTALLFOLDER" Condition='PORTS = "1"' Transitive="yes">
       <File Source="$(AddOns)\den-watcher-ports.exe" Name="den-watcher-ports.exe" KeyPath="yes" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlPorts"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherPorts"
                      Name="EventMessageFile" Type="expandable" Value="%SystemRoot%\System32\EventCreate.exe" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlPorts"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherPorts"
                      Name="TypesSupported" Type="integer" Value="7" />
     </Component>
 
@@ -635,7 +656,7 @@
     -->
     <Component Directory="INSTALLFOLDER" Condition='SMART = "1"' Transitive="yes">
       <File Source="$(AddOns)\den-watcher-smart.exe" Name="den-watcher-smart.exe" KeyPath="yes" />
-      <ServiceInstall Name="UsageControlSmart"
+      <ServiceInstall Name="DenWatcherSmart"
                       DisplayName="Den-Watcher smart add-on"
                       Description="Reads the health of this computer's disks for Den-Watcher."
                       Type="ownProcess"
@@ -648,13 +669,13 @@
                             RestartServiceDelayInSeconds="10"
                             ResetPeriodInDays="1" />
       </ServiceInstall>
-      <ServiceControl Name="UsageControlSmart" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\UsageControlSmart" Name="Environment" Type="multiString">
+      <ServiceControl Name="DenWatcherSmart" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\DenWatcherSmart" Name="Environment" Type="multiString">
         <MultiStringValue Value="ADDONS_DIR=[ADDONSFOLDER]" />
       </RegistryValue>
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlSmart"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherSmart"
                      Name="EventMessageFile" Type="expandable" Value="%SystemRoot%\System32\EventCreate.exe" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlSmart"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherSmart"
                      Name="TypesSupported" Type="integer" Value="7" />
     </Component>
 
@@ -665,9 +686,9 @@
     -->
     <Component Directory="INSTALLFOLDER" Condition='PROCESSES = "1"' Transitive="yes">
       <File Source="$(AddOns)\den-watcher-processes.exe" Name="den-watcher-processes.exe" KeyPath="yes" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlProcesses"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherProcesses"
                      Name="EventMessageFile" Type="expandable" Value="%SystemRoot%\System32\EventCreate.exe" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlProcesses"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherProcesses"
                      Name="TypesSupported" Type="integer" Value="7" />
     </Component>
 
@@ -678,9 +699,9 @@
     -->
     <Component Directory="INSTALLFOLDER" Condition='BLUETOOTH = "1"' Transitive="yes">
       <File Source="$(AddOns)\den-watcher-bluetooth.exe" Name="den-watcher-bluetooth.exe" KeyPath="yes" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlBluetooth"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherBluetooth"
                      Name="EventMessageFile" Type="expandable" Value="%SystemRoot%\System32\EventCreate.exe" />
-      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\UsageControlBluetooth"
+      <RegistryValue Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\DenWatcherBluetooth"
                      Name="TypesSupported" Type="integer" Value="7" />
     </Component>
 
@@ -691,13 +712,13 @@
       it, so reinstalling keeps the history, unless DELETE_HISTORY=1 (see
       DeleteHistory).
     -->
-    <Component Id="DataFolder" Directory="DATAFOLDER" Guid="C3AF9720-FF5B-4D29-AA9B-A3FB303E3586">
+    <Component Id="DataFolder" Directory="DATAFOLDER" Guid="9E0618DF-42AD-4389-A714-6970424E7E44">
       <CreateFolder>
         <PermissionEx Sddl="D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1301bf;;;LS)" />
       </CreateFolder>
     </Component>
     <!-- The add-on folder, with the data folder's rights. -->
-    <Component Id="AddOnsFolder" Directory="ADDONSFOLDER" Guid="5E0F3C1B-7D52-4E4B-9C8E-2A6F1D93B4C7">
+    <Component Id="AddOnsFolder" Directory="ADDONSFOLDER" Guid="0B2D5477-F719-4B7A-829D-38DBB23BBEF4">
       <CreateFolder />
     </Component>
   </Package>
@@ -734,7 +755,7 @@
           </RadioButtonGroup>
         </Control>
         <Control Id="CollectorText" Type="Text" X="38" Y="77" Width="310" Height="24" NoPrefix="yes" Text="Another device, such as a Raspberry Pi, shows this PC and keeps its history. Nothing else runs here." />
-        <Control Id="WebsiteText" Type="Text" X="38" Y="122" Width="310" Height="24" NoPrefix="yes" Text="This PC also shows the page and keeps its own history in [CommonAppDataFolder]Usage Control." />
+        <Control Id="WebsiteText" Type="Text" X="38" Y="122" Width="310" Height="24" NoPrefix="yes" Text="This PC also shows the page and keeps its own history in [CommonAppDataFolder]Den-Watcher." />
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)" />
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)" />
@@ -862,7 +883,7 @@
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
         <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}What else should go?" />
-        <Control Id="Description" Type="Text" X="25" Y="23" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="What is not ticked stays in [CommonAppDataFolder]Usage Control." />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="What is not ticked stays in [CommonAppDataFolder]Den-Watcher." />
         <Control Id="DeleteHistory" Type="CheckBox" X="20" Y="55" Width="330" Height="15" Property="DELETE_HISTORY" CheckBoxValue="1" Text="Delete the &amp;history" />
         <Control Id="DeleteHistoryText" Type="Text" X="38" Y="72" Width="310" Height="24" NoPrefix="yes" Text="Kept, installing Den-Watcher again shows it again." />
         <Control Id="DeleteRouterPasswords" Type="CheckBox" X="20" Y="100" Width="330" Height="15" Property="DELETE_ROUTER_PASSWORDS" CheckBoxValue="1" Text="Delete the &amp;router passwords" />

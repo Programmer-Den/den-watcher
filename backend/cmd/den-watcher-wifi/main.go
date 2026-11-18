@@ -42,7 +42,7 @@ import (
 const scanEvery = 5 * time.Minute
 
 func main() {
-	addons.MainReport("wifi", "UsageControlWifi", func() addons.ReadReport {
+	addons.MainReport("wifi", "DenWatcherWifi", func() addons.ReadReport {
 		read := wifi.NewReader()
 		var readNetworks func(context.Context) []wifi.AccessPoint
 		if addons.SwitchOn("WIFI_NEARBY", os.Getenv("WIFI_NEARBY")) {

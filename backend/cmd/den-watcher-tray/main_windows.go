@@ -17,7 +17,7 @@ import (
 )
 
 // serviceName is the service the installer sets up.
-const serviceName = "UsageControl"
+const serviceName = "DenWatcher"
 
 // checkEvery is how often the icon asks the service how it is.
 const checkEvery = 5 * time.Second
@@ -27,7 +27,7 @@ var icons embed.FS
 
 func main() {
 	// One icon per logged-in user, however often it is started.
-	instance, err := windows.CreateMutex(nil, false, windows.StringToUTF16Ptr(`Local\UsageControlTray`))
+	instance, err := windows.CreateMutex(nil, false, windows.StringToUTF16Ptr(`Local\DenWatcherTray`))
 	if errors.Is(err, windows.ERROR_ALREADY_EXISTS) {
 		return
 	}
@@ -238,7 +238,7 @@ func (t *tray) handleClicks() {
 
 // readSettings reads the installer's remembered options.
 func readSettings() settings {
-	key, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Usage Control`, registry.QUERY_VALUE)
+	key, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Den-Watcher`, registry.QUERY_VALUE)
 	if err != nil {
 		return newSettings("", "")
 	}

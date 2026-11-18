@@ -28,7 +28,7 @@ import (
 )
 
 func main() {
-	addons.Main("pressure", "UsageControlPressure", func() addons.Read {
+	addons.Main("pressure", "DenWatcherPressure", func() addons.Read {
 		read := pressure.NewReader()
 		return func(context.Context, time.Time) []metrics.Extra {
 			return read()

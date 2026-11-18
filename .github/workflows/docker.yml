@@ -138,9 +138,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          # Independent of the repository's name. The old name, usage-control,
-          # was published up to and including 3.0.0, the last version for Docker
-          # installs from before the rename.
+          # Independent of the repository's name.
           images: |
             ghcr.io/${{ github.repository_owner }}/den-watcher
           flavor: latest=false
@@ -231,7 +229,5 @@ jobs:
           Images for arm64 and amd64: \`$image:$version\`$also.
 
           Update with \`docker compose pull && docker compose up -d\` in the folder with \`compose.yaml\`.
-
-          A \`compose.yaml\` from before the rename to den-watcher still pulls the image by its old name, usage-control, which stopped at 3.0.0: run \`git pull\` and then \`docker compose up -d --remove-orphans\` in its folder.
           NOTES
           gh release edit "$tag" --notes-file notes.md

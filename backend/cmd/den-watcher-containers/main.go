@@ -27,7 +27,7 @@ import (
 )
 
 func main() {
-	addons.Main("containers", "UsageControlContainers", func() addons.Read {
+	addons.Main("containers", "DenWatcherContainers", func() addons.Read {
 		reader := containers.NewReader(sysfile.HostSys(), containers.DockerDir())
 		return func(_ context.Context, now time.Time) []metrics.Extra {
 			return containers.Extras(reader.Read(now))

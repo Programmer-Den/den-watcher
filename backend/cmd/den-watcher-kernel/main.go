@@ -27,7 +27,7 @@ import (
 )
 
 func main() {
-	addons.Main("kernel", "UsageControlKernel", func() addons.Read {
+	addons.Main("kernel", "DenWatcherKernel", func() addons.Read {
 		reader := kernel.NewSystemReader()
 		return func(_ context.Context, now time.Time) []metrics.Extra {
 			return kernel.Extras(reader.Read(now))

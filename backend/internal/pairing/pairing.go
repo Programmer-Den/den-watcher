@@ -23,10 +23,11 @@ import (
 const (
 	// CodeHeader is sent by a hub with every request, with the code given
 	// when the device was added, if any.
-	CodeHeader = "Usage-Control-Pairing-Code"
+	CodeHeader = "Den-Watcher-Pairing-Code"
 	// ProblemHeader is sent with the answer 403 to a hub that is not paired:
 	// "needed" when it sent no code, "wrong" when it sent another one.
-	ProblemHeader = "Usage-Control-Pairing"
+	// Both go also under their old names; see SetHeader.
+	ProblemHeader = "Den-Watcher-Pairing"
 )
 
 // alphabet are the characters of a code: digits and capital letters, without

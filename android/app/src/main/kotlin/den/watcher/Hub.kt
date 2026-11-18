@@ -49,6 +49,7 @@ object Hub {
             connection.doOutput = true
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty(Push.CODE_HEADER, code)
+            connection.setRequestProperty(Push.OLD_CODE_HEADER, code)
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             when (connection.responseCode) {
                 HttpURLConnection.HTTP_OK -> {

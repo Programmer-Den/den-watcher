@@ -11,7 +11,7 @@
 //
 //	ADDONS_DIR  the add-on folder den-watcher reads (default
 //	            /run/den-watcher-addons, the folder the systemd service
-//	            makes, or C:\ProgramData\Usage Control\addons on Windows)
+//	            makes, or C:\ProgramData\Den-Watcher\addons on Windows)
 package main
 
 import (
@@ -24,7 +24,7 @@ import (
 )
 
 func main() {
-	addons.Main("smart", "UsageControlSmart", func() addons.Read {
+	addons.Main("smart", "DenWatcherSmart", func() addons.Read {
 		reader := smart.NewReader()
 		return func(ctx context.Context, now time.Time) []metrics.Extra {
 			return smart.Extras(reader.Read(ctx, now))

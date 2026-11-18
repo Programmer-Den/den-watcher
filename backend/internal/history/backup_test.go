@@ -11,7 +11,7 @@ import (
 func TestBackupCopiesTheDatabaseNextToIt(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
-	store, err := Open(ctx, filepath.Join(dir, "usage-control.db"))
+	store, err := Open(ctx, filepath.Join(dir, "den-watcher.db"))
 	if err != nil {
 		t.Fatalf("Open() error = %v", err)
 	}
@@ -51,12 +51,12 @@ func TestBackupOfAFolderThatIsGoneFails(t *testing.T) {
 	if err := os.Mkdir(dir, 0o750); err != nil {
 		t.Fatal(err)
 	}
-	store, err := Open(ctx, filepath.Join(dir, "usage-control.db"))
+	store, err := Open(ctx, filepath.Join(dir, "den-watcher.db"))
 	if err != nil {
 		t.Fatalf("Open() error = %v", err)
 	}
 	defer func() { _ = store.Close() }()
-	store.path = filepath.Join(dir, "gone", "usage-control.db")
+	store.path = filepath.Join(dir, "gone", "den-watcher.db")
 
 	if path, err := store.Backup(ctx); err == nil {
 		t.Errorf("Backup() = %s, want an error for a folder that does not exist", path)
@@ -65,7 +65,7 @@ func TestBackupOfAFolderThatIsGoneFails(t *testing.T) {
 
 func TestAFailedBackupLeavesNoFile(t *testing.T) {
 	dir := t.TempDir()
-	store, err := Open(context.Background(), filepath.Join(dir, "usage-control.db"))
+	store, err := Open(context.Background(), filepath.Join(dir, "den-watcher.db"))
 	if err != nil {
 		t.Fatalf("Open() error = %v", err)
 	}
@@ -84,14 +84,14 @@ func TestAFailedBackupLeavesNoFile(t *testing.T) {
 func TestOpenDeletesBackupsLeftFromBefore(t *testing.T) {
 	dir := t.TempDir()
 	left := filepath.Join(dir, ".den-watcher-backup-123.db")
-	other := filepath.Join(dir, "usage-control.db.backup")
+	other := filepath.Join(dir, "den-watcher.db.backup")
 	for _, file := range []string{left, other} {
 		if err := os.WriteFile(file, []byte("copy"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	store, err := Open(context.Background(), filepath.Join(dir, "usage-control.db"))
+	store, err := Open(context.Background(), filepath.Join(dir, "den-watcher.db"))
 	if err != nil {
 		t.Fatalf("Open() error = %v", err)
 	}

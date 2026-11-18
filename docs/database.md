@@ -14,12 +14,12 @@ Every device with a website keeps its history in one SQLite file. A hub keeps th
 
 | Install | File |
 | --- | --- |
-| Docker | `/data/usage-control.db` in the container, on the `data` volume, so it survives updates and recreated containers |
-| Linux service | `/var/lib/den-watcher/usage-control.db` |
-| Windows | `C:\ProgramData\Usage Control\usage-control.db`; uninstalling keeps it, unless **Delete the history** is ticked on the installer's Remove page or `msiexec /x` gets `DELETE_HISTORY=1` |
-| From source | `usage-control.db` in the folder the program was started from |
+| Docker | `/data/den-watcher.db` in the container, on the `data` volume, so it survives updates and recreated containers |
+| Linux service | `/var/lib/den-watcher/den-watcher.db` |
+| Windows | `C:\ProgramData\Den-Watcher\den-watcher.db`; uninstalling keeps it, unless **Delete the history** is ticked on the installer's Remove page or `msiexec /x` gets `DELETE_HISTORY=1` |
+| From source | `den-watcher.db` in the folder the program was started from |
 
-`DATABASE_PATH` moves it. The driver is a pure-Go SQLite, so the binary needs no C library. The file uses write-ahead logging (WAL), so the page can read while the recorders write; next to it you will see `usage-control.db-wal` and `usage-control.db-shm`, which belong to it.
+`DATABASE_PATH` moves it. The driver is a pure-Go SQLite, so the binary needs no C library. The file uses write-ahead logging (WAL), so the page can read while the recorders write; next to it you will see `den-watcher.db-wal` and `den-watcher.db-shm`, which belong to it.
 
 ## Tables
 
@@ -103,7 +103,7 @@ Each kept minute is one row of a few bytes per value, and each hour has one row 
 
 A hub's file is the sum over its devices. A data-only device's buffer holds only minutes, no hours, and normally just one; while the hub cannot reach it, it grows with one row per value, up to `BUFFER_HOURS`: about 3 MB for a PC's 24 hours, about 20 MB for a week. `HISTORY_MAX_ENTRIES` (default 64) caps how many disks, sensors, network cards and GPUs each a device can add, and how many groups of extras and values per group, so one device with hundreds of virtual network cards cannot fill the disk. Each extra with `history: true` counts as one more value per device, at most 8 × `HISTORY_MAX_ENTRIES` (512) of them, and metric names are at most 256 bytes long.
 
-Deleted rows leave free pages in the file, which SQLite reuses for new values; the file does not shrink on its own. The write-ahead log (`usage-control.db-wal`) does: after a cleanup that deleted more than 5,000 rows it is truncated.
+Deleted rows leave free pages in the file, which SQLite reuses for new values; the file does not shrink on its own. The write-ahead log (`den-watcher.db-wal`) does: after a cleanup that deleted more than 5,000 rows it is truncated.
 
 Metric names are never deleted from `history_metrics`; a device whose extras are named after things that come and go (containers, say) adds a name of about 30 bytes for each new one.
 
@@ -111,7 +111,7 @@ Metric names are never deleted from `history_metrics`; a device whose extras are
 
 The file's layout version is kept in SQLite's `user_version`. When a new version of den-watcher changes the layout:
 
-1. It copies the file to `usage-control.db.backup` next to it, replacing an older copy; not for version 3, see below.
+1. It copies the file to `den-watcher.db.backup` next to it, replacing an older copy; not for version 3, see below.
 2. It updates the file in one transaction.
 
 An older version refuses to start on a file a newer version has changed, instead of damaging it, and says so in its log. To go back, put the old version and the `.backup` copy in place.
@@ -132,24 +132,24 @@ The file holds everything a device keeps: history, added devices with their addr
 
 The easiest way is the hub's *Devices* dialog: **Download backup** asks for the password, like a change to the devices, and the browser saves the file as `den-watcher-<date>.db`. The hub makes a consistent copy with SQLite's `VACUUM INTO` while it keeps recording, into a temporary file next to the database (`.den-watcher-backup-*.db`), and deletes that once it is sent, or could not be; one left by a stop in between is deleted at the next start. The copy needs as much free space next to the database as the database takes without its free pages. Before a password is chosen, the first backup chooses it, as the first change does. A data-only device has no page and offers none; its file only holds the minutes the hub has not fetched yet.
 
-To restore, stop den-watcher, put the downloaded file in place of the database under its name (`usage-control.db`), delete the `-wal` and `-shm` files next to it, and start it again.
+To restore, stop den-watcher, put the downloaded file in place of the database under its name (`den-watcher.db`), delete the `-wal` and `-shm` files next to it, and start it again.
 
 By hand, copy the file while den-watcher is stopped, or use SQLite's `.backup` command while it runs. With Docker:
 
 ```bash
 docker compose stop
-docker run --rm -v den-watcher_data:/data -v "$PWD":/backup alpine cp /data/usage-control.db /backup/
+docker run --rm -v den-watcher_data:/data -v "$PWD":/backup alpine cp /data/den-watcher.db /backup/
 docker compose start
 ```
 
-The volume's name is the folder of `compose.yaml` followed by `_data`: `den-watcher_data` above, and `usage-control_data` in a folder from before the rename. `docker volume ls` lists it.
+The volume's name is the folder of `compose.yaml` followed by `_data`: `den-watcher_data` above. `docker volume ls` lists it.
 
 A copy of a hub's file carries the hub's id (`hub_id`). Restoring it on the same hub is fine. When the copy starts a second hub while the first one still runs, both send the same id, and a data-only device takes them for one hub: it deletes the minutes either has fetched, so the other misses them while it cannot reach the device. Give the second hub an id of its own by deleting the row while it is stopped; it makes a new one at its next start. The image has no `sqlite3`, so with Docker:
 
 ```bash
 docker compose stop
-docker run --rm -v den-watcher_data:/data alpine sh -c 'apk add -q sqlite && sqlite3 /data/usage-control.db "DELETE FROM hub_id"'
+docker run --rm -v den-watcher_data:/data alpine sh -c 'apk add -q sqlite && sqlite3 /data/den-watcher.db "DELETE FROM hub_id"'
 docker compose start
 ```
 
-For the Linux service or Windows, stop it and run `sqlite3 usage-control.db "DELETE FROM hub_id"` on the file in `DATABASE_PATH`.
+For the Linux service or Windows, stop it and run `sqlite3 den-watcher.db "DELETE FROM hub_id"` on the file in `DATABASE_PATH`.
