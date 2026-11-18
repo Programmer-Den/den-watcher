@@ -51,6 +51,27 @@
         <item name="android:textColor">@color/button_outlined_text</item>
     </style>
 
+    <!-- A choice of the map's time range: filled while picked, outlined otherwise, set by MapActivity. -->
+    <style name="Button.Range">
+        <item name="android:layout_marginTop">0dp</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
+        <item name="android:background">@drawable/button_outlined</item>
+        <item name="android:textColor">@color/button_outlined_text</item>
+    </style>
+
+    <!-- A small round button with one sign, to step through the points of the map. -->
+    <style name="Button.Step">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_marginTop">0dp</item>
+        <item name="android:minWidth">48dp</item>
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">0dp</item>
+        <item name="android:background">@drawable/button_outlined</item>
+        <item name="android:textColor">@color/button_outlined_text</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+
     <!-- A link-like button, flush with the card's text. -->
     <style name="Button.Text">
         <item name="android:layout_marginTop">8dp</item>

@@ -14,4 +14,6 @@
     <color name="off">#8A7D76</color>
     <color name="warning">#4B3A0B</color>
     <color name="on_warning">#FFD28A</color>
+    <!-- The map's background where no tile loaded. -->
+    <color name="map_background">#322A26</color>
 </resources>

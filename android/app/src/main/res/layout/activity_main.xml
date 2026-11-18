@@ -112,6 +112,13 @@
                 android:id="@+id/open_hub"
                 style="@style/Button.Text"
                 android:text="@string/open_hub" />
+
+            <Button
+                android:id="@+id/open_map"
+                style="@style/Button.Text"
+                android:layout_marginTop="0dp"
+                android:drawableEnd="@drawable/ic_map"
+                android:text="@string/map_open" />
         </LinearLayout>
 
         <LinearLayout style="@style/Card">

@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="24dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/back"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/button_text"
+                android:contentDescription="@string/map_back"
+                android:src="@drawable/ic_back"
+                android:tint="@color/on_surface" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/map_title"
+                android:textColor="@color/on_surface"
+                android:textSize="24sp" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/Card">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/range_day"
+                    style="@style/Button.Range"
+                    android:text="@string/map_day" />
+
+                <Button
+                    android:id="@+id/range_week"
+                    style="@style/Button.Range"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/map_week" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/none"
+                style="@style/Hint"
+                android:layout_marginTop="16dp"
+                android:text="@string/map_none" />
+
+            <LinearLayout
+                android:id="@+id/route_group"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/distance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:textColor="@color/on_surface"
+                    android:textSize="28sp" />
+
+                <TextView
+                    android:id="@+id/points"
+                    style="@style/Hint"
+                    android:layout_marginTop="2dp" />
+
+                <den.watcher.RouteMapView
+                    android:id="@+id/map"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:contentDescription="@string/map_description" />
+
+                <TextView
+                    style="@style/Hint"
+                    android:layout_marginTop="4dp"
+                    android:gravity="end"
+                    android:text="@string/map_attribution"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/legend"
+                    style="@style/Hint" />
+
+                <LinearLayout
+                    android:id="@+id/pick_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/Hint"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/map_pick" />
+
+                    <Button
+                        android:id="@+id/latest"
+                        style="@style/Button.Text"
+                        android:drawableEnd="@null"
+                        android:text="@string/map_latest" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/point_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/previous"
+                            style="@style/Button.Step"
+                            android:contentDescription="@string/map_previous"
+                            android:text="@string/sign_previous" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_marginEnd="8dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/point_time"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-medium"
+                                android:textColor="@color/on_surface"
+                                android:textSize="16sp" />
+
+                            <TextView
+                                android:id="@+id/point_accuracy"
+                                style="@style/Hint"
+                                android:layout_marginTop="0dp" />
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/next"
+                            style="@style/Button.Step"
+                            android:contentDescription="@string/map_next"
+                            android:text="@string/sign_next" />
+
+                        <Button
+                            android:id="@+id/close"
+                            style="@style/Button.Step"
+                            android:layout_marginStart="8dp"
+                            android:contentDescription="@string/map_close"
+                            android:text="@string/sign_close" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/scan_summary"
+                        style="@style/Hint"
+                        android:layout_marginTop="8dp" />
+
+                    <LinearLayout
+                        android:id="@+id/networks"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                style="@style/Hint"
+                android:layout_marginTop="16dp"
+                android:text="@string/map_kept" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/places_group"
+            style="@style/Card">
+
+            <TextView
+                style="@style/Heading"
+                android:text="@string/map_places" />
+
+            <LinearLayout
+                android:id="@+id/places"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

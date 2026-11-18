@@ -51,6 +51,7 @@ object Recorder {
                 val scan = Nearby.read(app, reading.time)
                 scan?.takeIf { Nearby.isNew(it.time, settings.lastScan, reading.time) }?.let {
                     store.addScan(it)
+                    store.addMapScan(SeenScan.of(it))
                     settings.lastScan = it.time
                 }
                 // Its results are read at the next reading, half a minute later.
@@ -61,6 +62,7 @@ object Recorder {
                 }
             } else {
                 store.deleteScansUpTo(Long.MAX_VALUE)
+                store.deleteMapScans()
             }
             // While they are not collected, none is kept and the ones kept
             // before are not sent any more.
@@ -81,17 +83,19 @@ object Recorder {
      * Android for a new one every Route.ASK_EVERY_MILLIS, which the next
      * reading finds; while saving battery it asks for none. While the route
      * is not collected, none is kept and the ones kept before are not sent
-     * any more.
+     * any more, nor shown on the app's map.
      */
     private fun recordRoute(context: Context, settings: Settings, store: Store, choice: DataChoice) {
         if (!choice.collectsRoute) {
             store.deleteRouteUpTo(Long.MAX_VALUE)
+            store.deleteMapRoute()
             settings.lastRoutePoint = null
             return
         }
         val now = System.currentTimeMillis()
         Route.latest(context, now)?.takeIf { Route.keeps(settings.lastRoutePoint, it) }?.let {
             store.addRoutePoint(it)
+            store.addMapPoint(it)
             settings.lastRoutePoint = it
         }
         if (!Saving.on(context) && Route.askDue(settings.lastRouteAsk, now) && Route.ask(context)) {

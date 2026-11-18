@@ -82,4 +82,53 @@
     <string name="steps_hint">Los pasos que el teléfono cuenta hoy, con su podómetro, un chip que los cuenta solo, así que casi no gasta batería. Android pide para ello el permiso Actividad física desde Android 10.</string>
     <string name="steps_off">No se cuentan. Permite Actividad física para Den-Watcher.</string>
     <string name="steps_on">Se cuentan, también con el teléfono fuera de casa.</string>
+
+    <!-- The phone's own route on a map (MapActivity). -->
+    <string name="map_open">Mostrar la ruta en un mapa</string>
+    <string name="map_title">Ruta</string>
+    <string name="map_back">Atrás</string>
+    <string name="map_day">24 horas</string>
+    <string name="map_week">7 días</string>
+    <string name="map_none">Este teléfono no guardó ninguna ruta en este periodo. Deja Ruta activada en ¿Qué datos quieres recopilar? y permite la ubicación todo el tiempo.</string>
+    <string name="map_distance">%1$s km recorridos</string>
+    <string name="map_description">La ruta en un mapa</string>
+    <string name="map_attribution">Mapa © colaboradores de OpenStreetMap</string>
+    <string name="map_legend">○ Inicio   ● Último   • Punto, tócalo para ver su Wi-Fi</string>
+    <string name="map_pick">Toca un punto del mapa para ver las redes Wi-Fi que el móvil detectó allí.</string>
+    <string name="map_latest">Mostrar el último punto</string>
+    <string name="map_previous">Punto anterior</string>
+    <string name="map_next">Punto siguiente</string>
+    <string name="map_close">Cerrar</string>
+    <string name="map_accuracy">± %1$s m</string>
+    <string name="map_scan_summary">%1$s · %2$s</string>
+    <string name="map_scan_at">detectadas en este punto</string>
+    <string name="map_no_scan">El móvil no guardó ninguna búsqueda Wi-Fi en los 5 minutos alrededor de este punto. Deja Redes Wi-Fi cercanas activado para verlas.</string>
+    <string name="map_hidden">Red oculta</string>
+    <string name="map_connected">conectado</string>
+    <string name="map_open_network">Abierta</string>
+    <string name="map_band_24">2,4 GHz</string>
+    <string name="map_signal">señal %1$s %%</string>
+    <string name="map_places">Lugares donde estuvo</string>
+    <string name="map_place">%1$d. %2$s</string>
+    <string name="map_kept">Para este mapa, el móvil guarda su ruta y sus búsquedas Wi-Fi durante una semana, también cuando el hub ya las tiene. Solo salen del móvil hacia tu hub. Los mosaicos del mapa vienen de OpenStreetMap, que ve qué zona muestra el mapa, no la ruta.</string>
+    <plurals name="map_points">
+        <item quantity="one">%d punto</item>
+        <item quantity="other">%d puntos</item>
+    </plurals>
+    <plurals name="map_networks">
+        <item quantity="one">%d red Wi-Fi</item>
+        <item quantity="other">%d redes Wi-Fi</item>
+    </plurals>
+    <plurals name="map_scan_before">
+        <item quantity="one">detectadas %d minuto antes</item>
+        <item quantity="other">detectadas %d minutos antes</item>
+    </plurals>
+    <plurals name="map_scan_after">
+        <item quantity="one">detectadas %d minuto después</item>
+        <item quantity="other">detectadas %d minutos después</item>
+    </plurals>
+    <plurals name="map_visits">
+        <item quantity="one">una vez</item>
+        <item quantity="other">%d veces</item>
+    </plurals>
 </resources>

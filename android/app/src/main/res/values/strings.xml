@@ -83,4 +83,59 @@
     <string name="steps_hint">The steps the phone counts today, from its step counter, a chip that counts them by itself, so it costs almost no battery. Android asks for the Physical activity permission for it from Android 10 on.</string>
     <string name="steps_off">Not counted. Allow Physical activity for Den-Watcher.</string>
     <string name="steps_on">Counted, also while the phone is away.</string>
+
+    <!-- The phone's own route on a map (MapActivity). -->
+    <string name="map_open">Show the route on a map</string>
+    <string name="map_title">Location route</string>
+    <string name="map_back">Back</string>
+    <string name="map_day">24 hours</string>
+    <string name="map_week">7 days</string>
+    <string name="map_none">No route kept on this phone for this time. Keep Location route on under Which data do you want to collect, and allow the location all the time.</string>
+    <string name="map_distance">%1$s km travelled</string>
+    <string name="map_description">The route on a map</string>
+    <string name="map_attribution">Map © OpenStreetMap contributors</string>
+    <string name="map_legend">○ Start   ● Latest   • Point, tap for its Wi-Fi</string>
+    <string name="map_pick">Tap a point on the map to see the Wi-Fi networks the phone scanned there.</string>
+    <string name="map_latest">Show the latest point</string>
+    <string name="map_previous">Previous point</string>
+    <string name="map_next">Next point</string>
+    <string name="map_close">Close</string>
+    <string name="map_accuracy">± %1$s m</string>
+    <string name="map_scan_summary">%1$s · %2$s</string>
+    <string name="map_scan_at">scanned at this point</string>
+    <string name="map_no_scan">The phone kept no Wi-Fi scan within 5 minutes of this point. Keep Wi-Fi networks nearby on to see them.</string>
+    <string name="map_hidden">Hidden network</string>
+    <string name="map_connected">connected</string>
+    <string name="map_open_network">Open</string>
+    <string name="map_band_24">2.4 GHz</string>
+    <string name="map_signal">%1$s %% signal</string>
+    <string name="map_places">Places stayed at</string>
+    <string name="map_place">%1$d. %2$s</string>
+    <string name="map_kept">For this map the phone keeps its route and Wi-Fi scans for about a week, also after the hub has them. They never leave the phone except to your hub. The map\'s tiles come from OpenStreetMap, which sees which area the map shows, not the route.</string>
+    <plurals name="map_points">
+        <item quantity="one">%d point</item>
+        <item quantity="other">%d points</item>
+    </plurals>
+    <plurals name="map_networks">
+        <item quantity="one">%d Wi-Fi network</item>
+        <item quantity="other">%d Wi-Fi networks</item>
+    </plurals>
+    <plurals name="map_scan_before">
+        <item quantity="one">scanned %d minute before</item>
+        <item quantity="other">scanned %d minutes before</item>
+    </plurals>
+    <plurals name="map_scan_after">
+        <item quantity="one">scanned %d minute after</item>
+        <item quantity="other">scanned %d minutes after</item>
+    </plurals>
+    <plurals name="map_visits">
+        <item quantity="one">stayed once</item>
+        <item quantity="other">stayed %d times</item>
+    </plurals>
+    <string name="map_band" translatable="false">%1$d GHz</string>
+    <string name="map_minutes" translatable="false">%1$d min</string>
+    <string name="map_hours" translatable="false">%1$d h %2$d min</string>
+    <string name="sign_previous" translatable="false">‹</string>
+    <string name="sign_next" translatable="false">›</string>
+    <string name="sign_close" translatable="false">×</string>
 </resources>
