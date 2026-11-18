@@ -88,5 +88,8 @@ foreach ($try in 1..30) {
 if (-not (Test-Path "$folder\addons\power.json")) { throw 'The power add-on writes no report to the new add-on folder' }
 
 Invoke-Installer "/x `"$Msi`" DELETE_HISTORY=1"
-if (Test-Path $folder) { throw 'The data folder is still there' }
+if (Test-Path $folder) {
+    Get-ChildItem -Recurse -Force $folder | Format-List FullName
+    throw 'The data folder is still there'
+}
 Write-Host 'The update from 4.0.0 keeps the options and the power add-on and moves the history to the new names.'
