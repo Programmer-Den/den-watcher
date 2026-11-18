@@ -142,6 +142,8 @@ class MapActivity : Activity() {
         val number = ++loads
         val since = System.currentTimeMillis() - days * DAY_MILLIS
         val shown = points
+        val shownPlaces = places
+        val shownMeters = meters
         background.execute {
             if (closed) return@execute
             val read = try {
@@ -158,8 +160,8 @@ class MapActivity : Activity() {
                 return@execute
             }
             val changed = read !== shown
-            val stayed = if (changed) RouteMap.places(RouteMap.stops(read)) else places
-            val went = if (changed) RouteMap.distance(read) else meters
+            val stayed = if (changed) RouteMap.places(RouteMap.stops(read)) else shownPlaces
+            val went = if (changed) RouteMap.distance(read) else shownMeters
             main.post {
                 if (number != loads || isDestroyed) return@post
                 findViewById<TextView>(R.id.none).setText(R.string.map_none)

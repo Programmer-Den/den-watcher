@@ -108,10 +108,27 @@ type positionsResponse struct {
 	Places []history.WiFiPosition `json:"places"`
 }
 
-// positionsAnchorsBefore is how long before a range the places are found
-// from: as long as the page's ranges reach further back than the shortest,
-// a week, which keeps the work for a day's range small.
-const positionsAnchorsBefore = 7 * 24 * time.Hour
+// positionsAnchorsBefore is how long before the day a range ends on the
+// places are found from: the page's week and a day, so its day and week
+// ranges find them from the same time and their places keep the same IDs,
+// which change only once a day.
+const positionsAnchorsBefore = 8 * 24 * time.Hour
+
+// positionsAnchorsFrom is when the places of a range are found from, Unix
+// seconds: positionsAnchorsBefore before the start of the UTC day the range
+// ends on, or the start of its first day for a longer range. A fixed time
+// of the day, the same for all ranges that start after it, so a place
+// keeps its first scan, and its ID, as the page switches between its
+// ranges or the range moves on. Scans older than the retention but not yet
+// deleted only help find the places; they never count.
+func positionsAnchorsFrom(from, to int64) int64 {
+	const day = 24 * 60 * 60
+	anchors := to - to%day - int64(positionsAnchorsBefore.Seconds())
+	if from < anchors {
+		anchors = from - from%day
+	}
+	return anchors
+}
 
 // positionsHandler serves GET /api/wifi/positions?from=<unix seconds>&to=<unix
 // seconds>: the places the phones scanned the Wi-Fi networks at in that
@@ -130,10 +147,7 @@ func positionsHandler(source PositionSource, retention time.Duration) http.Handl
 		kept := now.Add(-retention).Unix()
 		from = min(max(from, kept), now.Unix())
 		to = min(max(to, from+1), now.Unix()+1)
-		// The places are found from up to positionsAnchorsBefore before the
-		// range on, as the retention allows, so they keep their IDs as the
-		// page switches between its ranges or the range moves on.
-		anchorsFrom := max(kept, from-int64(positionsAnchorsBefore.Seconds()))
+		anchorsFrom := positionsAnchorsFrom(from, to)
 		places, err := source.WiFiPositions(r.Context(), time.Unix(anchorsFrom, 0), time.Unix(from, 0), time.Unix(to, 0))
 		if err != nil {
 			slog.Error("read the places of the phones' scans", "error", err)

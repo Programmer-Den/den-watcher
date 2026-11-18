@@ -509,9 +509,11 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
 
         /**
          * How many of the newest points and scans for the map are kept
-         * whatever their age, should the clock have jumped ahead: a day's,
-         * a point every quarter of an hour and a scan every
-         * MAP_SCAN_EVERY_SECONDS.
+         * whatever their age, should the clock have jumped ahead: a day's
+         * while the phone stays, a point every quarter of an hour, and a
+         * scan every MAP_SCAN_EVERY_SECONDS. A phone on the move keeps a
+         * point far more often, so less of its way stays: enough to show
+         * where it is, as this is only a fallback.
          */
         const val KEEP_MAP_DAY_POINTS = 96
         const val KEEP_MAP_DAY_SCANS = (24 * 60 * 60 / MAP_SCAN_EVERY_SECONDS).toInt()

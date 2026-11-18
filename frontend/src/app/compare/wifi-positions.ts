@@ -89,8 +89,8 @@ export class WifiPositionsView {
 
   /**
    * The picked place: its id, which the hub keeps as the range changes or moves on, and its middle,
-   * should the id change once its first scan is older than the hub looks back, so it stays picked
-   * as the places are read again and comes back with the place when it was gone.
+   * should the id change once a day as the hub looks back from a day later, so it stays picked as
+   * the places are read again and comes back with the place when it was gone.
    */
   private readonly picked = signal<{ id: string; lat: number; lon: number } | null>(null);
 
@@ -222,8 +222,10 @@ export class WifiPositionsView {
         if (answer) {
           this.failed.set(false);
           this.answer.set(answer);
-          // Keeps the picked place's id and middle as they are now; one that is gone is kept.
-          const place = this.places()[this.matched()];
+          // Keeps the picked place's middle as it is now. A place found by its middle only is not
+          // kept in its place: it may be a neighbour, and the picked one may come back.
+          const picked = this.picked();
+          const place = this.places().find((p) => p.id === picked?.id);
           if (place) {
             this.picked.set({ id: place.id, lat: place.lat, lon: place.lon });
           }

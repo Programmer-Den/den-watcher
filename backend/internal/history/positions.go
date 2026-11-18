@@ -32,6 +32,10 @@ const (
 	// to in time; at most half its accuracy otherwise: a vague point further
 	// off tells the phone may have moved.
 	positionVagueMeters = 2 * PositionMaxAccuracy
+	// positionVagueMaxMeters is how far a vague point's middle may be from
+	// the precise one at most, however vague it is: a fix from a far cell
+	// tower kilometres off tells nothing of where the phone stayed.
+	positionVagueMaxMeters = 4 * PositionMaxAccuracy
 	// MaxPositionScans is how many scans WiFiPositions reads at most: the
 	// newest, a month of a few phones.
 	MaxPositionScans = 20000
@@ -120,8 +124,9 @@ type positionPoint struct {
 // most MaxPositions. Each scan is placed at the point of its phone's route
 // that placeAt finds, and counts to the closest place within PositionMeters
 // of the first scan there, or starts a new one. The places are found from
-// anchorsFrom on, before from as the retention allows, so a place keeps
-// its first scan, and with it its ID, as the range moves on or changes;
+// anchorsFrom on, which the caller keeps the same for a while and across
+// ranges, so a place keeps its first scan, and with it its ID, as the range
+// moves on or changes;
 // only its scans in the range count. Of the scans from anchorsFrom on, the
 // newest MaxPositionScans are read.
 func (s *Store) WiFiPositions(ctx context.Context, anchorsFrom, from, to time.Time) ([]WiFiPosition, error) {
@@ -249,18 +254,19 @@ func pointAt(route []positionPoint, i int, t int64, accept func(positionPoint) b
 // PositionMaxAccuracy. If it is, a precise point within the same time
 // places the scan only if every point between it and the scan agrees that
 // the phone stayed: each within its own accuracy and PositionMeters of it,
-// and the vague one also within half its accuracy, or positionVagueMeters.
+// and the vague one also within half its accuracy, at least
+// positionVagueMeters and at most positionVagueMaxMeters.
 // The precise point closest in time is tried first, then the one on the
 // other side of the scan. A scan of another place, after the phone moved,
 // must not count at the old one.
 func placeAt(route []positionPoint, t int64) (positionPoint, bool) {
 	i := sort.Search(len(route), func(i int) bool { return route[i].time > t })
-	any := pointAt(route, i, t, func(positionPoint) bool { return true })
-	if any < 0 {
+	closest := pointAt(route, i, t, func(positionPoint) bool { return true })
+	if closest < 0 {
 		return positionPoint{}, false
 	}
-	if route[any].accuracy <= PositionMaxAccuracy {
-		return route[any], true
+	if route[closest].accuracy <= PositionMaxAccuracy {
+		return route[closest], true
 	}
 	precise := func(p positionPoint) bool { return p.accuracy <= PositionMaxAccuracy }
 	before := pointAt(route[:i], i, t, precise)
@@ -273,9 +279,9 @@ func placeAt(route []positionPoint, t int64) (positionPoint, bool) {
 		tries = []int{after, before}
 	}
 	for _, j := range tries {
-		vague := route[any]
-		if j >= 0 && stayed(route, j, any) &&
-			distanceMeters(route[j].lat, route[j].lon, vague.lat, vague.lon) <= max(vague.accuracy/2, positionVagueMeters) {
+		vague := route[closest]
+		if j >= 0 && stayed(route, j, closest) &&
+			distanceMeters(route[j].lat, route[j].lon, vague.lat, vague.lon) <= min(max(vague.accuracy/2, positionVagueMeters), positionVagueMaxMeters) {
 			return route[j], true
 		}
 	}
@@ -311,10 +317,10 @@ type positionGrouper struct {
 
 // placeScans is what the scans at one place found so far.
 type placeScans struct {
-	id string
 	// id is the phone and time of the first scan, lat and lon its point,
-	// which the others are
-	// measured from, so a place does not wander off along a way.
+	// which the others are measured from, so a place does not wander off
+	// along a way.
+	id             string
 	lat, lon       float64
 	sumLat, sumLon float64
 	scans          int

@@ -241,6 +241,12 @@ func TestWiFiPositionsDropAScanAfterThePhoneLeft(t *testing.T) {
 			routePoint(hour, 53.5755, 9.9530, 20),
 			routePoint(hour.Add(14*time.Minute), 53.5845, 9.9530, 1500),
 		}},
+		// Home at 10:00, then 6 km away at 10:14, told within 20 km: home
+		// is inside, and within half of it, but far beyond what is trusted.
+		{"very vague point far from home", []RoutePoint{
+			routePoint(hour, 53.5755, 9.9530, 20),
+			routePoint(hour.Add(14*time.Minute), 53.6295, 9.9530, 20000),
+		}},
 		// Home at 10:00, 5 km away at 10:05, then a vague point at 10:14
 		// that covers home again: the one between tells the phone left.
 		{"left in between", []RoutePoint{

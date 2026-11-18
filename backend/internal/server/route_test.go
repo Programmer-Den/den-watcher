@@ -124,13 +124,17 @@ func TestServesTheWiFiNetworksOfAllPhonesByPlace(t *testing.T) {
 	if got.To > now.Unix()+5 || source.to.Unix() != got.To {
 		t.Errorf("to = %d, want it to end now", got.To)
 	}
-	if !source.anchorsFrom.Equal(source.from) {
-		t.Errorf("places found from %v, want the start of the retention, the range's start", source.anchorsFrom)
+	if want := got.From - got.From%86400; source.anchorsFrom.Unix() != want {
+		t.Errorf("places of the whole retention found from %v, want the start of its first day", source.anchorsFrom)
 	}
-	// A day's range finds the places from a week before it on.
-	get(handler, "/api/wifi/positions?from="+strconv.FormatInt(now.Unix()-86400, 10)+"&to="+strconv.FormatInt(now.Unix(), 10), "192.168.1.20:5000")
-	if d := source.from.Sub(source.anchorsFrom); d != 7*24*time.Hour {
-		t.Errorf("places found %v before the range, want a week", d)
+	// A day's and a week's range find the places from the same time: the
+	// start of the day 8 days before the one they end on.
+	day := now.Unix() - now.Unix()%86400
+	for _, span := range []int64{86400, 7 * 86400} {
+		get(handler, "/api/wifi/positions?from="+strconv.FormatInt(now.Unix()-span, 10)+"&to="+strconv.FormatInt(now.Unix(), 10), "192.168.1.20:5000")
+		if want := day - 8*86400; source.anchorsFrom.Unix() != want {
+			t.Errorf("places of %d s found from %v, want %v", span, source.anchorsFrom, time.Unix(want, 0))
+		}
 	}
 	if rec := get(handler, "/api/wifi/positions?from=5&to=1", "192.168.1.20:5000"); rec.Code != http.StatusBadRequest {
 		t.Errorf("status of a range that ends before it starts = %d, want 400", rec.Code)

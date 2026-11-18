@@ -189,12 +189,38 @@ describe('the Wi-Fi networks by position', () => {
     element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
     fixture.detectChanges();
     vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
-    // Its first scan is older than the hub looks back: a new id, about 50 m on.
+    // The hub looks back from a day later, past its first scan: a new id, about 50 m on.
     const again = answer();
     again.places[1].id = 'pixel@later';
     again.places[1].lat += 0.0004;
     reply(again);
     expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
+  });
+
+  it('does not keep a neighbour found by the middle in place of the pick', () => {
+    reply(answer());
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
+    fixture.detectChanges();
+    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
+    // The picked place is gone; a neighbour's middle is 50 m from where it was.
+    const gone = answer();
+    gone.places[1].id = 'pixel@neighbour';
+    gone.places[1].lat += 0.0004;
+    reply(gone);
+    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
+    // The picked place is back, next to the neighbour.
+    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
+    const back = answer();
+    back.places.push({
+      ...back.places[1],
+      id: 'pixel@neighbour',
+      lat: back.places[1].lat + 0.0004,
+    });
+    back.places.reverse();
+    reply(back);
+    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
+    expect(element.querySelector('g.place.picked text')?.textContent).toBe('2');
   });
 
   it('keeps a pick that is gone for a while, so it comes back with the place', () => {
