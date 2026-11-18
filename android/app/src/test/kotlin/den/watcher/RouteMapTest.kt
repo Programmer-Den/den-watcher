@@ -114,22 +114,32 @@ class RouteMapTest {
         val minute = 60_000L
         val now = System.currentTimeMillis() / minute * minute
         val old = home.copy(time = now - week - 10 * minute)
-        val recent = home.copy(time = now - week + 10 * minute)
-        // A point ahead of the clock deletes nothing more than one now would.
-        store.addMapPoint(recent)
-        store.addMapPoint(home.copy(time = now + 2 * week))
-        assertEquals(2, store.mapPoints(0).size)
-        store.deleteMapRoute()
         store.addMapPoint(old)
         store.addMapScan(SeenScan(old.time / 1000, emptyList()))
-        store.addMapPoint(recent)
-        assertEquals(2, store.mapPoints(0).size)
-        // Now, and the first ones are older than a week.
-        store.addMapPoint(home.copy(time = now))
-        store.addMapScan(SeenScan(now / 1000, emptyList()))
-        assertEquals(listOf(now - week + 10 * minute, now), store.mapPoints(0).map { it.time })
+        // A day's worth of newer points and scans, the last now: the old
+        // ones go.
+        val day = Store.KEEP_MAP_DAY_POINTS
+        for (i in day downTo 0) {
+            store.addMapPoint(home.copy(time = now - i * minute))
+        }
+        val scans = Store.KEEP_MAP_DAY_SCANS
+        for (i in scans downTo 0) {
+            store.addMapScan(SeenScan(now / 1000 - i * Store.MAP_SCAN_EVERY_SECONDS, emptyList()))
+        }
+        assertEquals(day + 1, store.mapPoints(0).size)
         assertNull(store.mapScanNear(old.time / 1000))
         assertEquals(now / 1000, store.mapScanNear(now / 1000)?.time)
+    }
+
+    @Test
+    fun keepsTheNewestDayOfTheMapWhenTheClockJumpedAhead() {
+        val minute = 60_000L
+        val now = System.currentTimeMillis() / minute * minute
+        store.addMapPoint(home.copy(time = now - minute))
+        store.addMapPoint(home.copy(time = now))
+        // A point a year ahead: the ones before stay, as the newest day's.
+        store.addMapPoint(home.copy(time = now + 365 * 24 * 60 * minute))
+        assertEquals(3, store.mapPoints(0).size)
     }
 
     @Test

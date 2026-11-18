@@ -81,7 +81,8 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
     /**
      * Keeps a point of the route for the app's map, and deletes those more
      * than KEEP_MAP_MILLIS older than it, or than now if it is ahead of the
-     * clock, and the oldest beyond KEEP_MAP_ROUTE.
+     * clock, but for the newest KEEP_MAP_DAY_POINTS, and the oldest beyond
+     * KEEP_MAP_ROUTE.
      */
     fun addMapPoint(point: RoutePoint) {
         val db = writableDatabase
@@ -93,8 +94,22 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
         }
         db.insertWithOnConflict("map_route", null, row, SQLiteDatabase.CONFLICT_REPLACE)
         val now = minOf(point.time, System.currentTimeMillis())
-        db.delete("map_route", "time < ?", arrayOf((now - KEEP_MAP_MILLIS).toString()))
+        // The newest day's worth stays even then, should the clock have jumped ahead.
+        db.delete(
+            "map_route",
+            "time < ? AND time < (SELECT time FROM map_route ORDER BY time DESC LIMIT 1 OFFSET ?)",
+            arrayOf((now - KEEP_MAP_MILLIS).toString(), (KEEP_MAP_DAY_POINTS - 1).toString()),
+        )
         db.delete("map_route", "time < (SELECT time FROM map_route ORDER BY time DESC LIMIT 1 OFFSET ?)", arrayOf((KEEP_MAP_ROUTE - 1).toString()))
+    }
+
+    /** How many points of the route are kept for the map from since on, Unix milliseconds, and the time of the newest. */
+    fun mapPointsSince(since: Long): Pair<Int, Long?> = readableDatabase.rawQuery(
+        "SELECT COUNT(*), MAX(time) FROM map_route WHERE time >= ?",
+        arrayOf(since.toString()),
+    ).use { rows ->
+        rows.moveToFirst()
+        rows.getInt(0) to (if (rows.isNull(1)) null else rows.getLong(1))
     }
 
     /** The points of the route kept for the map from since on, Unix milliseconds, oldest first. */
@@ -114,7 +129,8 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
     /**
      * Keeps a scan for the app's map when it is at least MAP_SCAN_EVERY_SECONDS
      * after the newest one kept, or the clock went back, and deletes those
-     * more than KEEP_MAP_MILLIS older than it (or than now) and the oldest beyond
+     * more than KEEP_MAP_MILLIS older than it (or than now), but for the
+     * newest KEEP_MAP_DAY_SCANS, and the oldest beyond
      * KEEP_MAP_SCANS: the map needs one scan near each point, not one of
      * every reading.
      */
@@ -132,7 +148,11 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
         }
         db.insertWithOnConflict("map_scans", null, row, SQLiteDatabase.CONFLICT_REPLACE)
         val now = minOf(scan.time, System.currentTimeMillis() / 1000)
-        db.delete("map_scans", "time < ?", arrayOf((now - KEEP_MAP_MILLIS / 1000).toString()))
+        db.delete(
+            "map_scans",
+            "time < ? AND time < (SELECT time FROM map_scans ORDER BY time DESC LIMIT 1 OFFSET ?)",
+            arrayOf((now - KEEP_MAP_MILLIS / 1000).toString(), (KEEP_MAP_DAY_SCANS - 1).toString()),
+        )
         db.delete("map_scans", "time < (SELECT time FROM map_scans ORDER BY time DESC LIMIT 1 OFFSET ?)", arrayOf((KEEP_MAP_SCANS - 1).toString()))
     }
 
@@ -482,6 +502,15 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
 
         /** How long the route and scans are kept for the app's map: the week it shows at most. */
         const val KEEP_MAP_MILLIS = 7 * 24 * 60 * 60_000L
+
+        /**
+         * How many of the newest points and scans for the map are kept
+         * whatever their age, should the clock have jumped ahead: a day's,
+         * a point every quarter of an hour and a scan every
+         * MAP_SCAN_EVERY_SECONDS.
+         */
+        const val KEEP_MAP_DAY_POINTS = 96
+        const val KEEP_MAP_DAY_SCANS = 24 * 15
 
         /** How many points of the route are kept for the app's map at most, as for the hub. */
         const val KEEP_MAP_ROUTE = KEEP_ROUTE

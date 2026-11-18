@@ -96,7 +96,7 @@ func TestServesThePhonesScanNearAPoint(t *testing.T) {
 // fakePositions has one place and keeps what it was asked for.
 type fakePositions struct{ from, to time.Time }
 
-func (f *fakePositions) WiFiPositions(_ context.Context, from, to time.Time) ([]history.WiFiPosition, error) {
+func (f *fakePositions) WiFiPositions(_ context.Context, _, from, to time.Time) ([]history.WiFiPosition, error) {
 	f.from, f.to = from, to
 	return []history.WiFiPosition{{Lat: 53.57, Lon: 9.95, Scans: 2, Devices: []string{"pixel"}, Networks: []history.PositionNetwork{
 		{SSID: "Den", SignalPercent: 80, Devices: []history.PositionSighting{{Device: "pixel", SignalPercent: 80, Scans: 2}}},

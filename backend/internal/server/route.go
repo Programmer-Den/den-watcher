@@ -97,7 +97,7 @@ func phoneScanHandler(d Device, source PhoneScanSource) http.HandlerFunc {
 
 // PositionSource reads the places the phones scanned the Wi-Fi networks at.
 type PositionSource interface {
-	WiFiPositions(ctx context.Context, from, to time.Time) ([]history.WiFiPosition, error)
+	WiFiPositions(ctx context.Context, anchorsFrom, from, to time.Time) ([]history.WiFiPosition, error)
 }
 
 // positionsResponse is the body of GET /api/wifi/positions. Times are Unix
@@ -122,9 +122,12 @@ func positionsHandler(source PositionSource, retention time.Duration) http.Handl
 			return
 		}
 		now := time.Now()
-		from = min(max(from, now.Add(-retention).Unix()), now.Unix())
+		kept := now.Add(-retention).Unix()
+		from = min(max(from, kept), now.Unix())
 		to = min(max(to, from+1), now.Unix()+1)
-		places, err := source.WiFiPositions(r.Context(), time.Unix(from, 0), time.Unix(to, 0))
+		// The places are found from the start of the retention on, so they
+		// stay the same for every range.
+		places, err := source.WiFiPositions(r.Context(), time.Unix(kept, 0), time.Unix(from, 0), time.Unix(to, 0))
 		if err != nil {
 			slog.Error("read the places of the phones' scans", "error", err)
 			http.Error(w, "could not read the places of the phones' scans", http.StatusInternalServerError)

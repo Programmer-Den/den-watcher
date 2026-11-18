@@ -103,6 +103,7 @@
     <string name="map_scan_summary">%1$s · %2$s</string>
     <string name="map_scan_at">detectadas en este punto</string>
     <string name="map_no_scan">El móvil no guardó ninguna búsqueda Wi-Fi en los 5 minutos alrededor de este punto. Deja Redes Wi-Fi cercanas activado para verlas.</string>
+    <string name="map_read_failed">No se pudieron leer los datos del mapa ahora mismo. El mapa lo vuelve a intentar en un minuto.</string>
     <string name="map_hidden">Red oculta</string>
     <string name="map_connected">conectado</string>
     <string name="map_open_network">Abierta</string>

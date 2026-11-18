@@ -103,6 +103,7 @@
     <string name="map_scan_summary">%1$s · %2$s</string>
     <string name="map_scan_at">an diesem Punkt gesucht</string>
     <string name="map_no_scan">Das Handy hat innerhalb von 5 Minuten um diesen Punkt keine WLAN-Suche aufbewahrt. Lass WLANs in der Nähe an, um sie zu sehen.</string>
+    <string name="map_read_failed">Die Daten für die Karte konnten gerade nicht gelesen werden. Die Karte versucht es in einer Minute noch einmal.</string>
     <string name="map_hidden">Verborgenes Netzwerk</string>
     <string name="map_connected">verbunden</string>
     <string name="map_open_network">Offen</string>

@@ -12,14 +12,17 @@ const MAX_RELATED = 5;
 
 /**
  * What GET /api/wifi/positions answers in the demo from `from` to `to` in Unix seconds: the demo
- * phone's scans at the points of its route, grouped into places within 100 m of their first scan as the hub does, the one with the
- * most scans first, each related to the others that heard some of the same networks. The demo's
+ * phone's scans at the points of its route, grouped into places within 100 m of their first scan as
+ * the hub does, the one with the most scans first, each related to the others that heard some of the same networks. The demo's
  * scans have no access point IDs, so they are related by the networks' names, as the hub does for
  * scans stored before it kept the IDs.
  */
 export function demoWifiPositions(from: number, to: number): WiFiPositions {
   const places: {
     place: WiFiPosition;
+    /** Where the first scan was, which the others are measured from. */
+    lat: number;
+    lon: number;
     sumLat: number;
     sumLon: number;
   }[] = [];
@@ -32,7 +35,7 @@ export function demoWifiPositions(from: number, to: number): WiFiPositions {
     let entry: (typeof places)[number] | undefined;
     let closest = PLACE_METERS;
     for (const e of places) {
-      const away = meters({ ...point, lat: e.place.anchorLat, lon: e.place.anchorLon }, point);
+      const away = meters({ ...point, lat: e.lat, lon: e.lon }, point);
       if (away <= closest) {
         closest = away;
         entry = e;
@@ -43,14 +46,15 @@ export function demoWifiPositions(from: number, to: number): WiFiPositions {
         place: {
           lat: 0,
           lon: 0,
-          anchorLat: round6(point.lat),
-          anchorLon: round6(point.lon),
+          id: `${DEMO_PHONE}@${scan.time}`,
           scans: 0,
           first: scan.time,
           last: 0,
           devices: [DEMO_PHONE],
           networks: [],
         },
+        lat: point.lat,
+        lon: point.lon,
         sumLat: 0,
         sumLon: 0,
       };

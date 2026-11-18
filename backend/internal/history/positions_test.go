@@ -2,6 +2,7 @@ package history
 
 import (
 	"context"
+	"strconv"
 	"testing"
 	"time"
 
@@ -46,7 +47,7 @@ func TestWiFiPositionsCombineThePhonesScansByPlace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := store.WiFiPositions(ctx, hour, hour.Add(2*time.Hour))
+	got, err := store.WiFiPositions(ctx, hour, hour, hour.Add(2*time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,13 +94,18 @@ func TestWiFiPositionsCombineThePhonesScansByPlace(t *testing.T) {
 		t.Errorf("café related = %+v", cafe.Related)
 	}
 
-	// Only the scans within the range count.
-	got, err = store.WiFiPositions(ctx, hour.Add(20*time.Minute), hour.Add(2*time.Hour))
+	if home.ID != "pixel@"+strconv.FormatInt(hour.Add(time.Minute).Unix(), 10) {
+		t.Errorf("home id = %q, want its first scan's phone and time", home.ID)
+	}
+
+	// Only the scans within the range count; the places are found from
+	// the anchors' start on, so they keep their IDs.
+	got, err = store.WiFiPositions(ctx, hour, hour.Add(20*time.Minute), hour.Add(2*time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 1 || got[0].Networks[0].SSID != "Cafe" {
-		t.Errorf("from 10:20 = %+v, want the café only", got)
+	if len(got) != 1 || got[0].Networks[0].SSID != "Cafe" || got[0].ID != cafe.ID || got[0].Scans != 1 {
+		t.Errorf("from 10:20 = %+v, want the café only, as before", got)
 	}
 }
 
@@ -120,7 +126,7 @@ func TestAScanIsPlacedAtThePointClosestInTime(t *testing.T) {
 		{36, 3, true},
 		{61, 0, false},
 	} {
-		p, found := pointAt(route, at(c.minutes))
+		p, found := placeAt(route, at(c.minutes))
 		if found != c.found || p.lat != c.lat {
 			t.Errorf("at %d minutes: %v %v, want %v %v", c.minutes, p.lat, found, c.lat, c.found)
 		}
@@ -169,21 +175,21 @@ func TestWiFiPositionsDropAScanWhoseClosestPointIsVague(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	got, err := store.WiFiPositions(ctx, hour, hour.Add(time.Hour))
+	got, err := store.WiFiPositions(ctx, hour, hour, hour.Add(time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(got) != 1 || got[0].Scans != 1 || len(got[0].Networks) != 1 || got[0].Networks[0].SSID != "Den" {
 		t.Fatalf("got %+v, want home with only its own scan", got)
 	}
-	if got[0].AnchorLat != 53.5755 || got[0].AnchorLon != 9.953 {
-		t.Errorf("anchor = %v, %v, want the first scan's point", got[0].AnchorLat, got[0].AnchorLon)
+	if got[0].ID != "pixel@"+strconv.FormatInt(hour.Add(time.Minute).Unix(), 10) {
+		t.Errorf("id = %q, want the first scan's phone and time", got[0].ID)
 	}
 }
 
 func TestWiFiPositionsWithoutScans(t *testing.T) {
 	store := openTestStore(t)
-	got, err := store.WiFiPositions(context.Background(), time.Unix(0, 0), time.Now())
+	got, err := store.WiFiPositions(context.Background(), time.Unix(0, 0), time.Unix(0, 0), time.Now())
 	if err != nil || got == nil || len(got) != 0 {
 		t.Fatalf("got %v, %v, want an empty list", got, err)
 	}
@@ -212,7 +218,7 @@ func TestWiFiPositionsPlaceAScanByAPrecisePointInsideAVagueOne(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	got, err := store.WiFiPositions(ctx, hour, hour.Add(time.Hour))
+	got, err := store.WiFiPositions(ctx, hour, hour, hour.Add(time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,29 +227,59 @@ func TestWiFiPositionsPlaceAScanByAPrecisePointInsideAVagueOne(t *testing.T) {
 	}
 }
 
-func TestWiFiPositionsDropAScanAtAVeryVaguePointThatCoversTheOldOne(t *testing.T) {
+func TestWiFiPositionsDropAScanAfterThePhoneLeft(t *testing.T) {
 	ctx := context.Background()
-	store := openTestStore(t)
 	hour := time.Date(2026, 11, 5, 10, 0, 0, 0, time.UTC)
-	// Home at 10:00, then 1 km away at 10:14, told within 1,500 m: home is
-	// inside, but too far off to tell the phone stayed.
-	if err := store.AddRoutePoints(ctx, "pixel", []RoutePoint{
-		routePoint(hour, 53.5755, 9.9530, 20),
-		routePoint(hour.Add(14*time.Minute), 53.5845, 9.9530, 1500),
-	}); err != nil {
-		t.Fatal(err)
+	cafe := []metrics.NearbyAccessPoint{{ID: "cafe", SSID: "Cafe", SignalPercent: 80}}
+	for _, c := range []struct {
+		name  string
+		route []RoutePoint
+	}{
+		// Home at 10:00, then 2 km away at 10:14, told within 1,500 m:
+		// home is outside of it.
+		{"vague point away from home", []RoutePoint{
+			routePoint(hour, 53.5755, 9.9530, 20),
+			routePoint(hour.Add(14*time.Minute), 53.5935, 9.9530, 1500),
+		}},
+		// Home at 10:00, 5 km away at 10:05, then a vague point at 10:14
+		// that covers home again: the one between tells the phone left.
+		{"left in between", []RoutePoint{
+			routePoint(hour, 53.5755, 9.9530, 20),
+			routePoint(hour.Add(5*time.Minute), 53.6205, 9.9530, 300),
+			routePoint(hour.Add(14*time.Minute), 53.5791, 9.9530, 1000),
+		}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			store := openTestStore(t)
+			if err := store.AddRoutePoints(ctx, "pixel", c.route); err != nil {
+				t.Fatal(err)
+			}
+			if err := store.AddPhoneScans(ctx, "pixel", []FoundScan{{At: hour.Add(13 * time.Minute), Found: cafe}}); err != nil {
+				t.Fatal(err)
+			}
+			got, err := store.WiFiPositions(ctx, hour, hour, hour.Add(time.Hour))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got) != 0 {
+				t.Fatalf("got %+v, want the café scan left out", got)
+			}
+		})
 	}
-	if err := store.AddPhoneScans(ctx, "pixel", []FoundScan{
-		{At: hour.Add(13 * time.Minute), Found: []metrics.NearbyAccessPoint{{ID: "cafe", SSID: "Cafe", SignalPercent: 80}}},
-	}); err != nil {
-		t.Fatal(err)
+}
+
+func TestPlaceAtTriesThePrecisePointOnTheOtherSide(t *testing.T) {
+	at := func(minutes int64) int64 { return minutes * 60_000 }
+	// A precise point a minute before, 600 m off a vague one, and one 4
+	// minutes after at the vague one's middle: the later one places it.
+	route := []positionPoint{
+		{time: at(9), lat: 53.5755, lon: 9.953, accuracy: 20},
+		{time: at(10) + 30_000, lat: 53.5809, lon: 9.953, accuracy: 400},
+		{time: at(14), lat: 53.5809, lon: 9.953, accuracy: 20},
 	}
-	got, err := store.WiFiPositions(ctx, hour, hour.Add(time.Hour))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got) != 0 {
-		t.Fatalf("got %+v, want the café scan left out", got)
+	p, ok := placeAt(route, at(10))
+	if !ok || p.time != at(14) {
+		t.Fatalf("placeAt = %+v, %v, want the point after", p, ok)
 	}
 }
 

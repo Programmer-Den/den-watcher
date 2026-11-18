@@ -11,8 +11,7 @@ function place(lat: number, scans: number, extra: Partial<WiFiPosition> = {}): W
   return {
     lat,
     lon: 10,
-    anchorLat: lat,
-    anchorLon: 10,
+    id: `pixel@${lat}`,
     scans,
     first: 1000,
     last: 2000,
@@ -167,19 +166,21 @@ describe('the Wi-Fi networks by position', () => {
     expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
   });
 
-  it('follows the picked place as its first scans leave the range', () => {
+  it('keeps the picked place when the range changes', () => {
     reply(answer());
     const element = fixture.nativeElement as HTMLElement;
     element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
     fixture.detectChanges();
-    // Each time its first scan leaves the range, the next one, about 80 m on, is its point.
-    for (const step of [1, 2, 3]) {
-      vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
-      const again = answer();
-      again.places[1].anchorLat += step * 0.0007;
-      reply(again);
-      expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
-    }
+    element.querySelectorAll<HTMLButtonElement>('.choices button')[1].click();
+    fixture.detectChanges();
+    vi.advanceTimersByTime(0);
+    // Over 7 days it has the most scans, and its middle is elsewhere; its id is the same.
+    const week = answer();
+    week.places.reverse();
+    week.places[0].lat += 0.002;
+    reply(week, 7 * 86400);
+    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 1');
+    expect(element.querySelector('tbody tr')?.textContent).toContain('Cafe');
   });
 
   it('keeps a pick that is gone for a while, so it comes back with the place', () => {

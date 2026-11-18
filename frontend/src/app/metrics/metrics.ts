@@ -403,12 +403,8 @@ export interface WiFiPositions {
 export interface WiFiPosition {
   lat: number;
   lon: number;
-  /**
-   * Where the first scan there was, which the others are measured from: it stays while new scans
-   * move the middle, and is more than 100 m from every other place's.
-   */
-  anchorLat: number;
-  anchorLon: number;
+  /** Tells the place apart, the same for every range: the phone and time of its first scan. */
+  id: string;
   scans: number;
   /** When the first and the last scan there were made, in Unix seconds. */
   first: number;

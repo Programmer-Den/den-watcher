@@ -12,7 +12,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import java.text.NumberFormat
-import java.util.concurrent.Executor
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -23,8 +23,9 @@ import kotlin.math.roundToInt
  * the places it stayed at, and for a tapped point the Wi-Fi networks the
  * phone scanned there. It works anywhere, also without the hub; only the
  * map's tiles come from OpenStreetMap. The points and scans are read off the
- * main thread, and the route is read again every minute while the map is
- * shown, as the recorder adds new points.
+ * main thread, on one thread of its own with one connection to the
+ * database, and every minute while the map is shown it looks whether the
+ * recorder kept new points.
  */
 class MapActivity : Activity() {
     private lateinit var map: RouteMapView
@@ -37,6 +38,19 @@ class MapActivity : Activity() {
 
     private val main = Handler(Looper.getMainLooper())
     private var resumed = false
+
+    /** Reads the points and scans; the store is opened and closed on it. */
+    private val background: ExecutorService = Executors.newSingleThreadExecutor()
+    private lateinit var store: Store
+
+    /** Set once the map is closed, so the reads still waiting do nothing. */
+    @Volatile private var closed = false
+
+    /** The places the list shows, so it is built again only when they change. */
+    private var placesShown: List<Place>? = null
+
+    /** The scan whose networks the list shows. */
+    private var scanShown: SeenScan? = null
 
     /** The time of the point whose networks the list shows, or null. */
     private var scanShownFor: Long? = null
@@ -51,6 +65,8 @@ class MapActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_map)
+        val context = applicationContext
+        background.execute { store = Store(context) }
         days = savedInstanceState?.getInt(DAYS, 1) ?: 1
         selectedTime = savedInstanceState?.getLong(SELECTED, -1)?.takeIf { it >= 0 }
         map = findViewById(R.id.map)
@@ -92,6 +108,14 @@ class MapActivity : Activity() {
         main.removeCallbacks(reload)
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        closed = true
+        main.removeCallbacksAndMessages(null)
+        background.execute { store.close() }
+        background.shutdown()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt(DAYS, days)
@@ -107,37 +131,64 @@ class MapActivity : Activity() {
     }
 
     /**
-     * Reads the points of the range again, off the main thread, with the
-     * places and distance worked out from them, and again after
-     * RELOAD_MILLIS while the map is shown: the recorder may have kept new
-     * points, a scan may have come in for the picked one, and the range
-     * moves on.
+     * Reads the points of the range off the main thread, with the places and
+     * distance worked out from them, and looks again every RELOAD_MILLIS
+     * while the map is shown: when the recorder kept a point since, or the
+     * range moved past the oldest one, the points are read again; a scan may
+     * have come in for the picked point too.
      */
     private fun load() {
         main.removeCallbacks(reload)
         val number = ++loads
         val since = System.currentTimeMillis() - days * DAY_MILLIS
-        val context = applicationContext
+        val shown = points
         background.execute {
+            if (closed) return@execute
             val read = try {
-                Store(context).use { it.mapPoints(since) }
+                // The same count and newest point as shown: nothing changed.
+                val (count, newest) = store.mapPointsSince(since)
+                if (count == shown.size && newest == shown.lastOrNull()?.time && shown.firstOrNull()?.let { it.time >= since } != false) {
+                    shown
+                } else {
+                    store.mapPoints(since)
+                }
             } catch (e: SQLiteException) {
-                // Busy or a disk error: the map keeps what it shows and tries again.
                 Log.w(TAG, "could not read the route for the map", e)
-                main.post { if (number == loads && resumed) main.postDelayed(reload, RELOAD_MILLIS) }
+                main.post { if (number == loads) failed() }
                 return@execute
             }
-            val stayed = RouteMap.places(RouteMap.stops(read))
-            val went = RouteMap.distance(read)
+            val changed = read !== shown
+            val stayed = if (changed) RouteMap.places(RouteMap.stops(read)) else places
+            val went = if (changed) RouteMap.distance(read) else meters
             main.post {
                 if (number != loads || isDestroyed) return@post
-                points = read
-                places = stayed
-                meters = went
-                show()
+                findViewById<TextView>(R.id.none).setText(R.string.map_none)
+                if (changed || points.isEmpty()) {
+                    points = read
+                    places = stayed
+                    meters = went
+                    show()
+                } else {
+                    // Only a scan may have come in for the picked point.
+                    showPoint(points.indexOfFirst { it.time == selectedTime })
+                }
                 if (resumed) main.postDelayed(reload, RELOAD_MILLIS)
             }
         }
+    }
+
+    /**
+     * The route could not be read, as when the database is busy: says so
+     * where nothing is shown yet, keeps what is shown, and tries again.
+     */
+    private fun failed() {
+        if (points.isEmpty()) {
+            findViewById<TextView>(R.id.none).apply {
+                setText(R.string.map_read_failed)
+                visibility = View.VISIBLE
+            }
+        }
+        if (resumed) main.postDelayed(reload, RELOAD_MILLIS)
     }
 
     private fun step(by: Int) {
@@ -168,7 +219,9 @@ class MapActivity : Activity() {
         }
         map.show(points, places, selected)
         showPoint(selected)
-        showPlaces(places)
+        if (places != placesShown) {
+            showPlaces(places)
+        }
     }
 
     private fun showRanges() {
@@ -194,6 +247,7 @@ class MapActivity : Activity() {
             findViewById<LinearLayout>(R.id.networks).removeAllViews()
             findViewById<TextView>(R.id.scan_summary).text = ""
             scanShownFor = null
+            scanShown = null
         }
         point ?: return
         findViewById<TextView>(R.id.point_time).text = time(point.time)
@@ -201,12 +255,17 @@ class MapActivity : Activity() {
             getString(R.string.map_accuracy, NumberFormat.getIntegerInstance().format(point.accuracy.roundToInt()))
         findViewById<Button>(R.id.previous).isEnabled = index > 0
         findViewById<Button>(R.id.next).isEnabled = index < points.size - 1
-        val context = applicationContext
         background.execute {
+            if (closed) return@execute
             val scan = try {
-                Store(context).use { it.mapScanNear(point.time / 1000) }
+                store.mapScanNear(point.time / 1000)
             } catch (e: SQLiteException) {
                 Log.w(TAG, "could not read the scan for the map", e)
+                main.post {
+                    if (!isDestroyed && selectedTime == point.time && scanShownFor != point.time) {
+                        findViewById<TextView>(R.id.scan_summary).setText(R.string.map_read_failed)
+                    }
+                }
                 return@execute
             }
             main.post {
@@ -218,7 +277,11 @@ class MapActivity : Activity() {
 
     /** The networks scanned near the picked point, or that there were none. */
     private fun showScan(point: RoutePoint, scan: SeenScan?) {
+        if (scanShownFor == point.time && scanShown == scan) {
+            return
+        }
         scanShownFor = point.time
+        scanShown = scan
         val list = findViewById<LinearLayout>(R.id.networks)
         list.removeAllViews()
         val summary = findViewById<TextView>(R.id.scan_summary)
@@ -270,6 +333,7 @@ class MapActivity : Activity() {
 
     /** The places the phone stayed at, the longest first, numbered as on the map. */
     private fun showPlaces(places: List<Place>) {
+        placesShown = places
         val list = findViewById<LinearLayout>(R.id.places)
         list.removeAllViews()
         places.forEachIndexed { i, p ->
@@ -293,10 +357,7 @@ class MapActivity : Activity() {
         return if (minutes < 60) getString(R.string.map_minutes, minutes) else getString(R.string.map_hours, minutes / 60, minutes % 60)
     }
 
-    companion object {
-        /** Where the points and scans are read: one thread for all maps, run in place by the screenshots. */
-        internal var background: Executor = Executors.newSingleThreadExecutor()
-
+    private companion object {
         private const val DAY_MILLIS = 24 * 60 * 60_000L
         private const val RELOAD_MILLIS = 60_000L
         private const val TAG = "MapActivity"
