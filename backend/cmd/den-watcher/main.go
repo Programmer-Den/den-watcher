@@ -9,7 +9,9 @@
 //	DISK_PATHS      comma-separated paths whose disk usage is shown (default "/",
 //	                or the system drive such as "C:\" on Windows)
 //	DATABASE_PATH   SQLite file the history is kept in, or with DATA_ONLY the
-//	                minutes kept for a hub (default "usage-control.db")
+//	                minutes kept for a hub (default "den-watcher.db"; a
+//	                usage-control.db next to it, the name up to 4.0.0, is
+//	                renamed to it)
 //	RETENTION_DAYS  days of history to keep; older values are deleted (default 30)
 //	HISTORY_MAX_ENTRIES  how many disks, temperature sensors, network cards and
 //	                GPUs each the history keeps per device (default 64)
@@ -115,7 +117,7 @@ func main() {
 	// service has no console, so its warnings go to the event log too. The
 	// service starts the add-ons installed next to it through the add-on host,
 	// a child process of its own program, and stops them when it stops.
-	winservice.LogWarnings("UsageControl")
+	winservice.LogWarnings("DenWatcher")
 	if len(os.Args) == 2 && os.Args[1] == addons.HostArgument {
 		addons.RunHost(os.Getenv("ADDONS_DIR"))
 		return
@@ -127,7 +129,7 @@ func main() {
 		}
 		return
 	}
-	ranAsService, err := winservice.Run("UsageControl", run, func() func() {
+	ranAsService, err := winservice.Run("DenWatcher", run, func() func() {
 		return addons.StartHost(os.Getenv("ADDONS_DIR"))
 	})
 	if !ranAsService && err == nil {
@@ -152,7 +154,14 @@ func run(ctx context.Context) error {
 	if addr == "" {
 		addr = ":9393"
 	}
-	databasePath := cmp.Or(os.Getenv("DATABASE_PATH"), "usage-control.db")
+	databasePath := cmp.Or(os.Getenv("DATABASE_PATH"), "den-watcher.db")
+	programData := ""
+	if runtime.GOOS == "windows" {
+		programData = os.Getenv("ProgramData")
+	}
+	if err := renameOldDatabase(databasePath, programData); err != nil {
+		return fmt.Errorf("rename the database of 4.0.0 and before to %s: %w", databasePath, err)
+	}
 
 	days, err := intSettingOr("RETENTION_DAYS", 30, 3650, " of days")
 	if err != nil {
@@ -657,6 +666,80 @@ func eventTargets(local metrics.Source, others *hub.Hub) []events.Target {
 		targets = append(targets, events.Target{ID: remote.ID, Usage: remote.Agent.Latest()})
 	}
 	return targets
+}
+
+// oldDatabaseName is what the database file was called up to 4.0.0, and
+// oldDataFolder the Windows data folder in ProgramData, now Den-Watcher.
+const (
+	oldDatabaseName = "usage-control.db"
+	oldDataFolder   = "Usage Control"
+	newDataFolder   = "Den-Watcher"
+)
+
+// renameOldDatabase renames the database a release up to 4.0.0 kept under
+// its old name to path, as long as path is called den-watcher.db and does
+// not exist yet: the one next to path, or on Windows (where programData is
+// the ProgramData folder, else empty) the one in the old data folder, which
+// then also gives up the encrypted router passwords and is deleted once
+// nothing else is left in it. The write-ahead log and its index are renamed
+// first and the database last, so a rename cut short is finished at the
+// next start without losing what the log still holds; the backup next to it
+// goes too.
+func renameOldDatabase(path, programData string) error {
+	if filepath.Base(path) != "den-watcher.db" {
+		return nil
+	}
+	dir := filepath.Dir(path)
+	oldDir := dir
+	windowsFolder := programData != "" && filepath.Clean(dir) == filepath.Join(programData, newDataFolder)
+	if windowsFolder {
+		oldDir = filepath.Join(programData, oldDataFolder)
+	}
+	old := filepath.Join(oldDir, oldDatabaseName)
+	if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
+		return nil //nolint:nilerr // the database is there, or can't be told: it is opened as it is
+	}
+	if _, err := os.Stat(old); err != nil {
+		return nil //nolint:nilerr // nothing to rename
+	}
+	if windowsFolder {
+		// The router passwords, encrypted for the service's account, which
+		// did not change; ones already in the new folder stay.
+		passwords := "router-passwords.dpapi"
+		if _, err := os.Stat(filepath.Join(dir, passwords)); errors.Is(err, fs.ErrNotExist) {
+			if err := moveFile(filepath.Join(oldDir, passwords), filepath.Join(dir, passwords)); err != nil {
+				return err
+			}
+		}
+	}
+	for _, suffix := range []string{"-wal", "-shm", ".backup", ""} {
+		if err := moveFile(old+suffix, path+suffix); err != nil {
+			return err
+		}
+	}
+	slog.Info("renamed the database to its new name", "from", old, "to", path)
+	if windowsFolder {
+		// The add-ons' reports are written again in the new folder; the old
+		// folder goes only once it is empty.
+		reports, _ := filepath.Glob(filepath.Join(oldDir, "addons", "*.json"))
+		for _, report := range reports {
+			_ = os.Remove(report)
+		}
+		_ = os.Remove(filepath.Join(oldDir, "addons"))
+		if err := os.Remove(oldDir); err != nil {
+			slog.Warn("the data folder of 4.0.0 and before is left, as something else is still in it", "folder", oldDir)
+		}
+	}
+	return nil
+}
+
+// moveFile renames from to to; a missing from is nothing to move.
+func moveFile(from, to string) error {
+	err := os.Rename(from, to)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	return err
 }
 
 // routerDevices returns the routers in HUB_ROUTERS as devices, each with

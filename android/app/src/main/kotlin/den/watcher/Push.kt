@@ -27,7 +27,13 @@ object Push {
     const val MAX_ROUTE = 500
 
     /** The header the pairing code is sent in, as a hub sends it to a device. */
-    const val CODE_HEADER = "Usage-Control-Pairing-Code"
+    const val CODE_HEADER = "Den-Watcher-Pairing-Code"
+
+    /**
+     * The header's name up to 4.0.0, which hubs from then still read, so the
+     * code goes under both names until a later release drops the old one.
+     */
+    const val OLD_CODE_HEADER = "Usage-Control-Pairing-Code"
 
     /**
      * The first of the minutes, oldest first, that fit in one push: at most

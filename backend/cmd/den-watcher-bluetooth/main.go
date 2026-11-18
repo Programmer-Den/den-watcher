@@ -12,7 +12,7 @@
 //	ADDONS_DIR               the add-on folder den-watcher reads (default
 //	                         /run/den-watcher-addons, the folder the
 //	                         systemd service makes; on Windows
-//	                         C:\ProgramData\Usage Control\addons)
+//	                         C:\ProgramData\Den-Watcher\addons)
 //	HOST_SYS                 where the host's /sys is, in a container
 //	                         (default /sys)
 //	DBUS_SYSTEM_BUS_ADDRESS  where the system D-Bus is, in a container
@@ -34,7 +34,7 @@ import (
 )
 
 func main() {
-	addons.Main("bluetooth", "UsageControlBluetooth", func() addons.Read {
+	addons.Main("bluetooth", "DenWatcherBluetooth", func() addons.Read {
 		read := bluetooth.NewReader(sysfile.HostSys())
 		names := addons.SwitchOn("BLUETOOTH_NAMES", os.Getenv("BLUETOOTH_NAMES"))
 		return func(ctx context.Context, _ time.Time) []metrics.Extra {

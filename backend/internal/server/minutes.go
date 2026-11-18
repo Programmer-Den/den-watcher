@@ -13,6 +13,7 @@ import (
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/history"
 	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
+	"github.com/Programmer-Den/den-watcher/backend/internal/pairing"
 )
 
 // MinuteSource has the averages a machine keeps of its own usage, one per
@@ -89,7 +90,7 @@ func minutesHandler(source MinuteSource) http.HandlerFunc {
 // hubAsking returns the id of the hub a request is from, or empty for a
 // request that is not from a hub.
 func hubAsking(r *http.Request) string {
-	if id := r.Header.Get(hub.HubIDHeader); hub.ValidHubID(id) {
+	if id := pairing.Header(r.Header, hub.HubIDHeader); hub.ValidHubID(id) {
 		return id
 	}
 	return ""

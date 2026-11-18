@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
+	"github.com/Programmer-Den/den-watcher/backend/internal/pairing"
 )
 
 // hubLinkTakeover is how long the remembered hub must not have asked before
@@ -62,7 +63,7 @@ func (l *hubLink) note(id, url string) {
 
 // hubURL builds the hub's page address from a request, if it is from a hub.
 func hubURL(r *http.Request) (string, bool) {
-	value := r.Header.Get(hub.PagePortHeader)
+	value := pairing.Header(r.Header, hub.PagePortHeader)
 	if value == "" {
 		return "", false
 	}

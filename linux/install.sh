@@ -105,51 +105,6 @@ if [[ "${1:-}" != --uninstall ]]; then
   done
 fi
 
-# Moves an install from before the rename (usage-control, 2.0.7a and older)
-# to the new names, once: its settings, router password, settings made with
-# systemctl edit and history move along, and its add-on services are taken
-# over as the den-watcher ones, which the install below then replaces. An
-# install removed with --uninstall left its settings and history, which move
-# too.
-if [[ -f /etc/usage-control.env && -f "$settings" && ! -e /etc/systemd/system/usage-control.service && ! -e /usr/local/bin/usage-control ]]; then
-  echo "/etc/usage-control.env is left as it is, as den-watcher has its own settings in $settings; delete it once nothing in it is needed." >&2
-fi
-if [[ -e /etc/systemd/system/usage-control.service || -e /usr/local/bin/usage-control || (-e /etc/usage-control.env && ! -e "$settings") ]] ||
-  [[ (-d /var/lib/private/usage-control || -d /var/lib/usage-control) && ! -e /var/lib/private/den-watcher && ! -e /var/lib/den-watcher ]]; then
-  echo "Moving usage-control to its new name, den-watcher, with its settings, add-ons and history."
-  for old in /etc/systemd/system/usage-control*.service; do
-    if [[ -f "$old" ]]; then
-      systemctl disable --now "$(basename "$old")" 2> /dev/null || true
-    fi
-  done
-  for old in /etc/systemd/system/usage-control-*.service /etc/systemd/system/usage-control*.service.d; do
-    new="/etc/systemd/system/den-watcher${old#/etc/systemd/system/usage-control}"
-    [[ -e "$old" && ! -e "$new" ]] && mv "$old" "$new"
-  done
-  if [[ -f /etc/usage-control.env && ! -f "$settings" ]]; then
-    mv /etc/usage-control.env "$settings"
-  fi
-  if [[ -f /etc/usage-control-router-passwords.cred && ! -f "$router_passwords" ]]; then
-    mv /etc/usage-control-router-passwords.cred "$router_passwords"
-  fi
-  if [[ -f "$router_dropin" ]]; then
-    sed -i "s|/etc/usage-control-router-passwords.cred|$router_passwords|" "$router_dropin"
-  fi
-  # With DynamicUser the history is in /var/lib/private, behind a link in
-  # /var/lib; systemd hands it to the new service's user when it starts.
-  if [[ -d /var/lib/private/usage-control && ! -e /var/lib/private/den-watcher ]]; then
-    mv /var/lib/private/usage-control /var/lib/private/den-watcher
-    rm -f /var/lib/usage-control
-  elif [[ -d /var/lib/usage-control && ! -L /var/lib/usage-control && ! -e /var/lib/den-watcher ]]; then
-    mv /var/lib/usage-control /var/lib/den-watcher
-  elif [[ -d /var/lib/private/usage-control || -d /var/lib/usage-control ]]; then
-    echo "den-watcher already has a history, so the one from usage-control stays in /var/lib/private/usage-control (or /var/lib/usage-control); delete it once it is no longer needed." >&2
-  fi
-  rm -f /usr/local/bin/usage-control /usr/local/bin/usage-control-* /etc/systemd/system/usage-control.service
-  rm -rf /run/usage-control-addons
-  systemctl daemon-reload
-fi
-
 # Every add-on there is: those in this archive and those installed before,
 # each with what it does for the question at install, from the
 # "Description=Den-Watcher <name> add-on: <what it does>" of its service.

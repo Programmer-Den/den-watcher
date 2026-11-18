@@ -29,7 +29,7 @@ func pushHandler(h Hub) http.HandlerFunc {
 			writeJSON(w, http.StatusBadRequest, problemResponse{problemRequest, "the push is not valid JSON: " + err.Error()})
 			return
 		}
-		answer, err := h.Receive(r.Context(), r.Header.Get(pairing.CodeHeader), push)
+		answer, err := h.Receive(r.Context(), pairing.Header(r.Header, pairing.CodeHeader), push)
 		switch {
 		case err == nil:
 			writeJSON(w, http.StatusOK, answer)
@@ -39,7 +39,7 @@ func pushHandler(h Hub) http.HandlerFunc {
 			case <-r.Context().Done():
 				return
 			}
-			w.Header().Set(pairing.ProblemHeader, "wrong")
+			pairing.SetHeader(w.Header(), pairing.ProblemHeader, "wrong")
 			http.Error(w, "no phone on this hub has this pairing code; add the phone in the hub's Devices dialog with the code its app shows", http.StatusForbidden)
 		case errors.Is(err, hub.ErrPushTooLarge):
 			writeJSON(w, http.StatusRequestEntityTooLarge, problemResponse{problemRequest, err.Error()})

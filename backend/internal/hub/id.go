@@ -13,7 +13,7 @@ import (
 // a device that keeps its minutes for the hub tells hubs apart by it rather
 // than by the address they ask from, which two hubs behind one NAT share and
 // which changes with IPv6 privacy addresses.
-const HubIDHeader = "Usage-Control-Hub-Id"
+const HubIDHeader = "Den-Watcher-Hub-Id"
 
 // idSchema keeps the hub's id, made once when the hub first starts.
 const idSchema = `

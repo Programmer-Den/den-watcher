@@ -10,7 +10,7 @@ After=network-online.target
 ExecStart=/usr/local/bin/den-watcher
 EnvironmentFile=-/etc/den-watcher.env
 # The history database, kept in /var/lib/den-watcher across updates.
-Environment=DATABASE_PATH=/var/lib/den-watcher/usage-control.db
+Environment=DATABASE_PATH=/var/lib/den-watcher/den-watcher.db
 StateDirectory=den-watcher
 # Where installed add-ons, such as the power add-on, write what they read.
 Environment=ADDONS_DIR=/run/den-watcher-addons

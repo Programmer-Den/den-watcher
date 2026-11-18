@@ -45,7 +45,7 @@ func pairedOnly(p Pairing, page bool, next http.HandlerFunc) http.HandlerFunc {
 		// code, so it cannot pair every such request after it.
 		answer := pairing.Needed
 		if id != "" {
-			answer = p.Allow(r.Context(), id, r.Header.Get(pairing.CodeHeader))
+			answer = p.Allow(r.Context(), id, pairing.Header(r.Header, pairing.CodeHeader))
 		}
 		switch answer {
 		case pairing.Paired:
@@ -56,10 +56,10 @@ func pairedOnly(p Pairing, page bool, next http.HandlerFunc) http.HandlerFunc {
 			case <-r.Context().Done():
 				return
 			}
-			w.Header().Set(pairing.ProblemHeader, "wrong")
+			pairing.SetHeader(w.Header(), pairing.ProblemHeader, "wrong")
 			http.Error(w, "the pairing code is wrong; give the code this device shows in the hub's Devices dialog", http.StatusForbidden)
 		default:
-			w.Header().Set(pairing.ProblemHeader, "needed")
+			pairing.SetHeader(w.Header(), pairing.ProblemHeader, "needed")
 			http.Error(w, "this device asks for its pairing code; give the code it shows in the hub's Devices dialog", http.StatusForbidden)
 		}
 	}

@@ -19,7 +19,7 @@ const (
 	// storedKey is where the Windows installer puts the router passwords it
 	// was given, readable only by the system, administrators and the
 	// service's account (see windows/den-watcher.wxs).
-	storedKey = `SOFTWARE\Usage Control\Router`
+	storedKey = `SOFTWARE\Den-Watcher\Router`
 	// storedValue holds them as "name=password" lines, one per string of a
 	// multi-string or in one string, until the service moves them into
 	// protectedFile.

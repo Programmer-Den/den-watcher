@@ -9,7 +9,7 @@
 //
 //	ADDONS_DIR  the add-on folder den-watcher reads (default
 //	            /run/den-watcher-addons, the folder the systemd service
-//	            makes, and C:\ProgramData\Usage Control\addons on Windows)
+//	            makes, and C:\ProgramData\Den-Watcher\addons on Windows)
 //	HOST_PROC   where the host's /proc is, in a container (default /proc)
 package main
 
@@ -19,5 +19,5 @@ import (
 )
 
 func main() {
-	addons.Main("memory", "UsageControlMemory", memory.New)
+	addons.Main("memory", "DenWatcherMemory", memory.New)
 }

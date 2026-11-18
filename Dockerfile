@@ -37,11 +37,6 @@ RUN mkdir /out/addons && for cmd in cmd/den-watcher-*/; do \
       CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
         go build -trimpath -ldflags="-s -w" -o "/out/addons/$name" "./$cmd" || exit 1; \
     done
-# The names from before the rename to den-watcher, which compose.yaml files
-# from then name as the add-ons' entrypoints: /usage-control-power and so on.
-RUN cd /out/addons && ln -s den-watcher usage-control && for addon in den-watcher-*; do \
-      ln -s "$addon" "usage-control-${addon#den-watcher-}" || exit 1; \
-    done
 # The folder the history database is kept in, mounted as a volume at run time.
 RUN mkdir /out/data
 
@@ -50,9 +45,9 @@ FROM gcr.io/distroless/static-debian13:nonroot@sha256:aafe993665bf6200db38a02c11
 COPY --from=backend /out/den-watcher /out/addons/ /
 # Owned by the nonroot user (65532), so a new volume mounted here is writable.
 COPY --from=backend --chown=65532:65532 /out/data /data
-# The file keeps its name from before the rename, so a volume from then keeps
-# its history.
-ENV DATABASE_PATH=/data/usage-control.db
+# A volume of 4.0.0 or before has it as usage-control.db, which den-watcher
+# renames at its first start.
+ENV DATABASE_PATH=/data/den-watcher.db
 # The folder SQLite sorts in when a sort outgrows its memory, such as for a
 # long history range. compose.yaml makes the rest of the container read-only,
 # where SQLite would find no folder it may write to and fail.

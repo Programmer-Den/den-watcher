@@ -181,15 +181,13 @@ jobs:
       # Starts den-watcher with two add-on containers as compose.yaml sets
       # them up, one as root without capabilities (power) and one as the
       # image's user (processes), and waits until den-watcher shows what
-      # the processes add-on wrote to the shared add-on volume. Then the same
-      # with the compose.yaml of 2.0.7a, the last release before the rename to
-      # den-watcher, which pulls the image by its old name and starts the
-      # add-ons by their old names; the new image has to run it the same way.
+      # the processes add-on wrote to the shared add-on volume. Then it checks
+      # that a volume whose history is named usage-control.db, as up to
+      # 4.0.0, keeps it as den-watcher.db.
       - name: Start it with add-ons
         env:
           IMAGE_TAG: ci
           COMPOSE_PROFILES: power,processes
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           # Starts the compose file $1 and checks den-watcher shows the
@@ -224,6 +222,17 @@ jobs:
             docker compose -f "$1" down -v
           }
           check compose.yaml "den-watcher power processes " den-watcher ""
-          gh api "repos/$GITHUB_REPOSITORY/contents/compose.yaml?ref=2.0.7a" -H 'Accept: application/vnd.github.raw' > old-compose.yaml
-          docker tag ghcr.io/programmer-den/den-watcher:ci ghcr.io/chriszly/usage-control:ci
-          check old-compose.yaml "power processes usage-control " "the compose.yaml from before the rename" " from before the rename"
+          # The image itself makes the old file, with the old name set.
+          image=ghcr.io/programmer-den/den-watcher:ci
+          docker run -d --name old-name -v rename-check:/data -e DATABASE_PATH=/data/usage-control.db "$image"
+          has() { docker run --rm -v rename-check:/data alpine test -f "/data/$1"; }
+          for _ in $(seq 1 30); do has usage-control.db && break; sleep 1; done
+          docker rm -f old-name
+          has usage-control.db || { echo "the image made no usage-control.db" >&2; exit 1; }
+          docker run -d --name new-name -v rename-check:/data "$image"
+          for _ in $(seq 1 30); do has den-watcher.db && break; sleep 1; done
+          docker logs new-name >&2
+          docker rm -f new-name
+          has den-watcher.db || { echo "the image did not rename usage-control.db to den-watcher.db" >&2; exit 1; }
+          if has usage-control.db; then echo "the image left usage-control.db" >&2; exit 1; fi
+          docker volume rm rename-check

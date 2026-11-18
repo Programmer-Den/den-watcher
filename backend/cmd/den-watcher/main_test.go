@@ -157,7 +157,7 @@ func TestWithBufferKeepsTheMinutesInTheDatabase(t *testing.T) {
 		t.Fatalf("NewCollector() error = %v", err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	path := filepath.Join(t.TempDir(), "usage-control.db")
+	path := filepath.Join(t.TempDir(), "den-watcher.db")
 
 	minutes, paired, wait := withBuffer(ctx, metrics.NewSampler(collector), path, time.Hour, 1, false)
 	cancel()
@@ -172,7 +172,7 @@ func TestWithBufferKeepsTheMinutesInTheDatabase(t *testing.T) {
 }
 
 func TestWithBufferRunsWithoutADatabaseItCannotOpen(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "missing", "usage-control.db")
+	path := filepath.Join(t.TempDir(), "missing", "den-watcher.db")
 
 	minutes, paired, wait := withBuffer(context.Background(), nil, path, time.Hour, 1, false)
 	wait()
@@ -211,7 +211,7 @@ func TestPrintPairingCodeAsksTheRunningDevice(t *testing.T) {
 // settings that would change what it sets up.
 func setUpRun(t *testing.T, addr string) string {
 	t.Helper()
-	database := filepath.Join(t.TempDir(), "usage-control.db")
+	database := filepath.Join(t.TempDir(), "den-watcher.db")
 	t.Setenv("LISTEN_ADDR", addr)
 	t.Setenv("DATABASE_PATH", database)
 	t.Setenv("DISK_PATHS", t.TempDir())
@@ -335,7 +335,7 @@ func TestRouterDevicesNeedThePasswordOfALogin(t *testing.T) {
 	t.Setenv("HUB_ROUTERS", "Home router=upnp:192.168.1.1,Office=asus:admin@192.168.2.1")
 	t.Setenv("CREDENTIALS_DIRECTORY", "")
 	t.Setenv("ROUTER_PASSWORDS_FILE", "")
-	if _, err := routerDevices("usage-control.db"); err == nil || !strings.Contains(err.Error(), "Office") {
+	if _, err := routerDevices("den-watcher.db"); err == nil || !strings.Contains(err.Error(), "Office") {
 		t.Errorf("without a passwords file: %v, want an error naming the router", err)
 	}
 
@@ -344,14 +344,14 @@ func TestRouterDevicesNeedThePasswordOfALogin(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("ROUTER_PASSWORDS_FILE", path)
-	if _, err := routerDevices("usage-control.db"); err == nil || !strings.Contains(err.Error(), "Office") {
+	if _, err := routerDevices("den-watcher.db"); err == nil || !strings.Contains(err.Error(), "Office") {
 		t.Errorf("without the router's line: %v, want an error naming the router", err)
 	}
 
 	if err := os.WriteFile(path, []byte("office=secret\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	devices, err := routerDevices("usage-control.db")
+	devices, err := routerDevices("den-watcher.db")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -367,13 +367,13 @@ func TestRouterDevicesRefuseAShortSNMPv3Password(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("ROUTER_PASSWORDS_FILE", path)
-	if _, err := routerDevices("usage-control.db"); err == nil || !strings.Contains(err.Error(), "8 characters") {
+	if _, err := routerDevices("den-watcher.db"); err == nil || !strings.Contains(err.Error(), "8 characters") {
 		t.Errorf("with a 5-character password: %v, want an error", err)
 	}
 	if err := os.WriteFile(path, []byte("Core=long enough\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := routerDevices("usage-control.db"); err != nil {
+	if _, err := routerDevices("den-watcher.db"); err != nil {
 		t.Error(err)
 	}
 }
