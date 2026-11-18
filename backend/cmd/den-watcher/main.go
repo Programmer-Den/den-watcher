@@ -693,7 +693,7 @@ func renameOldDatabase(path, programData string) string {
 	windowsFolder := programData != "" && strings.EqualFold(filepath.Clean(dir), filepath.Join(programData, newDataFolder))
 	if windowsFolder {
 		oldDir = filepath.Join(programData, oldDataFolder)
-		if _, err := os.Stat(oldDir); err != nil {
+		if _, err := os.Stat(oldDir); err != nil { //nolint:gosec // ProgramData, set by Windows
 			return path
 		}
 	}
@@ -705,8 +705,8 @@ func renameOldDatabase(path, programData string) string {
 	if windowsFolder {
 		// The router passwords, encrypted for the service's account, which
 		// did not change; ones already in the new folder stay.
-		passwords := "router-passwords.dpapi" // router.protectedFile, Windows only
-		if _, err := os.Stat(filepath.Join(dir, passwords)); errors.Is(err, fs.ErrNotExist) {
+		passwords := "router-passwords.dpapi"                                                 // router.protectedFile, Windows only
+		if _, err := os.Stat(filepath.Join(dir, passwords)); errors.Is(err, fs.ErrNotExist) { //nolint:gosec // ProgramData, set by Windows
 			if err := moveFile(filepath.Join(oldDir, passwords), filepath.Join(dir, passwords)); err != nil {
 				slog.Warn("could not move the router passwords of 4.0.0 and before", "from", oldDir, "error", err)
 				return path
@@ -715,16 +715,16 @@ func renameOldDatabase(path, programData string) string {
 		// Once the database moved, what is left are the add-ons' reports,
 		// written again in the new folder, and backups that are no longer
 		// needed; the old folder goes once it is empty.
-		if _, err := os.Stat(old); !errors.Is(err, fs.ErrNotExist) {
+		if _, err := os.Stat(old); !errors.Is(err, fs.ErrNotExist) { //nolint:gosec // ProgramData, set by Windows
 			return path
 		}
 		leftovers, _ := filepath.Glob(filepath.Join(oldDir, "addons", "*"))
 		backups, _ := filepath.Glob(filepath.Join(oldDir, ".den-watcher-backup-*.db"))
 		for _, file := range append(append(leftovers, backups...), old+".backup") {
-			_ = os.Remove(file)
+			_ = os.Remove(file) //nolint:gosec // ProgramData, set by Windows
 		}
-		_ = os.Remove(filepath.Join(oldDir, "addons"))
-		if err := os.Remove(oldDir); err != nil {
+		_ = os.Remove(filepath.Join(oldDir, "addons")) //nolint:gosec // ProgramData, set by Windows
+		if err := os.Remove(oldDir); err != nil {      //nolint:gosec // ProgramData, set by Windows
 			slog.Warn("the data folder of 4.0.0 and before is left, as something else is still in it", "folder", oldDir)
 		}
 	}
@@ -738,8 +738,8 @@ func renameOldDatabase(path, programData string) string {
 // halfway; a log and index left under the new name belong to no database
 // and are deleted before.
 func renameDatabaseFile(old, path string) error {
-	_, oldErr := os.Stat(old)
-	if _, err := os.Stat(path); err == nil {
+	_, oldErr := os.Stat(old)                //nolint:gosec // DATABASE_PATH or ProgramData, set by whoever runs the program
+	if _, err := os.Stat(path); err == nil { //nolint:gosec // DATABASE_PATH, set by whoever runs the program
 		if oldErr == nil {
 			slog.Warn("both databases are there, so the one of 4.0.0 and before is left unused; delete it once it is not needed", "unused", old, "used", path)
 		}
@@ -756,16 +756,16 @@ func renameDatabaseFile(old, path string) error {
 		return fmt.Errorf("write the log of %s into it: %w", old, err)
 	}
 	for _, suffix := range []string{"-wal", "-shm"} {
-		if err := os.Remove(path + suffix); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if err := os.Remove(path + suffix); err != nil && !errors.Is(err, fs.ErrNotExist) { //nolint:gosec // DATABASE_PATH, set by whoever runs the program
 			return err
 		}
 	}
-	if _, err := os.Stat(path + ".backup"); errors.Is(err, fs.ErrNotExist) {
+	if _, err := os.Stat(path + ".backup"); errors.Is(err, fs.ErrNotExist) { //nolint:gosec // DATABASE_PATH, set by whoever runs the program
 		if err := moveFile(old+".backup", path+".backup"); err != nil {
 			return err
 		}
 	}
-	if err := os.Rename(old, path); err != nil {
+	if err := os.Rename(old, path); err != nil { //nolint:gosec // DATABASE_PATH, set by whoever runs the program
 		return err
 	}
 	slog.Info("renamed the database to its new name", "from", old, "to", path)
@@ -774,7 +774,7 @@ func renameDatabaseFile(old, path string) error {
 
 // moveFile renames from to to; a missing from is nothing to move.
 func moveFile(from, to string) error {
-	err := os.Rename(from, to)
+	err := os.Rename(from, to) //nolint:gosec // DATABASE_PATH, set by whoever runs the program
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}

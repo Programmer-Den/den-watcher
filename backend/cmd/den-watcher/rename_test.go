@@ -48,11 +48,11 @@ func oldDatabase(t *testing.T, dir string) {
 	}
 	// Copied while open, so the row is in the log only.
 	for _, suffix := range []string{"", "-wal"} {
-		data, err := os.ReadFile(made + suffix)
+		data, err := os.ReadFile(made + suffix) //nolint:gosec // a file of the test
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(dir, oldDatabaseName+suffix), data, 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, oldDatabaseName+suffix), data, 0o600); err != nil { //nolint:gosec // a file of the test
 			t.Fatal(err)
 		}
 	}
@@ -84,7 +84,7 @@ func TestRenamesTheDatabaseUpTo400(t *testing.T) {
 	if got := keptRow(t, path); got != "history" {
 		t.Errorf("den-watcher.db holds %q, want what the old log held", got)
 	}
-	if got, _ := os.ReadFile(path + ".backup"); string(got) != oldDatabaseName+".backup" {
+	if got, _ := os.ReadFile(path + ".backup"); string(got) != oldDatabaseName+".backup" { //nolint:gosec // a file of the test
 		t.Errorf("den-watcher.db.backup = %q, want the old backup", got)
 	}
 	for _, suffix := range []string{"", "-wal", "-shm", ".backup"} {
@@ -115,7 +115,7 @@ func TestKeepsTheDatabaseThatHasTheNewName(t *testing.T) {
 	if got := renameOldDatabase(path, ""); got != path {
 		t.Fatalf("renameOldDatabase = %s, want the new path", got)
 	}
-	if got, _ := os.ReadFile(path); string(got) != "den-watcher.db" {
+	if got, _ := os.ReadFile(path); string(got) != "den-watcher.db" { //nolint:gosec // a file of the test
 		t.Errorf("den-watcher.db = %q, want it kept", got)
 	}
 	// A database with another name is left alone.
@@ -144,7 +144,7 @@ func TestMovesTheWindowsDataFolderUpTo400(t *testing.T) {
 	if got := keptRow(t, filepath.Join(dir, "den-watcher.db")); got != "history" {
 		t.Errorf("den-watcher.db holds %q, want the old history", got)
 	}
-	if got, err := os.ReadFile(filepath.Join(dir, "router-passwords.dpapi")); err != nil || string(got) != "router-passwords.dpapi" {
+	if got, err := os.ReadFile(filepath.Join(dir, "router-passwords.dpapi")); err != nil || string(got) != "router-passwords.dpapi" { //nolint:gosec // a file of the test
 		t.Errorf("router-passwords.dpapi = %q, %v; want the old one", got, err)
 	}
 	if _, err := os.Stat(old); !errors.Is(err, fs.ErrNotExist) {
