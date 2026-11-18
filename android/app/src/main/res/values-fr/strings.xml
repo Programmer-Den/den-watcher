@@ -128,7 +128,7 @@
         <item quantity="other">détectés %d minutes après</item>
     </plurals>
     <plurals name="map_visits">
-        <item quantity="one">une fois</item>
+        <item quantity="one">%d fois</item>
         <item quantity="other">%d fois</item>
     </plurals>
 </resources>
