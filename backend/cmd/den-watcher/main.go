@@ -154,14 +154,12 @@ func run(ctx context.Context) error {
 	if addr == "" {
 		addr = ":9393"
 	}
-	databasePath := cmp.Or(os.Getenv("DATABASE_PATH"), "den-watcher.db")
+	databasePath := cmp.Or(os.Getenv("DATABASE_PATH"), newDatabaseName)
 	programData := ""
 	if runtime.GOOS == "windows" {
 		programData = os.Getenv("ProgramData")
 	}
-	if err := renameOldDatabase(databasePath, programData); err != nil {
-		return fmt.Errorf("rename the database of 4.0.0 and before to %s: %w", databasePath, err)
-	}
+	databasePath = renameOldDatabase(databasePath, programData)
 
 	days, err := intSettingOr("RETENTION_DAYS", 30, 3650, " of days")
 	if err != nil {
@@ -669,11 +667,12 @@ func eventTargets(local metrics.Source, others *hub.Hub) []events.Target {
 }
 
 // oldDatabaseName is what the database file was called up to 4.0.0, and
-// oldDataFolder the Windows data folder in ProgramData, now Den-Watcher.
+// oldDataFolder the Windows data folder in ProgramData, now newDataFolder.
 const (
+	newDatabaseName = "den-watcher.db"
 	oldDatabaseName = "usage-control.db"
+	newDataFolder   = "Den-Watcher" // as addons.DefaultDir
 	oldDataFolder   = "Usage Control"
-	newDataFolder   = "Den-Watcher"
 )
 
 // renameOldDatabase renames the database a release up to 4.0.0 kept under
@@ -681,13 +680,12 @@ const (
 // not exist yet: the one next to path, or on Windows (where programData is
 // the ProgramData folder, else empty) the one in the old data folder, which
 // also gives up the encrypted router passwords and is deleted once nothing
-// else is left in it. What the write-ahead log holds is written into the
-// database first, so the rename moves one file and cannot be cut short
-// halfway; a log and index left under the new name belong to no database
-// and are deleted before. The backup next to it goes too.
-func renameOldDatabase(path, programData string) error {
-	if filepath.Base(path) != "den-watcher.db" {
-		return nil
+// else is left in it. It returns the database to open: path, or the old
+// one, kept where it is for now, when it could not be renamed, so den-watcher
+// still starts with its history and tries again at its next start.
+func renameOldDatabase(path, programData string) string {
+	if filepath.Base(path) != newDatabaseName {
+		return path
 	}
 	dir := filepath.Dir(path)
 	oldDir := dir
@@ -695,8 +693,13 @@ func renameOldDatabase(path, programData string) error {
 	if windowsFolder {
 		oldDir = filepath.Join(programData, oldDataFolder)
 		if _, err := os.Stat(oldDir); err != nil {
-			windowsFolder = false
+			return path
 		}
+	}
+	old := filepath.Join(oldDir, oldDatabaseName)
+	if err := renameDatabaseFile(old, path); err != nil {
+		slog.Warn("could not rename the database of 4.0.0 and before, so it is used under its old name for now", "from", old, "to", path, "error", err)
+		return old
 	}
 	if windowsFolder {
 		// The router passwords, encrypted for the service's account, which
@@ -704,36 +707,41 @@ func renameOldDatabase(path, programData string) error {
 		passwords := "router-passwords.dpapi" // router.protectedFile, Windows only
 		if _, err := os.Stat(filepath.Join(dir, passwords)); errors.Is(err, fs.ErrNotExist) {
 			if err := moveFile(filepath.Join(oldDir, passwords), filepath.Join(dir, passwords)); err != nil {
-				return err
+				slog.Warn("could not move the router passwords of 4.0.0 and before", "from", oldDir, "error", err)
+				return path
 			}
 		}
-	}
-	if err := renameDatabaseFile(filepath.Join(oldDir, oldDatabaseName), path); err != nil {
-		return err
-	}
-	if windowsFolder {
-		// The add-ons' reports are written again in the new folder; the old
-		// folder goes only once it is empty.
-		reports, _ := filepath.Glob(filepath.Join(oldDir, "addons", "*.json"))
-		for _, report := range reports {
-			_ = os.Remove(report)
+		// What is left are the add-ons' reports, written again in the new
+		// folder, and backups that are no longer needed; the old folder
+		// goes once it is empty.
+		leftovers, _ := filepath.Glob(filepath.Join(oldDir, "addons", "*.json"))
+		backups, _ := filepath.Glob(filepath.Join(oldDir, ".den-watcher-backup-*.db"))
+		for _, file := range append(append(leftovers, backups...), old+".backup") {
+			_ = os.Remove(file)
 		}
 		_ = os.Remove(filepath.Join(oldDir, "addons"))
-		if err := os.Remove(oldDir); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if err := os.Remove(oldDir); err != nil {
 			slog.Warn("the data folder of 4.0.0 and before is left, as something else is still in it", "folder", oldDir)
 		}
 	}
-	return nil
+	return path
 }
 
 // renameDatabaseFile renames the database old to path, with its backup,
-// unless path exists or old does not.
+// unless path exists or old does not. What the write-ahead log holds is
+// written into the database first, so the rename moves one file and cannot
+// be cut short halfway; a log and index left under the new name belong to
+// no database and are deleted before.
 func renameDatabaseFile(old, path string) error {
-	if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
-		return nil //nolint:nilerr // the database is there, or can't be told: it is opened as it is
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return err
 	}
-	if _, err := os.Stat(old); err != nil {
-		return nil //nolint:nilerr // nothing to rename
+	if _, err := os.Stat(old); errors.Is(err, fs.ErrNotExist) {
+		return nil
+	} else if err != nil {
+		return err
 	}
 	if err := history.Checkpoint(context.Background(), old); err != nil {
 		return fmt.Errorf("write the log of %s into it: %w", old, err)

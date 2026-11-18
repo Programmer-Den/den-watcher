@@ -426,13 +426,18 @@ func (s *Store) DB() *sql.DB {
 // Checkpoint writes what the write-ahead log of the database at path holds
 // into the database file itself and closes it, so the file alone is the
 // whole database and can be renamed on its own: SQLite deletes the log and
-// its index as the last connection closes.
+// its index as the last connection closes. It fails when another program
+// has the database open and the log could not be written in full.
 func Checkpoint(ctx context.Context, path string) error {
 	db, err := openDB(path)
 	if err != nil {
 		return err
 	}
 	db.SetMaxOpenConns(1)
-	_, err = db.ExecContext(ctx, "PRAGMA wal_checkpoint(TRUNCATE)")
+	var busy, logPages, done int
+	err = db.QueryRowContext(ctx, "PRAGMA wal_checkpoint(TRUNCATE)").Scan(&busy, &logPages, &done)
+	if err == nil && (busy != 0 || done != logPages) {
+		err = fmt.Errorf("another program has %s open, so its log could not be written into it", path)
+	}
 	return errors.Join(err, db.Close())
 }

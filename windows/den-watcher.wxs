@@ -500,18 +500,18 @@
       </RegistryValue>
 
       <!--
-        Where StoreRouterPasswords hands the router passwords to the service:
-        only the system, administrators and the service's account can read
-        the key, and the service may also delete the value in it. It is
-        locked down as it is created.
-      -->
-      <!--
         The key of 4.0.0 and before, which the removal of that version
         deletes; this deletes what may be left of it, so later updates read
         only the new one.
       -->
       <RemoveRegistryKey Root="HKLM" Key="SOFTWARE\Usage Control" Action="removeOnInstall" />
 
+      <!--
+        Where StoreRouterPasswords hands the router passwords to the service:
+        only the system, administrators and the service's account can read
+        the key, and the service may also delete the value in it. It is
+        locked down as it is created.
+      -->
       <RegistryKey Root="HKLM" Key="SOFTWARE\Den-Watcher\Router" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
         <PermissionEx Sddl="D:P(A;;KA;;;SY)(A;;KA;;;BA)(A;;0x2001b;;;LS)" />
       </RegistryKey>

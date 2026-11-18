@@ -78,8 +78,8 @@ func TestRenamesTheDatabaseUpTo400(t *testing.T) {
 	oldDatabase(t, dir)
 	writeFiles(t, dir, oldDatabaseName+".backup")
 	path := filepath.Join(dir, "den-watcher.db")
-	if err := renameOldDatabase(path, ""); err != nil {
-		t.Fatal(err)
+	if got := renameOldDatabase(path, ""); got != path {
+		t.Fatalf("renameOldDatabase = %s, want the new path", got)
 	}
 	if got := keptRow(t, path); got != "history" {
 		t.Errorf("den-watcher.db holds %q, want what the old log held", got)
@@ -100,8 +100,8 @@ func TestDropsALogLeftUnderTheNewName(t *testing.T) {
 	// A log of a database deleted since, which must not be read into it.
 	writeFiles(t, dir, "den-watcher.db-wal", "den-watcher.db-shm")
 	path := filepath.Join(dir, "den-watcher.db")
-	if err := renameOldDatabase(path, ""); err != nil {
-		t.Fatal(err)
+	if got := renameOldDatabase(path, ""); got != path {
+		t.Fatalf("renameOldDatabase = %s, want the new path", got)
 	}
 	if got := keptRow(t, path); got != "history" {
 		t.Errorf("den-watcher.db holds %q, want the old history", got)
@@ -112,8 +112,8 @@ func TestKeepsTheDatabaseThatHasTheNewName(t *testing.T) {
 	dir := t.TempDir()
 	writeFiles(t, dir, oldDatabaseName, "den-watcher.db")
 	path := filepath.Join(dir, "den-watcher.db")
-	if err := renameOldDatabase(path, ""); err != nil {
-		t.Fatal(err)
+	if got := renameOldDatabase(path, ""); got != path {
+		t.Fatalf("renameOldDatabase = %s, want the new path", got)
 	}
 	if got, _ := os.ReadFile(path); string(got) != "den-watcher.db" {
 		t.Errorf("den-watcher.db = %q, want it kept", got)
@@ -121,8 +121,8 @@ func TestKeepsTheDatabaseThatHasTheNewName(t *testing.T) {
 	// A database with another name is left alone.
 	other := t.TempDir()
 	writeFiles(t, other, oldDatabaseName)
-	if err := renameOldDatabase(filepath.Join(other, "mine.db"), ""); err != nil {
-		t.Fatal(err)
+	if got := renameOldDatabase(filepath.Join(other, "mine.db"), ""); got != filepath.Join(other, "mine.db") {
+		t.Fatalf("renameOldDatabase = %s, want the new path", got)
 	}
 	if _, err := os.Stat(filepath.Join(other, "mine.db")); !errors.Is(err, fs.ErrNotExist) {
 		t.Error("renamed the old database to a path of another name")
@@ -138,8 +138,8 @@ func TestMovesTheWindowsDataFolderUpTo400(t *testing.T) {
 	if err := os.Mkdir(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := renameOldDatabase(filepath.Join(dir, "den-watcher.db"), programData); err != nil {
-		t.Fatal(err)
+	if got := renameOldDatabase(filepath.Join(dir, "den-watcher.db"), programData); got != filepath.Join(dir, "den-watcher.db") {
+		t.Fatalf("renameOldDatabase = %s, want the new path", got)
 	}
 	if got := keptRow(t, filepath.Join(dir, "den-watcher.db")); got != "history" {
 		t.Errorf("den-watcher.db holds %q, want the old history", got)
@@ -160,8 +160,8 @@ func TestMovesTheRouterPasswordsWithoutADatabase(t *testing.T) {
 	if err := os.Mkdir(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := renameOldDatabase(filepath.Join(dir, "den-watcher.db"), programData); err != nil {
-		t.Fatal(err)
+	if got := renameOldDatabase(filepath.Join(dir, "den-watcher.db"), programData); got != filepath.Join(dir, "den-watcher.db") {
+		t.Fatalf("renameOldDatabase = %s, want the new path", got)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "router-passwords.dpapi")); err != nil {
 		t.Errorf("the router passwords were not moved: %v", err)
@@ -178,13 +178,43 @@ func TestLeavesTheOldWindowsDataFolderWithSomethingElseInIt(t *testing.T) {
 	writeFiles(t, old, "notes.txt")
 	dir := filepath.Join(programData, newDataFolder)
 	writeFiles(t, dir, "router-passwords.dpapi")
-	if err := renameOldDatabase(filepath.Join(dir, "den-watcher.db"), programData); err != nil {
-		t.Fatal(err)
+	if got := renameOldDatabase(filepath.Join(dir, "den-watcher.db"), programData); got != filepath.Join(dir, "den-watcher.db") {
+		t.Fatalf("renameOldDatabase = %s, want the new path", got)
 	}
 	if _, err := os.Stat(filepath.Join(old, "notes.txt")); err != nil {
 		t.Errorf("the old folder lost a file of its own: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "den-watcher.db")); err != nil {
 		t.Errorf("the database was not moved: %v", err)
+	}
+}
+
+func TestKeepsTheOldDatabaseWhileAnotherProgramHasItOpen(t *testing.T) {
+	dir := t.TempDir()
+	oldDatabase(t, dir)
+	old := filepath.Join(dir, oldDatabaseName)
+	db, err := sql.Open("sqlite", "file:"+old)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	// A read that keeps the log from being written into the database.
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	var value string
+	if err := tx.QueryRow("SELECT value FROM kept").Scan(&value); err != nil {
+		t.Fatal(err)
+	}
+	if got := renameOldDatabase(filepath.Join(dir, newDatabaseName), ""); got != old {
+		t.Fatalf("renameOldDatabase = %s, want the old database, used where it is", got)
+	}
+	if _, err := os.Stat(filepath.Join(dir, newDatabaseName)); !errors.Is(err, fs.ErrNotExist) {
+		t.Error("renamed the database another program has open")
+	}
+	if _, err := os.Stat(old + "-wal"); err != nil {
+		t.Errorf("the old log is gone: %v", err)
 	}
 }

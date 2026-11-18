@@ -23,3 +23,14 @@ func TestHeadersKeepTheirNamesUpTo400(t *testing.T) {
 		t.Errorf("Header = %q, want the new name first", got)
 	}
 }
+
+func TestOtherHeadersHaveNoOldName(t *testing.T) {
+	h := http.Header{}
+	SetHeader(h, "Content-Type", "text/plain")
+	if len(h) != 1 {
+		t.Errorf("headers = %v, want only Content-Type", h)
+	}
+	if got := Header(http.Header{"Usage-Control-Content-Type": {"x"}}, "Content-Type"); got != "" {
+		t.Errorf("Header = %q, want nothing under an invented old name", got)
+	}
+}
