@@ -135,11 +135,16 @@ class RouteMapTest {
     fun keepsTheNewestDayOfTheMapWhenTheClockJumpedAhead() {
         val minute = 60_000L
         val now = System.currentTimeMillis() / minute * minute
-        store.addMapPoint(home.copy(time = now - minute))
+        // Points and a scan kept before the clock jumped a year ahead, fewer
+        // than a day's worth: they stay with the first point after the jump.
+        val before = now - 365 * 24 * 60 * minute
+        store.addMapPoint(home.copy(time = before - minute))
+        store.addMapPoint(home.copy(time = before))
+        store.addMapScan(SeenScan(before / 1000, emptyList()))
         store.addMapPoint(home.copy(time = now))
-        // A point a year ahead: the ones before stay, as the newest day's.
-        store.addMapPoint(home.copy(time = now + 365 * 24 * 60 * minute))
+        store.addMapScan(SeenScan(now / 1000, emptyList()))
         assertEquals(3, store.mapPoints(0).size)
+        assertEquals(before / 1000, store.mapScanNear(before / 1000)?.time)
     }
 
     @Test

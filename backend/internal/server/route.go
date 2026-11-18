@@ -109,10 +109,10 @@ type positionsResponse struct {
 }
 
 // positionsAnchorsBefore is how long before the day a range ends on the
-// places are found from: the page's week and a day, so its day and week
-// ranges find them from the same time and their places keep the same IDs,
-// which change only once a day.
-const positionsAnchorsBefore = 8 * 24 * time.Hour
+// places are found from: the page's week, so its day and week ranges find
+// them from the same time and their places keep the same IDs, which change
+// only once a day.
+const positionsAnchorsBefore = 7 * 24 * time.Hour
 
 // positionsAnchorsFrom is when the places of a range are found from, Unix
 // seconds: positionsAnchorsBefore before the start of the UTC day the range

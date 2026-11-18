@@ -95,28 +95,7 @@ export class WifiPositionsView {
   private readonly picked = signal<{ id: string; lat: number; lon: number } | null>(null);
 
   /** The index of the picked place among those read, or -1 when none was picked or it is gone. */
-  private readonly matched = computed(() => {
-    const places = this.places();
-    const picked = this.picked();
-    if (!picked) {
-      return -1;
-    }
-    const index = places.findIndex((p) => p.id === picked.id);
-    if (index >= 0) {
-      return index;
-    }
-    // A new id: the place whose middle is closest to where the picked one was, within its size.
-    let closest = PLACE_METERS;
-    let found = -1;
-    places.forEach((p, i) => {
-      const away = meters({ ...here, lat: p.lat, lon: p.lon }, { ...here, ...picked });
-      if (away <= closest) {
-        closest = away;
-        found = i;
-      }
-    });
-    return found;
-  });
+  private readonly matched = computed(() => this.match(this.places(), this.picked()).index);
 
   /** The picked place, or the one with the most scans while none is (or the picked one is gone). */
   protected readonly selected = computed(() => {
@@ -155,6 +134,37 @@ export class WifiPositionsView {
   /** The names of the phones that scanned at a place. */
   protected phones(place: WiFiPosition): string {
     return place.devices.map((id) => this.name(id)).join(', ');
+  }
+
+  /**
+   * The index of the picked place among places by its id, or else by the middle closest to where
+   * it was, within its size, or -1; sure when found by its id or the only place that close.
+   */
+  private match(
+    places: readonly WiFiPosition[],
+    picked: { id: string; lat: number; lon: number } | null,
+  ): { index: number; sure: boolean } {
+    if (!picked) {
+      return { index: -1, sure: false };
+    }
+    const index = places.findIndex((p) => p.id === picked.id);
+    if (index >= 0) {
+      return { index, sure: true };
+    }
+    let closest = PLACE_METERS;
+    let found = -1;
+    let near = 0;
+    places.forEach((p, i) => {
+      const away = meters({ ...here, lat: p.lat, lon: p.lon }, { ...here, ...picked });
+      if (away <= PLACE_METERS) {
+        near++;
+      }
+      if (away <= closest) {
+        closest = away;
+        found = i;
+      }
+    });
+    return { index: found, sure: near === 1 };
   }
 
   protected select(index: number): void {
@@ -222,11 +232,12 @@ export class WifiPositionsView {
         if (answer) {
           this.failed.set(false);
           this.answer.set(answer);
-          // Keeps the picked place's middle as it is now. A place found by its middle only is not
-          // kept in its place: it may be a neighbour, and the picked one may come back.
-          const picked = this.picked();
-          const place = this.places().find((p) => p.id === picked?.id);
-          if (place) {
+          // Keeps the picked place's id and middle as they are now: by its id, or by its middle
+          // when that finds only one place, which is then the picked one with a new id. One that
+          // may be a neighbour is not kept in its place, as the picked one may come back.
+          const found = this.match(this.places(), this.picked());
+          const place = this.places()[found.index];
+          if (place && found.sure) {
             this.picked.set({ id: place.id, lat: place.lat, lon: place.lon });
           }
         }

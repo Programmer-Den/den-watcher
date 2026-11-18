@@ -195,6 +195,11 @@ describe('the Wi-Fi networks by position', () => {
     again.places[1].lat += 0.0004;
     reply(again);
     expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
+    // Found by its middle alone, it is kept by its new id, wherever its middle moves.
+    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
+    again.places[1].lat += 0.002;
+    reply(again);
+    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
   });
 
   it('does not keep a neighbour found by the middle in place of the pick', () => {
@@ -203,24 +208,20 @@ describe('the Wi-Fi networks by position', () => {
     element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
     fixture.detectChanges();
     vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
-    // The picked place is gone; a neighbour's middle is 50 m from where it was.
+    // The picked place is gone; two others are within 100 m of where it was.
     const gone = answer();
-    gone.places[1].id = 'pixel@neighbour';
+    gone.places[1].id = 'pixel@east';
     gone.places[1].lat += 0.0004;
+    gone.places.push({ ...gone.places[1], id: 'pixel@west', lat: gone.places[1].lat - 0.0007 });
     reply(gone);
-    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
-    // The picked place is back, next to the neighbour.
+    // The closest is shown.
+    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 3');
+    // The picked place is back, next to them.
     vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
     const back = answer();
-    back.places.push({
-      ...back.places[1],
-      id: 'pixel@neighbour',
-      lat: back.places[1].lat + 0.0004,
-    });
-    back.places.reverse();
+    back.places.unshift(gone.places[1], gone.places[2]);
     reply(back);
-    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
-    expect(element.querySelector('g.place.picked text')?.textContent).toBe('2');
+    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 4');
   });
 
   it('keeps a pick that is gone for a while, so it comes back with the place', () => {

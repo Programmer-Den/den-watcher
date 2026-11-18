@@ -128,11 +128,11 @@ func TestServesTheWiFiNetworksOfAllPhonesByPlace(t *testing.T) {
 		t.Errorf("places of the whole retention found from %v, want the start of its first day", source.anchorsFrom)
 	}
 	// A day's and a week's range find the places from the same time: the
-	// start of the day 8 days before the one they end on.
+	// start of the day a week before the one they end on.
 	day := now.Unix() - now.Unix()%86400
 	for _, span := range []int64{86400, 7 * 86400} {
 		get(handler, "/api/wifi/positions?from="+strconv.FormatInt(now.Unix()-span, 10)+"&to="+strconv.FormatInt(now.Unix(), 10), "192.168.1.20:5000")
-		if want := day - 8*86400; source.anchorsFrom.Unix() != want {
+		if want := day - 7*86400; source.anchorsFrom.Unix() != want {
 			t.Errorf("places of %d s found from %v, want %v", span, source.anchorsFrom, time.Unix(want, 0))
 		}
 	}
