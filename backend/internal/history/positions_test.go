@@ -235,11 +235,11 @@ func TestWiFiPositionsDropAScanAfterThePhoneLeft(t *testing.T) {
 		name  string
 		route []RoutePoint
 	}{
-		// Home at 10:00, then 2 km away at 10:14, told within 1,500 m:
-		// home is outside of it.
+		// Home at 10:00, then 1 km away at 10:14, told within 1,500 m:
+		// home is inside, but more than half of it off.
 		{"vague point away from home", []RoutePoint{
 			routePoint(hour, 53.5755, 9.9530, 20),
-			routePoint(hour.Add(14*time.Minute), 53.5935, 9.9530, 1500),
+			routePoint(hour.Add(14*time.Minute), 53.5845, 9.9530, 1500),
 		}},
 		// Home at 10:00, 5 km away at 10:05, then a vague point at 10:14
 		// that covers home again: the one between tells the phone left.
@@ -265,6 +265,18 @@ func TestWiFiPositionsDropAScanAfterThePhoneLeft(t *testing.T) {
 				t.Fatalf("got %+v, want the café scan left out", got)
 			}
 		})
+	}
+}
+
+func TestPlaceAtTrustsACoarsePointNearThePreciseOne(t *testing.T) {
+	at := func(minutes int64) int64 { return minutes * 60_000 }
+	// The phone stays at home; Android tells 1,500 m, 700 m off.
+	route := []positionPoint{
+		{time: at(0), lat: 53.5755, lon: 9.953, accuracy: 20},
+		{time: at(15), lat: 53.5818, lon: 9.953, accuracy: 1500},
+	}
+	if p, ok := placeAt(route, at(10)); !ok || p.time != at(0) {
+		t.Fatalf("placeAt = %+v, %v, want home", p, ok)
 	}
 }
 

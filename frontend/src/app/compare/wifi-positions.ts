@@ -15,7 +15,7 @@ import {
   nowSeconds,
 } from '../metrics/metrics';
 import { PageVisibility } from '../page-visibility';
-import { MAP_HEIGHT, MAP_WIDTH, routeMap } from '../phone/phone-route';
+import { MAP_HEIGHT, MAP_WIDTH, meters, routeMap } from '../phone/phone-route';
 import { bandText, securityText, signalLevel, wifiBand } from './wifi';
 
 /** The ranges the places can be shown for. */
@@ -27,6 +27,12 @@ const RANGES: Range[] = [
 
 /** How often the places are read again: the phones send their scans every few minutes. */
 export const POSITIONS_REFRESH_MS = 5 * 60_000;
+
+/** How large a place is on the hub, in meters: the scans within it of its first count to it. */
+const PLACE_METERS = 100;
+
+/** A point at no time, to measure with. */
+const here = { time: 0, lat: 0, lon: 0, accuracy: 0 };
 
 /** How many places the list shows until all are asked for. */
 export const LIST_PLACES = 8;
@@ -82,16 +88,40 @@ export class WifiPositionsView {
   );
 
   /**
-   * The id of the picked place, which the hub keeps for every range, so it stays picked as the
-   * places are read again or the range changes, and comes back with the place when it was gone.
+   * The picked place: its id, which the hub keeps as the range changes or moves on, and its middle,
+   * should the id change once its first scan is older than the hub looks back, so it stays picked
+   * as the places are read again and comes back with the place when it was gone.
    */
-  private readonly pickedId = signal<string | null>(null);
+  private readonly picked = signal<{ id: string; lat: number; lon: number } | null>(null);
+
+  /** The index of the picked place among those read, or -1 when none was picked or it is gone. */
+  private readonly matched = computed(() => {
+    const places = this.places();
+    const picked = this.picked();
+    if (!picked) {
+      return -1;
+    }
+    const index = places.findIndex((p) => p.id === picked.id);
+    if (index >= 0) {
+      return index;
+    }
+    // A new id: the place whose middle is closest to where the picked one was, within its size.
+    let closest = PLACE_METERS;
+    let found = -1;
+    places.forEach((p, i) => {
+      const away = meters({ ...here, lat: p.lat, lon: p.lon }, { ...here, ...picked });
+      if (away <= closest) {
+        closest = away;
+        found = i;
+      }
+    });
+    return found;
+  });
 
   /** The picked place, or the one with the most scans while none is (or the picked one is gone). */
   protected readonly selected = computed(() => {
-    const places = this.places();
-    const index = places.findIndex((p) => p.id === this.pickedId());
-    return index >= 0 || places.length === 0 ? index : 0;
+    const matched = this.matched();
+    return matched >= 0 || this.places().length === 0 ? matched : 0;
   });
 
   protected readonly place = computed(() => this.places()[this.selected()] ?? null);
@@ -130,7 +160,7 @@ export class WifiPositionsView {
   protected select(index: number): void {
     const place = this.places()[index];
     if (place) {
-      this.pickedId.set(place.id);
+      this.picked.set({ id: place.id, lat: place.lat, lon: place.lon });
     }
   }
 
@@ -192,6 +222,11 @@ export class WifiPositionsView {
         if (answer) {
           this.failed.set(false);
           this.answer.set(answer);
+          // Keeps the picked place's id and middle as they are now; one that is gone is kept.
+          const place = this.places()[this.matched()];
+          if (place) {
+            this.picked.set({ id: place.id, lat: place.lat, lon: place.lon });
+          }
         }
       });
   }

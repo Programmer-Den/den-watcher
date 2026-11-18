@@ -29,15 +29,6 @@ class MapActivityTest {
 
     private fun points(activity: MapActivity, count: Int) = activity.resources.getQuantityString(R.plurals.map_points, count, count)
 
-    /** Runs the main thread until the map's own thread has read what it shows. */
-    private fun waitFor(done: () -> Boolean) {
-        repeat(250) {
-            shadowOf(Looper.getMainLooper()).idle()
-            if (done()) return
-            Thread.sleep(20)
-        }
-    }
-
     @Test
     fun addsTheNewPointsWhileTheMapIsOpen() {
         store.addMapPoint(point(30))

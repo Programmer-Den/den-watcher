@@ -97,19 +97,23 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
         // The newest day's worth stays even then, should the clock have jumped ahead.
         db.delete(
             "map_route",
-            "time < ? AND time < (SELECT time FROM map_route ORDER BY time DESC LIMIT 1 OFFSET ?)",
-            arrayOf((now - KEEP_MAP_MILLIS).toString(), (KEEP_MAP_DAY_POINTS - 1).toString()),
+            "time < ? AND time < COALESCE((SELECT time FROM map_route ORDER BY time DESC LIMIT 1 OFFSET ?), ?)",
+            arrayOf((now - KEEP_MAP_MILLIS).toString(), (KEEP_MAP_DAY_POINTS - 1).toString(), (now - KEEP_MAP_MILLIS).toString()),
         )
         db.delete("map_route", "time < (SELECT time FROM map_route ORDER BY time DESC LIMIT 1 OFFSET ?)", arrayOf((KEEP_MAP_ROUTE - 1).toString()))
     }
 
-    /** How many points of the route are kept for the map from since on, Unix milliseconds, and the time of the newest. */
-    fun mapPointsSince(since: Long): Pair<Int, Long?> = readableDatabase.rawQuery(
-        "SELECT COUNT(*), MAX(time) FROM map_route WHERE time >= ?",
+    /**
+     * How many points of the route are kept for the map from since on, Unix
+     * milliseconds, and the times of the oldest and newest of them, which
+     * tell whether the points changed.
+     */
+    fun mapPointsSince(since: Long): Triple<Int, Long?, Long?> = readableDatabase.rawQuery(
+        "SELECT COUNT(*), MIN(time), MAX(time) FROM map_route WHERE time >= ?",
         arrayOf(since.toString()),
     ).use { rows ->
         rows.moveToFirst()
-        rows.getInt(0) to (if (rows.isNull(1)) null else rows.getLong(1))
+        Triple(rows.getInt(0), if (rows.isNull(1)) null else rows.getLong(1), if (rows.isNull(2)) null else rows.getLong(2))
     }
 
     /** The points of the route kept for the map from since on, Unix milliseconds, oldest first. */
@@ -150,8 +154,8 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
         val now = minOf(scan.time, System.currentTimeMillis() / 1000)
         db.delete(
             "map_scans",
-            "time < ? AND time < (SELECT time FROM map_scans ORDER BY time DESC LIMIT 1 OFFSET ?)",
-            arrayOf((now - KEEP_MAP_MILLIS / 1000).toString(), (KEEP_MAP_DAY_SCANS - 1).toString()),
+            "time < ? AND time < COALESCE((SELECT time FROM map_scans ORDER BY time DESC LIMIT 1 OFFSET ?), ?)",
+            arrayOf((now - KEEP_MAP_MILLIS / 1000).toString(), (KEEP_MAP_DAY_SCANS - 1).toString(), (now - KEEP_MAP_MILLIS / 1000).toString()),
         )
         db.delete("map_scans", "time < (SELECT time FROM map_scans ORDER BY time DESC LIMIT 1 OFFSET ?)", arrayOf((KEEP_MAP_SCANS - 1).toString()))
     }
@@ -510,7 +514,7 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
          * MAP_SCAN_EVERY_SECONDS.
          */
         const val KEEP_MAP_DAY_POINTS = 96
-        const val KEEP_MAP_DAY_SCANS = 24 * 15
+        const val KEEP_MAP_DAY_SCANS = (24 * 60 * 60 / MAP_SCAN_EVERY_SECONDS).toInt()
 
         /** How many points of the route are kept for the app's map at most, as for the hub. */
         const val KEEP_MAP_ROUTE = KEEP_ROUTE

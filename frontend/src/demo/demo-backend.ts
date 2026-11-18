@@ -116,7 +116,9 @@ export class DemoBackend implements HttpBackend {
     if (request.method === 'GET' && url.pathname === '/api/wifi/positions') {
       const to = Math.min(Number(url.searchParams.get('to')), Math.floor(now) + 1);
       const from = Math.max(Number(url.searchParams.get('from')), to - DEMO_RETENTION_DAYS * 86400);
-      return respond(request, demoWifiPositions(from, to));
+      // The places are found from a week before the range on, as the hub does.
+      const anchorsFrom = Math.max(from - 7 * 86400, to - DEMO_RETENTION_DAYS * 86400);
+      return respond(request, demoWifiPositions(anchorsFrom, from, to));
     }
     if (request.method === 'GET' && url.pathname === '/api/phone/usage') {
       if (device !== DEMO_PHONE) {

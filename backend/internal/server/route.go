@@ -108,6 +108,11 @@ type positionsResponse struct {
 	Places []history.WiFiPosition `json:"places"`
 }
 
+// positionsAnchorsBefore is how long before a range the places are found
+// from: as long as the page's ranges reach further back than the shortest,
+// a week, which keeps the work for a day's range small.
+const positionsAnchorsBefore = 7 * 24 * time.Hour
+
 // positionsHandler serves GET /api/wifi/positions?from=<unix seconds>&to=<unix
 // seconds>: the places the phones scanned the Wi-Fi networks at in that
 // range, by where their routes were, each with every network heard there by
@@ -125,9 +130,11 @@ func positionsHandler(source PositionSource, retention time.Duration) http.Handl
 		kept := now.Add(-retention).Unix()
 		from = min(max(from, kept), now.Unix())
 		to = min(max(to, from+1), now.Unix()+1)
-		// The places are found from the start of the retention on, so they
-		// stay the same for every range.
-		places, err := source.WiFiPositions(r.Context(), time.Unix(kept, 0), time.Unix(from, 0), time.Unix(to, 0))
+		// The places are found from up to positionsAnchorsBefore before the
+		// range on, as the retention allows, so they keep their IDs as the
+		// page switches between its ranges or the range moves on.
+		anchorsFrom := max(kept, from-int64(positionsAnchorsBefore.Seconds()))
+		places, err := source.WiFiPositions(r.Context(), time.Unix(anchorsFrom, 0), time.Unix(from, 0), time.Unix(to, 0))
 		if err != nil {
 			slog.Error("read the places of the phones' scans", "error", err)
 			http.Error(w, "could not read the places of the phones' scans", http.StatusInternalServerError)

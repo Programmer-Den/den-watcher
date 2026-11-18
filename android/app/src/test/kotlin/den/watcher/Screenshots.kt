@@ -243,13 +243,4 @@ class Screenshots {
         /** How long a map waits for its tiles from OpenStreetMap; without internet it shows its plain background. */
         const val TILE_WAIT_SECONDS = 5
     }
-
-    /** Runs the main thread until done, while another thread reads what it shows. */
-    private fun waitFor(done: () -> Boolean) {
-        repeat(250) {
-            shadowOf(Looper.getMainLooper()).idle()
-            if (done()) return
-            Thread.sleep(20)
-        }
-    }
 }

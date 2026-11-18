@@ -183,6 +183,20 @@ describe('the Wi-Fi networks by position', () => {
     expect(element.querySelector('tbody tr')?.textContent).toContain('Cafe');
   });
 
+  it('follows the picked place by its middle when its id changed', () => {
+    reply(answer());
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
+    fixture.detectChanges();
+    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
+    // Its first scan is older than the hub looks back: a new id, about 50 m on.
+    const again = answer();
+    again.places[1].id = 'pixel@later';
+    again.places[1].lat += 0.0004;
+    reply(again);
+    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
+  });
+
   it('keeps a pick that is gone for a while, so it comes back with the place', () => {
     reply(answer());
     const element = fixture.nativeElement as HTMLElement;

@@ -94,10 +94,10 @@ func TestServesThePhonesScanNearAPoint(t *testing.T) {
 }
 
 // fakePositions has one place and keeps what it was asked for.
-type fakePositions struct{ from, to time.Time }
+type fakePositions struct{ anchorsFrom, from, to time.Time }
 
-func (f *fakePositions) WiFiPositions(_ context.Context, _, from, to time.Time) ([]history.WiFiPosition, error) {
-	f.from, f.to = from, to
+func (f *fakePositions) WiFiPositions(_ context.Context, anchorsFrom, from, to time.Time) ([]history.WiFiPosition, error) {
+	f.anchorsFrom, f.from, f.to = anchorsFrom, from, to
 	return []history.WiFiPosition{{Lat: 53.57, Lon: 9.95, Scans: 2, Devices: []string{"pixel"}, Networks: []history.PositionNetwork{
 		{SSID: "Den", SignalPercent: 80, Devices: []history.PositionSighting{{Device: "pixel", SignalPercent: 80, Scans: 2}}},
 	}}}, nil
@@ -123,6 +123,14 @@ func TestServesTheWiFiNetworksOfAllPhonesByPlace(t *testing.T) {
 	}
 	if got.To > now.Unix()+5 || source.to.Unix() != got.To {
 		t.Errorf("to = %d, want it to end now", got.To)
+	}
+	if !source.anchorsFrom.Equal(source.from) {
+		t.Errorf("places found from %v, want the start of the retention, the range's start", source.anchorsFrom)
+	}
+	// A day's range finds the places from a week before it on.
+	get(handler, "/api/wifi/positions?from="+strconv.FormatInt(now.Unix()-86400, 10)+"&to="+strconv.FormatInt(now.Unix(), 10), "192.168.1.20:5000")
+	if d := source.from.Sub(source.anchorsFrom); d != 7*24*time.Hour {
+		t.Errorf("places found %v before the range, want a week", d)
 	}
 	if rec := get(handler, "/api/wifi/positions?from=5&to=1", "192.168.1.20:5000"); rec.Code != http.StatusBadRequest {
 		t.Errorf("status of a range that ends before it starts = %d, want 400", rec.Code)

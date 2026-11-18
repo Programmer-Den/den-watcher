@@ -145,9 +145,9 @@ class MapActivity : Activity() {
         background.execute {
             if (closed) return@execute
             val read = try {
-                // The same count and newest point as shown: nothing changed.
-                val (count, newest) = store.mapPointsSince(since)
-                if (count == shown.size && newest == shown.lastOrNull()?.time && shown.firstOrNull()?.let { it.time >= since } != false) {
+                // The same count, oldest and newest point as shown: nothing changed.
+                val (count, oldest, newest) = store.mapPointsSince(since)
+                if (count == shown.size && oldest == shown.firstOrNull()?.time && newest == shown.lastOrNull()?.time) {
                     shown
                 } else {
                     store.mapPoints(since)

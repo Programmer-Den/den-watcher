@@ -13,11 +13,12 @@ const MAX_RELATED = 5;
 /**
  * What GET /api/wifi/positions answers in the demo from `from` to `to` in Unix seconds: the demo
  * phone's scans at the points of its route, grouped into places within 100 m of their first scan as
- * the hub does, the one with the most scans first, each related to the others that heard some of the same networks. The demo's
+ * the hub does, found from `anchorsFrom` on so they keep their ids, the one with the most scans in
+ * the range first, each related to the others that heard some of the same networks. The demo's
  * scans have no access point IDs, so they are related by the networks' names, as the hub does for
  * scans stored before it kept the IDs.
  */
-export function demoWifiPositions(from: number, to: number): WiFiPositions {
+export function demoWifiPositions(anchorsFrom: number, from: number, to: number): WiFiPositions {
   const places: {
     place: WiFiPosition;
     /** Where the first scan was, which the others are measured from. */
@@ -26,7 +27,7 @@ export function demoWifiPositions(from: number, to: number): WiFiPositions {
     sumLat: number;
     sumLon: number;
   }[] = [];
-  for (const point of demoPhoneRoute(from, to).points) {
+  for (const point of demoPhoneRoute(Math.min(anchorsFrom, from), to).points) {
     const scan = demoPhoneScan(point.time).scan;
     if (!scan) {
       continue;
@@ -60,9 +61,16 @@ export function demoWifiPositions(from: number, to: number): WiFiPositions {
       };
       places.push(entry);
     }
+    if (scan.time < from) {
+      // Before the range: it only keeps the place where it was.
+      continue;
+    }
     entry.sumLat += point.lat;
     entry.sumLon += point.lon;
     const place = entry.place;
+    if (place.scans === 0) {
+      place.first = scan.time;
+    }
     place.scans++;
     place.last = scan.time;
     place.lat = round6(entry.sumLat / place.scans);
@@ -76,7 +84,10 @@ export function demoWifiPositions(from: number, to: number): WiFiPositions {
       addSighting(network, n.signalPercent, scan.time, n.frequencyMHz, n.security, n.connected);
     }
   }
-  const all = places.map((e) => e.place).sort((a, b) => b.scans - a.scans || b.last - a.last);
+  const all = places
+    .map((e) => e.place)
+    .filter((p) => p.scans > 0)
+    .sort((a, b) => b.scans - a.scans || b.last - a.last);
   for (const place of all) {
     place.networks.sort((a, b) => b.signalPercent - a.signalPercent);
   }

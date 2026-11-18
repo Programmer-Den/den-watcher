@@ -27,6 +27,11 @@ const (
 	// positionAfter is how long after a scan the point may be, when it is
 	// closer in time than the one before.
 	positionAfter = 5 * time.Minute
+	// positionVagueMeters is how far a vague point's middle may be from a
+	// precise one at least, for that to place a scan the vague one is closer
+	// to in time; at most half its accuracy otherwise: a vague point further
+	// off tells the phone may have moved.
+	positionVagueMeters = 2 * PositionMaxAccuracy
 	// MaxPositionScans is how many scans WiFiPositions reads at most: the
 	// newest, a month of a few phones.
 	MaxPositionScans = 20000
@@ -243,7 +248,8 @@ func pointAt(route []positionPoint, i int, t int64, accept func(positionPoint) b
 // t, Unix milliseconds: the one closest in time, if it is not vaguer than
 // PositionMaxAccuracy. If it is, a precise point within the same time
 // places the scan only if every point between it and the scan agrees that
-// the phone stayed: each within its own accuracy and PositionMeters of it.
+// the phone stayed: each within its own accuracy and PositionMeters of it,
+// and the vague one also within half its accuracy, or positionVagueMeters.
 // The precise point closest in time is tried first, then the one on the
 // other side of the scan. A scan of another place, after the phone moved,
 // must not count at the old one.
@@ -267,7 +273,9 @@ func placeAt(route []positionPoint, t int64) (positionPoint, bool) {
 		tries = []int{after, before}
 	}
 	for _, j := range tries {
-		if j >= 0 && stayed(route, j, any) {
+		vague := route[any]
+		if j >= 0 && stayed(route, j, any) &&
+			distanceMeters(route[j].lat, route[j].lon, vague.lat, vague.lon) <= max(vague.accuracy/2, positionVagueMeters) {
 			return route[j], true
 		}
 	}
