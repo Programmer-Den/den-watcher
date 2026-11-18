@@ -504,6 +504,9 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
          */
         const val KEEP_ROUTE = 20_000
 
+        /** How often a scan is kept for the app's map at most: as often as the app asks for one. */
+        const val MAP_SCAN_EVERY_SECONDS = 4 * 60L
+
         /** How long the route and scans are kept for the app's map: the week it shows at most. */
         const val KEEP_MAP_MILLIS = 7 * 24 * 60 * 60_000L
 
@@ -520,9 +523,6 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
 
         /** How many points of the route are kept for the app's map at most, as for the hub. */
         const val KEEP_MAP_ROUTE = KEEP_ROUTE
-
-        /** How often a scan is kept for the app's map at most: as often as the app asks for one. */
-        const val MAP_SCAN_EVERY_SECONDS = 4 * 60L
 
         /** How many scans are kept for the app's map: a week of one every MAP_SCAN_EVERY_SECONDS. */
         const val KEEP_MAP_SCANS = 7 * 24 * 15
