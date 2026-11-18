@@ -139,7 +139,9 @@ class Screenshots {
 
     /** A morning's route kept for the map, from home past a café to work, with the scans along it. */
     private fun keepRoute(store: Store) {
-        val start = System.currentTimeMillis() - 3 * 60 * 60_000L
+        // On the hour, so the light and the dark screenshot keep the same points.
+        val hour = 60 * 60_000L
+        val start = (System.currentTimeMillis() - 3 * hour) / hour * hour
         val way = listOf(
             0 to (53.5511 to 9.9937), 10 to (53.5512 to 9.9938), 25 to (53.5510 to 9.9936),
             32 to (53.5530 to 9.9890), 40 to (53.5560 to 9.9850), 52 to (53.5561 to 9.9851),
