@@ -88,29 +88,36 @@ export class WifiPositionsView {
   );
 
   /**
-   * The picked place, kept by its first scan's point as the places are read again: the one with the
-   * most scans until another is picked.
+   * The picked place: its id, which the hub keeps as the range changes or moves on, and its middle,
+   * should the id change as the hub looks back from a day later or over 30 days, so it stays
+   * picked as the places are read again and comes back with the place when it was gone.
    */
-  private readonly pickedAt = signal<{ lat: number; lon: number } | null>(null);
+  private readonly picked = signal<{ id: string; lat: number; lon: number } | null>(null);
 
-  /** The index of the picked place among those read, or -1 when none was picked or it is gone. */
+  /**
+   * The index of the picked place among those read: by its id, or else by the middle closest to
+   * where it was, within its size; -1 when none was picked or it is gone.
+   */
   private readonly matched = computed(() => {
     const places = this.places();
-    const at = this.pickedAt();
-    let index = -1;
-    if (at) {
-      // The same point, or, once its first scan left the range, the closest within a place's
-      // size: the hub keeps those points more than a place's size apart.
-      let closest = PLACE_METERS;
-      places.forEach((p, i) => {
-        const away = meters({ ...here, lat: p.anchorLat, lon: p.anchorLon }, { ...here, ...at });
-        if (away <= closest) {
-          closest = away;
-          index = i;
-        }
-      });
+    const picked = this.picked();
+    if (!picked) {
+      return -1;
     }
-    return index;
+    const index = places.findIndex((p) => p.id === picked.id);
+    if (index >= 0) {
+      return index;
+    }
+    let closest = PLACE_METERS;
+    let found = -1;
+    places.forEach((p, i) => {
+      const away = meters({ ...here, lat: p.lat, lon: p.lon }, { ...here, ...picked });
+      if (away <= closest) {
+        closest = away;
+        found = i;
+      }
+    });
+    return found;
   });
 
   /** The picked place, or the one with the most scans while none is (or the picked one is gone). */
@@ -155,7 +162,7 @@ export class WifiPositionsView {
   protected select(index: number): void {
     const place = this.places()[index];
     if (place) {
-      this.pickedAt.set({ lat: place.anchorLat, lon: place.anchorLon });
+      this.picked.set({ id: place.id, lat: place.lat, lon: place.lon });
     }
   }
 
@@ -217,13 +224,20 @@ export class WifiPositionsView {
         if (answer) {
           this.failed.set(false);
           this.answer.set(answer);
-          // The picked place's first scan moves on as old scans leave the range: keep the new one.
-          // A pick that is gone for now is kept, so it comes back with the place.
+          // Keeps the picked place's id and middle as they are now. A place found by its middle
+          // is taken for it only when the picked one's first scan is before the places were found
+          // from, so its id changed; else it may be a neighbour, and the picked one may come back.
+          const picked = this.picked();
           const place = this.places()[this.matched()];
-          if (place) {
-            this.pickedAt.set({ lat: place.anchorLat, lon: place.anchorLon });
+          if (place && (place.id === picked?.id || firstScan(picked?.id) < answer.placesFrom)) {
+            this.picked.set({ id: place.id, lat: place.lat, lon: place.lon });
           }
         }
       });
   }
+}
+
+/** The Unix time of a place's first scan, from its id (`<device>@<time>`), or NaN. */
+function firstScan(id: string | undefined): number {
+  return id ? Number(id.slice(id.lastIndexOf('@') + 1)) : NaN;
 }

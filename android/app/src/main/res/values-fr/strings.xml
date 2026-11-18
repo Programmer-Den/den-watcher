@@ -103,6 +103,7 @@
     <string name="map_scan_summary">%1$s · %2$s</string>
     <string name="map_scan_at">détectés à ce point</string>
     <string name="map_no_scan">Le téléphone n\'a gardé aucune recherche Wi-Fi dans les 5 minutes autour de ce point. Laissez Réseaux Wi-Fi à proximité activé pour les voir.</string>
+    <string name="map_read_failed">Impossible de lire les données de la carte pour le moment. La carte réessaie dans une minute.</string>
     <string name="map_hidden">Réseau masqué</string>
     <string name="map_connected">connecté</string>
     <string name="map_open_network">Ouvert</string>

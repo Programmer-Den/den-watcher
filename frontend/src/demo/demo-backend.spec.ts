@@ -148,7 +148,8 @@ describe('DemoBackend', () => {
     }
     // The most scanned place is home, where the phone heard its own network best.
     expect(answer.places[0].networks[0].ssid).toBe('Den');
-    expect(answer.places[0].related?.length).toBeGreaterThan(0);
+    // Home itself may share no network with another place, depending on the day's way.
+    expect(answer.places.some((p) => (p.related?.length ?? 0) > 0)).toBe(true);
   });
 
   it('tells the Wi-Fi networks the phone scanned at each point of its route, connected to one at a place', async () => {

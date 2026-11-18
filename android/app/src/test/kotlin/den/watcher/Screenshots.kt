@@ -17,7 +17,6 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
-import java.util.concurrent.Executor
 
 /**
  * Draws the app's screen in a few states, light and dark, into PNGs for a
@@ -183,55 +182,57 @@ class Screenshots {
         set: Settings.() -> Unit,
     ) {
         folder.mkdirs()
-        // The map reads its points in place, so they are there for the shot.
-        val background = MapActivity.background
-        MapActivity.background = Executor { it.run() }
-        try {
-            for (mode in listOf("light", "dark")) {
-                val qualifiers = listOfNotNull(language, if (mode == "dark") "night" else "notnight")
-                RuntimeEnvironment.setQualifiers("+" + qualifiers.joinToString("-"))
-                val app = RuntimeEnvironment.getApplication()
-                app.getSharedPreferences("settings", 0).edit().clear().commit()
-                Settings(app).set()
-                shadowOf(app).grantPermissions(*permissions)
-                shadowOf(app.getSystemService(AppOpsManager::class.java)).setMode(
-                    AppOpsManager.OPSTR_GET_USAGE_STATS,
-                    Process.myUid(),
-                    app.packageName,
-                    if (usageAccess) AppOpsManager.MODE_ALLOWED else AppOpsManager.MODE_DEFAULT,
-                )
-                Store(app).use(fill)
-                val activity = Robolectric.buildActivity(screen).setup().get()
-                // Runs the status refresh that onResume posts.
-                shadowOf(Looper.getMainLooper()).idle()
-                tap(activity)
-                // Runs what the tap posts, such as the picked point's networks.
-                shadowOf(Looper.getMainLooper()).idle()
-                val content = activity.findViewById<View>(R.id.content)
-                val metrics = activity.resources.displayMetrics
-                val width = metrics.widthPixels
-                content.measure(
-                    View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
-                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                )
-                val height = maxOf(content.measuredHeight, metrics.heightPixels)
-                content.layout(0, 0, width, content.measuredHeight)
-                if (screen != MainActivity::class.java) {
-                    // A first draw asks for the map's tiles, which come in on the main thread.
-                    content.draw(Canvas(Bitmap.createBitmap(width, content.measuredHeight, Bitmap.Config.ARGB_8888)))
-                    repeat(TILE_WAIT_SECONDS) {
-                        Thread.sleep(1000)
-                        shadowOf(Looper.getMainLooper()).idle()
-                    }
-                }
-                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                val canvas = Canvas(bitmap)
-                canvas.drawColor(activity.getColor(R.color.surface))
-                content.draw(canvas)
-                File(folder, "$name-$mode.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        for (mode in listOf("light", "dark")) {
+            val qualifiers = listOfNotNull(language, if (mode == "dark") "night" else "notnight")
+            RuntimeEnvironment.setQualifiers("+" + qualifiers.joinToString("-"))
+            val app = RuntimeEnvironment.getApplication()
+            app.getSharedPreferences("settings", 0).edit().clear().commit()
+            Settings(app).set()
+            shadowOf(app).grantPermissions(*permissions)
+            shadowOf(app.getSystemService(AppOpsManager::class.java)).setMode(
+                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                Process.myUid(),
+                app.packageName,
+                if (usageAccess) AppOpsManager.MODE_ALLOWED else AppOpsManager.MODE_DEFAULT,
+            )
+            Store(app).use(fill)
+            val controller = Robolectric.buildActivity(screen).setup()
+            val activity = controller.get()
+            // Runs the status refresh that onResume posts.
+            shadowOf(Looper.getMainLooper()).idle()
+            if (activity is MapActivity) {
+                // The map reads its points on its own thread.
+                waitFor { activity.findViewById<View>(R.id.route_group).visibility == View.VISIBLE }
             }
-        } finally {
-            MapActivity.background = background
+            tap(activity)
+            if (activity is MapActivity && activity.findViewById<View>(R.id.point_group).visibility == View.VISIBLE) {
+                // And the picked point's networks.
+                waitFor { activity.findViewById<android.widget.TextView>(R.id.scan_summary).text.isNotEmpty() }
+            }
+            val content = activity.findViewById<View>(R.id.content)
+            val metrics = activity.resources.displayMetrics
+            val width = metrics.widthPixels
+            content.measure(
+                View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            )
+            val height = maxOf(content.measuredHeight, metrics.heightPixels)
+            content.layout(0, 0, width, content.measuredHeight)
+            if (screen != MainActivity::class.java) {
+                // A first draw asks for the map's tiles, which come in on the main thread.
+                content.draw(Canvas(Bitmap.createBitmap(width, content.measuredHeight, Bitmap.Config.ARGB_8888)))
+                repeat(TILE_WAIT_SECONDS) {
+                    Thread.sleep(1000)
+                    shadowOf(Looper.getMainLooper()).idle()
+                }
+            }
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            canvas.drawColor(activity.getColor(R.color.surface))
+            content.draw(canvas)
+            File(folder, "$name-$mode.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            // Closes a map's thread and database before the next one fills it.
+            controller.pause().stop().destroy()
         }
     }
 

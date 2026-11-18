@@ -104,6 +104,7 @@
     <string name="map_scan_summary">%1$s · %2$s</string>
     <string name="map_scan_at">scanned at this point</string>
     <string name="map_no_scan">The phone kept no Wi-Fi scan within 5 minutes of this point. Keep Wi-Fi networks nearby on to see them.</string>
+    <string name="map_read_failed">The data for the map could not be read just now. The map tries again in a minute.</string>
     <string name="map_hidden">Hidden network</string>
     <string name="map_connected">connected</string>
     <string name="map_open_network">Open</string>

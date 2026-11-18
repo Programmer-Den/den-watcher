@@ -97,15 +97,40 @@ func phoneScanHandler(d Device, source PhoneScanSource) http.HandlerFunc {
 
 // PositionSource reads the places the phones scanned the Wi-Fi networks at.
 type PositionSource interface {
-	WiFiPositions(ctx context.Context, from, to time.Time) ([]history.WiFiPosition, error)
+	WiFiPositions(ctx context.Context, anchorsFrom, from, to time.Time) ([]history.WiFiPosition, error)
 }
 
 // positionsResponse is the body of GET /api/wifi/positions. Times are Unix
 // seconds.
 type positionsResponse struct {
-	From   int64                  `json:"from"`
-	To     int64                  `json:"to"`
-	Places []history.WiFiPosition `json:"places"`
+	From int64 `json:"from"`
+	To   int64 `json:"to"`
+	// PlacesFrom is when the places were found from: the IDs are of their
+	// first scan since.
+	PlacesFrom int64                  `json:"placesFrom"`
+	Places     []history.WiFiPosition `json:"places"`
+}
+
+// positionsAnchorsBefore is how long before the day a range ends on the
+// places are found from: the page's week, so its day and week ranges find
+// them from the same time and their places keep the same IDs, which change
+// only once a day.
+const positionsAnchorsBefore = 7 * 24 * time.Hour
+
+// positionsAnchorsFrom is when the places of a range are found from, Unix
+// seconds: positionsAnchorsBefore before the start of the UTC day the range
+// ends on, or the start of its first day for a longer range. A fixed time
+// of the day, the same for all ranges that start after it, so a place
+// keeps its first scan, and its ID, as the page switches between its
+// ranges or the range moves on. Scans older than the retention but not yet
+// deleted only help find the places; they never count.
+func positionsAnchorsFrom(from, to int64) int64 {
+	const day = 24 * 60 * 60
+	anchors := to - to%day - int64(positionsAnchorsBefore.Seconds())
+	if from < anchors {
+		anchors = from - from%day
+	}
+	return anchors
 }
 
 // positionsHandler serves GET /api/wifi/positions?from=<unix seconds>&to=<unix
@@ -122,9 +147,11 @@ func positionsHandler(source PositionSource, retention time.Duration) http.Handl
 			return
 		}
 		now := time.Now()
-		from = min(max(from, now.Add(-retention).Unix()), now.Unix())
+		kept := now.Add(-retention).Unix()
+		from = min(max(from, kept), now.Unix())
 		to = min(max(to, from+1), now.Unix()+1)
-		places, err := source.WiFiPositions(r.Context(), time.Unix(from, 0), time.Unix(to, 0))
+		anchorsFrom := positionsAnchorsFrom(from, to)
+		places, err := source.WiFiPositions(r.Context(), time.Unix(anchorsFrom, 0), time.Unix(from, 0), time.Unix(to, 0))
 		if err != nil {
 			slog.Error("read the places of the phones' scans", "error", err)
 			http.Error(w, "could not read the places of the phones' scans", http.StatusInternalServerError)
@@ -133,6 +160,6 @@ func positionsHandler(source PositionSource, retention time.Duration) http.Handl
 		if places == nil {
 			places = []history.WiFiPosition{}
 		}
-		writeJSON(w, http.StatusOK, positionsResponse{From: from, To: to, Places: places})
+		writeJSON(w, http.StatusOK, positionsResponse{From: from, To: to, PlacesFrom: min(anchorsFrom, from), Places: places})
 	}
 }

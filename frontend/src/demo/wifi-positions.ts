@@ -12,18 +12,22 @@ const MAX_RELATED = 5;
 
 /**
  * What GET /api/wifi/positions answers in the demo from `from` to `to` in Unix seconds: the demo
- * phone's scans at the points of its route, grouped into places within 100 m of their first scan as the hub does, the one with the
- * most scans first, each related to the others that heard some of the same networks. The demo's
+ * phone's scans at the points of its route, grouped into places within 100 m of their first scan as
+ * the hub does, found from `anchorsFrom` on so they keep their ids, the one with the most scans in
+ * the range first, each related to the others that heard some of the same networks. The demo's
  * scans have no access point IDs, so they are related by the networks' names, as the hub does for
  * scans stored before it kept the IDs.
  */
-export function demoWifiPositions(from: number, to: number): WiFiPositions {
+export function demoWifiPositions(anchorsFrom: number, from: number, to: number): WiFiPositions {
   const places: {
     place: WiFiPosition;
+    /** Where the first scan was, which the others are measured from. */
+    lat: number;
+    lon: number;
     sumLat: number;
     sumLon: number;
   }[] = [];
-  for (const point of demoPhoneRoute(from, to).points) {
+  for (const point of demoPhoneRoute(Math.min(anchorsFrom, from), to).points) {
     const scan = demoPhoneScan(point.time).scan;
     if (!scan) {
       continue;
@@ -32,7 +36,7 @@ export function demoWifiPositions(from: number, to: number): WiFiPositions {
     let entry: (typeof places)[number] | undefined;
     let closest = PLACE_METERS;
     for (const e of places) {
-      const away = meters({ ...point, lat: e.place.anchorLat, lon: e.place.anchorLon }, point);
+      const away = meters({ ...point, lat: e.lat, lon: e.lon }, point);
       if (away <= closest) {
         closest = away;
         entry = e;
@@ -43,22 +47,31 @@ export function demoWifiPositions(from: number, to: number): WiFiPositions {
         place: {
           lat: 0,
           lon: 0,
-          anchorLat: round6(point.lat),
-          anchorLon: round6(point.lon),
+          // By the point's time: points close in time can share a scan.
+          id: `${DEMO_PHONE}@${point.time}`,
           scans: 0,
           first: scan.time,
           last: 0,
           devices: [DEMO_PHONE],
           networks: [],
         },
+        lat: point.lat,
+        lon: point.lon,
         sumLat: 0,
         sumLon: 0,
       };
       places.push(entry);
     }
+    if (scan.time < from) {
+      // Before the range: it only keeps the place where it was.
+      continue;
+    }
     entry.sumLat += point.lat;
     entry.sumLon += point.lon;
     const place = entry.place;
+    if (place.scans === 0) {
+      place.first = scan.time;
+    }
     place.scans++;
     place.last = scan.time;
     place.lat = round6(entry.sumLat / place.scans);
@@ -72,12 +85,15 @@ export function demoWifiPositions(from: number, to: number): WiFiPositions {
       addSighting(network, n.signalPercent, scan.time, n.frequencyMHz, n.security, n.connected);
     }
   }
-  const all = places.map((e) => e.place).sort((a, b) => b.scans - a.scans || b.last - a.last);
+  const all = places
+    .map((e) => e.place)
+    .filter((p) => p.scans > 0)
+    .sort((a, b) => b.scans - a.scans || b.last - a.last);
   for (const place of all) {
     place.networks.sort((a, b) => b.signalPercent - a.signalPercent);
   }
   relate(all);
-  return { from, to, places: all };
+  return { from, to, placesFrom: Math.min(anchorsFrom, from), places: all };
 }
 
 function addSighting(

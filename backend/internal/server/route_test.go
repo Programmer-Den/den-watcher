@@ -94,10 +94,10 @@ func TestServesThePhonesScanNearAPoint(t *testing.T) {
 }
 
 // fakePositions has one place and keeps what it was asked for.
-type fakePositions struct{ from, to time.Time }
+type fakePositions struct{ anchorsFrom, from, to time.Time }
 
-func (f *fakePositions) WiFiPositions(_ context.Context, from, to time.Time) ([]history.WiFiPosition, error) {
-	f.from, f.to = from, to
+func (f *fakePositions) WiFiPositions(_ context.Context, anchorsFrom, from, to time.Time) ([]history.WiFiPosition, error) {
+	f.anchorsFrom, f.from, f.to = anchorsFrom, from, to
 	return []history.WiFiPosition{{Lat: 53.57, Lon: 9.95, Scans: 2, Devices: []string{"pixel"}, Networks: []history.PositionNetwork{
 		{SSID: "Den", SignalPercent: 80, Devices: []history.PositionSighting{{Device: "pixel", SignalPercent: 80, Scans: 2}}},
 	}}}, nil
@@ -123,6 +123,21 @@ func TestServesTheWiFiNetworksOfAllPhonesByPlace(t *testing.T) {
 	}
 	if got.To > now.Unix()+5 || source.to.Unix() != got.To {
 		t.Errorf("to = %d, want it to end now", got.To)
+	}
+	if want := got.From - got.From%86400; source.anchorsFrom.Unix() != want {
+		t.Errorf("places of the whole retention found from %v, want the start of its first day", source.anchorsFrom)
+	}
+	if got.PlacesFrom != source.anchorsFrom.Unix() {
+		t.Errorf("placesFrom = %d, want %d", got.PlacesFrom, source.anchorsFrom.Unix())
+	}
+	// A day's and a week's range find the places from the same time: the
+	// start of the day a week before the one they end on.
+	day := now.Unix() - now.Unix()%86400
+	for _, span := range []int64{86400, 7 * 86400} {
+		get(handler, "/api/wifi/positions?from="+strconv.FormatInt(now.Unix()-span, 10)+"&to="+strconv.FormatInt(now.Unix(), 10), "192.168.1.20:5000")
+		if want := day - 7*86400; source.anchorsFrom.Unix() != want {
+			t.Errorf("places of %d s found from %v, want %v", span, source.anchorsFrom, time.Unix(want, 0))
+		}
 	}
 	if rec := get(handler, "/api/wifi/positions?from=5&to=1", "192.168.1.20:5000"); rec.Code != http.StatusBadRequest {
 		t.Errorf("status of a range that ends before it starts = %d, want 400", rec.Code)

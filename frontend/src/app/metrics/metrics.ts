@@ -396,6 +396,8 @@ export interface ScannedNetwork {
 export interface WiFiPositions {
   from: number;
   to: number;
+  /** When the places were found from, Unix seconds: their ids are of their first scan since. */
+  placesFrom: number;
   places: WiFiPosition[];
 }
 
@@ -404,11 +406,10 @@ export interface WiFiPosition {
   lat: number;
   lon: number;
   /**
-   * Where the first scan there was, which the others are measured from: it stays while new scans
-   * move the middle, and is more than 100 m from every other place's.
+   * Tells the place apart: the phone and Unix time of its first scan since `placesFrom`, so the
+   * same for the day and week ranges until that moves on a day.
    */
-  anchorLat: number;
-  anchorLon: number;
+  id: string;
   scans: number;
   /** When the first and the last scan there were made, in Unix seconds. */
   first: number;
