@@ -38,6 +38,8 @@ export function demoWifiPositions(from: number, to: number): WiFiPositions {
         place: {
           lat: 0,
           lon: 0,
+          anchorLat: point.lat,
+          anchorLon: point.lon,
           scans: 0,
           first: scan.time,
           last: 0,

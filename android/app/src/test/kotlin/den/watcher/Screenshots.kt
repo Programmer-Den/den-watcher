@@ -17,6 +17,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
+import java.util.concurrent.Executor
 
 /**
  * Draws the app's screen in a few states, light and dark, into PNGs for a
@@ -196,6 +197,8 @@ class Screenshots {
                 if (usageAccess) AppOpsManager.MODE_ALLOWED else AppOpsManager.MODE_DEFAULT,
             )
             Store(app).use(fill)
+            // The map reads its points in place, so they are there for the shot.
+            MapActivity.background = Executor { it.run() }
             val activity = Robolectric.buildActivity(screen).setup().get()
             // Runs the status refresh that onResume posts.
             shadowOf(Looper.getMainLooper()).idle()

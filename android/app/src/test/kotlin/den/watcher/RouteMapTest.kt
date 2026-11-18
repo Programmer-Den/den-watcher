@@ -109,6 +109,23 @@ class RouteMapTest {
     }
 
     @Test
+    fun keepsTheMapsRouteAndScansForAWeek() {
+        val week = Store.KEEP_MAP_MILLIS
+        store.addMapPoint(home)
+        store.addMapScan(SeenScan(home.time / 1000, emptyList()))
+        store.addMapPoint(home.copy(time = home.time + week))
+        store.addMapScan(SeenScan((home.time + week) / 1000, emptyList()))
+        assertEquals(2, store.mapPoints(0).size)
+        assertEquals(home.time / 1000, store.mapScanNear(home.time / 1000)?.time)
+        // A few minutes more, and the first ones are older than a week.
+        val later = home.time + week + Store.MAP_SCAN_EVERY_SECONDS * 1000
+        store.addMapPoint(home.copy(time = later))
+        store.addMapScan(SeenScan(later / 1000, emptyList()))
+        assertEquals(listOf(home.time + week, later), store.mapPoints(0).map { it.time })
+        assertNull(store.mapScanNear(home.time / 1000))
+    }
+
+    @Test
     fun keepsAScanForTheMapEveryFewMinutes() {
         val t = home.time / 1000
         fun scan(time: Long) = SeenScan(time, listOf(SeenNetwork("Home", -50, 5180, "WPA2", true)))

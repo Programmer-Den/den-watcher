@@ -60,7 +60,7 @@ h3 {
   }
 }
 
-.place circle {
+.place circle:not(.hit) {
   fill: var(--place-casing);
   stroke: var(--place);
   stroke-width: 2.5;
@@ -73,7 +73,7 @@ h3 {
   text-anchor: middle;
 }
 
-.place.picked circle {
+.place.picked circle:not(.hit) {
   fill: var(--place);
   stroke: var(--place-casing);
   stroke-width: 3;
@@ -91,6 +91,7 @@ h3 {
 
 .hit {
   fill: transparent;
+  stroke: none;
   cursor: pointer;
 
   &:hover {

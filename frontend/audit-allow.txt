@@ -1,0 +1,3 @@
+# Advisories ci/npm-audit.sh lets pass: no fixed version yet, and only in tools
+# that build or test the page, never in what is shipped. One GHSA id per line.
+GHSA-fc5q-39xc-vjpf # picomatch <=4.0.7, ReDoS; through @angular/build, vite, vitest

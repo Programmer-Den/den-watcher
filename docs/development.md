@@ -82,12 +82,12 @@ gitleaks git
 bash ci/check-no-ai-links.sh
 bash ci/check-demo-covers-addons.sh
 (cd backend && gofmt -l . && golangci-lint run && go test ./... && go mod tidy -diff && go tool govulncheck ./...)
-(cd frontend && npm run format:check && npm run lint && npm audit --audit-level=high && npm test && npm run build)
+(cd frontend && npm run format:check && npm run lint && bash ../ci/npm-audit.sh && npm test && npm run build)
 ```
 
 - Formatting: `gofumpt` and `goimports` for Go (`golangci-lint fmt` fixes it), Prettier for the frontend (`npm run format` fixes it)
 - Linting: `golangci-lint` with the settings in `backend/.golangci.yml`; ESLint in the frontend, which also fails on circular imports
-- Dependencies: `govulncheck` and `npm audit` fail on known vulnerabilities; `go mod tidy -diff` fails when `go.mod` or `go.sum` is out of date
+- Dependencies: `govulncheck` and `npm audit` fail on known vulnerabilities (`ci/npm-audit.sh` lets the advisories in `frontend/audit-allow.txt` pass: no fixed version yet, and only in tools that build or test the page); `go mod tidy -diff` fails when `go.mod` or `go.sum` is out of date
 - Shell scripts: `bash -n` and `shellcheck`
 - Android app: `(cd android && ./gradlew testReleaseUnitTest lintRelease assembleRelease)`, with the Android SDK in `ANDROID_HOME`; `./gradlew testReleaseUnitTest -Pscreenshots=$PWD/shots` draws the app's screen in a few states, light and dark, into PNGs there
 

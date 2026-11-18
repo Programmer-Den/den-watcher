@@ -10,8 +10,11 @@
 </div>
 
 @if (answer(); as a) {
+  @if (failed()) {
+    <p class="detail" role="status">{{ i18n.t('wifiPositions.failed') }}</p>
+  }
   @if (map(); as m) {
-    <div class="overview" [class.stale]="connection.lost()">
+    <div class="overview" [class.stale]="connection.lost() || failed()">
       <figure class="map">
         <svg
           [attr.viewBox]="'0 0 ' + MAP_WIDTH + ' ' + MAP_HEIGHT"
@@ -54,12 +57,11 @@
               } @else {
                 <circle r="3.5" />
               }
+              <!-- In the drawing order, so a click picks the place drawn on top. -->
+              <circle class="hit" r="14" (click)="select(i)">
+                <title>{{ i18n.t('wifiPositions.place', { number: i + 1 }) }}</title>
+              </circle>
             </g>
-          }
-          @for (pt of m.points; track $index; let i = $index) {
-            <circle class="hit" [attr.cx]="pt.x" [attr.cy]="pt.y" r="14" (click)="select(i)">
-              <title>{{ i18n.t('wifiPositions.place', { number: i + 1 }) }}</title>
-            </circle>
           }
         </svg>
         <figcaption class="detail">{{ i18n.t('phoneRoute.attribution') }}</figcaption>

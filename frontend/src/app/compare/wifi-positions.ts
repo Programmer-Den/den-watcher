@@ -88,8 +88,8 @@ export class WifiPositionsView {
   );
 
   /**
-   * The picked place, kept by where it is as the places are read again: the one with the most
-   * scans until another is picked.
+   * The picked place, kept by its first scan's point as the places are read again: the one with the
+   * most scans until another is picked.
    */
   private readonly pickedAt = signal<{ lat: number; lon: number } | null>(null);
 
@@ -98,10 +98,11 @@ export class WifiPositionsView {
     const at = this.pickedAt();
     let index = places.length > 0 ? 0 : -1;
     if (at) {
-      // Its middle moves a little with each new scan there, so the closest within a place's size.
+      // The same point, or, once its first scan left the range, the closest within a place's
+      // size: the hub keeps those points more than a place's size apart.
       let closest = PLACE_METERS;
       places.forEach((p, i) => {
-        const away = meters({ ...here, lat: p.lat, lon: p.lon }, { ...here, ...at });
+        const away = meters({ ...here, lat: p.anchorLat, lon: p.anchorLon }, { ...here, ...at });
         if (away <= closest) {
           closest = away;
           index = i;
@@ -147,7 +148,7 @@ export class WifiPositionsView {
   protected select(index: number): void {
     const place = this.places()[index];
     if (place) {
-      this.pickedAt.set({ lat: place.lat, lon: place.lon });
+      this.pickedAt.set({ lat: place.anchorLat, lon: place.anchorLon });
     }
   }
 

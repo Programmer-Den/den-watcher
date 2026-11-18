@@ -40,6 +40,12 @@ type WiFiPosition struct {
 	// Lat and Lon are the middle of the scans' points, in degrees.
 	Lat float64 `json:"lat"`
 	Lon float64 `json:"lon"`
+	// AnchorLat and AnchorLon are the point of the first scan, which the
+	// others are measured from: they stay while new scans move the middle,
+	// and are more than PositionMeters from every other place's, so the
+	// page keeps a picked place by them.
+	AnchorLat float64 `json:"anchorLat"`
+	AnchorLon float64 `json:"anchorLon"`
 	// Scans is how many scans were made there, First and Last when, in
 	// Unix seconds.
 	Scans int   `json:"scans"`
@@ -97,22 +103,21 @@ type PositionSighting struct {
 	Scans         int     `json:"scans"`
 }
 
-// positionPoint is a point of a phone's route, Time in Unix milliseconds.
+// positionPoint is a point of a phone's route, Time in Unix milliseconds,
+// accuracy in meters.
 type positionPoint struct {
 	time     int64
 	lat, lon float64
+	accuracy float64
 }
 
 // WiFiPositions returns the places the phones scanned the Wi-Fi networks at
 // from from up to (not including) to, the one with the most scans first, at
 // most MaxPositions: each scan of the newest MaxPositionScans is placed at
-// the point of its phone's route closest in time to it, and counts to the
-// first place within PositionMeters of that point.
+// the point of its phone's route closest in time to it, unless that point is
+// vaguer than PositionMaxAccuracy, and counts to the first place within
+// PositionMeters of that point.
 func (s *Store) WiFiPositions(ctx context.Context, from, to time.Time) ([]WiFiPosition, error) {
-	routes, err := s.positionPoints(ctx, from.Add(-positionBefore), to.Add(positionAfter))
-	if err != nil {
-		return nil, err
-	}
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT device, time, networks FROM phone_scans
 		WHERE time >= ? AND time < ? ORDER BY time DESC LIMIT ?`, from.Unix(), to.Unix(), MaxPositionScans)
@@ -136,12 +141,25 @@ func (s *Store) WiFiPositions(ctx context.Context, from, to time.Time) ([]WiFiPo
 	if err != nil {
 		return nil, err
 	}
+	if len(scans) == 0 {
+		return []WiFiPosition{}, nil
+	}
 	slices.Reverse(scans)
+	// Only the points that can place the scans read: the newest scans of a
+	// long range may be far fewer than the points of all routes in it.
+	routes, err := s.positionPoints(ctx,
+		time.Unix(scans[0].time, 0).Add(-positionBefore),
+		time.Unix(scans[len(scans)-1].time, 0).Add(positionAfter+time.Second))
+	if err != nil {
+		return nil, err
+	}
 
 	var grouper positionGrouper
 	for _, sc := range scans {
 		p, ok := pointAt(routes[sc.device], sc.time*1000)
-		if !ok {
+		// A vague point tells nothing of where the scan was, and an older
+		// accurate one may be far from it once the phone moved.
+		if !ok || p.accuracy > PositionMaxAccuracy {
 			continue
 		}
 		var networks []ScannedNetwork
@@ -153,12 +171,12 @@ func (s *Store) WiFiPositions(ctx context.Context, from, to time.Time) ([]WiFiPo
 	return grouper.positions(), nil
 }
 
-// positionPoints reads the points of all phones' routes from from up to to
-// that are not vaguer than PositionMaxAccuracy, by phone, oldest first.
+// positionPoints reads the points of all phones' routes from from up to to,
+// by phone, oldest first.
 func (s *Store) positionPoints(ctx context.Context, from, to time.Time) (map[string][]positionPoint, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT device, time, lat, lon FROM route_points
-		WHERE time >= ? AND time < ? AND accuracy <= ? ORDER BY time`, from.UnixMilli(), to.UnixMilli(), PositionMaxAccuracy)
+		SELECT device, time, lat, lon, accuracy FROM route_points
+		WHERE time >= ? AND time < ? ORDER BY time`, from.UnixMilli(), to.UnixMilli())
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +184,7 @@ func (s *Store) positionPoints(ctx context.Context, from, to time.Time) (map[str
 	err = scanRows(rows, func() error {
 		var device string
 		var p positionPoint
-		if err := rows.Scan(&device, &p.time, &p.lat, &p.lon); err != nil {
+		if err := rows.Scan(&device, &p.time, &p.lat, &p.lon, &p.accuracy); err != nil {
 			return err
 		}
 		routes[device] = append(routes[device], p)
@@ -360,13 +378,15 @@ func (g *positionGrouper) positions() []WiFiPosition {
 		})
 		heard = append(heard, heardAt(place))
 		positions = append(positions, WiFiPosition{
-			Lat:      round6(place.sumLat / float64(place.scans)),
-			Lon:      round6(place.sumLon / float64(place.scans)),
-			Scans:    place.scans,
-			First:    place.first,
-			Last:     place.last,
-			Devices:  place.devices,
-			Networks: networks,
+			Lat:       round6(place.sumLat / float64(place.scans)),
+			Lon:       round6(place.sumLon / float64(place.scans)),
+			AnchorLat: round6(place.lat),
+			AnchorLon: round6(place.lon),
+			Scans:     place.scans,
+			First:     place.first,
+			Last:      place.last,
+			Devices:   place.devices,
+			Networks:  networks,
 		})
 	}
 	relate(positions, heard)

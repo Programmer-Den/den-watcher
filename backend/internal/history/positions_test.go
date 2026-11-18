@@ -153,3 +153,44 @@ func TestPlacesWithoutIDsAreRelatedByName(t *testing.T) {
 		t.Errorf("places = %+v", got)
 	}
 }
+
+func TestWiFiPositionsDropAScanWhoseClosestPointIsVague(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	hour := time.Date(2026, 11, 5, 10, 0, 0, 0, time.UTC)
+	point := func(at time.Time, lat, lon, accuracy float64) RoutePoint {
+		return RoutePoint{PhoneTime: at.UnixMilli(), Time: at.UnixMilli(), Lat: lat, Lon: lon, Accuracy: accuracy}
+	}
+	// At home at 10:00, then 10 km away at 10:10, told only vaguely.
+	if err := store.AddRoutePoints(ctx, "pixel", []RoutePoint{
+		point(hour, 53.5755, 9.9530, 20),
+		point(hour.Add(10*time.Minute), 53.6655, 9.9530, 800),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.AddPhoneScans(ctx, "pixel", []FoundScan{
+		{At: hour.Add(time.Minute), Found: []metrics.NearbyAccessPoint{{ID: "den", SSID: "Den", SignalPercent: 80}}},
+		// Made after the phone moved: not at home.
+		{At: hour.Add(12 * time.Minute), Found: []metrics.NearbyAccessPoint{{ID: "far", SSID: "Far", SignalPercent: 60}}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := store.WiFiPositions(ctx, hour, hour.Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Scans != 1 || len(got[0].Networks) != 1 || got[0].Networks[0].SSID != "Den" {
+		t.Fatalf("got %+v, want home with only its own scan", got)
+	}
+	if got[0].AnchorLat != 53.5755 || got[0].AnchorLon != 9.953 {
+		t.Errorf("anchor = %v, %v, want the first scan's point", got[0].AnchorLat, got[0].AnchorLon)
+	}
+}
+
+func TestWiFiPositionsWithoutScans(t *testing.T) {
+	store := openTestStore(t)
+	got, err := store.WiFiPositions(context.Background(), time.Unix(0, 0), time.Now())
+	if err != nil || got == nil || len(got) != 0 {
+		t.Fatalf("got %v, %v, want an empty list", got, err)
+	}
+}
