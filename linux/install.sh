@@ -71,7 +71,7 @@ if ! command -v systemctl > /dev/null || [[ ! -d /run/systemd/system ]]; then
 fi
 
 # The options and the archive's files are checked before anything changes,
-# so a mistyped option leaves an install from before the rename running.
+# so a mistyped option leaves the installed version running.
 case "${1:-}" in
   --uninstall | "") ;;
   --addons=*)

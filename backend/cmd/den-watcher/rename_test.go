@@ -218,3 +218,26 @@ func TestKeepsTheOldDatabaseWhileAnotherProgramHasItOpen(t *testing.T) {
 		t.Errorf("the old log is gone: %v", err)
 	}
 }
+
+func TestKeepsTheOldDatabaseWhileAnotherProgramHasItOpenIdle(t *testing.T) {
+	dir := t.TempDir()
+	oldDatabase(t, dir)
+	old := filepath.Join(dir, oldDatabaseName)
+	db, err := sql.Open("sqlite", "file:"+old)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	// A connection that read once and stays open, outside a transaction.
+	db.SetMaxOpenConns(1)
+	var value string
+	if err := db.QueryRow("SELECT value FROM kept").Scan(&value); err != nil {
+		t.Fatal(err)
+	}
+	if got := renameOldDatabase(filepath.Join(dir, newDatabaseName), ""); got != old {
+		t.Fatalf("renameOldDatabase = %s, want the old database, used where it is", got)
+	}
+	if _, err := os.Stat(filepath.Join(dir, newDatabaseName)); !errors.Is(err, fs.ErrNotExist) {
+		t.Error("renamed the database another program has open")
+	}
+}

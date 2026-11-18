@@ -689,7 +689,8 @@ func renameOldDatabase(path, programData string) string {
 	}
 	dir := filepath.Dir(path)
 	oldDir := dir
-	windowsFolder := programData != "" && filepath.Clean(dir) == filepath.Join(programData, newDataFolder)
+	// Windows compares paths regardless of case.
+	windowsFolder := programData != "" && strings.EqualFold(filepath.Clean(dir), filepath.Join(programData, newDataFolder))
 	if windowsFolder {
 		oldDir = filepath.Join(programData, oldDataFolder)
 		if _, err := os.Stat(oldDir); err != nil {
@@ -711,10 +712,13 @@ func renameOldDatabase(path, programData string) string {
 				return path
 			}
 		}
-		// What is left are the add-ons' reports, written again in the new
-		// folder, and backups that are no longer needed; the old folder
-		// goes once it is empty.
-		leftovers, _ := filepath.Glob(filepath.Join(oldDir, "addons", "*.json"))
+		// Once the database moved, what is left are the add-ons' reports,
+		// written again in the new folder, and backups that are no longer
+		// needed; the old folder goes once it is empty.
+		if _, err := os.Stat(old); !errors.Is(err, fs.ErrNotExist) {
+			return path
+		}
+		leftovers, _ := filepath.Glob(filepath.Join(oldDir, "addons", "*"))
 		backups, _ := filepath.Glob(filepath.Join(oldDir, ".den-watcher-backup-*.db"))
 		for _, file := range append(append(leftovers, backups...), old+".backup") {
 			_ = os.Remove(file)
@@ -729,19 +733,24 @@ func renameOldDatabase(path, programData string) string {
 
 // renameDatabaseFile renames the database old to path, with its backup,
 // unless path exists or old does not. What the write-ahead log holds is
-// written into the database first, so the rename moves one file and cannot
-// be cut short halfway; a log and index left under the new name belong to
-// no database and are deleted before.
+// written into the database first, which also makes sure no other program
+// has it open, so the rename moves one file and cannot be cut short
+// halfway; a log and index left under the new name belong to no database
+// and are deleted before.
 func renameDatabaseFile(old, path string) error {
+	_, oldErr := os.Stat(old)
 	if _, err := os.Stat(path); err == nil {
+		if oldErr == nil {
+			slog.Warn("both databases are there, so the one of 4.0.0 and before is left unused; delete it once it is not needed", "unused", old, "used", path)
+		}
 		return nil
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	if _, err := os.Stat(old); errors.Is(err, fs.ErrNotExist) {
+	if errors.Is(oldErr, fs.ErrNotExist) {
 		return nil
-	} else if err != nil {
-		return err
+	} else if oldErr != nil {
+		return oldErr
 	}
 	if err := history.Checkpoint(context.Background(), old); err != nil {
 		return fmt.Errorf("write the log of %s into it: %w", old, err)
@@ -759,9 +768,6 @@ func renameDatabaseFile(old, path string) error {
 	if err := os.Rename(old, path); err != nil {
 		return err
 	}
-	// Empty after the checkpoint, should SQLite have kept them.
-	_ = os.Remove(old + "-wal")
-	_ = os.Remove(old + "-shm")
 	slog.Info("renamed the database to its new name", "from", old, "to", path)
 	return nil
 }

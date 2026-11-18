@@ -321,7 +321,9 @@
       before it (UPGRADINGPRODUCTCODE), which keeps them all, so an empty
       password in an update still keeps the one stored for that name. The
       path is spelled out from CommonAppDataFolder rather than DATAFOLDER,
-      which a command line could point elsewhere.
+      which a command line could point elsewhere. The history and passwords
+      also go from the folder of 4.0.0 and before, which the service still
+      uses while it cannot move them.
     -->
     <Property Id="DELETE_HISTORY" Secure="yes" />
     <Property Id="DELETE_ROUTER_PASSWORDS" Value="1" Secure="yes" />
@@ -333,10 +335,10 @@
                  Value='"[System64Folder]cmd.exe" /d /c del /f /q "[CommonAppDataFolder]Den-Watcher\addons\*.json"'
                  Condition='REMOVE = "ALL" AND NOT UPGRADINGPRODUCTCODE' />
     <SetProperty Id="DeleteRouterPasswords" Before="DeleteRouterPasswords" Sequence="execute"
-                 Value='"[System64Folder]cmd.exe" /d /c del /f /q "[CommonAppDataFolder]Den-Watcher\router-passwords.dpapi"'
+                 Value='"[System64Folder]cmd.exe" /d /c del /f /q "[CommonAppDataFolder]Den-Watcher\router-passwords.dpapi" "[CommonAppDataFolder]Usage Control\router-passwords.dpapi"'
                  Condition='REMOVE = "ALL" AND NOT UPGRADINGPRODUCTCODE AND DELETE_ROUTER_PASSWORDS = "1"' />
     <SetProperty Id="DeleteHistory" Before="DeleteHistory" Sequence="execute"
-                 Value='"[System64Folder]cmd.exe" /d /c del /f /q "[CommonAppDataFolder]Den-Watcher\den-watcher.db*"'
+                 Value='"[System64Folder]cmd.exe" /d /c del /f /q "[CommonAppDataFolder]Den-Watcher\den-watcher.db*" "[CommonAppDataFolder]Usage Control\usage-control.db*"'
                  Condition='REMOVE = "ALL" AND NOT UPGRADINGPRODUCTCODE AND DELETE_HISTORY = "1"' />
     <InstallExecuteSequence>
       <Custom Action="DeleteAddOnReports" After="StopServices" Condition='REMOVE = "ALL" AND NOT UPGRADINGPRODUCTCODE' />
