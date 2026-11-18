@@ -130,6 +130,27 @@ describe('DemoBackend', () => {
     ).rejects.toBeTruthy();
   });
 
+  it('tells the Wi-Fi networks heard at each place, most scans first, related by the networks', async () => {
+    const to = Math.floor(Date.now() / 1000);
+    const answer = await firstValueFrom(metrics.wifiPositions(to - 7 * 86400, to));
+    expect(answer.places.length).toBeGreaterThan(4);
+    for (const [i, p] of answer.places.entries()) {
+      expect(p.devices).toEqual([DEMO_PHONE]);
+      expect(p.networks.length).toBeGreaterThan(0);
+      expect(p.first).toBeLessThanOrEqual(p.last);
+      if (i > 0) {
+        expect(p.scans).toBeLessThanOrEqual(answer.places[i - 1].scans);
+      }
+      for (const r of p.related ?? []) {
+        expect(r.place).not.toBe(i);
+        expect(r.shared).toBeGreaterThan(0);
+      }
+    }
+    // The most scanned place is home, where the phone heard its own network best.
+    expect(answer.places[0].networks[0].ssid).toBe('Den');
+    expect(answer.places[0].related?.length).toBeGreaterThan(0);
+  });
+
   it('tells the Wi-Fi networks the phone scanned at each point of its route, connected to one at a place', async () => {
     const to = Math.floor(Date.now() / 1000);
     const route = await firstValueFrom(metrics.phoneRoute(to - 2 * 86400, to, DEMO_PHONE));

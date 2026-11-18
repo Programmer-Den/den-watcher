@@ -1,0 +1,199 @@
+<div class="head">
+  <p class="detail">{{ i18n.t('wifiPositions.intro') }}</p>
+  <div class="choices" role="group" [attr.aria-label]="i18n.t('history.range')">
+    @for (r of ranges; track r.seconds) {
+      <button type="button" [attr.aria-pressed]="r === range()" (click)="range.set(r)">
+        {{ i18n.t(r.label) }}
+      </button>
+    }
+  </div>
+</div>
+
+@if (answer(); as a) {
+  @if (map(); as m) {
+    <div class="overview" [class.stale]="connection.lost()">
+      <figure class="map">
+        <svg
+          [attr.viewBox]="'0 0 ' + MAP_WIDTH + ' ' + MAP_HEIGHT"
+          role="img"
+          [attr.aria-label]="i18n.t('wifiPositions.map')"
+        >
+          @for (t of m.tiles; track t.href) {
+            @if (!failedTiles().has(t.href)) {
+              <image
+                [attr.href]="t.href"
+                [attr.x]="t.x"
+                [attr.y]="t.y"
+                width="256"
+                height="256"
+                (error)="tileFailed(t.href)"
+              />
+            }
+          }
+          <!-- The places that heard some of the same access points as the picked one. -->
+          @if (place(); as p) {
+            @for (r of p.related ?? []; track r.place) {
+              <line
+                class="related"
+                [attr.x1]="m.points[selected()].x"
+                [attr.y1]="m.points[selected()].y"
+                [attr.x2]="m.points[r.place].x"
+                [attr.y2]="m.points[r.place].y"
+              />
+            }
+          }
+          @for (i of drawOrder(); track i) {
+            <g
+              class="place"
+              [class.picked]="i === selected()"
+              [attr.transform]="'translate(' + m.points[i].x + ' ' + m.points[i].y + ')'"
+            >
+              @if (numbered().has(i)) {
+                <circle r="9" />
+                <text dy="0.35em">{{ i + 1 }}</text>
+              } @else {
+                <circle r="3.5" />
+              }
+            </g>
+          }
+          @for (pt of m.points; track $index; let i = $index) {
+            <circle class="hit" [attr.cx]="pt.x" [attr.cy]="pt.y" r="14" (click)="select(i)">
+              <title>{{ i18n.t('wifiPositions.place', { number: i + 1 }) }}</title>
+            </circle>
+          }
+        </svg>
+        <figcaption class="detail">{{ i18n.t('phoneRoute.attribution') }}</figcaption>
+      </figure>
+
+      <div class="places">
+        <h3>{{ i18n.t('wifiPositions.places') }}</h3>
+        <ol>
+          @for (p of listed(); track p.lat + ' ' + p.lon; let i = $index) {
+            <li>
+              <button
+                type="button"
+                class="pick"
+                [attr.aria-pressed]="i === selected()"
+                (click)="select(i)"
+              >
+                <span class="number">{{ i + 1 }}</span>
+                <span class="what">
+                  <span>{{
+                    i18n.plural(
+                      p.networks.length,
+                      'phoneRoute.networks.one',
+                      'phoneRoute.networks.other'
+                    )
+                  }}</span>
+                  <span class="hint">
+                    {{
+                      i18n.plural(
+                        p.devices.length,
+                        'wifiPositions.phones.one',
+                        'wifiPositions.phones.other'
+                      )
+                    }}
+                    ·
+                    {{
+                      i18n.plural(p.scans, 'wifiPositions.scans.one', 'wifiPositions.scans.other')
+                    }}
+                  </span>
+                </span>
+              </button>
+            </li>
+          }
+        </ol>
+        @if (places().length > LIST_PLACES) {
+          <button type="button" class="link" (click)="showAll.set(!showAll())">
+            {{
+              showAll()
+                ? i18n.t('phoneWifi.showFewer')
+                : i18n.t('wifiPositions.showAll', { count: places().length })
+            }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (place(); as p) {
+      <div class="picked-place" aria-live="polite">
+        <h3>{{ i18n.t('wifiPositions.place', { number: selected() + 1 }) }}</h3>
+        <p class="detail">
+          {{ i18n.t('phoneWifi.span', { from: time(p.first), to: time(p.last) }) }} ·
+          {{ i18n.t('wifiPositions.heardHere', { phones: phones(p) }) }}
+        </p>
+        @if (p.related?.length) {
+          <p class="related-list">
+            <span class="hint">{{ i18n.t('wifiPositions.related') }}</span>
+            @for (r of p.related; track r.place) {
+              <button type="button" class="chip" (click)="select(r.place)">
+                {{
+                  i18n.t('wifiPositions.relatedPlace', {
+                    number: r.place + 1,
+                    percent: r.percent,
+                    shared: r.shared,
+                  })
+                }}
+              </button>
+            }
+          </p>
+        }
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">{{ i18n.t('wifi.network') }}</th>
+                <th scope="col">{{ i18n.t('wifiPositions.bestSignal') }}</th>
+                <th scope="col">{{ i18n.t('wifiPositions.heardBy') }}</th>
+                <th scope="col">{{ i18n.t('wifiPositions.lastHeard') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (n of p.networks; track (n.ssid ?? '') + ' ' + (n.id ?? '')) {
+                <tr>
+                  <th scope="row">
+                    <span class="name">
+                      @if (n.ssid) {
+                        <span class="ssid">{{ n.ssid }}</span>
+                      } @else {
+                        <span class="ssid hidden">{{ i18n.t('phoneRoute.hiddenNetwork') }}</span>
+                      }
+                      @if (n.connected) {
+                        <span class="badge">{{ i18n.t('wifi.connected') }}</span>
+                      }
+                    </span>
+                    <span class="meta">{{ meta(n) }}</span>
+                  </th>
+                  <td>
+                    <span class="level" [attr.data-level]="signalLevel(n.signalPercent)">
+                      {{ n.signalPercent | number: '1.0-0' : i18n.language() }} %
+                    </span>
+                  </td>
+                  <td>
+                    <span class="sightings">
+                      @for (s of n.devices; track s.device) {
+                        <span class="sighting" [attr.data-level]="signalLevel(s.signalPercent)">
+                          {{ name(s.device) }}
+                          <span class="percent"
+                            >{{ s.signalPercent | number: '1.0-0' : i18n.language() }} %</span
+                          >
+                        </span>
+                      }
+                    </span>
+                  </td>
+                  <td>{{ time(n.last) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  } @else {
+    <p class="detail">{{ i18n.t('wifiPositions.none') }}</p>
+  }
+} @else if (failed()) {
+  <p class="detail">{{ i18n.t('wifiPositions.failed') }}</p>
+} @else {
+  <p class="detail">{{ i18n.t('dashboard.loading') }}</p>
+}

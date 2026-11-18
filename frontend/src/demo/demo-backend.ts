@@ -27,6 +27,7 @@ import { demoPhoneRoute } from './phone-route';
 import { demoPhoneScan } from './phone-scan';
 import { demoPhoneWifi } from './phone-wifi';
 import { DEMO_PLACES, demoWifi } from './wifi';
+import { demoWifiPositions } from './wifi-positions';
 
 /** How many days of history the demo hub keeps; more than 30 shows the "All" range. */
 export const DEMO_RETENTION_DAYS = 90;
@@ -111,6 +112,11 @@ export class DemoBackend implements HttpBackend {
       const to = Math.min(Number(url.searchParams.get('to')), Math.floor(now) + 1);
       const from = Math.max(Number(url.searchParams.get('from')), to - DEMO_RETENTION_DAYS * 86400);
       return respond(request, demoWifi(from, to));
+    }
+    if (request.method === 'GET' && url.pathname === '/api/wifi/positions') {
+      const to = Math.min(Number(url.searchParams.get('to')), Math.floor(now) + 1);
+      const from = Math.max(Number(url.searchParams.get('from')), to - DEMO_RETENTION_DAYS * 86400);
+      return respond(request, demoWifiPositions(from, to));
     }
     if (request.method === 'GET' && url.pathname === '/api/phone/usage') {
       if (device !== DEMO_PHONE) {
