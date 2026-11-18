@@ -168,8 +168,10 @@
     <Upgrade Id="C226A238-37CF-4C24-85FE-A29D04C94172">
       <UpgradeVersion Minimum="$(Version)" Maximum="$(Version)" IncludeMinimum="yes" IncludeMaximum="yes"
                       OnlyDetect="yes" Property="SAMEVERSION" />
-      <!-- usage-control, the name up to 2.0.7a, which this version no longer takes over. -->
-      <UpgradeVersion Maximum="2.0.8" IncludeMaximum="no" OnlyDetect="yes" Property="USAGECONTROL" />
+      <!-- usage-control, the name up to 2.0.7a, which this version no longer takes over.
+           From 0.1.0, so the 0.0.x builds of pull requests are not taken for it. -->
+      <UpgradeVersion Minimum="0.1.0" IncludeMinimum="yes" Maximum="2.0.8" IncludeMaximum="no"
+                      OnlyDetect="yes" Property="USAGECONTROL" />
     </Upgrade>
     <Launch Condition="Installed OR NOT USAGECONTROL"
             Message="This PC still runs usage-control, which this version no longer takes over. Install Den-Watcher 4.0.0 over it first, then this version." />
