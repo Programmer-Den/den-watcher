@@ -80,7 +80,8 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
 
     /**
      * Keeps a point of the route for the app's map, and deletes those more
-     * than KEEP_MAP_MILLIS older than it and the oldest beyond KEEP_MAP_ROUTE.
+     * than KEEP_MAP_MILLIS older than it, or than now if it is ahead of the
+     * clock, and the oldest beyond KEEP_MAP_ROUTE.
      */
     fun addMapPoint(point: RoutePoint) {
         val db = writableDatabase
@@ -91,7 +92,8 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
             put("accuracy", point.accuracy)
         }
         db.insertWithOnConflict("map_route", null, row, SQLiteDatabase.CONFLICT_REPLACE)
-        db.delete("map_route", "time < ?", arrayOf((point.time - KEEP_MAP_MILLIS).toString()))
+        val now = minOf(point.time, System.currentTimeMillis())
+        db.delete("map_route", "time < ?", arrayOf((now - KEEP_MAP_MILLIS).toString()))
         db.delete("map_route", "time < (SELECT time FROM map_route ORDER BY time DESC LIMIT 1 OFFSET ?)", arrayOf((KEEP_MAP_ROUTE - 1).toString()))
     }
 
@@ -112,7 +114,7 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
     /**
      * Keeps a scan for the app's map when it is at least MAP_SCAN_EVERY_SECONDS
      * after the newest one kept, or the clock went back, and deletes those
-     * more than KEEP_MAP_MILLIS older than it and the oldest beyond
+     * more than KEEP_MAP_MILLIS older than it (or than now) and the oldest beyond
      * KEEP_MAP_SCANS: the map needs one scan near each point, not one of
      * every reading.
      */
@@ -129,7 +131,8 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6
             put("networks", scan.text())
         }
         db.insertWithOnConflict("map_scans", null, row, SQLiteDatabase.CONFLICT_REPLACE)
-        db.delete("map_scans", "time < ?", arrayOf((scan.time - KEEP_MAP_MILLIS / 1000).toString()))
+        val now = minOf(scan.time, System.currentTimeMillis() / 1000)
+        db.delete("map_scans", "time < ?", arrayOf((now - KEEP_MAP_MILLIS / 1000).toString()))
         db.delete("map_scans", "time < (SELECT time FROM map_scans ORDER BY time DESC LIMIT 1 OFFSET ?)", arrayOf((KEEP_MAP_SCANS - 1).toString()))
     }
 

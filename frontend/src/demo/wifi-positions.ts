@@ -20,8 +20,6 @@ const MAX_RELATED = 5;
 export function demoWifiPositions(from: number, to: number): WiFiPositions {
   const places: {
     place: WiFiPosition;
-    lat: number;
-    lon: number;
     sumLat: number;
     sumLon: number;
   }[] = [];
@@ -31,23 +29,22 @@ export function demoWifiPositions(from: number, to: number): WiFiPositions {
       continue;
     }
     let entry = places.find(
-      (e) => meters({ ...point, lat: e.lat, lon: e.lon }, point) <= PLACE_METERS,
+      (e) =>
+        meters({ ...point, lat: e.place.anchorLat, lon: e.place.anchorLon }, point) <= PLACE_METERS,
     );
     if (!entry) {
       entry = {
         place: {
           lat: 0,
           lon: 0,
-          anchorLat: point.lat,
-          anchorLon: point.lon,
+          anchorLat: Math.round(point.lat * 1e6) / 1e6,
+          anchorLon: Math.round(point.lon * 1e6) / 1e6,
           scans: 0,
           first: scan.time,
           last: 0,
           devices: [DEMO_PHONE],
           networks: [],
         },
-        lat: point.lat,
-        lon: point.lon,
         sumLat: 0,
         sumLon: 0,
       };

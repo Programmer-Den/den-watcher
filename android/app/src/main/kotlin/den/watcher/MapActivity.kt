@@ -94,6 +94,8 @@ class MapActivity : Activity() {
     private fun setDays(to: Int) {
         if (to != days) {
             days = to
+            showRange(R.id.range_day, days == 1)
+            showRange(R.id.range_week, days == 7)
             load()
         }
     }
@@ -169,7 +171,7 @@ class MapActivity : Activity() {
         findViewById<View>(R.id.point_group).visibility = if (point == null) View.GONE else View.VISIBLE
         if (point?.time != scanShownFor) {
             // Another point: its networks are read anew. The same one keeps
-            // its list while it is read again with the route.
+            // the list it shows, as when the route is read again.
             findViewById<LinearLayout>(R.id.networks).removeAllViews()
             findViewById<TextView>(R.id.scan_summary).text = ""
             scanShownFor = null
@@ -180,6 +182,9 @@ class MapActivity : Activity() {
             getString(R.string.map_accuracy, NumberFormat.getIntegerInstance().format(point.accuracy.roundToInt()))
         findViewById<Button>(R.id.previous).isEnabled = index > 0
         findViewById<Button>(R.id.next).isEnabled = index < points.size - 1
+        if (point.time == scanShownFor) {
+            return
+        }
         val context = applicationContext
         background.execute {
             val scan = Store(context).use { it.mapScanNear(point.time / 1000) }

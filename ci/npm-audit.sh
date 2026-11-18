@@ -7,16 +7,16 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/../frontend"
-report=$(npm audit --json "$@" || true)
-# The script is JavaScript, whose ${...} the shell must leave alone.
+# The report goes in on stdin: it can be larger than an environment variable
+# may be. The script is JavaScript, whose ${...} the shell must leave alone.
 # shellcheck disable=SC2016
-REPORT=$report node -e '
+{ npm audit --json "$@" || true; } | node -e '
 const fs = require("fs");
 const allowed = new Set(
   fs.readFileSync("audit-allow.txt", "utf8").split("\n")
     .map((line) => line.replace(/#.*/, "").trim()).filter(Boolean),
 );
-const report = JSON.parse(process.env.REPORT);
+const report = JSON.parse(fs.readFileSync(0, "utf8"));
 if (report.error) {
   console.error(`npm audit failed: ${report.error.summary ?? JSON.stringify(report.error)}`);
   process.exit(1);

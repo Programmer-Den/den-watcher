@@ -111,18 +111,25 @@ class RouteMapTest {
     @Test
     fun keepsTheMapsRouteAndScansForAWeek() {
         val week = Store.KEEP_MAP_MILLIS
-        store.addMapPoint(home)
-        store.addMapScan(SeenScan(home.time / 1000, emptyList()))
-        store.addMapPoint(home.copy(time = home.time + week))
-        store.addMapScan(SeenScan((home.time + week) / 1000, emptyList()))
+        val minute = 60_000L
+        val now = System.currentTimeMillis() / minute * minute
+        val old = home.copy(time = now - week - 10 * minute)
+        val recent = home.copy(time = now - week + 10 * minute)
+        // A point ahead of the clock deletes nothing more than one now would.
+        store.addMapPoint(recent)
+        store.addMapPoint(home.copy(time = now + 2 * week))
         assertEquals(2, store.mapPoints(0).size)
-        assertEquals(home.time / 1000, store.mapScanNear(home.time / 1000)?.time)
-        // A few minutes more, and the first ones are older than a week.
-        val later = home.time + week + Store.MAP_SCAN_EVERY_SECONDS * 1000
-        store.addMapPoint(home.copy(time = later))
-        store.addMapScan(SeenScan(later / 1000, emptyList()))
-        assertEquals(listOf(home.time + week, later), store.mapPoints(0).map { it.time })
-        assertNull(store.mapScanNear(home.time / 1000))
+        store.deleteMapRoute()
+        store.addMapPoint(old)
+        store.addMapScan(SeenScan(old.time / 1000, emptyList()))
+        store.addMapPoint(recent)
+        assertEquals(2, store.mapPoints(0).size)
+        // Now, and the first ones are older than a week.
+        store.addMapPoint(home.copy(time = now))
+        store.addMapScan(SeenScan(now / 1000, emptyList()))
+        assertEquals(listOf(now - week + 10 * minute, now), store.mapPoints(0).map { it.time })
+        assertNull(store.mapScanNear(old.time / 1000))
+        assertEquals(now / 1000, store.mapScanNear(now / 1000)?.time)
     }
 
     @Test

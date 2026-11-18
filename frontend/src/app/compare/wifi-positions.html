@@ -70,7 +70,7 @@
       <div class="places">
         <h3>{{ i18n.t('wifiPositions.places') }}</h3>
         <ol>
-          @for (p of listed(); track p.lat + ' ' + p.lon; let i = $index) {
+          @for (p of listed(); track p.anchorLat + ' ' + p.anchorLon; let i = $index) {
             <li>
               <button
                 type="button"

@@ -183,6 +183,26 @@ class Screenshots {
         set: Settings.() -> Unit,
     ) {
         folder.mkdirs()
+        // The map reads its points in place, so they are there for the shot.
+        val background = MapActivity.background
+        MapActivity.background = Executor { it.run() }
+        try {
+            shots(name, language, permissions, usageAccess, screen, fill, tap, set)
+        } finally {
+            MapActivity.background = background
+        }
+    }
+
+    private fun shots(
+        name: String,
+        language: String?,
+        permissions: Array<String>,
+        usageAccess: Boolean,
+        screen: Class<out Activity>,
+        fill: (Store) -> Unit,
+        tap: (Activity) -> Unit,
+        set: Settings.() -> Unit,
+    ) {
         for (mode in listOf("light", "dark")) {
             val qualifiers = listOfNotNull(language, if (mode == "dark") "night" else "notnight")
             RuntimeEnvironment.setQualifiers("+" + qualifiers.joinToString("-"))
@@ -197,8 +217,6 @@ class Screenshots {
                 if (usageAccess) AppOpsManager.MODE_ALLOWED else AppOpsManager.MODE_DEFAULT,
             )
             Store(app).use(fill)
-            // The map reads its points in place, so they are there for the shot.
-            MapActivity.background = Executor { it.run() }
             val activity = Robolectric.buildActivity(screen).setup().get()
             // Runs the status refresh that onResume posts.
             shadowOf(Looper.getMainLooper()).idle()

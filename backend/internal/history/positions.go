@@ -7,6 +7,7 @@ import (
 	"math"
 	"slices"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -114,9 +115,9 @@ type positionPoint struct {
 // WiFiPositions returns the places the phones scanned the Wi-Fi networks at
 // from from up to (not including) to, the one with the most scans first, at
 // most MaxPositions: each scan of the newest MaxPositionScans is placed at
-// the point of its phone's route closest in time to it, unless that point is
-// vaguer than PositionMaxAccuracy, and counts to the first place within
-// PositionMeters of that point.
+// the point of its phone's route closest in time to it, as placeAt finds it
+// for one vaguer than PositionMaxAccuracy, and counts to the first place
+// within PositionMeters of that point.
 func (s *Store) WiFiPositions(ctx context.Context, from, to time.Time) ([]WiFiPosition, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT device, time, networks FROM phone_scans
@@ -147,7 +148,13 @@ func (s *Store) WiFiPositions(ctx context.Context, from, to time.Time) ([]WiFiPo
 	slices.Reverse(scans)
 	// Only the points that can place the scans read: the newest scans of a
 	// long range may be far fewer than the points of all routes in it.
-	routes, err := s.positionPoints(ctx,
+	var devices []string
+	for _, sc := range scans {
+		if !slices.Contains(devices, sc.device) {
+			devices = append(devices, sc.device)
+		}
+	}
+	routes, err := s.positionPoints(ctx, devices,
 		time.Unix(scans[0].time, 0).Add(-positionBefore),
 		time.Unix(scans[len(scans)-1].time, 0).Add(positionAfter+time.Second))
 	if err != nil {
@@ -156,10 +163,8 @@ func (s *Store) WiFiPositions(ctx context.Context, from, to time.Time) ([]WiFiPo
 
 	var grouper positionGrouper
 	for _, sc := range scans {
-		p, ok := pointAt(routes[sc.device], sc.time*1000)
-		// A vague point tells nothing of where the scan was, and an older
-		// accurate one may be far from it once the phone moved.
-		if !ok || p.accuracy > PositionMaxAccuracy {
+		p, ok := placeAt(routes[sc.device], sc.time*1000)
+		if !ok {
 			continue
 		}
 		var networks []ScannedNetwork
@@ -171,12 +176,17 @@ func (s *Store) WiFiPositions(ctx context.Context, from, to time.Time) ([]WiFiPo
 	return grouper.positions(), nil
 }
 
-// positionPoints reads the points of all phones' routes from from up to to,
-// by phone, oldest first.
-func (s *Store) positionPoints(ctx context.Context, from, to time.Time) (map[string][]positionPoint, error) {
+// positionPoints reads the points of the devices' routes from from up to
+// to, by phone, oldest first.
+func (s *Store) positionPoints(ctx context.Context, devices []string, from, to time.Time) (map[string][]positionPoint, error) {
+	args := []any{from.UnixMilli(), to.UnixMilli()}
+	for _, d := range devices {
+		args = append(args, d)
+	}
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT device, time, lat, lon, accuracy FROM route_points
-		WHERE time >= ? AND time < ? ORDER BY time`, from.UnixMilli(), to.UnixMilli())
+		WHERE time >= ? AND time < ? AND device IN (?`+strings.Repeat(", ?", len(devices)-1)+`)
+		ORDER BY time`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -207,6 +217,32 @@ func pointAt(route []positionPoint, t int64) (positionPoint, bool) {
 		best, found = route[i], true
 	}
 	return best, found
+}
+
+// placeAt returns the point of a route, oldest first, that places a scan at
+// t, Unix milliseconds: the one pointAt finds, if it is not vaguer than
+// PositionMaxAccuracy. If it is, the closest in time of the others that are
+// not, within the same time, places it only if it lies within the vague
+// one's accuracy: the phone may have stayed where it was, but it may also
+// have moved, and a scan of another place must not count at the old one.
+func placeAt(route []positionPoint, t int64) (positionPoint, bool) {
+	p, ok := pointAt(route, t)
+	if !ok || p.accuracy <= PositionMaxAccuracy {
+		return p, ok
+	}
+	from := sort.Search(len(route), func(i int) bool { return route[i].time >= t-positionBefore.Milliseconds() })
+	to := sort.Search(len(route), func(i int) bool { return route[i].time > t+positionAfter.Milliseconds() })
+	var precise []positionPoint
+	for _, q := range route[from:to] {
+		if q.accuracy <= PositionMaxAccuracy {
+			precise = append(precise, q)
+		}
+	}
+	q, ok := pointAt(precise, t)
+	if !ok || distanceMeters(q.lat, q.lon, p.lat, p.lon) > p.accuracy {
+		return positionPoint{}, false
+	}
+	return q, true
 }
 
 // metersPerDegree is how long a degree of latitude is, in meters.
