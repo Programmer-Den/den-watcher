@@ -705,7 +705,8 @@ func renameOldDatabase(path, programData string) string {
 	if windowsFolder {
 		// The router passwords, encrypted for the service's account, which
 		// did not change; ones already in the new folder stay.
-		passwords := "router-passwords.dpapi"                                                 // router.protectedFile, Windows only
+		// router.protectedFile, Windows only
+		passwords := "router-passwords.dpapi"
 		if _, err := os.Stat(filepath.Join(dir, passwords)); errors.Is(err, fs.ErrNotExist) { //nolint:gosec // ProgramData, set by Windows
 			if err := moveFile(filepath.Join(oldDir, passwords), filepath.Join(dir, passwords)); err != nil {
 				slog.Warn("could not move the router passwords of 4.0.0 and before", "from", oldDir, "error", err)
