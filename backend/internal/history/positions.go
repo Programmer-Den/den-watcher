@@ -7,7 +7,6 @@ import (
 	"math"
 	"slices"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -120,8 +119,8 @@ type positionPoint struct {
 // from from up to (not including) to, the one with the most scans first, at
 // most MaxPositions: each scan of the newest MaxPositionScans is placed at
 // the point of its phone's route closest in time to it, as placeAt finds it
-// for one vaguer than PositionMaxAccuracy, and counts to the first place
-// within PositionMeters of that point.
+// for one vaguer than PositionMaxAccuracy, and counts to the closest place
+// within PositionMeters of that point, or starts a new one.
 func (s *Store) WiFiPositions(ctx context.Context, from, to time.Time) ([]WiFiPosition, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT device, time, networks FROM phone_scans
@@ -183,31 +182,27 @@ func (s *Store) WiFiPositions(ctx context.Context, from, to time.Time) ([]WiFiPo
 // positionPoints reads the points of the devices' routes from from up to
 // to, by phone, oldest first.
 func (s *Store) positionPoints(ctx context.Context, devices []string, from, to time.Time) (map[string][]positionPoint, error) {
-	if len(devices) == 0 {
-		return map[string][]positionPoint{}, nil
-	}
-	args := []any{from.UnixMilli(), to.UnixMilli()}
-	for _, d := range devices {
-		args = append(args, d)
-	}
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT device, time, lat, lon, accuracy FROM route_points
-		WHERE time >= ? AND time < ? AND device IN (?`+strings.Repeat(", ?", len(devices)-1)+`)
-		ORDER BY time`, args...)
-	if err != nil {
-		return nil, err
-	}
 	routes := map[string][]positionPoint{}
-	err = scanRows(rows, func() error {
-		var device string
-		var p positionPoint
-		if err := rows.Scan(&device, &p.time, &p.lat, &p.lon, &p.accuracy); err != nil {
-			return err
+	for _, device := range devices {
+		rows, err := s.db.QueryContext(ctx, `
+			SELECT time, lat, lon, accuracy FROM route_points
+			WHERE device = ? AND time >= ? AND time < ? ORDER BY time`, device, from.UnixMilli(), to.UnixMilli())
+		if err != nil {
+			return nil, err
 		}
-		routes[device] = append(routes[device], p)
-		return nil
-	})
-	return routes, err
+		err = scanRows(rows, func() error {
+			var p positionPoint
+			if err := rows.Scan(&p.time, &p.lat, &p.lon, &p.accuracy); err != nil {
+				return err
+			}
+			routes[device] = append(routes[device], p)
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return routes, nil
 }
 
 // pointAt returns the point of a route, oldest first, that places a scan at

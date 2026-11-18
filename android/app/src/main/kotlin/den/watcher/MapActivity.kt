@@ -1,10 +1,12 @@
 package den.watcher
 
 import android.app.Activity
+import android.database.sqlite.SQLiteException
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.format.DateUtils
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
@@ -117,7 +119,14 @@ class MapActivity : Activity() {
         val since = System.currentTimeMillis() - days * DAY_MILLIS
         val context = applicationContext
         background.execute {
-            val read = Store(context).use { it.mapPoints(since) }
+            val read = try {
+                Store(context).use { it.mapPoints(since) }
+            } catch (e: SQLiteException) {
+                // Busy or a disk error: the map keeps what it shows and tries again.
+                Log.w(TAG, "could not read the route for the map", e)
+                main.post { if (number == loads && resumed) main.postDelayed(reload, RELOAD_MILLIS) }
+                return@execute
+            }
             val stayed = RouteMap.places(RouteMap.stops(read))
             val went = RouteMap.distance(read)
             main.post {
@@ -194,7 +203,12 @@ class MapActivity : Activity() {
         findViewById<Button>(R.id.next).isEnabled = index < points.size - 1
         val context = applicationContext
         background.execute {
-            val scan = Store(context).use { it.mapScanNear(point.time / 1000) }
+            val scan = try {
+                Store(context).use { it.mapScanNear(point.time / 1000) }
+            } catch (e: SQLiteException) {
+                Log.w(TAG, "could not read the scan for the map", e)
+                return@execute
+            }
             main.post {
                 // Shown only if the point is still the one picked.
                 if (!isDestroyed && selectedTime == point.time) showScan(point, scan)
@@ -285,6 +299,7 @@ class MapActivity : Activity() {
 
         private const val DAY_MILLIS = 24 * 60 * 60_000L
         private const val RELOAD_MILLIS = 60_000L
+        private const val TAG = "MapActivity"
         private const val DAYS = "days"
         private const val SELECTED = "selected"
         private const val HIDDEN_ALPHA = 0.7f

@@ -28,10 +28,16 @@ export function demoWifiPositions(from: number, to: number): WiFiPositions {
     if (!scan) {
       continue;
     }
-    let entry = places.find(
-      (e) =>
-        meters({ ...point, lat: e.place.anchorLat, lon: e.place.anchorLon }, point) <= PLACE_METERS,
-    );
+    // The closest place within its size, as the hub does.
+    let entry: (typeof places)[number] | undefined;
+    let closest = PLACE_METERS;
+    for (const e of places) {
+      const away = meters({ ...point, lat: e.place.anchorLat, lon: e.place.anchorLon }, point);
+      if (away <= closest) {
+        closest = away;
+        entry = e;
+      }
+    }
     if (!entry) {
       entry = {
         place: {

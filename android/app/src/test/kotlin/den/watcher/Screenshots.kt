@@ -205,6 +205,8 @@ class Screenshots {
                 // Runs the status refresh that onResume posts.
                 shadowOf(Looper.getMainLooper()).idle()
                 tap(activity)
+                // Runs what the tap posts, such as the picked point's networks.
+                shadowOf(Looper.getMainLooper()).idle()
                 val content = activity.findViewById<View>(R.id.content)
                 val metrics = activity.resources.displayMetrics
                 val width = metrics.widthPixels
