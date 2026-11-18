@@ -42,9 +42,10 @@ import {
   wifiChanges,
   wifiDevices,
 } from './wifi';
+import { WifiPositionsView } from './wifi-positions';
 
 /** The views of what the devices' Wi-Fi sees. */
-export type WifiView = 'who' | 'home' | 'channels' | 'where' | 'places' | 'changes';
+export type WifiView = 'who' | 'home' | 'channels' | 'where' | 'places' | 'positions' | 'changes';
 
 const VIEWS: { id: WifiView; label: MessageKey }[] = [
   { id: 'who', label: 'wifi.whoSeesWhat' },
@@ -52,6 +53,7 @@ const VIEWS: { id: WifiView; label: MessageKey }[] = [
   { id: 'channels', label: 'wifi.channels' },
   { id: 'where', label: 'wifi.where' },
   { id: 'places', label: 'wifi.places' },
+  { id: 'positions', label: 'wifi.positions' },
   { id: 'changes', label: 'wifi.changes' },
 ];
 
@@ -90,12 +92,20 @@ const PLACES_RETRY_MS = 10_000;
  * network how well, how well each one hears the network they are connected to, through which of
  * its access points, how crowded the channels are, and which devices hear the networks alike, as
  * those are probably in one place, where each device was over the day, at the places named on
- * the page or near which router at home, and what changed, such as a copy of the home network.
+ * the page or near which router at home, every network the phones heard at each place they were,
+ * and what changed, such as a copy of the home network.
  * Shown only once a device has the add-on.
  */
 @Component({
   selector: 'app-wifi-nearby',
-  imports: [DecimalPipe, FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [
+    DecimalPipe,
+    FormsModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    WifiPositionsView,
+  ],
   templateUrl: './wifi-nearby.html',
   styleUrl: './wifi-nearby.css',
 })

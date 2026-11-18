@@ -94,3 +94,45 @@ func phoneScanHandler(d Device, source PhoneScanSource) http.HandlerFunc {
 		writeJSON(w, http.StatusOK, phoneScanResponse{Time: at, Scan: scan})
 	}
 }
+
+// PositionSource reads the places the phones scanned the Wi-Fi networks at.
+type PositionSource interface {
+	WiFiPositions(ctx context.Context, from, to time.Time) ([]history.WiFiPosition, error)
+}
+
+// positionsResponse is the body of GET /api/wifi/positions. Times are Unix
+// seconds.
+type positionsResponse struct {
+	From   int64                  `json:"from"`
+	To     int64                  `json:"to"`
+	Places []history.WiFiPosition `json:"places"`
+}
+
+// positionsHandler serves GET /api/wifi/positions?from=<unix seconds>&to=<unix
+// seconds>: the places the phones scanned the Wi-Fi networks at in that
+// range, by where their routes were, each with every network heard there by
+// any of them. The range is limited to the retention period and ends now at
+// the latest.
+func positionsHandler(source PositionSource, retention time.Duration) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		from, fromErr := strconv.ParseInt(r.URL.Query().Get("from"), 10, 64)
+		to, toErr := strconv.ParseInt(r.URL.Query().Get("to"), 10, 64)
+		if fromErr != nil || toErr != nil || from >= to {
+			http.Error(w, "from and to must be Unix times in seconds, with from before to", http.StatusBadRequest)
+			return
+		}
+		now := time.Now()
+		from = min(max(from, now.Add(-retention).Unix()), now.Unix())
+		to = min(max(to, from+1), now.Unix()+1)
+		places, err := source.WiFiPositions(r.Context(), time.Unix(from, 0), time.Unix(to, 0))
+		if err != nil {
+			slog.Error("read the places of the phones' scans", "error", err)
+			http.Error(w, "could not read the places of the phones' scans", http.StatusInternalServerError)
+			return
+		}
+		if places == nil {
+			places = []history.WiFiPosition{}
+		}
+		writeJSON(w, http.StatusOK, positionsResponse{From: from, To: to, Places: places})
+	}
+}

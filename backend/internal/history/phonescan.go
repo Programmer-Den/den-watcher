@@ -29,6 +29,9 @@ CREATE INDEX IF NOT EXISTS phone_scans_by_time ON phone_scans (time);
 // ScannedNetwork is one network a phone's scan found, with only what the
 // page shows of it, to keep the rows small.
 type ScannedNetwork struct {
+	// ID tells the access point apart (metrics.NearbyAccessPoint.ID); scans
+	// stored before it was kept have none.
+	ID string `json:"id,omitempty"`
 	// SSID is left out for a hidden network.
 	SSID          string   `json:"ssid,omitempty"`
 	SignalPercent float64  `json:"signalPercent"`
@@ -89,6 +92,7 @@ func scannedNetworks(found []metrics.NearbyAccessPoint) []ScannedNetwork {
 	networks := make([]ScannedNetwork, 0, len(found))
 	for _, ap := range found {
 		networks = append(networks, ScannedNetwork{
+			ID:            ap.ID,
 			SSID:          ap.SSID,
 			SignalPercent: ap.SignalPercent,
 			SignalDBm:     ap.SignalDBm,
