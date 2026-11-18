@@ -82,4 +82,53 @@
     <string name="steps_hint">Les pas que le téléphone compte aujourd\'hui, par son podomètre, une puce qui les compte elle-même, donc presque sans batterie. Android demande pour cela l\'autorisation Activité physique à partir d\'Android 10.</string>
     <string name="steps_off">Non comptés. Autorisez Activité physique pour Den-Watcher.</string>
     <string name="steps_on">Comptés, même quand le téléphone est ailleurs.</string>
+
+    <!-- The phone's own route on a map (MapActivity). -->
+    <string name="map_open">Afficher le trajet sur une carte</string>
+    <string name="map_title">Trajet</string>
+    <string name="map_back">Retour</string>
+    <string name="map_day">24 heures</string>
+    <string name="map_week">7 jours</string>
+    <string name="map_none">Aucun trajet gardé sur ce téléphone pour cette période. Laissez Trajet activé sous Quelles données voulez-vous collecter ? et autorisez la localisation tout le temps.</string>
+    <string name="map_distance">%1$s km parcourus</string>
+    <string name="map_description">Le trajet sur une carte</string>
+    <string name="map_attribution">Carte © les contributeurs d’OpenStreetMap</string>
+    <string name="map_legend">○ Départ   ● Dernier   • Point, touchez pour son Wi-Fi</string>
+    <string name="map_pick">Touchez un point de la carte pour voir les réseaux Wi-Fi que le téléphone y a détectés.</string>
+    <string name="map_latest">Afficher le dernier point</string>
+    <string name="map_previous">Point précédent</string>
+    <string name="map_next">Point suivant</string>
+    <string name="map_close">Fermer</string>
+    <string name="map_accuracy">± %1$s m</string>
+    <string name="map_scan_summary">%1$s · %2$s</string>
+    <string name="map_scan_at">détectés à ce point</string>
+    <string name="map_no_scan">Le téléphone n\'a gardé aucune recherche Wi-Fi dans les 5 minutes autour de ce point. Laissez Réseaux Wi-Fi à proximité activé pour les voir.</string>
+    <string name="map_hidden">Réseau masqué</string>
+    <string name="map_connected">connecté</string>
+    <string name="map_open_network">Ouvert</string>
+    <string name="map_band_24">2,4 GHz</string>
+    <string name="map_signal">signal %1$s %%</string>
+    <string name="map_places">Lieux où il est resté</string>
+    <string name="map_place">%1$d. %2$s</string>
+    <string name="map_kept">Pour cette carte, le téléphone garde son trajet et ses recherches Wi-Fi environ une semaine, même une fois que le hub les a. Ils ne quittent le téléphone que vers votre hub. Les tuiles de la carte viennent d’OpenStreetMap, qui voit quelle zone la carte affiche, pas le trajet.</string>
+    <plurals name="map_points">
+        <item quantity="one">%d point</item>
+        <item quantity="other">%d points</item>
+    </plurals>
+    <plurals name="map_networks">
+        <item quantity="one">%d réseau Wi-Fi</item>
+        <item quantity="other">%d réseaux Wi-Fi</item>
+    </plurals>
+    <plurals name="map_scan_before">
+        <item quantity="one">détectés %d minute avant</item>
+        <item quantity="other">détectés %d minutes avant</item>
+    </plurals>
+    <plurals name="map_scan_after">
+        <item quantity="one">détectés %d minute après</item>
+        <item quantity="other">détectés %d minutes après</item>
+    </plurals>
+    <plurals name="map_visits">
+        <item quantity="one">%d fois</item>
+        <item quantity="other">%d fois</item>
+    </plurals>
 </resources>

@@ -75,6 +75,11 @@
             </intent-filter>
         </activity>
 
+        <!-- The phone's own route on a map, opened from the main screen. -->
+        <activity
+            android:name=".MapActivity"
+            android:exported="false" />
+
         <!-- The scanner turns with the phone, so it can be held upright. -->
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"

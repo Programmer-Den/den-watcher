@@ -15,8 +15,12 @@ import org.json.JSONObject
  * newest KEEP readings are kept, so a phone that does not reach the hub for a
  * long time does not fill up. They are counted rather than dated: a clock set far ahead for a moment
  * would make every reading before it look too old to keep.
+ *
+ * Apart from what the hub does not have yet, it keeps the newest points of
+ * the route and scans of the networks nearby for the app's own map, which
+ * the hub taking them does not delete: about a week of them.
  */
-class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 5) {
+class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 6) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
             """
@@ -32,6 +36,7 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 5
         createUses(db)
         createConnections(db)
         createRoute(db)
+        createMap(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -47,6 +52,97 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 5
         if (oldVersion < 5) {
             createRoute(db)
         }
+        if (oldVersion < 6) {
+            createMap(db)
+        }
+    }
+
+    private fun createMap(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE map_route (
+                time     INTEGER PRIMARY KEY, -- Unix milliseconds on the phone's clock
+                lat      REAL    NOT NULL,    -- degrees north
+                lon      REAL    NOT NULL,    -- degrees east
+                accuracy REAL    NOT NULL     -- meters
+            )
+            """.trimIndent(),
+        )
+        db.execSQL(
+            """
+            CREATE TABLE map_scans (
+                time     INTEGER PRIMARY KEY, -- Unix seconds on the phone's clock
+                networks TEXT    NOT NULL     -- the networks as SeenScan keeps them, in JSON
+            )
+            """.trimIndent(),
+        )
+    }
+
+    /** Keeps a point of the route for the app's map, and deletes the oldest beyond KEEP_MAP_ROUTE. */
+    fun addMapPoint(point: RoutePoint) {
+        val db = writableDatabase
+        val row = ContentValues().apply {
+            put("time", point.time)
+            put("lat", point.lat)
+            put("lon", point.lon)
+            put("accuracy", point.accuracy)
+        }
+        db.insertWithOnConflict("map_route", null, row, SQLiteDatabase.CONFLICT_REPLACE)
+        db.delete("map_route", "time < (SELECT time FROM map_route ORDER BY time DESC LIMIT 1 OFFSET ?)", arrayOf((KEEP_MAP_ROUTE - 1).toString()))
+    }
+
+    /** The points of the route kept for the map from since on, Unix milliseconds, oldest first. */
+    fun mapPoints(since: Long): List<RoutePoint> {
+        val points = mutableListOf<RoutePoint>()
+        readableDatabase.rawQuery(
+            "SELECT time, lat, lon, accuracy FROM map_route WHERE time >= ? ORDER BY time",
+            arrayOf(since.toString()),
+        ).use { rows ->
+            while (rows.moveToNext()) {
+                points += RoutePoint(rows.getLong(0), rows.getDouble(1), rows.getDouble(2), rows.getDouble(3))
+            }
+        }
+        return points
+    }
+
+    /**
+     * Keeps a scan for the app's map when it is at least MAP_SCAN_EVERY_SECONDS
+     * after the newest one kept, or the clock went back, and deletes the
+     * oldest beyond KEEP_MAP_SCANS: the map needs one scan near each point,
+     * not one of every reading.
+     */
+    fun addMapScan(scan: SeenScan) {
+        val db = writableDatabase
+        val newest = db.rawQuery("SELECT MAX(time) FROM map_scans", null).use { rows ->
+            if (rows.moveToFirst() && !rows.isNull(0)) rows.getLong(0) else null
+        }
+        if (newest != null && scan.time - newest < MAP_SCAN_EVERY_SECONDS && scan.time >= newest) {
+            return
+        }
+        val row = ContentValues().apply {
+            put("time", scan.time)
+            put("networks", scan.text())
+        }
+        db.insertWithOnConflict("map_scans", null, row, SQLiteDatabase.CONFLICT_REPLACE)
+        db.delete("map_scans", "time < (SELECT time FROM map_scans ORDER BY time DESC LIMIT 1 OFFSET ?)", arrayOf((KEEP_MAP_SCANS - 1).toString()))
+    }
+
+    /** The scan kept for the map closest to time, Unix seconds, within SeenScan.WITHIN_SECONDS, or null. */
+    fun mapScanNear(time: Long): SeenScan? = readableDatabase.rawQuery(
+        "SELECT time, networks FROM map_scans WHERE time BETWEEN ? AND ? ORDER BY ABS(time - ?), time DESC LIMIT 1",
+        arrayOf((time - SeenScan.WITHIN_SECONDS).toString(), (time + SeenScan.WITHIN_SECONDS).toString(), time.toString()),
+    ).use { rows ->
+        if (rows.moveToFirst()) SeenScan.parse(rows.getLong(0), rows.getString(1)) else null
+    }
+
+    /** Deletes the route kept for the map, as when the route is not collected any more. */
+    fun deleteMapRoute() {
+        writableDatabase.delete("map_route", null, null)
+    }
+
+    /** Deletes the scans kept for the map, as when the networks nearby are not collected any more. */
+    fun deleteMapScans() {
+        writableDatabase.delete("map_scans", null, null)
     }
 
     private fun createRoute(db: SQLiteDatabase) {
@@ -374,6 +470,15 @@ class Store(context: Context) : SQLiteOpenHelper(context, "readings.db", null, 5
          * more than a week of a phone that moves all day.
          */
         const val KEEP_ROUTE = 20_000
+
+        /** How many points of the route are kept for the app's map: as many as for the hub, about a week. */
+        const val KEEP_MAP_ROUTE = KEEP_ROUTE
+
+        /** How often a scan is kept for the app's map at most: as often as the app asks for one. */
+        const val MAP_SCAN_EVERY_SECONDS = 4 * 60L
+
+        /** How many scans are kept for the app's map: a week of one every MAP_SCAN_EVERY_SECONDS. */
+        const val KEEP_MAP_SCANS = 7 * 24 * 15
 
         /** How many readings are added between two looks for the ones too old to keep: an hour's. */
         const val PRUNE_EVERY = 120

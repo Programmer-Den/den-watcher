@@ -20,11 +20,12 @@ import android.widget.Toast
 import com.google.zxing.integration.android.IntentIntegrator
 
 /**
- * The app's only screen, in cards as on the website: how recording goes,
- * with a dot as on the hub's page, the pairing code to enter on the hub,
- * the hub's address, scanned from the hub's page, which data to collect and
- * what is sent. Once the hub took a push, the hub's address, stopping and
- * which data to collect are locked until the hub allows a change.
+ * The app's main screen, in cards as on the website: how recording goes,
+ * with a dot as on the hub's page and a way to the phone's route on a map
+ * (MapActivity), the pairing code to enter on the hub, the hub's address,
+ * scanned from the hub's page, which data to collect and what is sent. Once
+ * the hub took a push, the hub's address, stopping and which data to collect
+ * are locked until the hub allows a change.
  */
 class MainActivity : Activity() {
     private lateinit var settings: Settings
@@ -68,6 +69,7 @@ class MainActivity : Activity() {
         dot = findViewById(R.id.dot)
         openHub = findViewById(R.id.open_hub)
         openHub.setOnClickListener { openHubPage() }
+        findViewById<Button>(R.id.open_map).setOnClickListener { startActivity(Intent(this, MapActivity::class.java)) }
 
         findViewById<Button>(R.id.network_usual).setOnClickListener {
             settings.otherNetwork?.let { settings.usualNetworks += it }
@@ -389,6 +391,8 @@ class MainActivity : Activity() {
         findViewById<View>(R.id.network_group).visibility = if (other == null) View.GONE else View.VISIBLE
         other?.let { findViewById<TextView>(R.id.network).text = getString(R.string.network_notice, it) }
         openHub.visibility = if (HubAddress.pageUrl(settings.hubAddress) == null) View.GONE else View.VISIBLE
+        // The map shows the route the phone keeps, which it keeps only while it is collected.
+        findViewById<View>(R.id.open_map).visibility = if (settings.dataChoice.collectsRoute) View.VISIBLE else View.GONE
         showNearby()
         showApps()
         showBluetooth()

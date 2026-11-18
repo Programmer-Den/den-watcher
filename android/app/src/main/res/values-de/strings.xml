@@ -82,4 +82,53 @@
     <string name="steps_hint">Die Schritte, die das Handy heute zählt, von seinem Schrittzähler, einem Chip, der sie selbst zählt, deshalb kostet es fast keinen Akku. Android fragt dafür ab Android 10 nach der Berechtigung Körperliche Aktivität.</string>
     <string name="steps_off">Werden nicht gezählt. Erlaube Den-Watcher Körperliche Aktivität.</string>
     <string name="steps_on">Werden gezählt, auch wenn das Handy unterwegs ist.</string>
+
+    <!-- The phone's own route on a map (MapActivity). -->
+    <string name="map_open">Verlauf auf der Karte zeigen</string>
+    <string name="map_title">Standortverlauf</string>
+    <string name="map_back">Zurück</string>
+    <string name="map_day">24 Stunden</string>
+    <string name="map_week">7 Tage</string>
+    <string name="map_none">Für diese Zeit hat dieses Handy keinen Verlauf. Lass Standortverlauf unter Welche Daten möchtest du sammeln? an und erlaube den Standort immer.</string>
+    <string name="map_distance">%1$s km zurückgelegt</string>
+    <string name="map_description">Der Verlauf auf einer Karte</string>
+    <string name="map_attribution">Karte © OpenStreetMap-Mitwirkende</string>
+    <string name="map_legend">○ Start   ● Zuletzt   • Punkt, antippen für sein WLAN</string>
+    <string name="map_pick">Tippe einen Punkt auf der Karte an, um die WLANs zu sehen, die das Handy dort gefunden hat.</string>
+    <string name="map_latest">Letzten Punkt zeigen</string>
+    <string name="map_previous">Vorheriger Punkt</string>
+    <string name="map_next">Nächster Punkt</string>
+    <string name="map_close">Schließen</string>
+    <string name="map_accuracy">± %1$s m</string>
+    <string name="map_scan_summary">%1$s · %2$s</string>
+    <string name="map_scan_at">an diesem Punkt gesucht</string>
+    <string name="map_no_scan">Das Handy hat innerhalb von 5 Minuten um diesen Punkt keine WLAN-Suche aufbewahrt. Lass WLANs in der Nähe an, um sie zu sehen.</string>
+    <string name="map_hidden">Verborgenes Netzwerk</string>
+    <string name="map_connected">verbunden</string>
+    <string name="map_open_network">Offen</string>
+    <string name="map_band_24">2,4 GHz</string>
+    <string name="map_signal">%1$s %% Signal</string>
+    <string name="map_places">Aufenthaltsorte</string>
+    <string name="map_place">%1$d. %2$s</string>
+    <string name="map_kept">Für diese Karte bewahrt das Handy seinen Verlauf und seine WLAN-Suchen etwa eine Woche auf, auch wenn der Hub sie schon hat. Sie verlassen das Handy nur zu deinem Hub. Die Kacheln der Karte kommen von OpenStreetMap, das sieht, welche Gegend die Karte zeigt, aber nicht den Verlauf.</string>
+    <plurals name="map_points">
+        <item quantity="one">%d Punkt</item>
+        <item quantity="other">%d Punkte</item>
+    </plurals>
+    <plurals name="map_networks">
+        <item quantity="one">%d WLAN</item>
+        <item quantity="other">%d WLANs</item>
+    </plurals>
+    <plurals name="map_scan_before">
+        <item quantity="one">%d Minute vorher gesucht</item>
+        <item quantity="other">%d Minuten vorher gesucht</item>
+    </plurals>
+    <plurals name="map_scan_after">
+        <item quantity="one">%d Minute danach gesucht</item>
+        <item quantity="other">%d Minuten danach gesucht</item>
+    </plurals>
+    <plurals name="map_visits">
+        <item quantity="one">einmal</item>
+        <item quantity="other">%d-mal</item>
+    </plurals>
 </resources>

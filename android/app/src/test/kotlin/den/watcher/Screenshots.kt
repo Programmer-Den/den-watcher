@@ -1,6 +1,7 @@
 package den.watcher
 
 import android.Manifest
+import android.app.Activity
 import android.app.AppOpsManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -109,16 +110,75 @@ class Screenshots {
         releasedUntil = RELEASED_UNTIL
     }
 
+    @Test
+    fun map() = shot("12-map", screen = MapActivity::class.java, fill = ::keepRoute) {
+        hubAddress = "192.168.1.20:9393"
+        recording = true
+        lastPush = LAST_PUSH
+    }
+
+    @Test
+    fun mapPoint() = shot(
+        "13-map-point",
+        screen = MapActivity::class.java,
+        fill = ::keepRoute,
+        // Taps the point at the café.
+        tap = { (it as MapActivity).findViewById<RouteMapView>(R.id.map).onSelect?.invoke(5) },
+    ) {
+        hubAddress = "192.168.1.20:9393"
+        recording = true
+        lastPush = LAST_PUSH
+    }
+
+    @Test
+    fun mapGerman() = shot("14-map-german", "de", screen = MapActivity::class.java, fill = ::keepRoute) {
+        hubAddress = "192.168.1.20:9393"
+        recording = true
+        lastPush = LAST_PUSH
+    }
+
+    /** A morning's route kept for the map, from home past a café to work, with the scans along it. */
+    private fun keepRoute(store: Store) {
+        // On the hour, so the light and the dark screenshot keep the same points.
+        val hour = 60 * 60_000L
+        val start = (System.currentTimeMillis() - 3 * hour) / hour * hour
+        val way = listOf(
+            0 to (53.5511 to 9.9937), 10 to (53.5512 to 9.9938), 25 to (53.5510 to 9.9936),
+            32 to (53.5530 to 9.9890), 40 to (53.5560 to 9.9850), 52 to (53.5561 to 9.9851),
+            60 to (53.5585 to 9.9800), 68 to (53.5620 to 9.9760), 80 to (53.5621 to 9.9761),
+            110 to (53.5622 to 9.9759), 150 to (53.5620 to 9.9760),
+        )
+        for ((minutes, at) in way) {
+            val time = start + minutes * 60_000L
+            store.addMapPoint(RoutePoint(time, at.first, at.second, 25.0))
+            store.addMapScan(
+                SeenScan(
+                    time / 1000 + 40,
+                    listOf(
+                        SeenNetwork(if (minutes < 30) "Home" else "Café Hafen", -48, 5180, "WPA2/WPA3", minutes < 30),
+                        SeenNetwork("Neighbours", -67, 2437, "WPA2", false),
+                        SeenNetwork("", -74, 5500, "WPA3", false),
+                        SeenNetwork("Free Wi-Fi", -82, 2462, "Open", false),
+                    ),
+                ),
+            )
+        }
+    }
+
     /**
      * Saves the screen with settings as set and the permissions granted, and
      * usage access when usageAccess is set, as <name>-light.png and
-     * <name>-dark.png.
+     * <name>-dark.png: the main screen, or another with what fill keeps in
+     * the Store, after tap.
      */
     private fun shot(
         name: String,
         language: String? = null,
         permissions: Array<String> = emptyArray(),
         usageAccess: Boolean = false,
+        screen: Class<out Activity> = MainActivity::class.java,
+        fill: (Store) -> Unit = {},
+        tap: (Activity) -> Unit = {},
         set: Settings.() -> Unit,
     ) {
         folder.mkdirs()
@@ -135,9 +195,11 @@ class Screenshots {
                 app.packageName,
                 if (usageAccess) AppOpsManager.MODE_ALLOWED else AppOpsManager.MODE_DEFAULT,
             )
-            val activity = Robolectric.buildActivity(MainActivity::class.java).setup().get()
+            Store(app).use(fill)
+            val activity = Robolectric.buildActivity(screen).setup().get()
             // Runs the status refresh that onResume posts.
             shadowOf(Looper.getMainLooper()).idle()
+            tap(activity)
             val content = activity.findViewById<View>(R.id.content)
             val metrics = activity.resources.displayMetrics
             val width = metrics.widthPixels
@@ -147,6 +209,14 @@ class Screenshots {
             )
             val height = maxOf(content.measuredHeight, metrics.heightPixels)
             content.layout(0, 0, width, content.measuredHeight)
+            if (screen != MainActivity::class.java) {
+                // A first draw asks for the map's tiles, which come in on the main thread.
+                content.draw(Canvas(Bitmap.createBitmap(width, content.measuredHeight, Bitmap.Config.ARGB_8888)))
+                repeat(TILE_WAIT_SECONDS) {
+                    Thread.sleep(1000)
+                    shadowOf(Looper.getMainLooper()).idle()
+                }
+            }
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             canvas.drawColor(activity.getColor(R.color.surface))
@@ -161,5 +231,8 @@ class Screenshots {
 
         /** A time the hub allows a change until, far enough ahead that the screenshot shows it. */
         const val RELEASED_UNTIL = 4_102_444_800L
+
+        /** How long a map waits for its tiles from OpenStreetMap; without internet it shows its plain background. */
+        const val TILE_WAIT_SECONDS = 5
     }
 }
