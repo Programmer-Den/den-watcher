@@ -680,11 +680,11 @@ const (
 // its old name to path, as long as path is called den-watcher.db and does
 // not exist yet: the one next to path, or on Windows (where programData is
 // the ProgramData folder, else empty) the one in the old data folder, which
-// then also gives up the encrypted router passwords and is deleted once
-// nothing else is left in it. The write-ahead log and its index are renamed
-// first and the database last, so a rename cut short is finished at the
-// next start without losing what the log still holds; the backup next to it
-// goes too.
+// also gives up the encrypted router passwords and is deleted once nothing
+// else is left in it. What the write-ahead log holds is written into the
+// database first, so the rename moves one file and cannot be cut short
+// halfway; a log and index left under the new name belong to no database
+// and are deleted before. The backup next to it goes too.
 func renameOldDatabase(path, programData string) error {
 	if filepath.Base(path) != "den-watcher.db" {
 		return nil
@@ -694,30 +694,23 @@ func renameOldDatabase(path, programData string) error {
 	windowsFolder := programData != "" && filepath.Clean(dir) == filepath.Join(programData, newDataFolder)
 	if windowsFolder {
 		oldDir = filepath.Join(programData, oldDataFolder)
-	}
-	old := filepath.Join(oldDir, oldDatabaseName)
-	if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
-		return nil //nolint:nilerr // the database is there, or can't be told: it is opened as it is
-	}
-	if _, err := os.Stat(old); err != nil {
-		return nil //nolint:nilerr // nothing to rename
+		if _, err := os.Stat(oldDir); err != nil {
+			windowsFolder = false
+		}
 	}
 	if windowsFolder {
 		// The router passwords, encrypted for the service's account, which
 		// did not change; ones already in the new folder stay.
-		passwords := "router-passwords.dpapi"
+		passwords := "router-passwords.dpapi" // router.protectedFile, Windows only
 		if _, err := os.Stat(filepath.Join(dir, passwords)); errors.Is(err, fs.ErrNotExist) {
 			if err := moveFile(filepath.Join(oldDir, passwords), filepath.Join(dir, passwords)); err != nil {
 				return err
 			}
 		}
 	}
-	for _, suffix := range []string{"-wal", "-shm", ".backup", ""} {
-		if err := moveFile(old+suffix, path+suffix); err != nil {
-			return err
-		}
+	if err := renameDatabaseFile(filepath.Join(oldDir, oldDatabaseName), path); err != nil {
+		return err
 	}
-	slog.Info("renamed the database to its new name", "from", old, "to", path)
 	if windowsFolder {
 		// The add-ons' reports are written again in the new folder; the old
 		// folder goes only once it is empty.
@@ -726,10 +719,42 @@ func renameOldDatabase(path, programData string) error {
 			_ = os.Remove(report)
 		}
 		_ = os.Remove(filepath.Join(oldDir, "addons"))
-		if err := os.Remove(oldDir); err != nil {
+		if err := os.Remove(oldDir); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			slog.Warn("the data folder of 4.0.0 and before is left, as something else is still in it", "folder", oldDir)
 		}
 	}
+	return nil
+}
+
+// renameDatabaseFile renames the database old to path, with its backup,
+// unless path exists or old does not.
+func renameDatabaseFile(old, path string) error {
+	if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
+		return nil //nolint:nilerr // the database is there, or can't be told: it is opened as it is
+	}
+	if _, err := os.Stat(old); err != nil {
+		return nil //nolint:nilerr // nothing to rename
+	}
+	if err := history.Checkpoint(context.Background(), old); err != nil {
+		return fmt.Errorf("write the log of %s into it: %w", old, err)
+	}
+	for _, suffix := range []string{"-wal", "-shm"} {
+		if err := os.Remove(path + suffix); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+	}
+	if _, err := os.Stat(path + ".backup"); errors.Is(err, fs.ErrNotExist) {
+		if err := moveFile(old+".backup", path+".backup"); err != nil {
+			return err
+		}
+	}
+	if err := os.Rename(old, path); err != nil {
+		return err
+	}
+	// Empty after the checkpoint, should SQLite have kept them.
+	_ = os.Remove(old + "-wal")
+	_ = os.Remove(old + "-shm")
+	slog.Info("renamed the database to its new name", "from", old, "to", path)
 	return nil
 }
 

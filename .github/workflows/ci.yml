@@ -190,38 +190,29 @@ jobs:
           COMPOSE_PROFILES: power,processes
         run: |
           set -euo pipefail
-          # Starts the compose file $1 and checks den-watcher shows the
-          # processes add-on and the services $2 run; $3 and $4 name what
-          # failed in the messages.
-          check() {
-            docker compose -f "$1" up -d --no-build --pull never
-            for _ in $(seq 1 30); do
-              if curl -fsS http://127.0.0.1:9393/api/metrics 2> /dev/null | grep -q '"id":"processes-memory"'; then
-                break
-              fi
-              sleep 1
-            done
-            if ! curl -fsS http://127.0.0.1:9393/api/metrics | grep -q '"id":"processes-memory"'; then
-              docker compose -f "$1" logs >&2
-              echo "$3 does not show the processes add-on" >&2
-              exit 1
+          docker compose up -d --no-build --pull never
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:9393/api/metrics 2> /dev/null | grep -q '"id":"processes-memory"'; then
+              break
             fi
-            # A container that ends is restarted, so with the current
-            # compose.yaml it has to have run throughout.
-            local restarts="0 "
-            if [[ "$1" == compose.yaml ]]; then
-              mapfile -t containers < <(docker compose -f "$1" ps -aq)
-              restarts="$(docker inspect -f '{{.RestartCount}}' "${containers[@]}" | sort -u | tr '\n' ' ')"
-            fi
-            if [[ "$(docker compose -f "$1" ps --status running --services | sort | tr '\n' ' ')" != "$2" || "$restarts" != "0 " ]]; then
-              docker compose -f "$1" ps -a >&2
-              docker compose -f "$1" logs >&2
-              echo "not every container$4 is running" >&2
-              exit 1
-            fi
-            docker compose -f "$1" down -v
-          }
-          check compose.yaml "den-watcher power processes " den-watcher ""
+            sleep 1
+          done
+          if ! curl -fsS http://127.0.0.1:9393/api/metrics | grep -q '"id":"processes-memory"'; then
+            docker compose logs >&2
+            echo "den-watcher does not show the processes add-on" >&2
+            exit 1
+          fi
+          # A container that ends is restarted, so it has to have run
+          # throughout.
+          mapfile -t containers < <(docker compose ps -aq)
+          restarts="$(docker inspect -f '{{.RestartCount}}' "${containers[@]}" | sort -u | tr '\n' ' ')"
+          if [[ "$(docker compose ps --status running --services | sort | tr '\n' ' ')" != "den-watcher power processes " || "$restarts" != "0 " ]]; then
+            docker compose ps -a >&2
+            docker compose logs >&2
+            echo "not every container is running" >&2
+            exit 1
+          fi
+          docker compose down -v
           # The image itself makes the old file, with the old name set.
           image=ghcr.io/programmer-den/den-watcher:ci
           docker run -d --name old-name -v rename-check:/data -e DATABASE_PATH=/data/usage-control.db "$image"

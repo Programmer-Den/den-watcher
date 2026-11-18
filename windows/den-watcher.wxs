@@ -168,7 +168,11 @@
     <Upgrade Id="C226A238-37CF-4C24-85FE-A29D04C94172">
       <UpgradeVersion Minimum="$(Version)" Maximum="$(Version)" IncludeMinimum="yes" IncludeMaximum="yes"
                       OnlyDetect="yes" Property="SAMEVERSION" />
+      <!-- usage-control, the name up to 2.0.7a, which this version no longer takes over. -->
+      <UpgradeVersion Maximum="2.0.8" IncludeMaximum="no" OnlyDetect="yes" Property="USAGECONTROL" />
     </Upgrade>
+    <Launch Condition="Installed OR NOT USAGECONTROL"
+            Message="This PC still runs usage-control, which this version no longer takes over. Install Den-Watcher 4.0.0 over it first, then this version." />
     <Property Id="INSTALLEDBUGFIX">
       <RegistrySearch Id="RememberedBugfix" Root="HKLM" Key="SOFTWARE\Den-Watcher" Name="Bugfix" Type="raw" />
       <RegistrySearch Id="RememberedOldBugfix" Root="HKLM" Key="SOFTWARE\Usage Control" Name="Bugfix" Type="raw" />
@@ -501,6 +505,13 @@
         the key, and the service may also delete the value in it. It is
         locked down as it is created.
       -->
+      <!--
+        The key of 4.0.0 and before, which the removal of that version
+        deletes; this deletes what may be left of it, so later updates read
+        only the new one.
+      -->
+      <RemoveRegistryKey Root="HKLM" Key="SOFTWARE\Usage Control" Action="removeOnInstall" />
+
       <RegistryKey Root="HKLM" Key="SOFTWARE\Den-Watcher\Router" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
         <PermissionEx Sddl="D:P(A;;KA;;;SY)(A;;KA;;;BA)(A;;0x2001b;;;LS)" />
       </RegistryKey>

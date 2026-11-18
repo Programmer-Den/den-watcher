@@ -65,7 +65,7 @@ if [[ -n "$old_archive" ]]; then
   sed -i 's/^DEVICE_NAME=.*/DEVICE_NAME=Up to 4.0.0/' /etc/den-watcher.env
   systemctl restart den-watcher
   answer /api/devices | grep -q '"name":"Up to 4.0.0"' || { echo "the old archive did not take DEVICE_NAME" >&2; exit 1; }
-  test -f /var/lib/den-watcher/den-watcher.db
+  test -f /var/lib/den-watcher/usage-control.db
   # Without --addons and without a terminal, as an unattended update.
   "$folder/install.sh" < /dev/null
   answer /api/metrics | grep -q "\"version\":\"$version\"" || { echo "the service does not report version $version after the update" >&2; exit 1; }

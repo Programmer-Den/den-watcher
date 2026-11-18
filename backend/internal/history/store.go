@@ -422,3 +422,17 @@ func (s *Store) shrinkLog(ctx context.Context, deleted int64) {
 func (s *Store) DB() *sql.DB {
 	return s.db
 }
+
+// Checkpoint writes what the write-ahead log of the database at path holds
+// into the database file itself and closes it, so the file alone is the
+// whole database and can be renamed on its own: SQLite deletes the log and
+// its index as the last connection closes.
+func Checkpoint(ctx context.Context, path string) error {
+	db, err := openDB(path)
+	if err != nil {
+		return err
+	}
+	db.SetMaxOpenConns(1)
+	_, err = db.ExecContext(ctx, "PRAGMA wal_checkpoint(TRUNCATE)")
+	return errors.Join(err, db.Close())
+}

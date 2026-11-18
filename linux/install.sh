@@ -105,6 +105,13 @@ if [[ "${1:-}" != --uninstall ]]; then
   done
 fi
 
+# usage-control, the name up to 2.0.7a, is no longer taken over: such an
+# install updates to 4.0.0 first, whose install.sh moves it.
+if [[ "${1:-}" != --uninstall && (-e /etc/systemd/system/usage-control.service || -e /usr/local/bin/usage-control) ]]; then
+  echo "This machine still runs usage-control, which this version no longer takes over. Update it with the archive of den-watcher 4.0.0 first (https://github.com/Programmer-Den/den-watcher/releases/tag/4.0.0), then with this one." >&2
+  exit 1
+fi
+
 # Every add-on there is: those in this archive and those installed before,
 # each with what it does for the question at install, from the
 # "Description=Den-Watcher <name> add-on: <what it does>" of its service.
