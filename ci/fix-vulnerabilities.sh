@@ -62,8 +62,8 @@ npm audit fix --package-lock-only --ignore-scripts || true
 if ! git diff --quiet -- package-lock.json; then
   echo "- npm: \`npm audit fix\` updated package-lock.json" >>"$summary"
 fi
-# The same check the CI workflow runs.
-if ! bash "$root/ci/npm-audit.sh" --package-lock-only; then
+# The same level the CI workflow fails at.
+if ! npm audit --package-lock-only --audit-level=high; then
   unfixed=1
 fi
 

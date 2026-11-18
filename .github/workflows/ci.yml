@@ -141,9 +141,7 @@ jobs:
       - run: npm run format:check
       - run: npm run lint
       - name: Check dependencies for known vulnerabilities
-        # Like npm audit --audit-level=high, but lets the advisories in
-        # frontend/audit-allow.txt pass until a fix ships.
-        run: bash ../ci/npm-audit.sh
+        run: npm audit --audit-level=high
       - run: npm test
       - run: npm run build
       # The demo on GitHub Pages, so a change that breaks it shows up before the merge.
