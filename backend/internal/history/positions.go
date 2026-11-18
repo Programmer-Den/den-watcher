@@ -183,6 +183,9 @@ func (s *Store) WiFiPositions(ctx context.Context, from, to time.Time) ([]WiFiPo
 // positionPoints reads the points of the devices' routes from from up to
 // to, by phone, oldest first.
 func (s *Store) positionPoints(ctx context.Context, devices []string, from, to time.Time) (map[string][]positionPoint, error) {
+	if len(devices) == 0 {
+		return map[string][]positionPoint{}, nil
+	}
 	args := []any{from.UnixMilli(), to.UnixMilli()}
 	for _, d := range devices {
 		args = append(args, d)

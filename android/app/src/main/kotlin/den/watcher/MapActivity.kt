@@ -41,7 +41,7 @@ class MapActivity : Activity() {
 
     /** Counts the reads, so the answer of one the range changed after is dropped. */
     private var loads = 0
-    private val reload = Runnable { load(again = true) }
+    private val reload = Runnable { load() }
 
     /** The time of the point whose networks are shown, kept by time as the route moves on, or null. */
     private var selectedTime: Long? = null
@@ -72,8 +72,7 @@ class MapActivity : Activity() {
         }
         findViewById<TextView>(R.id.legend).text = getString(R.string.map_legend)
         // Nothing but the range until the points are read.
-        showRange(R.id.range_day, days == 1)
-        showRange(R.id.range_week, days == 7)
+        showRanges()
         for (id in listOf(R.id.none, R.id.route_group, R.id.places_group)) {
             findViewById<View>(id).visibility = View.GONE
         }
@@ -100,8 +99,7 @@ class MapActivity : Activity() {
     private fun setDays(to: Int) {
         if (to != days) {
             days = to
-            showRange(R.id.range_day, days == 1)
-            showRange(R.id.range_week, days == 7)
+            showRanges()
             load()
         }
     }
@@ -109,23 +107,17 @@ class MapActivity : Activity() {
     /**
      * Reads the points of the range again, off the main thread, with the
      * places and distance worked out from them, and again after
-     * RELOAD_MILLIS while the map is shown, when the recorder kept a new
-     * point since.
+     * RELOAD_MILLIS while the map is shown: the recorder may have kept new
+     * points, a scan may have come in for the picked one, and the range
+     * moves on.
      */
-    private fun load(again: Boolean = false) {
+    private fun load() {
         main.removeCallbacks(reload)
         val number = ++loads
         val since = System.currentTimeMillis() - days * DAY_MILLIS
-        val shownNewest = points.lastOrNull()?.time
         val context = applicationContext
         background.execute {
-            val read = Store(context).use { store ->
-                if (again && store.newestMapPoint() == shownNewest) null else store.mapPoints(since)
-            }
-            if (read == null) {
-                main.post { if (number == loads && resumed) main.postDelayed(reload, RELOAD_MILLIS) }
-                return@execute
-            }
+            val read = Store(context).use { it.mapPoints(since) }
             val stayed = RouteMap.places(RouteMap.stops(read))
             val went = RouteMap.distance(read)
             main.post {
@@ -146,8 +138,7 @@ class MapActivity : Activity() {
     }
 
     private fun show() {
-        showRange(R.id.range_day, days == 1)
-        showRange(R.id.range_week, days == 7)
+        showRanges()
         val any = points.isNotEmpty()
         findViewById<View>(R.id.none).visibility = if (any) View.GONE else View.VISIBLE
         findViewById<View>(R.id.route_group).visibility = if (any) View.VISIBLE else View.GONE
@@ -171,6 +162,11 @@ class MapActivity : Activity() {
         showPlaces(places)
     }
 
+    private fun showRanges() {
+        showRange(R.id.range_day, days == 1)
+        showRange(R.id.range_week, days == 7)
+    }
+
     private fun showRange(id: Int, picked: Boolean) {
         findViewById<Button>(id).apply {
             setBackgroundResource(if (picked) R.drawable.button_filled else R.drawable.button_outlined)
@@ -185,7 +181,7 @@ class MapActivity : Activity() {
         findViewById<View>(R.id.point_group).visibility = if (point == null) View.GONE else View.VISIBLE
         if (point?.time != scanShownFor) {
             // Another point: its networks are read anew. The same one keeps
-            // the list it shows.
+            // the list it shows until it is read again.
             findViewById<LinearLayout>(R.id.networks).removeAllViews()
             findViewById<TextView>(R.id.scan_summary).text = ""
             scanShownFor = null
@@ -196,10 +192,6 @@ class MapActivity : Activity() {
             getString(R.string.map_accuracy, NumberFormat.getIntegerInstance().format(point.accuracy.roundToInt()))
         findViewById<Button>(R.id.previous).isEnabled = index > 0
         findViewById<Button>(R.id.next).isEnabled = index < points.size - 1
-        // A scan may come in only near the newest point.
-        if (point.time == scanShownFor && index < points.size - 1) {
-            return
-        }
         val context = applicationContext
         background.execute {
             val scan = Store(context).use { it.mapScanNear(point.time / 1000) }
