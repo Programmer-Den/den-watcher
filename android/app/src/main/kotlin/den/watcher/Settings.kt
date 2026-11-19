@@ -98,6 +98,17 @@ class Settings(context: Context) {
         get() = prefs.getString(OTHER_NETWORK, null)
         set(value) = prefs.edit().putString(OTHER_NETWORK, value).apply()
 
+    /**
+     * Where the hub last did not answer, as Hub.place names it, and when, in
+     * Unix seconds; null after it answered.
+     */
+    var unreachable: Pair<String, Long>?
+        get() {
+            val place = prefs.getString(UNREACHABLE_PLACE, null) ?: return null
+            return place to prefs.getLong(UNREACHABLE_AT, 0)
+        }
+        set(value) = prefs.edit().putString(UNREACHABLE_PLACE, value?.first).putLong(UNREACHABLE_AT, value?.second ?: 0).apply()
+
     /** Which data the app collects, as chosen on its screen; all of it until something is switched off. */
     var dataChoice: DataChoice
         get() = DataChoice(
@@ -224,6 +235,8 @@ class Settings(context: Context) {
         const val LAST_READING = "lastReading"
         const val USUAL_NETWORKS = "usualNetworks"
         const val OTHER_NETWORK = "otherNetwork"
+        const val UNREACHABLE_PLACE = "unreachablePlace"
+        const val UNREACHABLE_AT = "unreachableAt"
         const val LAST_SCAN = "lastScan"
         const val COLLECT_SYSTEM = "collectSystem"
         const val SAVE_BATTERY = "saveBattery"

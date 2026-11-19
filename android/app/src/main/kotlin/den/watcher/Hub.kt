@@ -9,6 +9,13 @@ import java.net.URL
 object Hub {
     private const val TIMEOUT_MILLIS = 10_000
 
+    /**
+     * How long the phone waits before it tries the hub again on a network
+     * where it did not answer and that is not a usual one, such as a Wi-Fi
+     * at work: each try there can keep the phone awake for TIMEOUT_MILLIS.
+     */
+    const val RETRY_ELSEWHERE_SECONDS = 5 * 60L
+
     /** The longest answer read; the hub's is a few hundred bytes. */
     private const val MAX_ANSWER_BYTES = 64 * 1024
 
@@ -34,6 +41,24 @@ object Hub {
             val routeAfter: Long = 0,
         ) : Answer
         data class Failed(val problem: Problem) : Answer
+    }
+
+    /** The hub's address on the network, as Settings keeps where the hub did not answer. */
+    fun place(address: String, network: String): String = "$address on $network"
+
+    /**
+     * Whether to leave out trying the hub at address now, Unix seconds, on
+     * network (null when it has none): when it is not one of the usual ones
+     * and the hub did not answer there within RETRY_ELSEWHERE_SECONDS, as
+     * unreachable tells. On a usual network, before the first one is known
+     * and on another network or address, the phone tries at once.
+     */
+    fun waits(address: String, network: String?, usual: Set<String>, unreachable: Pair<String, Long>?, now: Long): Boolean {
+        if (network == null || usual.isEmpty() || network in usual || unreachable == null) {
+            return false
+        }
+        val (place, at) = unreachable
+        return place == place(address, network) && now - at in 0 until RETRY_ELSEWHERE_SECONDS
     }
 
     fun push(url: String, code: String, body: JSONObject): Answer {
