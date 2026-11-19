@@ -3,12 +3,14 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { DeviceService } from '../devices/devices';
+import { MapViewport } from '../map/map-view';
 import { HistoryStore } from '../history/history-store';
 import { PhoneRoute, RoutePoint } from '../metrics/metrics';
 import {
   MAP_HEIGHT,
   MAP_WIDTH,
   PhoneRouteCard,
+  Place,
   ROUTE_REFRESH_MS,
   STOP_SECONDS,
   distance,
@@ -70,16 +72,22 @@ describe('the route', () => {
     ]);
   });
 
+  /** The map of the route, opened on all of it as the card opens it. */
+  function drawn(points: RoutePoint[], placesOf: Place[] = []) {
+    const map = new MapViewport(MAP_WIDTH, MAP_HEIGHT);
+    map.show(points);
+    return routeMap(points, placesOf, (p) => map.at(p));
+  }
+
   it('gives the points a dot each, only the newest of those drawn on top of each other', () => {
-    const map = routeMap(day().points)!;
+    const map = drawn(day().points)!;
     expect(map.points.length).toBe(8);
     // The three at home, the two on the way and the three at work, each drawn at the same spot.
     expect(map.dots).toEqual([2, 3, 7]);
   });
 
   it('draws the route centered on a map that holds all of it', () => {
-    const map = routeMap(day().points, places(stops(day().points)))!;
-    expect(map.zoom).toBeGreaterThan(10);
+    const map = drawn(day().points, places(stops(day().points)))!;
     expect(map.path.startsWith('M')).toBe(true);
     for (const p of [map.start, map.end, ...map.places]) {
       expect(p.x).toBeGreaterThan(0);
@@ -89,11 +97,7 @@ describe('the route', () => {
     }
     // North is up.
     expect(map.end.y).toBeLessThan(map.start.y);
-    expect(map.tiles.length).toBeGreaterThan(0);
-    expect(map.tiles[0].href).toMatch(
-      new RegExp(`^https://tile\\.openstreetmap\\.org/${map.zoom}/\\d+/\\d+\\.png$`),
-    );
-    expect(routeMap([])).toBeNull();
+    expect(drawn([])).toBeNull();
   });
 });
 
@@ -232,5 +236,32 @@ describe('PhoneRouteCard', () => {
     fixture.detectChanges();
     vi.advanceTimersByTime(0);
     answer(day());
+  });
+
+  it('zooms with the buttons, keeps the zoom as the route moves on and shows it whole again', () => {
+    answer(day());
+    const element = fixture.nativeElement as HTMLElement;
+    const end = () => element.querySelector('circle.end')!.getAttribute('cy');
+    const whole = end();
+    const buttons = element.querySelectorAll<HTMLButtonElement>('app-map-frame .zoom button');
+    expect(buttons[2].disabled).toBe(true);
+    buttons[0].click();
+    fixture.detectChanges();
+    expect(end()).not.toBe(whole);
+    expect(buttons[2].disabled).toBe(false);
+    const zoomed = end();
+    vi.advanceTimersByTime(ROUTE_REFRESH_MS);
+    answer(day());
+    expect(end()).toBe(zoomed);
+    buttons[2].click();
+    fixture.detectChanges();
+    expect(end()).toBe(whole);
+    // Another range opens on the whole route again.
+    buttons[0].click();
+    TestBed.inject(HistoryStore).span.set(24 * 3600);
+    fixture.detectChanges();
+    vi.advanceTimersByTime(0);
+    answer(day());
+    expect(end()).toBe(whole);
   });
 });

@@ -1,0 +1,40 @@
+<ng-content />
+<div class="zoom" role="group" [attr.aria-label]="i18n.t('map.zoom')">
+  <button
+    type="button"
+    [disabled]="!map().canZoomIn()"
+    [attr.aria-label]="i18n.t('map.zoomIn')"
+    [title]="i18n.t('map.zoomIn')"
+    (click)="map().zoom(ZOOM_STEP)"
+  >
+    +
+  </button>
+  <button
+    type="button"
+    [disabled]="!map().canZoomOut()"
+    [attr.aria-label]="i18n.t('map.zoomOut')"
+    [title]="i18n.t('map.zoomOut')"
+    (click)="map().zoom(-ZOOM_STEP)"
+  >
+    −
+  </button>
+  <button
+    type="button"
+    class="whole"
+    [disabled]="!map().zoomed()"
+    [attr.aria-label]="i18n.t('map.whole')"
+    [title]="i18n.t('map.whole')"
+    (click)="map().showWhole()"
+  >
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+    </svg>
+  </button>
+</div>
+@if (scale(); as s) {
+  <div class="scale" aria-hidden="true">
+    {{ s.text }}
+    <span class="bar" [style.width.%]="s.percent"></span>
+  </div>
+}
+<p class="hint" role="status" [class.shown]="map().hint()">{{ i18n.t('map.hint') }}</p>

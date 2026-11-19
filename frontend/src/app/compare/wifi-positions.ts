@@ -14,8 +14,11 @@ import {
   WiFiPositions,
   nowSeconds,
 } from '../metrics/metrics';
+import { MapFrame } from '../map/map-frame';
+import { LatLon, MapViewport, Spot } from '../map/map-view';
+import { MapZoom } from '../map/map-zoom';
 import { PageVisibility } from '../page-visibility';
-import { MAP_HEIGHT, MAP_WIDTH, meters, routeMap } from '../phone/phone-route';
+import { MAP_HEIGHT, MAP_WIDTH, meters } from '../phone/phone-route';
 import { bandText, securityText, signalLevel, wifiBand } from './wifi';
 
 /** The ranges the places can be shown for. */
@@ -45,9 +48,9 @@ export function bandsText(frequencies: number[] | undefined, i18n: I18n): string
   return bands.map((b) => bandText(b, i18n)).join(' · ');
 }
 
-/** The map of the places: each place as a point of a route, drawn without the route. */
-export function placesMap(places: WiFiPosition[]) {
-  return routeMap(places.map((p) => ({ time: p.last, lat: p.lat, lon: p.lon, accuracy: 0 })));
+/** Where the places are drawn on the map, in map units, by where `at` puts them. */
+export function placesMap(places: WiFiPosition[], at: (place: LatLon) => Spot) {
+  return places.length > 0 ? { points: places.map(at) } : null;
 }
 
 /**
@@ -57,7 +60,7 @@ export function placesMap(places: WiFiPosition[]) {
  */
 @Component({
   selector: 'app-wifi-positions',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, MapFrame, MapZoom],
   templateUrl: './wifi-positions.html',
   styleUrl: './wifi-positions.css',
 })
@@ -68,8 +71,8 @@ export class WifiPositionsView {
   protected readonly i18n = inject(I18n);
   protected readonly connection = inject(HubConnection);
 
-  protected readonly MAP_WIDTH = MAP_WIDTH;
-  protected readonly MAP_HEIGHT = MAP_HEIGHT;
+  /** The map, which opens on all places and keeps the user's zoom as they are read again. */
+  protected readonly viewport = new MapViewport(MAP_WIDTH, MAP_HEIGHT);
   protected readonly ranges = RANGES;
   protected readonly range = signal(RANGES[0]);
   protected readonly signalLevel = signalLevel;
@@ -80,7 +83,9 @@ export class WifiPositionsView {
   protected readonly showAll = signal(false);
 
   protected readonly places = computed(() => this.answer()?.places ?? []);
-  protected readonly map = computed(() => placesMap(this.places()));
+  protected readonly map = computed(() =>
+    this.viewport.view() ? placesMap(this.places(), (p) => this.viewport.at(p)) : null,
+  );
 
   /** The places the list shows. */
   protected readonly listed = computed(() =>
@@ -163,6 +168,10 @@ export class WifiPositionsView {
     const place = this.places()[index];
     if (place) {
       this.picked.set({ id: place.id, lat: place.lat, lon: place.lon });
+      // A zoomed map follows the pick, so it does not stay off the map.
+      if (this.viewport.zoomed()) {
+        this.viewport.centerOn(place);
+      }
     }
   }
 
@@ -208,6 +217,7 @@ export class WifiPositionsView {
         switchMap((range) => {
           this.answer.set(null);
           this.failed.set(false);
+          this.viewport.show([], true);
           return this.page.poll(POSITIONS_REFRESH_MS, () => {
             const to = nowSeconds();
             return this.metrics.wifiPositions(to - range.seconds, to).pipe(
@@ -224,6 +234,7 @@ export class WifiPositionsView {
         if (answer) {
           this.failed.set(false);
           this.answer.set(answer);
+          this.viewport.show(answer.places);
           // Keeps the picked place's id and middle as they are now. A place found by its middle
           // is taken for it only when the picked one's first scan is before the places were found
           // from, so its id changed; else it may be a neighbour, and the picked one may come back.
