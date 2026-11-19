@@ -61,7 +61,7 @@
                 }
                 <!-- In the drawing order, so a click picks the place drawn on top. -->
                 <circle class="hit" r="14" (click)="select(i)">
-                  <title>{{ i18n.t('wifiPositions.place', { number: i + 1 }) }}</title>
+                  <title>{{ placeName(i) }}</title>
                 </circle>
               </g>
             }
@@ -83,6 +83,9 @@
               >
                 <span class="number">{{ i + 1 }}</span>
                 <span class="what">
+                  @if (p.name) {
+                    <span>{{ p.name }}</span>
+                  }
                   <span>{{
                     i18n.plural(
                       p.networks.length,
@@ -122,7 +125,7 @@
 
     @if (place(); as p) {
       <div class="picked-place" aria-live="polite">
-        <h3>{{ i18n.t('wifiPositions.place', { number: selected() + 1 }) }}</h3>
+        <h3>{{ placeName(selected()) }}</h3>
         <p class="detail">
           {{ i18n.t('phoneWifi.span', { from: time(p.first), to: time(p.last) }) }} ·
           {{ i18n.t('wifiPositions.heardHere', { phones: phones(p) }) }}
@@ -134,7 +137,7 @@
               <button type="button" class="chip" (click)="select(r.place)">
                 {{
                   i18n.t('wifiPositions.relatedPlace', {
-                    number: r.place + 1,
+                    place: placeName(r.place),
                     percent: r.percent,
                     shared: r.shared,
                   })

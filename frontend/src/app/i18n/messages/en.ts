@@ -611,7 +611,7 @@ export const en = {
   'wifiPositions.intro':
     'Every Wi-Fi network the phones heard at each place, all phones together, placed by their location route. Places that heard the same access points are related, also when their positions differ.',
   'wifiPositions.map': 'The places on a map',
-  'wifiPositions.places': 'Places, most scans first',
+  'wifiPositions.places': 'Places, named first, then most scans',
   'wifiPositions.place': 'Place {number}',
   'wifiPositions.phones.one': '{count} phone',
   'wifiPositions.phones.other': '{count} phones',
@@ -620,7 +620,7 @@ export const en = {
   'wifiPositions.showAll': 'Show all {count} places',
   'wifiPositions.heardHere': 'scanned by {phones}',
   'wifiPositions.related': 'Heard alike at:',
-  'wifiPositions.relatedPlace': 'Place {number} · {percent} % ({shared} shared)',
+  'wifiPositions.relatedPlace': '{place} · {percent} % ({shared} shared)',
   'wifiPositions.bestSignal': 'Best signal',
   'wifiPositions.heardBy': 'Heard by',
   'wifiPositions.lastHeard': 'Last heard',

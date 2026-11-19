@@ -619,7 +619,7 @@ export const de: Messages = {
   'wifiPositions.intro':
     'Jedes WLAN, das die Handys an jedem Ort empfangen haben, von allen Handys zusammen, verortet über ihre Standortroute. Orte, die dieselben Access Points empfangen, werden verknüpft, auch wenn ihre Positionen abweichen.',
   'wifiPositions.map': 'Die Orte auf einer Karte',
-  'wifiPositions.places': 'Orte, meiste Scans zuerst',
+  'wifiPositions.places': 'Orte, benannte zuerst, dann meiste Scans',
   'wifiPositions.place': 'Ort {number}',
   'wifiPositions.phones.one': '{count} Handy',
   'wifiPositions.phones.other': '{count} Handys',
@@ -628,7 +628,7 @@ export const de: Messages = {
   'wifiPositions.showAll': 'Alle {count} Orte zeigen',
   'wifiPositions.heardHere': 'gescannt von {phones}',
   'wifiPositions.related': 'Ähnlich empfangen bei:',
-  'wifiPositions.relatedPlace': 'Ort {number} · {percent} % ({shared} gemeinsam)',
+  'wifiPositions.relatedPlace': '{place} · {percent} % ({shared} gemeinsam)',
   'wifiPositions.bestSignal': 'Bestes Signal',
   'wifiPositions.heardBy': 'Empfangen von',
   'wifiPositions.lastHeard': 'Zuletzt empfangen',

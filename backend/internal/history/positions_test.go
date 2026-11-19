@@ -2,7 +2,6 @@ package history
 
 import (
 	"context"
-	"strconv"
 	"testing"
 	"time"
 
@@ -47,7 +46,7 @@ func TestWiFiPositionsCombineThePhonesScansByPlace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := store.WiFiPositions(ctx, hour, hour, hour.Add(2*time.Hour))
+	got, err := store.WiFiPositions(ctx, hour, hour.Add(2*time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,13 +93,13 @@ func TestWiFiPositionsCombineThePhonesScansByPlace(t *testing.T) {
 		t.Errorf("café related = %+v", cafe.Related)
 	}
 
-	if home.ID != "pixel@"+strconv.FormatInt(hour.Add(time.Minute).Unix(), 10) {
-		t.Errorf("home id = %q, want its first scan's phone and time", home.ID)
+	if home.ID == 0 || cafe.ID == 0 || home.ID == cafe.ID {
+		t.Errorf("ids = %d and %d, want two kept places", home.ID, cafe.ID)
 	}
 
-	// Only the scans within the range count; the places are found from
-	// the anchors' start on, so they keep their IDs.
-	got, err = store.WiFiPositions(ctx, hour, hour.Add(20*time.Minute), hour.Add(2*time.Hour))
+	// Only the scans within the range count; the hub keeps the places, so
+	// they keep their IDs.
+	got, err = store.WiFiPositions(ctx, hour.Add(20*time.Minute), hour.Add(2*time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,21 +174,21 @@ func TestWiFiPositionsDropAScanWhoseClosestPointIsVague(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	got, err := store.WiFiPositions(ctx, hour, hour, hour.Add(time.Hour))
+	got, err := store.WiFiPositions(ctx, hour, hour.Add(time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(got) != 1 || got[0].Scans != 1 || len(got[0].Networks) != 1 || got[0].Networks[0].SSID != "Den" {
 		t.Fatalf("got %+v, want home with only its own scan", got)
 	}
-	if got[0].ID != "pixel@"+strconv.FormatInt(hour.Add(time.Minute).Unix(), 10) {
-		t.Errorf("id = %q, want the first scan's phone and time", got[0].ID)
+	if got[0].ID == 0 {
+		t.Errorf("id = %d, want a kept place", got[0].ID)
 	}
 }
 
 func TestWiFiPositionsWithoutScans(t *testing.T) {
 	store := openTestStore(t)
-	got, err := store.WiFiPositions(context.Background(), time.Unix(0, 0), time.Unix(0, 0), time.Now())
+	got, err := store.WiFiPositions(context.Background(), time.Unix(0, 0), time.Now())
 	if err != nil || got == nil || len(got) != 0 {
 		t.Fatalf("got %v, %v, want an empty list", got, err)
 	}
@@ -218,7 +217,7 @@ func TestWiFiPositionsPlaceAScanByAPrecisePointInsideAVagueOne(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	got, err := store.WiFiPositions(ctx, hour, hour, hour.Add(time.Hour))
+	got, err := store.WiFiPositions(ctx, hour, hour.Add(time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,7 +262,7 @@ func TestWiFiPositionsDropAScanAfterThePhoneLeft(t *testing.T) {
 			if err := store.AddPhoneScans(ctx, "pixel", []FoundScan{{At: hour.Add(13 * time.Minute), Found: cafe}}); err != nil {
 				t.Fatal(err)
 			}
-			got, err := store.WiFiPositions(ctx, hour, hour, hour.Add(time.Hour))
+			got, err := store.WiFiPositions(ctx, hour, hour.Add(time.Hour))
 			if err != nil {
 				t.Fatal(err)
 			}
