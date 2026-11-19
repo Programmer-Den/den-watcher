@@ -116,7 +116,6 @@ class RouteMapView(context: Context, attrs: AttributeSet?) : View(context, attrs
         camera = null
         relayout()
         invalidate()
-        onZoom?.invoke()
     }
 
     /** Zooms by levels around the spot x, y in pixels of the view. */
@@ -131,7 +130,6 @@ class RouteMapView(context: Context, attrs: AttributeSet?) : View(context, attrs
         camera = to
         relayout()
         invalidate()
-        onZoom?.invoke()
     }
 
     /** Shows points with their places, and the point at selected marked, or none for -1. */
@@ -142,7 +140,6 @@ class RouteMapView(context: Context, attrs: AttributeSet?) : View(context, attrs
         this.selected = selected
         if (changed) {
             relayout()
-            onZoom?.invoke()
         }
         invalidate()
     }
@@ -163,8 +160,10 @@ class RouteMapView(context: Context, attrs: AttributeSet?) : View(context, attrs
         super.onDetachedFromWindow()
     }
 
+    /** Lays the map out again and tells onZoom, as the zoom buttons may change with it. */
     private fun relayout() {
         layout = RouteMap.layout(points, places, width / density.toDouble(), height / density.toDouble(), camera)
+        onZoom?.invoke()
     }
 
     override fun onDraw(canvas: Canvas) {
