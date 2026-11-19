@@ -31,10 +31,11 @@ const PhoneMinutesPath = "/api/phone/minutes"
 const MaxPushBytes = maxMinutesBytes
 
 // phoneFresh is how long a phone counts as within reach after its last push.
-// A phone sends one every half minute or so while it reaches the hub; one
-// that sent none for longer is away or asleep, which is time it was not in
-// use, as for a PC that is switched off.
-const phoneFresh = 90 * time.Second
+// A phone sends one every half minute while its screen is on and every
+// minute while it is off, to spare its battery, so one late or lost push is
+// no gap; one that sent none for longer is away or asleep, which is time it
+// was not in use, as for a PC that is switched off.
+const phoneFresh = 150 * time.Second
 
 // Push is the body of POST /api/phone/minutes. Times are Unix seconds on the
 // phone's clock.

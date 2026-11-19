@@ -11,8 +11,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Wakes the phone every half minute while recording, takes a reading and
- * sends it. A timer in the service would stop as soon as the screen goes
+ * Wakes the phone every half minute while recording, every minute while the
+ * screen is off (see Saving), takes a reading and sends it. A timer in the service would stop as soon as the screen goes
  * off, since the processor then sleeps; an alarm wakes it, and a wake lock
  * keeps it awake until the reading is sent. In deep sleep Android lets such
  * an alarm ring only about every 9 minutes, and SyncJob runs as well.

@@ -18,9 +18,17 @@ class SavingTest {
     private val power = shadowOf(app.getSystemService(PowerManager::class.java))
 
     @Test
+    fun readsEveryMinuteWithTheScreenOff() {
+        power.setIsInteractive(true)
+        assertEquals(30_000L, Saving.interval(app, 30_000L))
+        power.setIsInteractive(false)
+        assertEquals(Saving.SCREEN_OFF_INTERVAL_MILLIS, Saving.interval(app, 30_000L))
+    }
+
+    @Test
     fun readsLessOftenOnlyWhileSavingWithTheScreenOff() {
         power.setIsInteractive(false)
-        assertEquals(30_000L, Saving.interval(app, 30_000L))
+        assertEquals(Saving.SCREEN_OFF_INTERVAL_MILLIS, Saving.interval(app, 30_000L))
         Settings(app).saveBattery = true
         assertTrue(Saving.on(app))
         assertEquals(Saving.SAVING_INTERVAL_MILLIS, Saving.interval(app, 30_000L))
