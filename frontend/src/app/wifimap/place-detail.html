@@ -1,0 +1,150 @@
+@let p = place();
+<section aria-live="polite">
+  <div class="head">
+    @if (renaming() === null) {
+      <h3>{{ label() }}</h3>
+      <button type="button" class="chip" (click)="rename()">
+        {{ i18n.t(p.name ? 'wifiMap.rename' : 'wifiMap.name') }}
+      </button>
+    } @else {
+      <form class="rename" (submit)="$event.preventDefault(); saveName(nameInput.value)">
+        <input
+          #nameInput
+          [value]="renaming()"
+          maxlength="100"
+          [attr.aria-label]="i18n.t('wifiMap.nameLabel')"
+          [placeholder]="i18n.t('wifiMap.namePlaceholder')"
+        />
+        <button type="submit" class="chip" [disabled]="busy()">{{ i18n.t('wifiMap.save') }}</button>
+        <button type="button" class="chip" (click)="renaming.set(null)">
+          {{ i18n.t('wifiMap.cancel') }}
+        </button>
+      </form>
+    }
+    <span class="hint">{{
+      i18n.t('phoneWifi.span', { from: time(p.first), to: time(p.last) })
+    }}</span>
+  </div>
+  @if (problem()) {
+    <p class="problem" role="alert">{{ problem() }}</p>
+  }
+
+  <dl class="tiles">
+    <div>
+      <dt>{{ i18n.t('wifiMap.networks') }}</dt>
+      <dd>{{ p.networks.length }}</dd>
+    </div>
+    <div>
+      <dt>{{ i18n.t('wifiMap.scans') }}</dt>
+      <dd>{{ p.scans }}</dd>
+    </div>
+    <div>
+      <dt>{{ i18n.t('wifiMap.phones') }}</dt>
+      <dd>{{ p.devices.length }}</dd>
+      <dd class="hint">{{ phones() }}</dd>
+    </div>
+    @if (yours(); as y) {
+      <div>
+        <dt>{{ i18n.t('wifiMap.yourNetwork') }}</dt>
+        <dd>{{ y.signalPercent | number: '1.0-0' : i18n.language() }} %</dd>
+        <dd class="hint">{{ y.ssid ?? i18n.t('phoneRoute.hiddenNetwork') }}</dd>
+      </div>
+    }
+  </dl>
+
+  @for (s of same(); track s.place) {
+    <p class="same">
+      <span>{{
+        i18n.t('wifiMap.same', {
+          place: labels()[s.place],
+          percent: s.percent,
+          meters: (s.meters | number: '1.0-0' : i18n.language()) ?? '',
+        })
+      }}</span>
+      <button type="button" class="chip" [disabled]="busy()" (click)="merge(s)">
+        {{ i18n.t('wifiMap.mergeInto', { place: mergeInto(s) }) }}
+      </button>
+      <button type="button" class="chip" [disabled]="busy()" (click)="keepApart(s)">
+        {{ i18n.t('wifiMap.keepApart') }}
+      </button>
+    </p>
+  }
+  @if (p.merged?.length) {
+    <p class="related-list">
+      <span class="hint">{{ i18n.t('wifiMap.merged') }}</span>
+      @for (id of p.merged; track id) {
+        <button type="button" class="chip" [disabled]="busy()" (click)="split(id)">
+          {{ i18n.t('wifiMap.split', { place: i18n.t('wifiPositions.place', { number: id }) }) }}
+        </button>
+      }
+    </p>
+  }
+  @if (p.related?.length) {
+    <p class="related-list">
+      <span class="hint">{{ i18n.t('wifiPositions.related') }}</span>
+      @for (r of p.related; track r.place) {
+        <button type="button" class="chip" (click)="pick.emit(r.place)">
+          {{
+            i18n.t('wifiPositions.relatedPlace', {
+              place: labels()[r.place],
+              percent: r.percent,
+              shared: r.shared,
+            })
+          }}
+        </button>
+      }
+    </p>
+  }
+
+  <div class="table">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">{{ i18n.t('wifi.network') }}</th>
+          <th scope="col">{{ i18n.t('wifiPositions.bestSignal') }}</th>
+          <th scope="col">{{ i18n.t('wifiMap.heardInTitle') }}</th>
+          <th scope="col">{{ i18n.t('wifiPositions.heardBy') }}</th>
+          <th scope="col">{{ i18n.t('wifiPositions.lastHeard') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (n of p.networks; track (n.ssid ?? '') + ' ' + (n.id ?? '')) {
+          <tr>
+            <th scope="row">
+              <span class="name">
+                @if (n.ssid) {
+                  <span class="ssid">{{ n.ssid }}</span>
+                } @else {
+                  <span class="ssid hidden">{{ i18n.t('phoneRoute.hiddenNetwork') }}</span>
+                }
+                @if (n.connected) {
+                  <span class="badge">{{ i18n.t('wifi.connected') }}</span>
+                }
+              </span>
+              <span class="meta">{{ meta(n) }}</span>
+            </th>
+            <td>
+              <span class="level" [attr.data-level]="signalLevel(n.signalPercent)">
+                {{ n.signalPercent | number: '1.0-0' : i18n.language() }} %
+              </span>
+            </td>
+            <td>{{ heardIn(n) }}</td>
+            <td>
+              <span class="sightings">
+                @for (s of n.devices; track s.device) {
+                  <span class="sighting" [attr.data-level]="signalLevel(s.signalPercent)">
+                    {{ name(s.device) }}
+                    <span class="percent"
+                      >{{ s.signalPercent | number: '1.0-0' : i18n.language() }} %</span
+                    >
+                  </span>
+                }
+              </span>
+            </td>
+            <td>{{ time(n.last) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

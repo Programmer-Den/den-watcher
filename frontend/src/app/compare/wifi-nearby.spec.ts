@@ -174,19 +174,10 @@ describe('WifiNearby', () => {
 
   it('shows what changed in the networks', () => {
     answer();
-    show(6);
+    show(5);
     expect(rows()).toEqual([
       ['This hour', 'New network Vodafone Hotspot on channel 36.', 'Laptop'],
     ]);
-  });
-
-  it('shows the networks the phones heard at each position', () => {
-    answer();
-    const element = show(5);
-    vi.advanceTimersByTime(0);
-    http.expectOne((r) => r.url === '/api/wifi/positions').flush({ from: 0, to: 1, places: [] });
-    fixture.detectChanges();
-    expect(element.textContent).toContain('No Wi-Fi scans with a position');
   });
 
   it('shows how alike the devices hear the networks', () => {

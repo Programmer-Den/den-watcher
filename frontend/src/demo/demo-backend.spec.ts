@@ -157,6 +157,31 @@ describe('DemoBackend', () => {
     expect(answer.places.some((p) => (p.related?.length ?? 0) > 0)).toBe(true);
   });
 
+  it('keeps the names and merges of the places on the Wi-Fi map for the visit', async () => {
+    const to = Math.floor(Date.now() / 1000);
+    const read = () => firstValueFrom(metrics.wifiPositions(to - 7 * 86400, to));
+    const before = await read();
+    const [home, office, other] = before.places;
+    await firstValueFrom(metrics.renamePosition(other.id, 'Gym'));
+    await expect(firstValueFrom(metrics.renamePosition(home.id, 'gym'))).rejects.toBeTruthy();
+    let after = await read();
+    expect(after.places.find((p) => p.id === other.id)?.name).toBe('Gym');
+
+    await firstValueFrom(metrics.mergePosition(office.id, home.id));
+    after = await read();
+    const merged = after.places.find((p) => p.id === home.id)!;
+    expect(merged.scans).toBe(home.scans + office.scans);
+    expect(merged.merged).toEqual([office.id]);
+    expect(after.places.some((p) => p.id === office.id)).toBe(false);
+
+    await firstValueFrom(metrics.mergePosition(office.id, null));
+    await firstValueFrom(metrics.keepPositionsApart(home.id, other.id));
+    after = await read();
+    expect(after.places.find((p) => p.id === home.id)?.apart).toEqual(
+      [office.id, other.id].sort((a, b) => a - b),
+    );
+  });
+
   it('tells the Wi-Fi networks the phone scanned at each point of its route, connected to one at a place', async () => {
     const to = Math.floor(Date.now() / 1000);
     const route = await firstValueFrom(metrics.phoneRoute(to - 2 * 86400, to, DEMO_PHONE));

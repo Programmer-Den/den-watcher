@@ -27,7 +27,7 @@ import { demoPhoneRoute } from './phone-route';
 import { demoPhoneScan } from './phone-scan';
 import { demoPhoneWifi } from './phone-wifi';
 import { DEMO_PLACES, demoWifi } from './wifi';
-import { demoWifiPositions } from './wifi-positions';
+import { DemoPlaceEdits, demoWifiPositions, emptyPlaceEdits } from './wifi-positions';
 
 /** How many days of history the demo hub keeps; more than 30 shows the "All" range. */
 export const DEMO_RETENTION_DAYS = 90;
@@ -84,6 +84,8 @@ export class DemoBackend implements HttpBackend {
   private readonly window = inject(DOCUMENT).defaultView;
   /** Until when each phone may change its hub, in Unix seconds, once it was let. */
   private readonly released = new Map<string, number>();
+  /** What the visitor told of the places on the Wi-Fi map, for this visit. */
+  private readonly placeEdits: DemoPlaceEdits = emptyPlaceEdits();
 
   handle(request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> {
     const url = new URL(request.urlWithParams, 'http://demo');
@@ -123,7 +125,7 @@ export class DemoBackend implements HttpBackend {
       if (from < anchorsFrom) {
         anchorsFrom = from - (from % day);
       }
-      return respond(request, demoWifiPositions(anchorsFrom, from, to));
+      return respond(request, demoWifiPositions(anchorsFrom, from, to, this.placeEdits));
     }
     if (request.method === 'GET' && url.pathname === '/api/phone/usage') {
       if (device !== DEMO_PHONE) {
@@ -178,6 +180,10 @@ export class DemoBackend implements HttpBackend {
       // Changes nothing but what the list tells, as the demo's phone has no app to tell.
       this.released.set(decodeURIComponent(release[1]), now + RELEASE_SECONDS);
       return respond(request, null);
+    }
+    const position = /^\/api\/wifi\/positions\/(\d+)\/(name|merged-into|apart)$/.exec(url.pathname);
+    if (position) {
+      return this.changePlace(request, Number(position[1]), position[2]);
     }
     if (request.method === 'POST' && url.pathname === '/api/backup') {
       return fail(request, 403, { problem: 'demoBackup' });
@@ -288,6 +294,52 @@ export class DemoBackend implements HttpBackend {
     } catch {
       return fail(request, 500, 'could not keep the places');
     }
+  }
+
+  /**
+   * A change to a place on the Wi-Fi map, kept for the visit: its name, the place it is merged
+   * into (or none, which keeps the two apart, as on the hub), or another place it is kept apart
+   * from.
+   */
+  private changePlace(
+    request: HttpRequest<unknown>,
+    id: number,
+    change: string,
+  ): Observable<HttpEvent<unknown>> {
+    const edits = this.placeEdits;
+    const body = request.body as { name?: string; into?: number | null; other?: number };
+    const pair = (a: number, b: number) => `${Math.min(a, b)}-${Math.max(a, b)}`;
+    if (change === 'name' && request.method === 'PUT') {
+      const name = (body.name ?? '').trim();
+      const taken = [...edits.names].some(
+        ([other, n]) => other !== id && n.toLowerCase() === name.toLowerCase(),
+      );
+      if (name && taken) {
+        return fail(request, 400, { problem: 'request', message: 'another place has this name' });
+      }
+      edits.names.set(id, name);
+      return respond(request, null);
+    }
+    if (change === 'merged-into' && request.method === 'PUT') {
+      const before = edits.mergedInto.get(id);
+      if (body.into === null || body.into === undefined) {
+        edits.mergedInto.delete(id);
+        if (before !== undefined) {
+          edits.apart.add(pair(id, before));
+        }
+      } else if (body.into !== id) {
+        edits.mergedInto.set(id, body.into);
+        if (edits.names.get(id) && !edits.names.get(body.into)) {
+          edits.names.set(body.into, edits.names.get(id)!);
+        }
+      }
+      return respond(request, null);
+    }
+    if (change === 'apart' && request.method === 'POST' && body.other !== undefined) {
+      edits.apart.add(pair(id, body.other));
+      return respond(request, null);
+    }
+    return fail(request, 404, 'not found');
   }
 
   /** GET and PUT /api/energy-price, kept in the visitor's browser like the layout. */

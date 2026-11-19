@@ -59,6 +59,13 @@
     } @error {
       <app-missing-part />
     }
+  } @else if (devices.wifiMap() && several && !kiosk.on) {
+    <!-- Loaded only when it is opened, as the comparison is. -->
+    @defer {
+      <app-wifi-map />
+    } @error {
+      <app-missing-part />
+    }
   } @else if (devices.home() && several && !kiosk.on) {
     <app-home />
   } @else {
