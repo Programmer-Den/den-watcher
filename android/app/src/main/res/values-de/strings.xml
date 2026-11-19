@@ -44,7 +44,7 @@
     <string name="network_channel_name">Andere Netze</string>
     <string name="network_channel_description">Wenn der Hub in einem anderen als dem üblichen Netz antwortet.</string>
     <string name="nearby_title">WLANs</string>
-    <string name="nearby_hint">Damit sieht der Hub, wo dieses Handy über den Tag war: mit welchem WLAN es wann verbunden war, in welchem Raum zu Hause und an Orten, die du benennst, etwa Arbeit. Android gibt die Namen der WLANs nur mit der Standortberechtigung; die App liest deinen Standort nur für den Standortverlauf, den du unten ausschalten kannst. Alle 5 Minuten lässt sie Android nach den WLANs in Reichweite suchen, was kaum Akku kostet. Sie werden aufbewahrt, bis das Handy wieder zu Hause ist.</string>
+    <string name="nearby_hint">Damit sieht der Hub, wo dieses Handy über den Tag war: mit welchem WLAN es wann verbunden war, in welchem Raum zu Hause und an Orten, die du benennst, etwa Arbeit. Android gibt die Namen der WLANs nur mit der Standortberechtigung; die App liest deinen Standort nur für den Standortverlauf, den du unten ausschalten kannst. Alle 5 Minuten lässt sie Android nach den WLANs in Reichweite suchen, alle 20 Minuten, solange das Handy still liegt, was kaum Akku kostet. Sie werden aufbewahrt, bis das Handy wieder zu Hause ist.</string>
     <string name="nearby_off">Werden nicht gelesen.</string>
     <string name="nearby_open">Werden nur gelesen, solange die App offen ist. Erlaube es immer, damit sie auch gelesen werden, wenn das Handy in der Tasche ist.</string>
     <string name="nearby_always">Werden immer gelesen, auch wenn das Handy unterwegs ist.</string>

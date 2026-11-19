@@ -73,11 +73,12 @@ object Nearby {
     /**
      * Whether to ask for a scan at now, when the app last asked for one at
      * last and Android last scanned at newest, all in Unix milliseconds (0
-     * for never): once neither happened for SCAN_EVERY_MILLIS, and at once
+     * for never): once neither happened for every (SCAN_EVERY_MILLIS, or
+     * Still.STILL_EVERY_MILLIS while the phone stands still), and at once
      * after the clock went back.
      */
-    fun scanDue(last: Long, newest: Long, now: Long): Boolean =
-        (now - last >= SCAN_EVERY_MILLIS || last > now) && (now - newest >= SCAN_EVERY_MILLIS || newest > now)
+    fun scanDue(last: Long, newest: Long, now: Long, every: Long = SCAN_EVERY_MILLIS): Boolean =
+        (now - last >= every || last > now) && (now - newest >= every || newest > now)
 
     /**
      * Asks Android to scan for the networks nearby, whose results a later

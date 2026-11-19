@@ -179,6 +179,32 @@ class Settings(context: Context) {
             ?.takeIf { it.size == 3 }?.let { (day, today, counter) -> StepCount(day, today, counter) }
         set(value) = prefs.edit().putString(STEP_COUNT, value?.let { "${it.day},${it.today},${it.counter}" }).apply()
 
+    /**
+     * Whether the last two scans kept were made at the same place, as
+     * Still.samePlace tells it; null when not known.
+     */
+    var wifiStill: Boolean?
+        get() = if (prefs.contains(WIFI_STILL)) prefs.getBoolean(WIFI_STILL, false) else null
+        set(value) = prefs.edit().apply { if (value == null) remove(WIFI_STILL) else putBoolean(WIFI_STILL, value) }.apply()
+
+    /** The access points the last scan kept saw, as Still.place tells them. */
+    var lastPlace: Set<String>
+        get() = prefs.getStringSet(LAST_PLACE, null)?.toSet() ?: emptySet()
+        set(value) = prefs.edit().putStringSet(LAST_PLACE, value).apply()
+
+    /**
+     * The step counter's value and the network the phone was on, as
+     * Networks names it, when the app last asked for its own scan or a
+     * position, which Still measures from; each null when not known.
+     */
+    var stillAtAsk: Pair<Long?, String?>
+        get() = (if (prefs.contains(STEPS_AT_ASK)) prefs.getLong(STEPS_AT_ASK, 0) else null) to prefs.getString(NETWORK_AT_ASK, null)
+        set(value) = prefs.edit().apply {
+            val (steps, network) = value
+            if (steps == null) remove(STEPS_AT_ASK) else putLong(STEPS_AT_ASK, steps)
+            putString(NETWORK_AT_ASK, network)
+        }.apply()
+
     /** The point of the location route kept last, which the next one is measured from; null for none. */
     var lastRoutePoint: RoutePoint?
         get() = RoutePoint.parse(prefs.getString(LAST_ROUTE_POINT, null))
@@ -257,6 +283,10 @@ class Settings(context: Context) {
         const val LAST_ROUTE_POINT = "lastRoutePoint"
         const val LAST_ROUTE_ASK = "lastRouteAsk"
         const val USES_READ_UNTIL = "usesReadUntil"
+        const val WIFI_STILL = "wifiStill"
+        const val LAST_PLACE = "lastPlace"
+        const val STEPS_AT_ASK = "stepsAtAsk"
+        const val NETWORK_AT_ASK = "networkAtAsk"
     }
 }
 
