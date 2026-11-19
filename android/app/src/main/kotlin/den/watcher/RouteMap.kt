@@ -5,6 +5,8 @@ import kotlin.math.floor
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import kotlin.math.sin
 
@@ -17,8 +19,24 @@ data class Place(val lat: Double, val lon: Double, val millis: Long, val visits:
 /** Where something is drawn on the map, in its units: dp from its top left corner. */
 data class MapSpot(val x: Double, val y: Double)
 
-/** One OpenStreetMap tile of the map: which one, and where its top left corner is drawn. */
-data class MapTile(val zoom: Int, val x: Int, val y: Int, val left: Double, val top: Double) {
+/**
+ * What the map shows: its zoom, which may lie between two levels, and its
+ * middle on the whole map of the world at zoom 0, RouteMap.TILE units wide.
+ */
+data class MapCamera(val zoom: Double, val x: Double, val y: Double)
+
+/**
+ * One OpenStreetMap tile of the map: which one, where its top left corner is
+ * drawn and how large, larger or smaller at a zoom between two levels.
+ */
+data class MapTile(
+    val zoom: Int,
+    val x: Int,
+    val y: Int,
+    val left: Double,
+    val top: Double,
+    val size: Double = RouteMap.TILE,
+) {
     /** Where OpenStreetMap serves it. */
     val url: String get() = "https://tile.openstreetmap.org/$zoom/$x/$y.png"
 }
@@ -35,6 +53,7 @@ data class RouteLayout(
     val points: List<MapSpot>,
     val places: List<MapSpot>,
     val dots: List<Int>,
+    val camera: MapCamera,
 )
 
 /**
@@ -46,9 +65,12 @@ object RouteMap {
     /** The size of a tile, in map units at its zoom. */
     const val TILE = 256.0
 
-    /** The zoom levels the map picks from: from a country to a street. */
+    /** The zoom levels the map can show: from a country to a house, as far as OpenStreetMap draws. */
     const val MIN_ZOOM = 3
-    const val MAX_ZOOM = 17
+    const val MAX_ZOOM = 19
+
+    /** The closest zoom the map opens at: a street, so a single point still shows where it is. */
+    const val FIT_ZOOM = 17
 
     /** The room around the route on the map, in map units. */
     const val PADDING = 24.0
@@ -122,45 +144,95 @@ object RouteMap {
     }
 
     /**
-     * The map of the points on a map of width by height units, at the
-     * closest zoom that shows all of them with PADDING around, centered on
-     * them, or null without points.
+     * The camera that shows all the points on a map of width by height
+     * units, centered on them with PADDING around: the closest whole zoom
+     * level that holds them, at most FIT_ZOOM; null without points.
      */
-    fun layout(points: List<RoutePoint>, places: List<Place>, width: Double, height: Double): RouteLayout? {
+    fun fit(points: List<RoutePoint>, width: Double, height: Double): MapCamera? {
         if (points.isEmpty() || width <= 0 || height <= 0) {
             return null
         }
-        val north = points.maxOf { it.lat }
-        val south = points.minOf { it.lat }
-        val east = points.maxOf { it.lon }
-        val west = points.minOf { it.lon }
-        val zoom = (MAX_ZOOM downTo MIN_ZOOM).firstOrNull { z ->
-            val nw = project(north, west, z)
-            val se = project(south, east, z)
-            se.x - nw.x <= width - 2 * PADDING && se.y - nw.y <= height - 2 * PADDING
+        val spots = points.map { project(it.lat, it.lon) }
+        val west = spots.minOf { it.x }
+        val east = spots.maxOf { it.x }
+        val north = spots.minOf { it.y }
+        val south = spots.maxOf { it.y }
+        val zoom = (FIT_ZOOM downTo MIN_ZOOM).firstOrNull { z ->
+            val scale = (1 shl z).toDouble()
+            (east - west) * scale <= width - 2 * PADDING && (south - north) * scale <= height - 2 * PADDING
         } ?: MIN_ZOOM
-        val nw = project(north, west, zoom)
-        val se = project(south, east, zoom)
-        val left = (nw.x + se.x) / 2 - width / 2
-        val top = (nw.y + se.y) / 2 - height / 2
-        fun at(lat: Double, lon: Double): MapSpot {
-            val p = project(lat, lon, zoom)
-            return MapSpot(round(p.x - left), round(p.y - top))
+        return MapCamera(zoom.toDouble(), (west + east) / 2, (north + south) / 2)
+    }
+
+    /**
+     * The camera zoomed by levels around the spot x, y of a map of width by
+     * height units, which stays where it is, within MIN_ZOOM and MAX_ZOOM.
+     */
+    fun zoomAround(camera: MapCamera, levels: Double, x: Double, y: Double, width: Double, height: Double): MapCamera {
+        val zoom = (camera.zoom + levels).coerceIn(MIN_ZOOM.toDouble(), MAX_ZOOM.toDouble())
+        val before = 2.0.pow(camera.zoom)
+        val after = 2.0.pow(zoom)
+        val dx = (x - width / 2) / before
+        val dy = (y - height / 2) / before
+        return MapCamera(zoom, camera.x + dx - dx * before / after, camera.y + dy - dy * before / after)
+    }
+
+    /** The camera moved by a drag of dx, dy map units: the map follows the finger. */
+    fun panBy(camera: MapCamera, dx: Double, dy: Double): MapCamera {
+        val scale = 2.0.pow(camera.zoom)
+        return camera.copy(x = camera.x - dx / scale, y = camera.y - dy / scale)
+    }
+
+    /**
+     * The map of the points on a map of width by height units as camera
+     * shows it, or the whole route centered on the map when camera is null;
+     * the tiles from the whole zoom level closest to the camera's; null
+     * without points.
+     */
+    fun layout(
+        points: List<RoutePoint>,
+        places: List<Place>,
+        width: Double,
+        height: Double,
+        camera: MapCamera? = null,
+    ): RouteLayout? {
+        val view = camera ?: fit(points, width, height) ?: return null
+        if (points.isEmpty() || width <= 0 || height <= 0) {
+            return null
         }
-        val count = 1 shl zoom
+        val scale = 2.0.pow(view.zoom)
+        fun at(lat: Double, lon: Double): MapSpot {
+            val p = project(lat, lon)
+            return MapSpot(round((p.x - view.x) * scale + width / 2), round((p.y - view.y) * scale + height / 2))
+        }
+        val level = view.zoom.roundToInt().coerceIn(0, MAX_ZOOM)
+        val size = TILE * 2.0.pow(view.zoom - level)
+        // A hair larger between levels, so no seam shows between the tiles.
+        val drawnSize = if (view.zoom == level.toDouble()) TILE else round(size) + 0.5
+        val count = 1 shl level
+        // The map's top left corner, in tiles of level.
+        val left = (view.x * scale - width / 2) / size
+        val top = (view.y * scale - height / 2) / size
         val tiles = mutableListOf<MapTile>()
-        for (ty in floor(top / TILE).toInt()..floor((top + height) / TILE).toInt()) {
+        for (ty in floor(top).toInt()..floor(top + height / size).toInt()) {
             if (ty < 0 || ty >= count) {
                 continue
             }
-            for (tx in floor(left / TILE).toInt()..floor((left + width) / TILE).toInt()) {
-                tiles += MapTile(zoom, Math.floorMod(tx, count), ty, round(tx * TILE - left), round(ty * TILE - top))
+            for (tx in floor(left).toInt()..floor(left + width / size).toInt()) {
+                tiles += MapTile(
+                    level,
+                    Math.floorMod(tx, count),
+                    ty,
+                    round((tx - left) * size),
+                    round((ty - top) * size),
+                    drawnSize,
+                )
             }
         }
         val drawn = points.map { at(it.lat, it.lon) }
         val cells = LinkedHashMap<Pair<Long, Long>, Int>()
         drawn.forEachIndexed { i, p -> cells[(p.x / DOT_SPACING).roundToLong() to (p.y / DOT_SPACING).roundToLong()] = i }
-        return RouteLayout(zoom, tiles, drawn, places.map { at(it.lat, it.lon) }, cells.values.sorted())
+        return RouteLayout(level, tiles, drawn, places.map { at(it.lat, it.lon) }, cells.values.sorted(), view)
     }
 
     /**
@@ -181,11 +253,10 @@ object RouteMap {
         return best
     }
 
-    /** Where a point is on the whole map of the world at a zoom, in its units (Web Mercator). */
-    private fun project(lat: Double, lon: Double, zoom: Int): MapSpot {
-        val size = TILE * (1 shl zoom)
+    /** Where a point is on the whole map of the world at zoom 0, TILE units wide (Web Mercator). */
+    private fun project(lat: Double, lon: Double): MapSpot {
         val s = min(max(sin(lat * PI / 180), -0.9999), 0.9999)
-        return MapSpot((lon + 180) / 360 * size, (0.5 - ln((1 + s) / (1 - s)) / (4 * PI)) * size)
+        return MapSpot((lon + 180) / 360 * TILE, (0.5 - ln((1 + s) / (1 - s)) / (4 * PI)) * TILE)
     }
 
     private fun round(n: Double): Double = Math.round(n * 10) / 10.0

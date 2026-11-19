@@ -73,6 +73,15 @@
     </style>
 
     <!-- A link-like button, flush with the card's text. -->
+    <!-- A zoom button over the map: square, 40 dp, its sign in the text's color. -->
+    <style name="MapButton">
+        <item name="android:layout_width">40dp</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:background">@drawable/button_text</item>
+        <item name="android:tint">@color/on_surface</item>
+        <item name="android:scaleType">center</item>
+    </style>
+
     <style name="Button.Text">
         <item name="android:layout_marginTop">8dp</item>
         <item name="android:layout_marginStart">-12dp</item>

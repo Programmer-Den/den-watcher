@@ -75,6 +75,18 @@ class MapActivity : Activity() {
             selectedTime = if (time == selectedTime) null else time
             show()
         }
+        val zoomIn = findViewById<View>(R.id.zoom_in)
+        val zoomOut = findViewById<View>(R.id.zoom_out)
+        val zoomWhole = findViewById<View>(R.id.zoom_whole)
+        zoomIn.setOnClickListener { map.zoomIn() }
+        zoomOut.setOnClickListener { map.zoomOut() }
+        zoomWhole.setOnClickListener { map.showWhole() }
+        map.onZoom = {
+            enable(zoomIn, map.canZoomIn)
+            enable(zoomOut, map.canZoomOut)
+            enable(zoomWhole, map.zoomed)
+        }
+        map.onZoom?.invoke()
         findViewById<View>(R.id.back).setOnClickListener { finish() }
         findViewById<Button>(R.id.range_day).setOnClickListener { setDays(1) }
         findViewById<Button>(R.id.range_week).setOnClickListener { setDays(7) }
@@ -125,6 +137,7 @@ class MapActivity : Activity() {
     private fun setDays(to: Int) {
         if (to != days) {
             days = to
+            map.showWhole()
             showRanges()
             load()
         }
@@ -224,6 +237,12 @@ class MapActivity : Activity() {
         if (places != placesShown) {
             showPlaces(places)
         }
+    }
+
+    /** A zoom button that can or cannot be pressed, greyed out when not. */
+    private fun enable(button: View, enabled: Boolean) {
+        button.isEnabled = enabled
+        button.alpha = if (enabled) 1f else DISABLED_ALPHA
     }
 
     private fun showRanges() {
@@ -364,6 +383,9 @@ class MapActivity : Activity() {
         private const val RELOAD_MILLIS = 60_000L
         private const val TAG = "MapActivity"
         private const val DAYS = "days"
+
+        /** How visible a zoom button is that cannot be pressed, as Material greys out disabled controls. */
+        private const val DISABLED_ALPHA = 0.38f
         private const val SELECTED = "selected"
         private const val HIDDEN_ALPHA = 0.7f
     }

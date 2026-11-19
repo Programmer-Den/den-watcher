@@ -8,18 +8,30 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.util.AttributeSet
+import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
+import kotlin.math.log2
 
 /**
  * The phone's route on an OpenStreetMap map, drawn as the hub's page draws
  * it: a violet line with a light casing, a dot for its points, a numbered
  * circle for the places it stayed at, a ring at the start and a filled dot at
  * the latest point. A tap on a dot calls onSelect with the point's index.
+ * It zooms like other map apps: pinch, double-tap, and drag with one finger to
+ * move it, or with zoomIn, zoomOut and showWhole for buttons. It keeps the
+ * zoom while new points come in, until showWhole.
  */
 class RouteMapView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     /** Called with the index of the point whose dot was tapped. */
     var onSelect: ((Int) -> Unit)? = null
+
+    /** Called when the zoom or what is shown changes, so buttons can follow. */
+    var onZoom: (() -> Unit)? = null
+
+    /** What the user zoomed or moved to, or null for the whole route. */
+    private var camera: MapCamera? = null
 
     private var points: List<RoutePoint> = emptyList()
     private var places: List<Place> = emptyList()
@@ -47,6 +59,78 @@ class RouteMapView(context: Context, attrs: AttributeSet?) : View(context, attrs
     private val background = context.getColor(R.color.map_background)
     private val corner = RectF()
     private val path = Path()
+
+    private val scaler = ScaleGestureDetector(
+        context,
+        object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                zoomAt(log2(detector.scaleFactor.toDouble()), detector.focusX, detector.focusY)
+                return true
+            }
+        },
+    )
+
+    private val gestures = GestureDetector(
+        context,
+        object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(e: MotionEvent): Boolean = true
+
+            override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+                val map = layout ?: return false
+                move(RouteMap.panBy(map.camera, -distanceX / density.toDouble(), -distanceY / density.toDouble()))
+                return true
+            }
+
+            override fun onDoubleTap(e: MotionEvent): Boolean {
+                zoomAt(1.0, e.x, e.y)
+                return true
+            }
+
+            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                val map = layout ?: return false
+                val i = RouteMap.dotAt(map, e.x / density.toDouble(), e.y / density.toDouble(), REACH_DP)
+                if (i >= 0) {
+                    performClick()
+                    onSelect?.invoke(i)
+                }
+                return true
+            }
+        },
+    )
+
+    /** Whether the map is zoomed or moved away from the whole route. */
+    val zoomed: Boolean get() = camera != null
+
+    /** Whether the map can zoom in or out further. */
+    val canZoomIn: Boolean get() = (layout?.camera?.zoom ?: RouteMap.MAX_ZOOM.toDouble()) < RouteMap.MAX_ZOOM
+    val canZoomOut: Boolean get() = (layout?.camera?.zoom ?: RouteMap.MIN_ZOOM.toDouble()) > RouteMap.MIN_ZOOM
+
+    /** Zooms in one level around the middle. */
+    fun zoomIn() = zoomAt(1.0, width / 2f, height / 2f)
+
+    /** Zooms out one level around the middle. */
+    fun zoomOut() = zoomAt(-1.0, width / 2f, height / 2f)
+
+    /** Shows the whole route again, as when the map opens. */
+    fun showWhole() {
+        camera = null
+        relayout()
+        invalidate()
+    }
+
+    /** Zooms by levels around the spot x, y in pixels of the view. */
+    private fun zoomAt(levels: Double, x: Float, y: Float) {
+        val map = layout ?: return
+        val w = width / density.toDouble()
+        val h = height / density.toDouble()
+        move(RouteMap.zoomAround(map.camera, levels, x / density.toDouble(), y / density.toDouble(), w, h))
+    }
+
+    private fun move(to: MapCamera) {
+        camera = to
+        relayout()
+        invalidate()
+    }
 
     /** Shows points with their places, and the point at selected marked, or none for -1. */
     fun show(points: List<RoutePoint>, places: List<Place>, selected: Int) {
@@ -76,8 +160,10 @@ class RouteMapView(context: Context, attrs: AttributeSet?) : View(context, attrs
         super.onDetachedFromWindow()
     }
 
+    /** Lays the map out again and tells onZoom, as the zoom buttons may change with it. */
     private fun relayout() {
-        layout = RouteMap.layout(points, places, width / density.toDouble(), height / density.toDouble())
+        layout = RouteMap.layout(points, places, width / density.toDouble(), height / density.toDouble(), camera)
+        onZoom?.invoke()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -89,7 +175,7 @@ class RouteMapView(context: Context, attrs: AttributeSet?) : View(context, attrs
         canvas.scale(density, density)
         for (t in map.tiles) {
             tiles.get(t)?.let {
-                corner.set(t.left.toFloat(), t.top.toFloat(), (t.left + RouteMap.TILE).toFloat(), (t.top + RouteMap.TILE).toFloat())
+                corner.set(t.left.toFloat(), t.top.toFloat(), (t.left + t.size).toFloat(), (t.top + t.size).toFloat())
                 canvas.drawBitmap(it, null, corner, tilePaint)
             }
         }
@@ -123,19 +209,19 @@ class RouteMapView(context: Context, attrs: AttributeSet?) : View(context, attrs
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val map = layout ?: return false
-        when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> return true
-            MotionEvent.ACTION_UP -> {
-                val i = RouteMap.dotAt(map, event.x / density.toDouble(), event.y / density.toDouble(), REACH_DP)
-                if (i >= 0) {
-                    performClick()
-                    onSelect?.invoke(i)
-                }
-                return true
-            }
+        if (layout == null) {
+            return false
         }
-        return super.onTouchEvent(event)
+        // The map takes the drag, not the scrolling screen around it.
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> parent?.requestDisallowInterceptTouchEvent(true)
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> parent?.requestDisallowInterceptTouchEvent(false)
+        }
+        scaler.onTouchEvent(event)
+        if (!scaler.isInProgress) {
+            gestures.onTouchEvent(event)
+        }
+        return true
     }
 
     override fun performClick(): Boolean = super.performClick()

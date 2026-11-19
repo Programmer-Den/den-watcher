@@ -92,6 +92,9 @@
     <string name="map_none">Aucun trajet gardé sur ce téléphone pour cette période. Laissez Trajet activé sous Quelles données voulez-vous collecter ? et autorisez la localisation tout le temps.</string>
     <string name="map_distance">%1$s km parcourus</string>
     <string name="map_description">Le trajet sur une carte</string>
+    <string name="map_zoom_in">Zoom avant</string>
+    <string name="map_zoom_out">Zoom arrière</string>
+    <string name="map_zoom_whole">Afficher tout le trajet</string>
     <string name="map_attribution">Carte © les contributeurs d’OpenStreetMap</string>
     <string name="map_legend">○ Départ   ● Dernier   • Point, touchez pour son Wi-Fi</string>
     <string name="map_pick">Touchez un point de la carte pour voir les réseaux Wi-Fi que le téléphone y a détectés.</string>

@@ -66,17 +66,48 @@ class RouteMapTest {
         assertTrue(map.points[2].y < map.points[0].y)
         // The tiles cover the whole map, without a gap.
         assertTrue(map.tiles.any { it.left <= 0 && it.top <= 0 })
-        assertTrue(map.tiles.any { it.left + RouteMap.TILE >= 400 && it.top + RouteMap.TILE >= 360 })
+        assertTrue(map.tiles.any { it.left + it.size >= 400 && it.top + it.size >= 360 })
         assertTrue(map.tiles.all { it.url == "https://tile.openstreetmap.org/${it.zoom}/${it.x}/${it.y}.png" })
     }
 
     @Test
     fun zoomsToAStreetForOnePoint() {
         val map = RouteMap.layout(listOf(home), emptyList(), 400.0, 360.0)!!
-        assertEquals(RouteMap.MAX_ZOOM, map.zoom)
+        assertEquals(RouteMap.FIT_ZOOM, map.zoom)
         assertEquals(200.0, map.points[0].x, 0.1)
         assertEquals(180.0, map.points[0].y, 0.1)
         assertNull(RouteMap.layout(emptyList(), emptyList(), 400.0, 360.0))
+    }
+
+    @Test
+    fun zoomsAroundTheSpotUnderTheFingers() {
+        val points = listOf(at(0), at(10, 0.01), at(20, 0.02))
+        val whole = RouteMap.layout(points, emptyList(), 400.0, 360.0)!!
+        val end = whole.points[2]
+        val camera = RouteMap.zoomAround(whole.camera, 1.4, end.x, end.y, 400.0, 360.0)
+        assertEquals(whole.camera.zoom + 1.4, camera.zoom, 1e-9)
+        val zoomed = RouteMap.layout(points, emptyList(), 400.0, 360.0, camera)!!
+        // The end stays under the fingers, the start moves away from it.
+        assertEquals(end.x, zoomed.points[2].x, 0.2)
+        assertEquals(end.y, zoomed.points[2].y, 0.2)
+        assertTrue(zoomed.points[0].y - zoomed.points[2].y > (whole.points[0].y - whole.points[2].y) * 2.5)
+        // Between two levels the tiles of the closer one are drawn larger, and still cover the map.
+        assertEquals(Math.round(camera.zoom).toInt(), zoomed.zoom)
+        assertTrue(zoomed.tiles.all { it.size > RouteMap.TILE })
+        assertTrue(zoomed.tiles.any { it.left <= 0 && it.top <= 0 })
+        assertTrue(zoomed.tiles.any { it.left + it.size >= 400 && it.top + it.size >= 360 })
+        // Not past the closest and farthest levels.
+        assertEquals(RouteMap.MAX_ZOOM.toDouble(), RouteMap.zoomAround(camera, 50.0, 0.0, 0.0, 400.0, 360.0).zoom, 0.0)
+        assertEquals(RouteMap.MIN_ZOOM.toDouble(), RouteMap.zoomAround(camera, -50.0, 0.0, 0.0, 400.0, 360.0).zoom, 0.0)
+    }
+
+    @Test
+    fun movesTheMapWithTheFinger() {
+        val points = listOf(at(0), at(10, 0.01))
+        val whole = RouteMap.layout(points, emptyList(), 400.0, 360.0)!!
+        val moved = RouteMap.layout(points, emptyList(), 400.0, 360.0, RouteMap.panBy(whole.camera, 30.0, -20.0))!!
+        assertEquals(whole.points[0].x + 30, moved.points[0].x, 0.2)
+        assertEquals(whole.points[0].y - 20, moved.points[0].y, 0.2)
     }
 
     @Test
