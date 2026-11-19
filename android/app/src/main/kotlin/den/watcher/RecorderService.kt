@@ -14,7 +14,7 @@ import android.os.IBinder
 /**
  * Keeps the app running while it records, with a notification of its own,
  * as Android requires for that, and starts RecordAlarm, which takes a
- * reading every half minute and sends it to the hub, so the hub's page shows
+ * reading every half minute (every minute with the screen off) and sends it to the hub, so the hub's page shows
  * the phone as within reach.
  *
  * The notification is ongoing, but from Android 14 on the user can still

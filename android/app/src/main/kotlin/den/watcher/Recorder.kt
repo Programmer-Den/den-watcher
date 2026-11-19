@@ -7,7 +7,8 @@ import android.net.NetworkCapabilities
 /**
  * Takes a reading, keeps its values, the networks nearby, the Wi-Fi the
  * phone is connected to, the location route and the uses of apps, and sends what
- * the hub does not have yet. RecordAlarm does this every half minute, and
+ * the hub does not have yet. RecordAlarm does this every half minute (every
+ * minute with the screen off, see Saving), and
  * SyncJob every quarter of an hour, so one reading is taken at a time.
  */
 object Recorder {
@@ -54,7 +55,7 @@ object Recorder {
                     store.addMapScan(SeenScan.of(it))
                     settings.lastScan = it.time
                 }
-                // Its results are read at the next reading, half a minute later.
+                // Its results are read at the next reading, half a minute or a minute later.
                 // While saving battery, only the scans Android makes on its own are read.
                 val now = System.currentTimeMillis()
                 if (!Saving.on(app) && Nearby.scanDue(settings.lastScanRequest, (scan?.time ?: 0) * 1000, now) && Nearby.requestScan(app)) {
@@ -146,7 +147,7 @@ object Recorder {
      * Sends what the hub does not have yet, with the newest reading, which is
      * made only when it is sent. On a network that is not a usual one, where
      * the hub did not answer lately, it waits (see Hub.waits), so a Wi-Fi at
-     * work does not keep the phone awake every half minute.
+     * work does not keep the phone awake at every reading.
      */
     private fun push(context: Context, settings: Settings, store: Store, snapshot: () -> org.json.JSONObject) {
         val address = settings.hubAddress

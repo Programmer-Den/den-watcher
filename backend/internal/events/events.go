@@ -86,7 +86,7 @@ type seen struct {
 
 // bootSlack is how much later than the start before a device's start may
 // seem, from the hub's clock and the age of a reading, and not be a new
-// start: a phone's reading can be phoneFresh (90 s) old, and more when the
+// start: a phone's reading can be phoneFresh (150 s) old, and more when the
 // phone sleeps. driftSlack adds a part of the time since the uptime was
 // written, as a device's uptime and the hub's clock drift apart (50 ppm,
 // as on some routers, is a minute in two weeks).
