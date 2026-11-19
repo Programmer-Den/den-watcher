@@ -26,50 +26,114 @@
     <p class="detail" role="status">{{ i18n.t('wifiPositions.failed') }}</p>
   }
   @if (places().length > 0) {
+    <div class="choices tabs" role="group" [attr.aria-label]="i18n.t('wifiMap.title')">
+      <button type="button" [attr.aria-pressed]="tab() === 'places'" (click)="showTab('places')">
+        {{ i18n.t('wifiMap.tabPlaces', { count: places().length }) }}
+      </button>
+      <button
+        type="button"
+        [attr.aria-pressed]="tab() === 'networks'"
+        (click)="showTab('networks')"
+      >
+        {{ i18n.t('wifiMap.tabNetworks', { count: networks().length }) }}
+      </button>
+    </div>
     <div class="overview" [class.stale]="connection.lost() || failed()">
-      <nav class="places" [attr.aria-label]="i18n.t('wifiPositions.places')">
-        @if (named().length > 0) {
-          <h3>{{ i18n.t('wifiMap.named') }}</h3>
+      @if (tab() === 'networks') {
+        <nav class="places" [attr.aria-label]="i18n.t('wifiMap.networks')">
           <ol>
-            @for (l of named(); track l.place.id) {
+            @for (n of listedNetworks(); track n.key) {
               <li>
-                <ng-container *ngTemplateOutlet="item; context: { $implicit: l }"></ng-container>
+                <button
+                  type="button"
+                  class="pick"
+                  [attr.aria-pressed]="n.key === network()?.key"
+                  (click)="selectNetwork(n)"
+                >
+                  <span class="what">
+                    <span class="label" [class.hidden]="!n.ssid">
+                      {{ n.ssid ?? i18n.t('phoneRoute.hiddenNetwork') }}
+                    </span>
+                    <span class="hint">
+                      {{ i18n.plural(n.at.length, 'wifiMap.places.one', 'wifiMap.places.other') }}
+                      @if (n.connected) {
+                        · {{ i18n.t('wifiMap.yours') }}
+                      }
+                    </span>
+                  </span>
+                  <span class="hint scans">{{ n.signalPercent }} %</span>
+                </button>
               </li>
             }
           </ol>
-        }
-        @if (others().length > 0) {
-          <h3>{{ i18n.t(named().length > 0 ? 'wifiMap.others' : 'wifiPositions.places') }}</h3>
-          <ol>
-            @for (l of listedOthers(); track l.place.id) {
-              <li>
-                <ng-container *ngTemplateOutlet="item; context: { $implicit: l }"></ng-container>
-              </li>
-            }
-          </ol>
-          @if (others().length > LIST_PLACES) {
+          @if (foundNetworks().length > LIST_PLACES) {
             <button type="button" class="link" (click)="showAll.set(!showAll())">
               {{
                 showAll()
                   ? i18n.t('phoneWifi.showFewer')
-                  : i18n.t('wifiPositions.showAll', { count: others().length })
+                  : i18n.t('wifiMap.showAllNetworks', { count: foundNetworks().length })
               }}
             </button>
           }
-        }
-        @if (named().length + others().length === 0) {
-          <p class="detail">{{ i18n.t('wifiMap.nothingFound') }}</p>
-        }
-      </nav>
+          @if (foundNetworks().length === 0) {
+            <p class="detail">{{ i18n.t('wifiMap.noNetworkFound') }}</p>
+          }
+        </nav>
+      } @else {
+        <nav class="places" [attr.aria-label]="i18n.t('wifiPositions.places')">
+          @if (named().length > 0) {
+            <h3>{{ i18n.t('wifiMap.named') }}</h3>
+            <ol>
+              @for (l of named(); track l.place.id) {
+                <li>
+                  <ng-container *ngTemplateOutlet="item; context: { $implicit: l }"></ng-container>
+                </li>
+              }
+            </ol>
+          }
+          @if (others().length > 0) {
+            <h3>{{ i18n.t(named().length > 0 ? 'wifiMap.others' : 'wifiPositions.places') }}</h3>
+            <ol>
+              @for (l of listedOthers(); track l.place.id) {
+                <li>
+                  <ng-container *ngTemplateOutlet="item; context: { $implicit: l }"></ng-container>
+                </li>
+              }
+            </ol>
+            @if (others().length > LIST_PLACES) {
+              <button type="button" class="link" (click)="showAll.set(!showAll())">
+                {{
+                  showAll()
+                    ? i18n.t('phoneWifi.showFewer')
+                    : i18n.t('wifiPositions.showAll', { count: others().length })
+                }}
+              </button>
+            }
+          }
+          @if (named().length + others().length === 0) {
+            <p class="detail">{{ i18n.t('wifiMap.nothingFound') }}</p>
+          }
+        </nav>
+      }
       <app-places-map
         [map]="viewport"
         [places]="places()"
         [labels]="labels()"
-        [selected]="selected()"
-        (pick)="select($event)"
+        [selected]="mapSelected()"
+        [levels]="levels()"
+        (pick)="showPlace($event)"
       />
     </div>
-    @if (selected() >= 0) {
+    @if (tab() === 'networks') {
+      @if (network(); as n) {
+        <app-network-detail
+          [network]="n"
+          [places]="places()"
+          [labels]="labels()"
+          (pick)="showPlace($event)"
+        />
+      }
+    } @else if (selected() >= 0) {
       <app-place-detail
         [places]="places()"
         [labels]="labels()"

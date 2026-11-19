@@ -9,6 +9,9 @@ import { I18n } from '../i18n/i18n';
 import { MetricsService, WiFiPosition, WiFiPositions, nowSeconds } from '../metrics/metrics';
 import { MapViewport } from '../map/map-view';
 import { PageVisibility } from '../page-visibility';
+import { signalLevel } from '../compare/wifi';
+import { NetworkDetail } from './network-detail';
+import { MapNetwork, mapNetworks, networkMatches } from './networks';
 import { PlaceDetail } from './place-detail';
 import { matches, placeLabel } from './places';
 import { MAP_HEIGHT, MAP_WIDTH, PlacesMap } from './places-map';
@@ -40,7 +43,7 @@ interface Listed {
  */
 @Component({
   selector: 'app-wifi-map',
-  imports: [NgTemplateOutlet, PlaceDetail, PlacesMap],
+  imports: [NetworkDetail, NgTemplateOutlet, PlaceDetail, PlacesMap],
   templateUrl: './wifi-map.html',
   styleUrl: './wifi-map.css',
 })
@@ -86,6 +89,63 @@ export class WifiMap {
     this.showAll() ? this.others() : this.others().slice(0, LIST_PLACES),
   );
   protected readonly LIST_PLACES = LIST_PLACES;
+
+  /** Whether the list shows the places or the networks heard at them. */
+  protected readonly tab = signal<'places' | 'networks'>('places');
+
+  /** Every network heard at the places, the user's own first. */
+  protected readonly networks = computed(() => mapNetworks(this.places()));
+  protected readonly foundNetworks = computed(() =>
+    this.networks().filter((n) => networkMatches(n, this.search())),
+  );
+  protected readonly listedNetworks = computed(() =>
+    this.showAll() ? this.foundNetworks() : this.foundNetworks().slice(0, LIST_PLACES),
+  );
+
+  /** The key of the picked network, which stays picked as the places are read again. */
+  private readonly pickedNetwork = signal<string | null>(null);
+
+  /** The picked network, or the first one while none is (or the picked one is gone). */
+  protected readonly network = computed((): MapNetwork | undefined => {
+    const key = this.pickedNetwork();
+    const networks = this.networks();
+    return networks.find((n) => n.key === key) ?? networks[0];
+  });
+
+  /** How well the picked network was heard at each place, on the networks tab. */
+  protected readonly levels = computed(() => {
+    const network = this.network();
+    if (this.tab() !== 'networks' || !network) {
+      return null;
+    }
+    const levels = this.places().map(() => null as ReturnType<typeof signalLevel> | null);
+    for (const s of network.at) {
+      levels[s.place] = signalLevel(s.signalPercent);
+    }
+    return levels;
+  });
+
+  /** The place drawn as picked: on the networks tab, where the picked network was heard best. */
+  protected readonly mapSelected = computed(() =>
+    this.tab() === 'networks' ? (this.network()?.at[0]?.place ?? -1) : this.selected(),
+  );
+
+  protected showTab(tab: 'places' | 'networks'): void {
+    this.tab.set(tab);
+    this.showAll.set(false);
+  }
+
+  protected selectNetwork(network: MapNetwork): void {
+    this.pickedNetwork.set(network.key);
+    // The map shows where it reaches.
+    this.viewport.focus(network.at.map((s) => this.places()[s.place]));
+  }
+
+  /** Picks a place, from the map or a network's places, and shows it on the places tab. */
+  protected showPlace(index: number): void {
+    this.showTab('places');
+    this.select(index);
+  }
 
   protected select(index: number): void {
     const place = this.places()[index];

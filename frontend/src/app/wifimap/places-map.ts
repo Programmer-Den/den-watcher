@@ -1,6 +1,7 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 
 import { I18n } from '../i18n/i18n';
+import { SignalLevel } from '../compare/wifi';
 import { WiFiPosition } from '../metrics/metrics';
 import { MapFrame } from '../map/map-frame';
 import { MapViewport } from '../map/map-view';
@@ -31,6 +32,11 @@ export class PlacesMap {
   readonly labels = input.required<string[]>();
   /** The index of the picked place, or -1. */
   readonly selected = input.required<number>();
+  /**
+   * How well a network was heard at each place, by index, null where it was not: the map then
+   * colours each place by it and draws every place on its own.
+   */
+  readonly levels = input<(SignalLevel | null)[] | null>(null);
   /** The index of a place the user picked on the map. */
   readonly pick = output<number>();
 
@@ -50,7 +56,8 @@ export class PlacesMap {
   protected readonly drawn = computed(() => {
     const places = this.places();
     const picked = this.selected();
-    const alone = new Set(places.flatMap((p, i) => (p.name || i === picked ? [i] : [])));
+    const levels = this.levels();
+    const alone = new Set(places.flatMap((p, i) => (levels || p.name || i === picked ? [i] : [])));
     // The places with the most scans first, which the numbered circles are drawn at.
     const order = places.map((_, i) => i);
     return clusters(this.spots(), order, alone).sort(
@@ -60,6 +67,11 @@ export class PlacesMap {
 
   private layer(c: Cluster, alone: ReadonlySet<number>, picked: number): number {
     const first = c.places[0];
+    const levels = this.levels();
+    if (levels) {
+      // The places that heard the network over those that did not.
+      return first === picked ? 2 : levels[first] ? 1 : 0;
+    }
     return first === picked ? 2 : alone.has(first) ? 1 : 0;
   }
 

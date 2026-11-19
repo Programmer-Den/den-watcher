@@ -118,4 +118,18 @@ describe('MapViewport', () => {
     expect(map.view()!.zoom).toBe(zoom + 2);
     expect(map.canZoomIn()).toBe(true);
   });
+
+  it('zooms in on some of the places, which the whole view shows again', () => {
+    const map = new MapViewport(WIDTH, HEIGHT);
+    map.show([south, north]);
+    const whole = map.view()!;
+    map.focus([north]);
+    expect(map.zoomed()).toBe(true);
+    expect(map.view()!.zoom).toBe(FIT_ZOOM);
+    expect(map.at(north).x).toBeCloseTo(WIDTH / 2);
+    map.focus([]);
+    expect(map.view()!.zoom).toBe(FIT_ZOOM);
+    map.showWhole();
+    expect(map.view()).toEqual(whole);
+  });
 });

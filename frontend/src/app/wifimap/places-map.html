@@ -20,7 +20,7 @@
       }
       @let s = spots();
       <!-- The places that heard some of the same access points as the picked one. -->
-      @if (s[selected()]; as from) {
+      @if (!levels() && s[selected()]; as from) {
         @for (r of places()[selected()].related ?? []; track r.place) {
           @if (s[r.place]; as to) {
             <line
@@ -41,7 +41,16 @@
           [class.named]="!!p.name"
           [attr.transform]="'translate(' + c.x + ' ' + c.y + ')'"
         >
-          @if (c.places.length > 1) {
+          @if (levels(); as l) {
+            @if (l[c.places[0]]; as level) {
+              <circle class="heard" [attr.data-level]="level" r="7" />
+            } @else {
+              <circle class="unheard" r="3" />
+            }
+            @if (p.name || c.places[0] === selected()) {
+              <text class="name" x="11" dy="0.35em">{{ labels()[c.places[0]] }}</text>
+            }
+          } @else if (c.places.length > 1) {
             <circle class="cluster" r="11" />
             <text dy="0.35em">{{ c.places.length }}</text>
           } @else if (p.name || c.places[0] === selected()) {

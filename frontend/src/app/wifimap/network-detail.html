@@ -1,0 +1,62 @@
+@let n = network();
+<section aria-live="polite">
+  <div class="head">
+    <h3 [class.hidden]="!n.ssid">{{ n.ssid ?? i18n.t('phoneRoute.hiddenNetwork') }}</h3>
+    @if (n.connected) {
+      <span class="badge">{{ i18n.t('wifiMap.yours') }}</span>
+    }
+    <span class="hint">{{ meta() }}</span>
+  </div>
+
+  <dl class="tiles">
+    <div>
+      <dt>{{ i18n.t('wifiMap.heardAt') }}</dt>
+      <dd>{{ i18n.plural(n.at.length, 'wifiMap.places.one', 'wifiMap.places.other') }}</dd>
+    </div>
+    @if (best(); as b) {
+      <div>
+        <dt>{{ i18n.t('wifiPositions.bestSignal') }}</dt>
+        <dd>{{ b.signalPercent | number: '1.0-0' : i18n.language() }} %</dd>
+        <dd class="hint">{{ labels()[b.place] }}</dd>
+      </div>
+    }
+    <div>
+      <dt>{{ i18n.t('wifiMap.reach') }}</dt>
+      <dd>{{ reach() | number: '1.0-0' : i18n.language() }} m</dd>
+      <dd class="hint">{{ i18n.t('wifiMap.reachHint') }}</dd>
+    </div>
+  </dl>
+
+  <div class="table">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">{{ i18n.t('wifiMap.place') }}</th>
+          <th scope="col">{{ i18n.t('wifiPositions.bestSignal') }}</th>
+          <th scope="col">{{ i18n.t('wifiMap.heardInTitle') }}</th>
+          <th scope="col">{{ i18n.t('wifiMap.fromBest') }}</th>
+          <th scope="col">{{ i18n.t('wifiPositions.lastHeard') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (s of n.at; track s.place) {
+          <tr>
+            <th scope="row">
+              <button type="button" class="link" (click)="pick.emit(s.place)">
+                {{ labels()[s.place] }}
+              </button>
+            </th>
+            <td>
+              <span class="level" [attr.data-level]="signalLevel(s.signalPercent)">
+                {{ s.signalPercent | number: '1.0-0' : i18n.language() }} %
+              </span>
+            </td>
+            <td>{{ i18n.t('wifiMap.heardIn', { count: s.heardIn, scans: s.scans }) }}</td>
+            <td>{{ away(s.place) | number: '1.0-0' : i18n.language() }} m</td>
+            <td>{{ time(s.last) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

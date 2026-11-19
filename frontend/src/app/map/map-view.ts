@@ -235,6 +235,13 @@ export class MapViewport {
     this.moved.set(null);
   }
 
+  /** Zooms in on some of the places, all of them on the map, as the user would. */
+  focus(places: LatLon[]): void {
+    if (places.length > 0) {
+      this.moved.set(fitView(places, this.width, this.height, this.padding));
+    }
+  }
+
   /** Zooms by `levels` around a spot, by default the middle. */
   zoom(levels: number, at: Spot = { x: this.width / 2, y: this.height / 2 }): void {
     const view = this.view();

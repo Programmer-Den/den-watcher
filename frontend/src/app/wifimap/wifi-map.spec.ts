@@ -119,6 +119,13 @@ describe('the Wi-Fi map', () => {
     fixture.detectChanges();
   }
 
+  function search(text: string): void {
+    const input = element.querySelector<HTMLInputElement>('input.search')!;
+    input.value = text;
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+  }
+
   function button(text: string): HTMLButtonElement {
     const found = [...element.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
       b.textContent?.includes(text),
@@ -161,6 +168,62 @@ describe('the Wi-Fi map', () => {
     fixture.detectChanges();
     expect(heading()).toBe('Place 5356');
     expect(element.querySelector('g.place.picked text')?.textContent).toBe('Place 5356');
+  });
+
+  it('shows every network on its own tab, with where it was heard and how far it reaches', () => {
+    const heard = answer();
+    heard.places[0].networks.push({
+      ssid: 'Cafe',
+      signalPercent: 30,
+      last: 1800,
+      devices: [{ device: 'pixel', signalPercent: 30, last: 1800, scans: 3 }],
+    });
+    reply(heard);
+    button('Networks 3').click();
+    fixture.detectChanges();
+    const list = [...element.querySelectorAll('.places .pick')].map((b) =>
+      b.textContent?.replace(/\s+/g, ' ').trim(),
+    );
+    // The user's own network first, then the one heard at the most places.
+    expect(list).toEqual([
+      'Den 1 place · Yours 92 %',
+      'Cafe 2 places 60 %',
+      'Hidden network 1 place 20 %',
+    ]);
+    expect(element.querySelector('app-network-detail h3')?.textContent?.trim()).toBe('Den');
+    expect(element.querySelector('app-place-detail')).toBeNull();
+    // The places that did not hear it are greyed out.
+    expect(element.querySelectorAll('g.place circle.heard').length).toBe(1);
+    expect(element.querySelectorAll('g.place circle.unheard').length).toBe(1);
+
+    pick(1);
+    const detail = element.querySelector('app-network-detail')!;
+    expect(detail.querySelector('h3')?.textContent?.trim()).toBe('Cafe');
+    expect(detail.querySelector('.tiles')?.textContent).toContain('2 places');
+    // 0.01° of latitude apart.
+    expect(detail.querySelector('.tiles')?.textContent).toContain('1,112 m');
+    const rows = detail.querySelectorAll('tbody tr');
+    expect(rows[0].textContent).toContain('Place 5356');
+    expect(rows[0].textContent).toContain('60 %');
+    expect(rows[0].textContent).toContain('3 of 3 scans');
+    expect(rows[1].textContent).toContain('Place 5357');
+    expect(rows[1].textContent).toContain('3 of 12 scans');
+    expect(element.querySelectorAll('g.place circle.heard').length).toBe(2);
+    // The best heard place is the one drawn as picked.
+    expect(element.querySelector('g.place.picked text')?.textContent).toBe('Place 5356');
+
+    search('den');
+    expect(element.querySelectorAll('.places .pick').length).toBe(1);
+    search('nowhere');
+    expect(element.querySelector('.places')?.textContent).toContain('No network has this name');
+    search('');
+
+    // A place picked among the network's places shows it on the places tab.
+    detail.querySelector<HTMLButtonElement>('tbody tr:nth-child(2) .link')!.click();
+    fixture.detectChanges();
+    expect(heading()).toBe('Place 5357');
+    expect(element.querySelector('app-network-detail')).toBeNull();
+    expect(element.querySelectorAll('g.place circle.heard').length).toBe(0);
   });
 
   it('lists the named places first, by their names', () => {
