@@ -142,7 +142,12 @@ object Recorder {
         return count.today
     }
 
-    /** Sends what the hub does not have yet, with the newest reading, which is made only when it is sent. */
+    /**
+     * Sends what the hub does not have yet, with the newest reading, which is
+     * made only when it is sent. On a network that is not a usual one, where
+     * the hub did not answer lately, it waits (see Hub.waits), so a Wi-Fi at
+     * work does not keep the phone awake every half minute.
+     */
     private fun push(context: Context, settings: Settings, store: Store, snapshot: () -> org.json.JSONObject) {
         val address = settings.hubAddress
         val url = HubAddress.pushUrl(address)
@@ -152,6 +157,11 @@ object Recorder {
         }
         if (!unmetered(context)) {
             settings.problem = Problem.NOT_HOME
+            return
+        }
+        val network = Networks.current(context)
+        if (Hub.waits(address, network, settings.usualNetworks, settings.unreachable, System.currentTimeMillis() / 1000)) {
+            settings.problem = Problem.UNREACHABLE
             return
         }
         var newest: org.json.JSONObject? = snapshot()
@@ -177,10 +187,14 @@ object Recorder {
                 when (answer) {
                     is Hub.Answer.Failed -> {
                         settings.problem = answer.problem
+                        if (answer.problem == Problem.UNREACHABLE && network != null) {
+                            settings.unreachable = Hub.place(address, network) to now
+                        }
                         return
                     }
                     is Hub.Answer.Taken -> {
                         settings.problem = null
+                        settings.unreachable = null
                         settings.lastPush = now
                         // A key is taken only while the app has none, so another
                         // server at the hub's address cannot give its own.
