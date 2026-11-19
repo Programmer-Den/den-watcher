@@ -92,6 +92,9 @@
     <string name="map_none">Für diese Zeit hat dieses Handy keinen Verlauf. Lass Standortverlauf unter Welche Daten möchtest du sammeln? an und erlaube den Standort immer.</string>
     <string name="map_distance">%1$s km zurückgelegt</string>
     <string name="map_description">Der Verlauf auf einer Karte</string>
+    <string name="map_zoom_in">Vergrößern</string>
+    <string name="map_zoom_out">Verkleinern</string>
+    <string name="map_zoom_whole">Ganze Route zeigen</string>
     <string name="map_attribution">Karte © OpenStreetMap-Mitwirkende</string>
     <string name="map_legend">○ Start   ● Zuletzt   • Punkt, antippen für sein WLAN</string>
     <string name="map_pick">Tippe einen Punkt auf der Karte an, um die WLANs zu sehen, die das Handy dort gefunden hat.</string>

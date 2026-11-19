@@ -131,6 +131,23 @@ class Screenshots {
     }
 
     @Test
+    fun mapZoomed() = shot(
+        "15-map-zoomed",
+        screen = MapActivity::class.java,
+        fill = ::keepRoute,
+        // Zooms in twice with the buttons.
+        tap = {
+            val map = (it as MapActivity).findViewById<RouteMapView>(R.id.map)
+            map.zoomIn()
+            map.zoomIn()
+        },
+    ) {
+        hubAddress = "192.168.1.20:9393"
+        recording = true
+        lastPush = LAST_PUSH
+    }
+
+    @Test
     fun mapGerman() = shot("14-map-german", "de", screen = MapActivity::class.java, fill = ::keepRoute) {
         hubAddress = "192.168.1.20:9393"
         recording = true

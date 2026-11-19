@@ -92,6 +92,9 @@
     <string name="map_none">Este teléfono no guardó ninguna ruta en este periodo. Deja Ruta activada en ¿Qué datos quieres recopilar? y permite la ubicación todo el tiempo.</string>
     <string name="map_distance">%1$s km recorridos</string>
     <string name="map_description">La ruta en un mapa</string>
+    <string name="map_zoom_in">Acercar</string>
+    <string name="map_zoom_out">Alejar</string>
+    <string name="map_zoom_whole">Mostrar toda la ruta</string>
     <string name="map_attribution">Mapa © colaboradores de OpenStreetMap</string>
     <string name="map_legend">○ Inicio   ● Último   • Punto, tócalo para ver su Wi-Fi</string>
     <string name="map_pick">Toca un punto del mapa para ver las redes Wi-Fi que el móvil detectó allí.</string>
