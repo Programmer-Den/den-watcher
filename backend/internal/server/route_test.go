@@ -3,7 +3,10 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -94,10 +97,15 @@ func TestServesThePhonesScanNearAPoint(t *testing.T) {
 }
 
 // fakePositions has one place and keeps what it was asked for.
-type fakePositions struct{ anchorsFrom, from, to time.Time }
+type fakePositions struct {
+	from, to time.Time
+	// changes are the changes to places asked for, err what they return.
+	changes []string
+	err     error
+}
 
-func (f *fakePositions) WiFiPositions(_ context.Context, anchorsFrom, from, to time.Time) ([]history.WiFiPosition, error) {
-	f.anchorsFrom, f.from, f.to = anchorsFrom, from, to
+func (f *fakePositions) WiFiPositions(_ context.Context, from, to time.Time) ([]history.WiFiPosition, error) {
+	f.from, f.to = from, to
 	return []history.WiFiPosition{{Lat: 53.57, Lon: 9.95, Scans: 2, Devices: []string{"pixel"}, Networks: []history.PositionNetwork{
 		{SSID: "Den", SignalPercent: 80, Devices: []history.PositionSighting{{Device: "pixel", SignalPercent: 80, Scans: 2}}},
 	}}}, nil
@@ -124,25 +132,66 @@ func TestServesTheWiFiNetworksOfAllPhonesByPlace(t *testing.T) {
 	if got.To > now.Unix()+5 || source.to.Unix() != got.To {
 		t.Errorf("to = %d, want it to end now", got.To)
 	}
-	if want := got.From - got.From%86400; source.anchorsFrom.Unix() != want {
-		t.Errorf("places of the whole retention found from %v, want the start of its first day", source.anchorsFrom)
-	}
-	if got.PlacesFrom != source.anchorsFrom.Unix() {
-		t.Errorf("placesFrom = %d, want %d", got.PlacesFrom, source.anchorsFrom.Unix())
-	}
-	// A day's and a week's range find the places from the same time: the
-	// start of the day a week before the one they end on.
-	day := now.Unix() - now.Unix()%86400
-	for _, span := range []int64{86400, 7 * 86400} {
-		get(handler, "/api/wifi/positions?from="+strconv.FormatInt(now.Unix()-span, 10)+"&to="+strconv.FormatInt(now.Unix(), 10), "192.168.1.20:5000")
-		if want := day - 7*86400; source.anchorsFrom.Unix() != want {
-			t.Errorf("places of %d s found from %v, want %v", span, source.anchorsFrom, time.Unix(want, 0))
-		}
-	}
 	if rec := get(handler, "/api/wifi/positions?from=5&to=1", "192.168.1.20:5000"); rec.Code != http.StatusBadRequest {
 		t.Errorf("status of a range that ends before it starts = %d, want 400", rec.Code)
 	}
 	if rec := get(New(Site{Devices: DeviceList(device(fakeCollector{}, nil)), Files: site}), "/api/wifi/positions?from=0&to=1", "192.168.1.20:5000"); rec.Code == http.StatusOK && strings.HasPrefix(rec.Body.String(), "{") {
 		t.Errorf("served without a source: %s", rec.Body)
+	}
+}
+
+func (f *fakePositions) RenamePositionPlace(_ context.Context, id int64, name string) error {
+	f.changes = append(f.changes, fmt.Sprintf("rename %d %q", id, name))
+	return f.err
+}
+
+func (f *fakePositions) MergePositionPlace(_ context.Context, id, into int64) error {
+	f.changes = append(f.changes, fmt.Sprintf("merge %d into %d", id, into))
+	return f.err
+}
+
+func (f *fakePositions) SplitPositionPlace(_ context.Context, id int64) error {
+	f.changes = append(f.changes, fmt.Sprintf("split %d", id))
+	return f.err
+}
+
+func (f *fakePositions) KeepPositionPlacesApart(_ context.Context, a, b int64) error {
+	f.changes = append(f.changes, fmt.Sprintf("apart %d %d", a, b))
+	return f.err
+}
+
+func TestChangesThePlacesOfThePhonesScans(t *testing.T) {
+	source := &fakePositions{}
+	handler := New(Site{Devices: DeviceList(device(fakeCollector{}, nil)), Files: site, Positions: source})
+	for _, c := range []struct{ method, path, body string }{
+		{http.MethodPut, "/api/wifi/positions/3/name", `{"name":"Home"}`},
+		{http.MethodPut, "/api/wifi/positions/5/merged-into", `{"into":3}`},
+		{http.MethodPut, "/api/wifi/positions/5/merged-into", `{"into":null}`},
+		{http.MethodPost, "/api/wifi/positions/5/apart", `{"other":3}`},
+	} {
+		if rec := send(handler, c.method, c.path, c.body); rec.Code != http.StatusNoContent {
+			t.Errorf("%s %s = %d %s, want 204", c.method, c.path, rec.Code, rec.Body)
+		}
+	}
+	want := []string{`rename 3 "Home"`, "merge 5 into 3", "split 5", "apart 5 3"}
+	if !slices.Equal(source.changes, want) {
+		t.Errorf("changes = %q, want %q", source.changes, want)
+	}
+
+	if rec := send(handler, http.MethodPut, "/api/wifi/positions/home/name", `{"name":"Home"}`); rec.Code != http.StatusNotFound {
+		t.Errorf("status of a place that is no number = %d, want 404", rec.Code)
+	}
+	if rec := send(handler, http.MethodPut, "/api/wifi/positions/3/name", `{"title":"Home"}`); rec.Code != http.StatusBadRequest {
+		t.Errorf("status of an unknown field = %d, want 400", rec.Code)
+	}
+	for err, status := range map[error]int{
+		history.ErrNoPositionPlace:                    http.StatusNotFound,
+		&history.PlaceInputError{Message: "too long"}: http.StatusBadRequest,
+		errors.New("disk full"):                       http.StatusInternalServerError,
+	} {
+		source.err = err
+		if rec := send(handler, http.MethodPut, "/api/wifi/positions/3/name", `{"name":"Home"}`); rec.Code != status {
+			t.Errorf("status for %v = %d, want %d", err, rec.Code, status)
+		}
 	}
 }

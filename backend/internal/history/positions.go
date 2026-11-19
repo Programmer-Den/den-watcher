@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
-	"fmt"
 	"math"
 	"slices"
 	"sort"
@@ -37,7 +36,7 @@ const (
 	// tower kilometres off tells nothing of where the phone stayed.
 	positionVagueMaxMeters = 4 * PositionMaxAccuracy
 	// MaxPositionScans is how many scans WiFiPositions reads at most: the
-	// newest, a month of a few phones.
+	// newest of the range, a month of a few phones.
 	MaxPositionScans = 20000
 	// MaxPositions is how many places WiFiPositions returns at most: those
 	// with the most scans.
@@ -51,9 +50,14 @@ type WiFiPosition struct {
 	Lat float64 `json:"lat"`
 	Lon float64 `json:"lon"`
 	// ID tells the place apart from the others and stays the same as the
-	// range moves on or changes: the phone and Unix time of the first scan
-	// there since the anchors' start, such as "pixel@1762336860".
-	ID string `json:"id"`
+	// range moves on or changes: the hub keeps the places (see
+	// positionPlaceSchema). Name is what the user called it, if anything.
+	ID   int64  `json:"id"`
+	Name string `json:"name,omitempty"`
+	// Merged are the places the user merged into this one, whose scans count
+	// to it; Apart those the user keeps apart from it.
+	Merged []int64 `json:"merged,omitempty"`
+	Apart  []int64 `json:"apart,omitempty"`
 	// Scans is how many scans were made there, First and Last when, in
 	// Unix seconds.
 	Scans int   `json:"scans"`
@@ -120,24 +124,18 @@ type positionPoint struct {
 }
 
 // WiFiPositions returns the places the phones scanned the Wi-Fi networks at
-// from from up to (not including) to, the one with the most scans first, at
-// most MaxPositions. Each scan is placed at the point of its phone's route
-// that placeAt finds, and counts to the closest place within PositionMeters
-// of the first scan there, or starts a new one. The places are found from
-// anchorsFrom on, which the caller keeps the same for a while and across
-// ranges, so a place keeps its first scan, and with it its ID, as the range
-// moves on or changes;
-// only its scans in the range count. Of the scans from anchorsFrom on, the
-// newest MaxPositionScans are read, those before the range included.
-func (s *Store) WiFiPositions(ctx context.Context, anchorsFrom, from, to time.Time) ([]WiFiPosition, error) {
-	if anchorsFrom.After(from) {
-		anchorsFrom = from
-	}
-	// The networks only of the scans in the range: the older ones only
-	// find the places.
+// from from up to (not including) to, named ones first, then the one with
+// the most scans first, at most MaxPositions. Each scan is placed at the
+// point of its phone's route that placeAt finds, and counts to the closest
+// place the hub keeps within PositionMeters of the first scan there, or to
+// the one that place was merged into; a scan far from all of them starts a
+// new place, which the hub keeps from then on, so a place keeps its ID as
+// the range moves on or changes. Of the scans in the range, the newest
+// MaxPositionScans are read.
+func (s *Store) WiFiPositions(ctx context.Context, from, to time.Time) ([]WiFiPosition, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT device, time, CASE WHEN time >= ? THEN networks ELSE '' END FROM phone_scans
-		WHERE time >= ? AND time < ? ORDER BY time DESC LIMIT ?`, from.Unix(), anchorsFrom.Unix(), to.Unix(), MaxPositionScans)
+		SELECT device, time, networks FROM phone_scans
+		WHERE time >= ? AND time < ? ORDER BY time DESC LIMIT ?`, from.Unix(), to.Unix(), MaxPositionScans)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +156,7 @@ func (s *Store) WiFiPositions(ctx context.Context, anchorsFrom, from, to time.Ti
 	if err != nil {
 		return nil, err
 	}
-	if len(scans) == 0 || scans[0].time < from.Unix() {
+	if len(scans) == 0 {
 		return []WiFiPosition{}, nil
 	}
 	slices.Reverse(scans)
@@ -179,14 +177,16 @@ func (s *Store) WiFiPositions(ctx context.Context, anchorsFrom, from, to time.Ti
 		return nil, err
 	}
 
-	var grouper positionGrouper
+	// One at a time, so two reads do not both start a place at the same spot.
+	s.placing.Lock()
+	defer s.placing.Unlock()
+	grouper, err := s.positionGrouper(ctx)
+	if err != nil {
+		return nil, err
+	}
 	for _, sc := range scans {
 		p, ok := placeAt(routes[sc.device], sc.time*1000)
 		if !ok {
-			continue
-		}
-		if sc.time < from.Unix() {
-			grouper.anchor(p, sc.device, sc.time)
 			continue
 		}
 		var networks []ScannedNetwork
@@ -194,6 +194,9 @@ func (s *Store) WiFiPositions(ctx context.Context, anchorsFrom, from, to time.Ti
 			return nil, err
 		}
 		grouper.add(p, sc.device, sc.time, networks)
+	}
+	if err := s.keepPositionPlaces(ctx, grouper); err != nil {
+		return nil, err
 	}
 	return grouper.positions(), nil
 }
@@ -314,15 +317,24 @@ type cell struct{ row, col int64 }
 type positionGrouper struct {
 	places []*placeScans
 	grid   map[cell][]int
+	// byID is the index of each kept place in places, by its ID.
+	byID map[int64]int
 }
 
-// placeScans is what the scans at one place found so far.
+// placeScans is a place and what the scans at it found so far.
 type placeScans struct {
-	// id is the phone and time of the first scan, lat and lon its point,
-	// which the others are measured from, so a place does not wander off
-	// along a way.
-	id             string
-	lat, lon       float64
+	// id is the place's ID, 0 until a new one is kept; lat and lon are where
+	// its first scan was, which the others are measured from, so a place
+	// does not wander off along a way.
+	id       int64
+	lat, lon float64
+	name     string
+	// mergedInto is the ID of the place it was merged into, or 0.
+	mergedInto int64
+	apart      []int64
+	// kept is the newest scan the hub has counted to it, newest the newest
+	// counted to it now, in Unix seconds.
+	kept, newest   int64
 	sumLat, sumLon float64
 	scans          int
 	first, last    int64
@@ -377,27 +389,54 @@ func (g *positionGrouper) find(p positionPoint) int {
 	return best
 }
 
-// anchor finds the place of a scan of device at t, Unix seconds, placed at
-// p, or starts one there, without counting the scan: one from before the
-// range, which only keeps the places where they were.
-func (g *positionGrouper) anchor(p positionPoint, device string, t int64) *placeScans {
+// at returns the place a scan at p falls in: the closest within
+// PositionMeters, or a new one there.
+func (g *positionGrouper) at(p positionPoint) *placeScans {
 	i := g.find(p)
 	if i < 0 {
-		if g.grid == nil {
-			g.grid = map[cell][]int{}
-		}
-		i = len(g.places)
-		g.places = append(g.places, &placeScans{id: fmt.Sprintf("%s@%d", device, t), lat: p.lat, lon: p.lon, networks: map[string]*networkScans{}})
-		row := cellRow(p.lat)
-		key := cell{row, cellCol(row, p.lon)}
-		g.grid[key] = append(g.grid[key], i)
+		i = g.keep(&placeScans{lat: p.lat, lon: p.lon})
 	}
 	return g.places[i]
 }
 
+// keep adds a place to the grouper and returns its index.
+func (g *positionGrouper) keep(place *placeScans) int {
+	if g.grid == nil {
+		g.grid = map[cell][]int{}
+		g.byID = map[int64]int{}
+	}
+	if place.networks == nil {
+		place.networks = map[string]*networkScans{}
+	}
+	i := len(g.places)
+	g.places = append(g.places, place)
+	if place.id != 0 {
+		g.byID[place.id] = i
+	}
+	row := cellRow(place.lat)
+	key := cell{row, cellCol(row, place.lon)}
+	g.grid[key] = append(g.grid[key], i)
+	return i
+}
+
+// root returns the place the scans of place count to: the one it was merged
+// into, if that is still kept.
+func (g *positionGrouper) root(place *placeScans) *placeScans {
+	for range len(g.places) {
+		i, ok := g.byID[place.mergedInto]
+		if place.mergedInto == 0 || !ok {
+			break
+		}
+		place = g.places[i]
+	}
+	return place
+}
+
 // add counts a scan of device at t, Unix seconds, placed at p.
 func (g *positionGrouper) add(p positionPoint, device string, t int64, networks []ScannedNetwork) {
-	place := g.anchor(p, device, t)
+	direct := g.at(p)
+	direct.newest = max(direct.newest, t)
+	place := g.root(direct)
 	if place.scans == 0 {
 		place.first = t
 	}
@@ -450,12 +489,22 @@ func (g *positionGrouper) add(p positionPoint, device string, t int64, networks 
 	}
 }
 
-// positions returns the places found, the one with the most scans first, at
-// most MaxPositions, each with its networks, the best heard first.
+// positions returns the places found, the named ones first, then the one
+// with the most scans first, at most MaxPositions, each with its networks,
+// the best heard first.
 func (g *positionGrouper) positions() []WiFiPosition {
+	merged := map[int64][]int64{}
+	for _, place := range g.places {
+		if place.mergedInto != 0 && place.id != 0 {
+			if root := g.root(place); root != place {
+				merged[root.id] = append(merged[root.id], place.id)
+			}
+		}
+	}
 	places := slices.DeleteFunc(slices.Clone(g.places), func(p *placeScans) bool { return p.scans == 0 })
 	slices.SortStableFunc(places, func(a, b *placeScans) int {
-		return cmp.Or(cmp.Compare(b.scans, a.scans), cmp.Compare(b.last, a.last))
+		named := func(p *placeScans) bool { return p.name != "" }
+		return cmp.Or(compareBool(named(b), named(a)), cmp.Compare(b.scans, a.scans), cmp.Compare(b.last, a.last), cmp.Compare(a.id, b.id))
 	})
 	if len(places) > MaxPositions {
 		places = places[:MaxPositions]
@@ -487,6 +536,9 @@ func (g *positionGrouper) positions() []WiFiPosition {
 			Lat:      round6(place.sumLat / float64(place.scans)),
 			Lon:      round6(place.sumLon / float64(place.scans)),
 			ID:       place.id,
+			Name:     place.name,
+			Merged:   slices.Sorted(slices.Values(merged[place.id])),
+			Apart:    place.apart,
 			Scans:    place.scans,
 			First:    place.first,
 			Last:     place.last,
@@ -547,6 +599,17 @@ func relate(positions []WiFiPosition, heard []map[string]bool) {
 			positions[i].Related = related
 		}
 	}
+}
+
+// compareBool orders false before true.
+func compareBool(a, b bool) int {
+	switch {
+	case a == b:
+		return 0
+	case a:
+		return 1
+	}
+	return -1
 }
 
 // round6 rounds degrees to 6 places, about 10 cm, which keeps the answer short.

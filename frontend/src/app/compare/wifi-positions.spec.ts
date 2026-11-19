@@ -11,7 +11,7 @@ function place(lat: number, scans: number, extra: Partial<WiFiPosition> = {}): W
   return {
     lat,
     lon: 10,
-    id: `pixel@${lat}`,
+    id: Math.round(lat * 100),
     scans,
     first: 1000,
     last: 2000,
@@ -32,7 +32,6 @@ function answer(): WiFiPositions {
   return {
     from: 0,
     to: 86400,
-    placesFrom: 0,
     places: [
       place(53.57, 12, {
         devices: ['pixel', 'galaxy'],
@@ -184,45 +183,17 @@ describe('the Wi-Fi networks by position', () => {
     expect(element.querySelector('tbody tr')?.textContent).toContain('Cafe');
   });
 
-  it('follows the picked place by its middle when its id changed', () => {
-    reply(answer());
+  it('calls a place by the name the user gave it', () => {
+    const named = answer();
+    named.places[1].name = 'Café Nord';
+    reply(named);
     const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelectorAll('.places .pick')[1].textContent).toContain('Café Nord');
+    // Related to the first place, by its name.
+    expect(element.querySelector('.related-list .chip')?.textContent).toContain('Café Nord · 33 %');
     element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
     fixture.detectChanges();
-    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
-    // The hub looks back from a day later, past its first scan: a new id, about 50 m on.
-    const again = answer();
-    again.placesFrom = 100;
-    again.places[1].id = 'pixel@200';
-    again.places[1].lat += 0.0004;
-    reply(again);
-    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
-    // It is kept by its new id from then on, wherever its middle moves.
-    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
-    again.places[1].lat += 0.002;
-    reply(again);
-    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
-  });
-
-  it('does not keep a neighbour found by the middle in place of the pick', () => {
-    reply(answer());
-    const element = fixture.nativeElement as HTMLElement;
-    element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
-    fixture.detectChanges();
-    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
-    // The picked place has no scans now, its first scan still since the places were found from; a
-    // neighbour's middle is 50 m from where it was, and is shown.
-    const gone = answer();
-    gone.places[1].id = 'pixel@neighbour';
-    gone.places[1].lat += 0.0004;
-    reply(gone);
-    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 2');
-    // The picked place is back, next to it.
-    vi.advanceTimersByTime(POSITIONS_REFRESH_MS);
-    const back = answer();
-    back.places.unshift(gone.places[1]);
-    reply(back);
-    expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 3');
+    expect(element.querySelector('.picked-place h3')?.textContent?.trim()).toBe('Café Nord');
   });
 
   it('keeps a pick that is gone for a while, so it comes back with the place', () => {
@@ -299,7 +270,7 @@ describe('the Wi-Fi networks by position', () => {
   });
 
   it('reads the picked range and tells when there are no places or they could not be read', () => {
-    reply({ from: 0, to: 1, placesFrom: 0, places: [] });
+    reply({ from: 0, to: 1, places: [] });
     const element = fixture.nativeElement as HTMLElement;
     expect(element.textContent).toContain('No Wi-Fi scans with a position');
     element.querySelectorAll<HTMLButtonElement>('.choices button')[1].click();

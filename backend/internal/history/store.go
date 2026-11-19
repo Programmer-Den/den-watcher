@@ -59,6 +59,8 @@ type Store struct {
 	// wifi is what the devices' Wi-Fi saw that is not written yet (see
 	// AddWiFi).
 	wifi wifiPending
+	// placing lets one WiFiPositions keep new places at a time.
+	placing sync.Mutex
 }
 
 // Series is the values of one metric over time.
@@ -83,7 +85,7 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	if _, err := db.ExecContext(ctx, schema+extraSchema+wifiSchema+appUseSchema+wifiConnectionSchema+routeSchema+phoneScanSchema); err != nil {
+	if _, err := db.ExecContext(ctx, schema+extraSchema+wifiSchema+appUseSchema+wifiConnectionSchema+routeSchema+phoneScanSchema+positionPlaceSchema); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
@@ -281,7 +283,11 @@ func (s *Store) DeleteBefore(ctx context.Context, t time.Time) (int64, error) {
 	if err != nil {
 		return deleted, err
 	}
-	s.shrinkLog(ctx, deleted+hourly+wifi+scans+uses+connections+route+phoneScans)
+	places, err := s.deleteOldPositionPlaces(ctx, t)
+	if err != nil {
+		return deleted, err
+	}
+	s.shrinkLog(ctx, deleted+hourly+wifi+scans+uses+connections+route+phoneScans+places)
 	return deleted, nil
 }
 

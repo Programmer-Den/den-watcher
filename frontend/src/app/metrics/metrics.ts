@@ -396,8 +396,6 @@ export interface ScannedNetwork {
 export interface WiFiPositions {
   from: number;
   to: number;
-  /** When the places were found from, Unix seconds: their ids are of their first scan since. */
-  placesFrom: number;
   places: WiFiPosition[];
 }
 
@@ -405,11 +403,13 @@ export interface WiFiPositions {
 export interface WiFiPosition {
   lat: number;
   lon: number;
-  /**
-   * Tells the place apart: the phone and Unix time of its first scan since `placesFrom`, so the
-   * same for the day and week ranges until that moves on a day.
-   */
-  id: string;
+  /** Tells the place apart; the hub keeps it, so it stays the same as the range changes. */
+  id: number;
+  /** What the user called it, if anything. */
+  name?: string;
+  /** The places merged into it, whose scans count to it, and those kept apart from it, by id. */
+  merged?: number[];
+  apart?: number[];
   scans: number;
   /** When the first and the last scan there were made, in Unix seconds. */
   first: number;

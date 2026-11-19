@@ -618,7 +618,7 @@ export const fr: Messages = {
   'wifiPositions.intro':
     'Chaque réseau Wi-Fi capté par les téléphones à chaque lieu, tous téléphones confondus, situé grâce à leur itinéraire. Les lieux qui captent les mêmes points d’accès sont liés, même si leurs positions diffèrent.',
   'wifiPositions.map': 'Les lieux sur une carte',
-  'wifiPositions.places': 'Lieux, les plus scannés d’abord',
+  'wifiPositions.places': 'Lieux, nommés d’abord, puis les plus scannés',
   'wifiPositions.place': 'Lieu {number}',
   'wifiPositions.phones.one': '{count} téléphone',
   'wifiPositions.phones.other': '{count} téléphones',
@@ -627,7 +627,7 @@ export const fr: Messages = {
   'wifiPositions.showAll': 'Afficher les {count} lieux',
   'wifiPositions.heardHere': 'scanné par {phones}',
   'wifiPositions.related': 'Captés de même à :',
-  'wifiPositions.relatedPlace': 'Lieu {number} · {percent} % ({shared} en commun)',
+  'wifiPositions.relatedPlace': '{place} · {percent} % ({shared} en commun)',
   'wifiPositions.bestSignal': 'Meilleur signal',
   'wifiPositions.heardBy': 'Capté par',
   'wifiPositions.lastHeard': 'Dernière détection',

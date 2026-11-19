@@ -10,11 +10,21 @@ const PLACE_METERS = 100;
 /** How many related places a place tells at most, as the hub does. */
 const MAX_RELATED = 5;
 
+/** A point at no time, to measure with. */
+const here = { time: 0, lat: 0, lon: 0, accuracy: 0 };
+
+/** The places the demo's user named: those of the demo phone's home and office networks. */
+const NAMED = [
+  { name: 'Home', lat: 53.5755, lon: 9.953 },
+  { name: 'Office', lat: 53.5531, lon: 10.0062 },
+];
+
 /**
  * What GET /api/wifi/positions answers in the demo from `from` to `to` in Unix seconds: the demo
  * phone's scans at the points of its route, grouped into places within 100 m of their first scan as
- * the hub does, found from `anchorsFrom` on so they keep their ids, the one with the most scans in
- * the range first, each related to the others that heard some of the same networks. The demo's
+ * the hub does, found from `anchorsFrom` on so they keep their ids (the hub keeps its places; the
+ * demo finds them again), the named ones first, then the one with the most scans in the range
+ * first, each related to the others that heard some of the same networks. The demo's
  * scans have no access point IDs, so they are related by the networks' names, as the hub does for
  * scans stored before it kept the IDs.
  */
@@ -48,7 +58,7 @@ export function demoWifiPositions(anchorsFrom: number, from: number, to: number)
           lat: 0,
           lon: 0,
           // By the point's time: points close in time can share a scan.
-          id: `${DEMO_PHONE}@${point.time}`,
+          id: point.time,
           scans: 0,
           first: scan.time,
           last: 0,
@@ -85,15 +95,28 @@ export function demoWifiPositions(anchorsFrom: number, from: number, to: number)
       addSighting(network, n.signalPercent, scan.time, n.frequencyMHz, n.security, n.connected);
     }
   }
+  // Each name on the place closest to its spot, as the user would have picked it.
+  for (const n of NAMED) {
+    const near = places
+      .map((e) => ({
+        e,
+        away: meters({ ...here, lat: e.lat, lon: e.lon }, { ...here, lat: n.lat, lon: n.lon }),
+      }))
+      .filter((c) => c.away <= PLACE_METERS)
+      .sort((a, b) => a.away - b.away)[0];
+    if (near) {
+      near.e.place.name = n.name;
+    }
+  }
   const all = places
     .map((e) => e.place)
     .filter((p) => p.scans > 0)
-    .sort((a, b) => b.scans - a.scans || b.last - a.last);
+    .sort((a, b) => Number(!!b.name) - Number(!!a.name) || b.scans - a.scans || b.last - a.last);
   for (const place of all) {
     place.networks.sort((a, b) => b.signalPercent - a.signalPercent);
   }
   relate(all);
-  return { from, to, placesFrom: Math.min(anchorsFrom, from), places: all };
+  return { from, to, places: all };
 }
 
 function addSighting(
