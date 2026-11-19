@@ -17,6 +17,9 @@ import {
   ScannedNetwork,
   nowSeconds,
 } from '../metrics/metrics';
+import { LatLon, MapViewport, Spot } from '../map/map-view';
+import { MapFrame } from '../map/map-frame';
+import { MapZoom } from '../map/map-zoom';
 import { PageVisibility } from '../page-visibility';
 
 /** How often the route of a phone is read again. */
@@ -28,16 +31,6 @@ export const MAP_HEIGHT = 360;
 
 /** The room around the route on the map, in map units. */
 const MAP_PADDING = 32;
-
-/** The size of one tile of the map, in pixels at its zoom, as OpenStreetMap draws them. */
-const TILE = 256;
-
-/** The zoom levels the map picks from: from a country to a street. */
-const MIN_ZOOM = 3;
-const MAX_ZOOM = 17;
-
-/** Where OpenStreetMap serves its tiles: the browser loads them from there, not the hub. */
-export const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 /** How close points must be to count as one place the phone stayed at, in meters. */
 export const STOP_METERS = 150;
@@ -140,34 +133,15 @@ export function places(found: Stop[]): Place[] {
   return all.sort((a, b) => b.seconds - a.seconds);
 }
 
-/** Where a point is on the whole map of the world at a zoom, in its pixels (Web Mercator). */
-function project(lat: number, lon: number, zoom: number): { x: number; y: number } {
-  const size = TILE * 2 ** zoom;
-  const sin = Math.min(Math.max(Math.sin((lat * Math.PI) / 180), -0.9999), 0.9999);
-  return {
-    x: ((lon + 180) / 360) * size,
-    y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * size,
-  };
-}
-
-/** One tile of the map: where it is drawn, in map units, and where it is loaded from. */
-export interface MapTile {
-  href: string;
-  x: number;
-  y: number;
-}
-
-/** The map of a route: its tiles and the route and places on them, in map units. */
+/** The route and its places as drawn on the map, in map units. */
 export interface RouteMap {
-  zoom: number;
-  tiles: MapTile[];
   /** The route as an SVG path. */
   path: string;
-  start: { x: number; y: number };
-  end: { x: number; y: number };
-  places: { x: number; y: number }[];
+  start: Spot;
+  end: Spot;
+  places: Spot[];
   /** Where each of the points is drawn, in their order. */
-  points: { x: number; y: number }[];
+  points: Spot[];
   /**
    * The points that get a dot, by their index, oldest first: of points closer together than
    * DOT_SPACING, as while the phone stays at a place, only the newest, so the dots do not pile up.
@@ -175,73 +149,28 @@ export interface RouteMap {
   dots: number[];
 }
 
-/**
- * The map of the points, at the closest zoom that shows all of them with MAP_PADDING around, centered
- * on them: the OpenStreetMap tiles it needs, and the route and the places drawn on them.
- */
-export function routeMap(points: RoutePoint[], placesOf: Place[] = []): RouteMap | null {
+/** The route drawn on the map: where `at` puts each point and place, and the dots at that zoom. */
+export function routeMap(
+  points: RoutePoint[],
+  placesOf: Place[],
+  at: (place: LatLon) => Spot,
+): RouteMap | null {
   if (points.length === 0) {
     return null;
   }
-  const lats = points.map((p) => p.lat);
-  const lons = points.map((p) => p.lon);
-  const north = Math.max(...lats);
-  const south = Math.min(...lats);
-  const east = Math.max(...lons);
-  const west = Math.min(...lons);
-  let zoom = MIN_ZOOM;
-  for (let z = MAX_ZOOM; z >= MIN_ZOOM; z--) {
-    const nw = project(north, west, z);
-    const se = project(south, east, z);
-    if (se.x - nw.x <= MAP_WIDTH - 2 * MAP_PADDING && se.y - nw.y <= MAP_HEIGHT - 2 * MAP_PADDING) {
-      zoom = z;
-      break;
-    }
-  }
-  const nw = project(north, west, zoom);
-  const se = project(south, east, zoom);
-  const left = (nw.x + se.x) / 2 - MAP_WIDTH / 2;
-  const top = (nw.y + se.y) / 2 - MAP_HEIGHT / 2;
-  const at = (lat: number, lon: number) => {
-    const p = project(lat, lon, zoom);
-    return { x: round(p.x - left), y: round(p.y - top) };
-  };
-  const count = 2 ** zoom;
-  const tiles: MapTile[] = [];
-  for (let ty = Math.floor(top / TILE); ty <= Math.floor((top + MAP_HEIGHT) / TILE); ty++) {
-    if (ty < 0 || ty >= count) {
-      continue;
-    }
-    for (let tx = Math.floor(left / TILE); tx <= Math.floor((left + MAP_WIDTH) / TILE); tx++) {
-      const wrapped = ((tx % count) + count) % count;
-      tiles.push({
-        href: TILE_URL.replace('{z}', String(zoom))
-          .replace('{x}', String(wrapped))
-          .replace('{y}', String(ty)),
-        x: round(tx * TILE - left),
-        y: round(ty * TILE - top),
-      });
-    }
-  }
-  const drawn = points.map((p) => at(p.lat, p.lon));
+  const drawn = points.map(at);
   const cells = new Map<string, number>();
   drawn.forEach((p, i) => {
     cells.set(`${Math.round(p.x / DOT_SPACING)} ${Math.round(p.y / DOT_SPACING)}`, i);
   });
   return {
-    zoom,
-    tiles,
     path: drawn.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x} ${p.y}`).join(' '),
     start: drawn[0],
     end: drawn[drawn.length - 1],
-    places: placesOf.map((p) => at(p.lat, p.lon)),
+    places: placesOf.map(at),
     points: drawn,
     dots: [...cells.values()].sort((a, b) => a - b),
   };
-}
-
-function round(n: number): number {
-  return Math.round(n * 10) / 10;
 }
 
 /**
@@ -252,7 +181,7 @@ function round(n: number): number {
  */
 @Component({
   selector: 'app-phone-route',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, MapFrame, MapZoom],
   templateUrl: './phone-route.html',
   styleUrl: './phone-route.css',
 })
@@ -264,15 +193,20 @@ export class PhoneRouteCard {
   private readonly store = inject(HistoryStore);
   private readonly page = inject(PageVisibility);
 
-  protected readonly MAP_WIDTH = MAP_WIDTH;
-  protected readonly MAP_HEIGHT = MAP_HEIGHT;
   protected readonly route = signal<PhoneRoute | null>(null);
+
+  /** The map, which opens on the whole route and keeps the user's zoom as the route moves on. */
+  protected readonly viewport = new MapViewport(MAP_WIDTH, MAP_HEIGHT, MAP_PADDING);
 
   /** The tiles that did not load, which are left out. */
   protected readonly failedTiles = signal<ReadonlySet<string>>(new Set());
 
   protected readonly places = computed(() => places(stops(this.route()?.points ?? [])));
-  protected readonly map = computed(() => routeMap(this.route()?.points ?? [], this.places()));
+  protected readonly map = computed(() =>
+    this.viewport.view()
+      ? routeMap(this.route()?.points ?? [], this.places(), (p) => this.viewport.at(p))
+      : null,
+  );
 
   /** How far the phone went, in kilometers in the page's language. */
   protected readonly distance = computed(() =>
@@ -363,6 +297,7 @@ export class PhoneRouteCard {
         switchMap(({ device, span }) => {
           this.route.set(null);
           this.selectedTime.set(null);
+          this.viewport.show([], true);
           return this.page.poll(ROUTE_REFRESH_MS, () => {
             const to = nowSeconds();
             return this.metrics.phoneRoute(to - span, to, device).pipe(catchError(() => of(null)));
@@ -373,6 +308,7 @@ export class PhoneRouteCard {
       .subscribe((route) => {
         if (route) {
           this.route.set(route);
+          this.viewport.show(route.points);
         }
       });
 

@@ -256,6 +256,19 @@ describe('the Wi-Fi networks by position', () => {
     expect(element.querySelector('.picked-place h3')?.textContent).toContain('Place 1');
   });
 
+  it('zooms the map and follows a place picked in the list', () => {
+    reply(answer());
+    const element = fixture.nativeElement as HTMLElement;
+    const at = () => element.querySelector('g.place.picked')!.getAttribute('transform');
+    const zoomIn = element.querySelector<HTMLButtonElement>('app-map-frame .zoom button')!;
+    zoomIn.click();
+    zoomIn.click();
+    fixture.detectChanges();
+    element.querySelectorAll<HTMLButtonElement>('.places .pick')[1].click();
+    fixture.detectChanges();
+    expect(at()).toBe('translate(320 180)');
+  });
+
   it('tells when the places could not be read again and greys out the old ones', () => {
     reply(answer());
     const element = fixture.nativeElement as HTMLElement;

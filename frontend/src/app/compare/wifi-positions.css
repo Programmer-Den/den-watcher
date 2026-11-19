@@ -27,7 +27,7 @@ h3 {
   font: var(--mat-sys-title-medium);
 }
 
-/* The map and the list of places side by side, the list below the map on a narrow screen. */
+/* The map beside the list, which goes below it on a narrow screen. */
 .overview {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(14rem, 1fr);
@@ -193,7 +193,7 @@ h3 {
   }
 }
 
-/* As the other tables of the Wi-Fi: it scrolls sideways on its own, with the names kept in view. */
+/* It scrolls sideways on its own, with the names kept in view. */
 .table {
   overflow-x: auto;
   border: 1px solid var(--mat-sys-outline-variant);

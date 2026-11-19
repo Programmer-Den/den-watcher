@@ -7,59 +7,62 @@
         {{ i18n.plural(r.points.length, 'phoneRoute.points.one', 'phoneRoute.points.other') }}
       </p>
       <figure class="map">
-        <svg
-          [attr.viewBox]="'0 0 ' + MAP_WIDTH + ' ' + MAP_HEIGHT"
-          role="img"
-          [attr.aria-label]="i18n.t('phoneRoute.map')"
-        >
-          <!-- A tile that does not load, as on a hub without internet access, leaves the plain background. -->
-          @for (t of m.tiles; track t.href) {
-            @if (!failedTiles().has(t.href)) {
-              <image
-                [attr.href]="t.href"
-                [attr.x]="t.x"
-                [attr.y]="t.y"
-                width="256"
-                height="256"
-                (error)="tileFailed(t.href)"
+        <app-map-frame [map]="viewport">
+          <svg
+            [appMapZoom]="viewport"
+            [attr.viewBox]="'0 0 ' + viewport.width + ' ' + viewport.height"
+            role="img"
+            [attr.aria-label]="i18n.t('phoneRoute.map')"
+          >
+            <!-- A tile that does not load, as on a hub without internet access, leaves the plain background. -->
+            @for (t of viewport.tiles(); track t.href) {
+              @if (!failedTiles().has(t.href)) {
+                <image
+                  [attr.href]="t.href"
+                  [attr.x]="t.x"
+                  [attr.y]="t.y"
+                  [attr.width]="t.size"
+                  [attr.height]="t.size"
+                  (error)="tileFailed(t.href)"
+                />
+              }
+            }
+            <!-- A light casing under the line keeps it apart from the roads of the map. -->
+            <path class="casing" [attr.d]="m.path" />
+            <path class="line" [attr.d]="m.path" />
+            @for (i of m.dots; track i) {
+              <circle class="dot" [attr.cx]="m.points[i].x" [attr.cy]="m.points[i].y" r="3" />
+            }
+            @for (s of m.places; track $index) {
+              <g class="stop" [attr.transform]="'translate(' + s.x + ' ' + s.y + ')'">
+                <circle r="9" />
+                <text dy="0.35em">{{ $index + 1 }}</text>
+              </g>
+            }
+            <circle class="start" [attr.cx]="m.start.x" [attr.cy]="m.start.y" r="6" />
+            <circle class="end" [attr.cx]="m.end.x" [attr.cy]="m.end.y" r="6" />
+            @if (selected() >= 0) {
+              <circle
+                class="selected"
+                [attr.cx]="m.points[selected()].x"
+                [attr.cy]="m.points[selected()].y"
+                r="8"
               />
             }
-          }
-          <!-- A light casing under the line keeps it apart from the roads of the map. -->
-          <path class="casing" [attr.d]="m.path" />
-          <path class="line" [attr.d]="m.path" />
-          @for (i of m.dots; track i) {
-            <circle class="dot" [attr.cx]="m.points[i].x" [attr.cy]="m.points[i].y" r="3" />
-          }
-          @for (s of m.places; track $index) {
-            <g class="stop" [attr.transform]="'translate(' + s.x + ' ' + s.y + ')'">
-              <circle r="9" />
-              <text dy="0.35em">{{ $index + 1 }}</text>
-            </g>
-          }
-          <circle class="start" [attr.cx]="m.start.x" [attr.cy]="m.start.y" r="6" />
-          <circle class="end" [attr.cx]="m.end.x" [attr.cy]="m.end.y" r="6" />
-          @if (selected() >= 0) {
-            <circle
-              class="selected"
-              [attr.cx]="m.points[selected()].x"
-              [attr.cy]="m.points[selected()].y"
-              r="8"
-            />
-          }
-          <!-- Larger, invisible targets on top, so a dot is easy to hit, also with a finger. -->
-          @for (i of m.dots; track i) {
-            <circle
-              class="hit"
-              [attr.cx]="m.points[i].x"
-              [attr.cy]="m.points[i].y"
-              r="14"
-              (click)="select(i)"
-            >
-              <title>{{ time(r.points[i].time) }}</title>
-            </circle>
-          }
-        </svg>
+            <!-- Larger, invisible targets on top, so a dot is easy to hit, also with a finger. -->
+            @for (i of m.dots; track i) {
+              <circle
+                class="hit"
+                [attr.cx]="m.points[i].x"
+                [attr.cy]="m.points[i].y"
+                r="14"
+                (click)="select(i)"
+              >
+                <title>{{ time(r.points[i].time) }}</title>
+              </circle>
+            }
+          </svg>
+        </app-map-frame>
         <figcaption class="detail">{{ i18n.t('phoneRoute.attribution') }}</figcaption>
       </figure>
       <div class="legend detail">
