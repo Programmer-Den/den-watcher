@@ -21,8 +21,7 @@
         <p class="sensor availability">
           <span>{{
             i18n.t(switchedOff(a.kind) ? 'dashboard.usage' : 'dashboard.availability')
-          }}</span
-          ><span>{{ availablePercent(a) | number: '1.0-2' : i18n.language() }} %</span>
+          }}</span><span>{{ availablePercent(a) | number: '1.0-2' : i18n.language() }} %</span>
         </p>
       } @else {
         <h3>
@@ -332,8 +331,7 @@
                           }
                           @if (s.memory.swap; as swap) {
                             <p class="sensor swap">
-                              <span class="label">{{ i18n.t('dashboard.swap') }}</span
-                              ><span
+                              <span class="label">{{ i18n.t('dashboard.swap') }}</span><span
                                 >{{ swap.usedPercent | number: '1.0-1' : i18n.language() }} %</span
                               >
                             </p>
@@ -369,8 +367,7 @@
                             @for (d of s.disks; track d.path) {
                               <div class="disk">
                                 <p class="sensor">
-                                  <span class="label" [title]="d.path">{{ d.path }}</span
-                                  ><span
+                                  <span class="label" [title]="d.path">{{ d.path }}</span><span
                                     >{{ d.usedPercent | number: '1.0-1' : i18n.language() }} %</span
                                   >
                                 </p>
@@ -571,8 +568,9 @@
                           <app-scroll-rows>
                             @for (t of hottestFirst(s.temperatures); track t.sensor) {
                               <p class="sensor">
-                                <span class="label" [title]="t.sensor">{{ t.sensor }}</span
-                                ><span>{{ t.celsius | number: '1.0-1' : i18n.language() }} °C</span>
+                                <span class="label" [title]="t.sensor">{{ t.sensor }}</span><span
+                                  >{{ t.celsius | number: '1.0-1' : i18n.language() }} °C</span
+                                >
                               </p>
                             } @empty {
                               <p class="detail">{{ i18n.t('dashboard.noTemperature') }}</p>
@@ -592,8 +590,7 @@
                           <app-scroll-rows>
                             @for (f of s.fans; track f.name) {
                               <p class="sensor">
-                                <span class="label" [title]="f.name">{{ f.name }}</span
-                                ><span>{{
+                                <span class="label" [title]="f.name">{{ f.name }}</span><span>{{
                                   i18n.t('dashboard.rpm', { rpm: decimal(f.rpm, '1.0-0') })
                                 }}</span>
                               </p>
@@ -729,8 +726,7 @@
                                   <span
                                     class="label"
                                     [title]="extraText(item.label, item.labels)"
-                                    >{{ extraLabel(item) }}</span
-                                  ><span
+                                    >{{ extraLabel(item) }}</span><span
                                     [class.label]="item.unit === 'text'"
                                     [attr.title]="item.unit === 'text' ? extraValue(item) : null"
                                     >{{ extraValue(item) }}</span
@@ -784,8 +780,7 @@
                             />
                             @for (fact of systemFacts(system, s.version); track fact.label) {
                               <p class="fact">
-                                <span>{{ i18n.t(fact.label) }}</span
-                                ><span>{{ fact.value }}</span>
+                                <span>{{ i18n.t(fact.label) }}</span><span>{{ fact.value }}</span>
                               </p>
                             }
                           </div>
