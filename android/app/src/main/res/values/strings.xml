@@ -45,7 +45,7 @@
     <string name="network_channel_name">Other networks</string>
     <string name="network_channel_description">When the hub answers on a network other than the usual one.</string>
     <string name="nearby_title">Wi-Fi networks</string>
-    <string name="nearby_hint">With them the hub can tell where this phone was over the day: which Wi-Fi it was connected to and when, which room at home, and places you name, such as Work. Android gives the networks\' names only with the location permission; the app reads your position only for the location route, which you can switch off below. Every 5 minutes it asks Android to scan for the networks in reach, which costs little battery. They are kept until the phone is home again.</string>
+    <string name="nearby_hint">With them the hub can tell where this phone was over the day: which Wi-Fi it was connected to and when, which room at home, and places you name, such as Work. Android gives the networks\' names only with the location permission; the app reads your position only for the location route, which you can switch off below. Every 5 minutes it asks Android to scan for the networks in reach, every 20 minutes while the phone stands still, which costs little battery. They are kept until the phone is home again.</string>
     <string name="nearby_off">Not read.</string>
     <string name="nearby_open">Read only while the app is open. Allow it all the time to also read them while the phone is in your pocket.</string>
     <string name="nearby_always">Read all the time, also while the phone is away.</string>

@@ -41,6 +41,8 @@ object Recorder {
                 steps = if (choice.collectsSteps) countSteps(app, settings) else null,
             )
         }
+        // How often to ask for a scan and a position: less often while the phone stands still.
+        val every = Still.every(still(app, settings))
         val rates = reading.ratesSince(settings.lastReading)
         settings.lastReading = reading
         Store(app).use { store ->
@@ -54,16 +56,22 @@ object Recorder {
                     store.addScan(it)
                     store.addMapScan(SeenScan.of(it))
                     settings.lastScan = it.time
+                    val place = Still.place(it)
+                    settings.wifiStill = Still.samePlace(settings.lastPlace, place)
+                    settings.lastPlace = place
                 }
                 // Its results are read at the next reading, half a minute or a minute later.
                 // While saving battery, only the scans Android makes on its own are read.
                 val now = System.currentTimeMillis()
-                if (!Saving.on(app) && Nearby.scanDue(settings.lastScanRequest, (scan?.time ?: 0) * 1000, now) && Nearby.requestScan(app)) {
+                if (!Saving.on(app) && Nearby.scanDue(settings.lastScanRequest, (scan?.time ?: 0) * 1000, now, every) && Nearby.requestScan(app)) {
                     settings.lastScanRequest = now
+                    asked(app, settings)
                 }
             } else {
                 store.deleteScansUpTo(Long.MAX_VALUE)
                 store.deleteMapScans()
+                settings.wifiStill = null
+                settings.lastPlace = emptySet()
             }
             // While they are not collected, none is kept and the ones kept
             // before are not sent any more.
@@ -72,7 +80,7 @@ object Recorder {
             } else {
                 store.deleteConnections()
             }
-            recordRoute(app, settings, store, choice)
+            recordRoute(app, settings, store, choice, every)
             recordUses(app, settings, store, choice)
             push(app, settings, store) { reading.snapshot(rates, Sampler.device(app)) }
         }
@@ -81,12 +89,12 @@ object Recorder {
     /**
      * Keeps the newest position Android has as a point of the route when the
      * phone moved since the point before or stayed for a while, and asks
-     * Android for a new one every Route.ASK_EVERY_MILLIS, which the next
-     * reading finds; while saving battery it asks for none. While the route
+     * Android for a new one every Route.ASK_EVERY_MILLIS (Still.STILL_EVERY_MILLIS
+     * while the phone stands still), which the next reading finds; while saving battery it asks for none. While the route
      * is not collected, none is kept and the ones kept before are not sent
      * any more, nor shown on the app's map.
      */
-    private fun recordRoute(context: Context, settings: Settings, store: Store, choice: DataChoice) {
+    private fun recordRoute(context: Context, settings: Settings, store: Store, choice: DataChoice, every: Long) {
         if (!choice.collectsRoute) {
             store.deleteRouteUpTo(Long.MAX_VALUE)
             store.deleteMapRoute()
@@ -99,9 +107,29 @@ object Recorder {
             store.addMapPoint(it)
             settings.lastRoutePoint = it
         }
-        if (!Saving.on(context) && Route.askDue(settings.lastRouteAsk, now) && Route.ask(context)) {
+        if (!Saving.on(context) && Route.askDue(settings.lastRouteAsk, now, every) && Route.ask(context)) {
             settings.lastRouteAsk = now
+            asked(context, settings)
         }
+    }
+
+    /** Whether the phone stands still since the app last asked for a scan or a position, as Still tells it. */
+    private fun still(context: Context, settings: Settings): Boolean {
+        val (stepsAtAsk, networkAtAsk) = settings.stillAtAsk
+        return Still.isStill(settings.wifiStill, settings.stepCount?.counter, stepsAtAsk, wifiNetwork(context), networkAtAsk)
+    }
+
+    /** Keeps the step counter and the network at the time the app asked for a scan or a position, for still. */
+    private fun asked(context: Context, settings: Settings) {
+        settings.stillAtAsk = settings.stepCount?.counter to wifiNetwork(context)
+    }
+
+    /** The Wi-Fi or cable network the phone is on, as Networks names it, or null on mobile data or none. */
+    private fun wifiNetwork(context: Context): String? {
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+        val capabilities = connectivity.getNetworkCapabilities(connectivity.activeNetwork) ?: return null
+        val local = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+        return if (local) Networks.current(context) else null
     }
 
     /**
