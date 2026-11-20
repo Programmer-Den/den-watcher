@@ -66,7 +66,7 @@ export function demoWifiPositions(
   // each was merged into.
   const scans: { point: RoutePoint; scan: PhoneScan; entry: (typeof places)[number] }[] = [];
   for (const point of demoPhoneRoute(Math.min(anchorsFrom, from), to).points) {
-    const scan = demoPhoneScan(point.time).scan;
+    const scan = demoPhoneScan(point.time, point).scan;
     if (!scan) {
       continue;
     }
@@ -126,9 +126,19 @@ export function demoWifiPositions(
     place.lat = round6(entry.sumLat / place.scans);
     place.lon = round6(entry.sumLon / place.scans);
     for (const n of scan.networks) {
-      let network = place.networks.find((m) => (m.ssid ?? '') === (n.ssid ?? ''));
+      // By name, or a hidden one by its access point, as the hub tells them apart.
+      let network = place.networks.find(
+        (m) => m.ssid === n.ssid && m.id === (n.ssid ? undefined : n.id),
+      );
       if (!network) {
-        network = { ssid: n.ssid, signalPercent: 0, last: 0, frequenciesMHz: [], devices: [] };
+        network = {
+          ssid: n.ssid,
+          id: n.ssid ? undefined : n.id,
+          signalPercent: 0,
+          last: 0,
+          frequenciesMHz: [],
+          devices: [],
+        };
         place.networks.push(network);
       }
       addSighting(network, n.signalPercent, scan.time, n.frequencyMHz, n.security, n.connected);

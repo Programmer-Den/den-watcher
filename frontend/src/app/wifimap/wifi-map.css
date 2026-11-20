@@ -123,6 +123,14 @@ ol {
   cursor: pointer;
 }
 
+.tabs {
+  margin-bottom: 1rem;
+}
+
+.hidden {
+  font-style: italic;
+}
+
 .stale {
   opacity: 0.6;
 }

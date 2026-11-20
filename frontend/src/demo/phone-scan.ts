@@ -1,5 +1,6 @@
-import { PhoneScanAnswer, ScannedNetwork } from '../app/metrics/metrics';
+import { PhoneScanAnswer, RoutePoint, ScannedNetwork } from '../app/metrics/metrics';
 import { drift } from './fleet';
+import { demoPhoneRoute } from './phone-route';
 import { demoPhoneWifi } from './phone-wifi';
 
 /** How often the demo phone scans, in seconds, as its app does. */
@@ -25,7 +26,7 @@ const AT: Record<string, Heard[]> = {
       security: 'WPA2',
       generation: 4,
     },
-    { signal: 22, frequencyMHz: 2412, security: 'WPA2', generation: 4 },
+    { id: '3c:a6:2f:41:7e:08', signal: 22, frequencyMHz: 2412, security: 'WPA2', generation: 4 },
   ],
   Office: [
     { ssid: 'Office', signal: 84, frequencyMHz: 5240, security: 'WPA2 Enterprise', generation: 6 },
@@ -33,7 +34,7 @@ const AT: Record<string, Heard[]> = {
     { ssid: 'Office-Guest', signal: 68, frequencyMHz: 5240, security: 'Open', generation: 6 },
     { ssid: 'DIRECT-7B-Canon MF', signal: 41, frequencyMHz: 2437, security: 'WPA2', generation: 4 },
     { ssid: 'Vodafone Hotspot', signal: 26, frequencyMHz: 2412, security: 'Open', generation: 5 },
-    { signal: 33, frequencyMHz: 5745, security: 'WPA2', generation: 5 },
+    { id: '00:1a:1e:52:c4:90', signal: 33, frequencyMHz: 5745, security: 'WPA2', generation: 5 },
   ],
   'Vodafone Hotspot': [
     { ssid: 'Vodafone Hotspot', signal: 74, frequencyMHz: 2412, security: 'Open', generation: 5 },
@@ -46,27 +47,119 @@ const AT: Record<string, Heard[]> = {
     { ssid: 'Telekom-8C21F0', signal: 66, frequencyMHz: 2427, security: SECURE, generation: 6 },
     { ssid: 'Bakery Guests', signal: 48, frequencyMHz: 2462, security: 'Open', generation: 5 },
     { ssid: 'WLAN-482913', signal: 29, frequencyMHz: 2437, security: 'WPA2', generation: 4 },
-    { signal: 18, frequencyMHz: 5180, security: 'WPA2', generation: 5 },
+    { id: 'e8:df:70:93:2b:5c', signal: 18, frequencyMHz: 5180, security: 'WPA2', generation: 5 },
   ],
 };
 
-/** Networks along the streets, of which the phone hears a few on its way, changing as it goes. */
-const STREET: Heard[] = [
+/** A network along the streets, heard within `meters` of where its access point is. */
+type StreetNetwork = Heard & { lat: number; lon: number; meters: number };
+
+/**
+ * Networks along the streets between the places, each heard only near its access point, the
+ * better the closer; the city's Wi-Fi is heard all over town.
+ */
+const STREET: StreetNetwork[] = [
   {
     ssid: 'FRITZ!Box 6660 Cable QW',
-    signal: 34,
+    signal: 58,
     frequencyMHz: 2437,
     security: SECURE,
     generation: 6,
+    lat: 53.57,
+    lon: 9.9532,
+    meters: 260,
   },
-  { ssid: 'Vodafone-7C3A', signal: 28, frequencyMHz: 2412, security: 'WPA2', generation: 5 },
-  { ssid: 'o2-WLAN-91D4', signal: 41, frequencyMHz: 5180, security: 'WPA2', generation: 5 },
-  { ssid: 'WLAN-55A0B1', signal: 22, frequencyMHz: 2462, security: 'WPA2', generation: 4 },
-  { ssid: 'Hamburg City WiFi', signal: 46, frequencyMHz: 2437, security: 'Open', generation: 5 },
-  { ssid: 'HVV Bus', signal: 52, frequencyMHz: 5745, security: 'Open', generation: 5 },
-  { ssid: 'Pizzeria Roma', signal: 30, frequencyMHz: 2427, security: 'WPA2', generation: 4 },
-  { signal: 19, frequencyMHz: 2412, security: 'WPA2', generation: 4 },
+  {
+    ssid: 'Vodafone-7C3A',
+    signal: 50,
+    frequencyMHz: 2412,
+    security: 'WPA2',
+    generation: 5,
+    lat: 53.5655,
+    lon: 9.953,
+    meters: 220,
+  },
+  {
+    ssid: 'o2-WLAN-91D4',
+    signal: 62,
+    frequencyMHz: 5180,
+    security: 'WPA2',
+    generation: 5,
+    lat: 53.5533,
+    lon: 9.968,
+    meters: 300,
+  },
+  {
+    ssid: 'WLAN-55A0B1',
+    signal: 44,
+    frequencyMHz: 2462,
+    security: 'WPA2',
+    generation: 4,
+    lat: 53.5531,
+    lon: 9.986,
+    meters: 240,
+  },
+  {
+    ssid: 'Pizzeria Roma',
+    signal: 54,
+    frequencyMHz: 2427,
+    security: 'WPA2',
+    generation: 4,
+    lat: 53.5612,
+    lon: 9.9575,
+    meters: 220,
+  },
+  {
+    id: 'a6:3e:51:0c:9d:12',
+    signal: 36,
+    frequencyMHz: 2412,
+    security: 'WPA2',
+    generation: 4,
+    lat: 53.5585,
+    lon: 9.953,
+    meters: 260,
+  },
+  {
+    ssid: 'Hamburg City WiFi',
+    signal: 52,
+    frequencyMHz: 2437,
+    security: 'Open',
+    generation: 5,
+    lat: 53.5615,
+    lon: 9.98,
+    meters: 3500,
+  },
 ];
+
+/** A network on the buses, which the phone hears now and then on its way, wherever it is. */
+const BUS: Heard = {
+  ssid: 'HVV Bus',
+  signal: 52,
+  frequencyMHz: 5745,
+  security: 'Open',
+  generation: 5,
+};
+
+/** How far apart two points are, in meters, near enough for a town. */
+function metersBetween(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
+  const y = (a.lat - b.lat) * 111_320;
+  const x = (a.lon - b.lon) * 111_320 * Math.cos((a.lat * Math.PI) / 180);
+  return Math.hypot(x, y);
+}
+
+/** The street's networks heard at a point, each weaker the farther from its access point. */
+function streetAt(where: { lat: number; lon: number }, time: number): Heard[] {
+  const heard: Heard[] = STREET.flatMap(({ lat, lon, meters, signal, ...network }) => {
+    const away = metersBetween(where, { lat, lon });
+    return away < meters
+      ? [{ ...network, signal: Math.round(signal * (1 - (0.7 * away) / meters)) }]
+      : [];
+  });
+  if (drift(time, 600, 820) > 0.3) {
+    heard.push(BUS);
+  }
+  return heard;
+}
 
 /** The networks heard, each at its signal a little up or down over time, the strongest first. */
 function scanOf(heard: Heard[], time: number, connectedTo?: string): ScannedNetwork[] {
@@ -91,9 +184,10 @@ function scanOf(heard: Heard[], time: number, connectedTo?: string): ScannedNetw
 /**
  * What GET /api/phone/scan answers in the demo for the phone near `time`, in Unix seconds: the
  * scan every five minutes closest to it, with the networks of the place the phone was connected
- * at then, or else a few along the street, the same on every visit.
+ * at then, or else those along the street where it was (`where`, or its route's point closest to
+ * the scan), the same on every visit.
  */
-export function demoPhoneScan(time: number): PhoneScanAnswer {
+export function demoPhoneScan(time: number, where?: { lat: number; lon: number }): PhoneScanAnswer {
   const at = Math.round(time / SCAN_EVERY) * SCAN_EVERY;
   const connection = demoPhoneWifi(at - 86400, at + 1).connections.find(
     (c) => c.start <= at && at <= c.end,
@@ -102,10 +196,12 @@ export function demoPhoneScan(time: number): PhoneScanAnswer {
     const heard = AT[connection.ssid] ?? AT['Den'];
     return { time, scan: { time: at, networks: scanOf(heard, at, connection.ssid) } };
   }
-  // On the way: about four of the street's networks, others every few minutes, and at least the
-  // nearest one, as a scan on the street always hears some.
-  const near = STREET.map((_, i) => drift(at, 600, 800 + i));
-  const nearest = near.indexOf(Math.max(...near));
-  const street = STREET.filter((_, i) => near[i] > 0.1 || i === nearest);
-  return { time, scan: { time: at, networks: scanOf(street, at) } };
+  const point =
+    where ??
+    // Up to a day on, so the way to the next place is there too.
+    demoPhoneRoute(at - SCAN_EVERY, at + 86400).points.reduce<RoutePoint | undefined>(
+      (best, p) => (!best || Math.abs(p.time - at) < Math.abs(best.time - at) ? p : best),
+      undefined,
+    );
+  return { time, scan: { time: at, networks: point ? scanOf(streetAt(point, at), at) : [] } };
 }
