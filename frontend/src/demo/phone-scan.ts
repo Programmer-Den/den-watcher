@@ -102,7 +102,10 @@ export function demoPhoneScan(time: number): PhoneScanAnswer {
     const heard = AT[connection.ssid] ?? AT['Den'];
     return { time, scan: { time: at, networks: scanOf(heard, at, connection.ssid) } };
   }
-  // On the way: about four of the street's networks, others every few minutes.
-  const street = STREET.filter((_, i) => drift(at, 600, 800 + i) > 0.1);
+  // On the way: about four of the street's networks, others every few minutes, and at least the
+  // nearest one, as a scan on the street always hears some.
+  const near = STREET.map((_, i) => drift(at, 600, 800 + i));
+  const nearest = near.indexOf(Math.max(...near));
+  const street = STREET.filter((_, i) => near[i] > 0.1 || i === nearest);
   return { time, scan: { time: at, networks: scanOf(street, at) } };
 }
