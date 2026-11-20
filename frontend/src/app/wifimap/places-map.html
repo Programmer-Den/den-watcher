@@ -1,0 +1,67 @@
+<figure>
+  <app-map-frame [map]="map()">
+    <svg
+      [appMapZoom]="map()"
+      [attr.viewBox]="'0 0 ' + map().width + ' ' + map().height"
+      role="img"
+      [attr.aria-label]="i18n.t('wifiPositions.map')"
+    >
+      @for (t of map().tiles(); track t.href) {
+        @if (!failedTiles().has(t.href)) {
+          <image
+            [attr.href]="t.href"
+            [attr.x]="t.x"
+            [attr.y]="t.y"
+            [attr.width]="t.size"
+            [attr.height]="t.size"
+            (error)="tileFailed(t.href)"
+          />
+        }
+      }
+      @let s = spots();
+      <!-- The places that heard some of the same access points as the picked one. -->
+      @if (s[selected()]; as from) {
+        @for (r of places()[selected()].related ?? []; track r.place) {
+          @if (s[r.place]; as to) {
+            <line
+              class="related"
+              [attr.x1]="from.x"
+              [attr.y1]="from.y"
+              [attr.x2]="to.x"
+              [attr.y2]="to.y"
+            />
+          }
+        }
+      }
+      @for (c of drawn(); track c.places[0]) {
+        @let p = places()[c.places[0]];
+        <g
+          class="place"
+          [class.picked]="c.places[0] === selected()"
+          [class.named]="!!p.name"
+          [attr.transform]="'translate(' + c.x + ' ' + c.y + ')'"
+        >
+          @if (c.places.length > 1) {
+            <circle class="cluster" r="11" />
+            <text dy="0.35em">{{ c.places.length }}</text>
+          } @else if (p.name || c.places[0] === selected()) {
+            <circle r="7" />
+            <text class="name" x="12" dy="0.35em">{{ labels()[c.places[0]] }}</text>
+          } @else {
+            <circle [attr.r]="p.scans > 1 ? 6 : 3.5" />
+          }
+          <circle class="hit" r="14" (click)="open(c)">
+            <title>
+              @if (c.places.length > 1) {
+              {{ i18n.t('wifiMap.together', { count: c.places.length }) }}
+              } @else {
+              {{ labels()[c.places[0]] }}
+              }
+            </title>
+          </circle>
+        </g>
+      }
+    </svg>
+  </app-map-frame>
+  <figcaption class="detail">{{ i18n.t('phoneRoute.attribution') }}</figcaption>
+</figure>

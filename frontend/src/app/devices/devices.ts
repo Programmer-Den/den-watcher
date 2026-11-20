@@ -215,6 +215,10 @@ export class DeviceService {
   readonly comparing = signal(false);
   /** Whether the page shows the home page of all devices instead of the picked one. */
   readonly home = signal(false);
+  /** Whether the page shows the Wi-Fi map of all phones instead of the picked device. */
+  readonly wifiMap = signal(false);
+  /** Whether a phone is among the devices, whose Wi-Fi scans the Wi-Fi map shows. */
+  readonly hasPhone = computed(() => this.devices().some((d) => d.kind === 'phone'));
   readonly selected = computed(
     () => this.devices().find((d) => d.id === this.selectedId()) ?? LOCAL_DEVICE,
   );
@@ -224,17 +228,27 @@ export class DeviceService {
     this.selectedId.set(id);
     this.comparing.set(false);
     this.home.set(false);
+    this.wifiMap.set(false);
   }
 
   /** Compares all devices, also when the home page was shown. */
   compare(): void {
     this.comparing.set(true);
     this.home.set(false);
+    this.wifiMap.set(false);
   }
 
   /** Shows the home page of all devices. */
   goHome(): void {
     this.home.set(true);
+    this.comparing.set(false);
+    this.wifiMap.set(false);
+  }
+
+  /** Shows the Wi-Fi map of all phones. */
+  showWifiMap(): void {
+    this.wifiMap.set(true);
+    this.home.set(false);
     this.comparing.set(false);
   }
 
