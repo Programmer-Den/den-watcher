@@ -292,6 +292,21 @@ export class MetricsService {
     return this.http.get<WiFiPositions>('/api/wifi/positions', { params: { from, to } });
   }
 
+  /** Names a place of the phones' scans; an empty name takes its name away. */
+  renamePosition(id: number, name: string): Observable<void> {
+    return this.http.put<void>(`/api/wifi/positions/${id}/name`, { name });
+  }
+
+  /** Makes the scans of a place count to another from then on, or to itself again for null. */
+  mergePosition(id: number, into: number | null): Observable<void> {
+    return this.http.put<void>(`/api/wifi/positions/${id}/merged-into`, { into });
+  }
+
+  /** Tells the hub two places are not one, so they are not suggested as one. */
+  keepPositionsApart(id: number, other: number): Observable<void> {
+    return this.http.post<void>(`/api/wifi/positions/${id}/apart`, { other });
+  }
+
   /** The places named on the page, by what a device's Wi-Fi hears there. */
   wifiPlaces(): Observable<WiFiPlace[]> {
     return this.http

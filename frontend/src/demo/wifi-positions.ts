@@ -1,5 +1,11 @@
 import { meters } from '../app/phone/phone-route';
-import { PositionNetwork, WiFiPosition, WiFiPositions } from '../app/metrics/metrics';
+import {
+  PhoneScan,
+  PositionNetwork,
+  RoutePoint,
+  WiFiPosition,
+  WiFiPositions,
+} from '../app/metrics/metrics';
 import { DEMO_PHONE } from './phone-usage';
 import { demoPhoneRoute } from './phone-route';
 import { demoPhoneScan } from './phone-scan';
@@ -19,6 +25,20 @@ const NAMED = [
   { name: 'Office', lat: 53.5531, lon: 10.0062 },
 ];
 
+/** What the demo's visitor told of the places, kept for the visit, by the places' ids. */
+export interface DemoPlaceEdits {
+  /** The names given, '' for one taken away. */
+  names: Map<number, string>;
+  /** The place each merged place counts to. */
+  mergedInto: Map<number, number>;
+  /** The pairs kept apart, as "smaller id-larger id". */
+  apart: Set<string>;
+}
+
+export function emptyPlaceEdits(): DemoPlaceEdits {
+  return { names: new Map(), mergedInto: new Map(), apart: new Set() };
+}
+
 /**
  * What GET /api/wifi/positions answers in the demo from `from` to `to` in Unix seconds: the demo
  * phone's scans at the points of its route, grouped into places within 100 m of their first scan as
@@ -26,9 +46,14 @@ const NAMED = [
  * demo finds them again), the named ones first, then the one with the most scans in the range
  * first, each related to the others that heard some of the same networks. The demo's
  * scans have no access point IDs, so they are related by the networks' names, as the hub does for
- * scans stored before it kept the IDs.
+ * scans stored before it kept the IDs. What the visitor named and merged counts, as on the hub.
  */
-export function demoWifiPositions(anchorsFrom: number, from: number, to: number): WiFiPositions {
+export function demoWifiPositions(
+  anchorsFrom: number,
+  from: number,
+  to: number,
+  edits: DemoPlaceEdits = emptyPlaceEdits(),
+): WiFiPositions {
   const places: {
     place: WiFiPosition;
     /** Where the first scan was, which the others are measured from. */
@@ -37,6 +62,9 @@ export function demoWifiPositions(anchorsFrom: number, from: number, to: number)
     sumLat: number;
     sumLon: number;
   }[] = [];
+  // First the places of all scans, then the scans in the range counted to them, or to the place
+  // each was merged into.
+  const scans: { point: RoutePoint; scan: PhoneScan; entry: (typeof places)[number] }[] = [];
   for (const point of demoPhoneRoute(Math.min(anchorsFrom, from), to).points) {
     const scan = demoPhoneScan(point.time).scan;
     if (!scan) {
@@ -57,8 +85,8 @@ export function demoWifiPositions(anchorsFrom: number, from: number, to: number)
         place: {
           lat: 0,
           lon: 0,
-          // By the point's time: points close in time can share a scan.
-          id: point.time,
+          // In the order the places start, as the hub numbers the places it keeps.
+          id: places.length + 1,
           scans: 0,
           first: scan.time,
           last: 0,
@@ -72,10 +100,21 @@ export function demoWifiPositions(anchorsFrom: number, from: number, to: number)
       };
       places.push(entry);
     }
-    if (scan.time < from) {
-      // Before the range: it only keeps the place where it was.
-      continue;
+    // One before the range only keeps the place where it was.
+    if (scan.time >= from) {
+      scans.push({ point, scan, entry });
     }
+  }
+  const byId = new Map(places.map((e) => [e.place.id, e]));
+  const root = (entry: (typeof places)[number]) => {
+    let at = entry;
+    for (let i = 0; i < places.length && edits.mergedInto.has(at.place.id); i++) {
+      at = byId.get(edits.mergedInto.get(at.place.id)!) ?? at;
+    }
+    return at;
+  };
+  for (const { point, scan, entry: direct } of scans) {
+    const entry = root(direct);
     entry.sumLat += point.lat;
     entry.sumLon += point.lon;
     const place = entry.place;
@@ -106,6 +145,23 @@ export function demoWifiPositions(anchorsFrom: number, from: number, to: number)
       .sort((a, b) => a.away - b.away)[0];
     if (near) {
       near.e.place.name = n.name;
+    }
+  }
+  for (const e of places) {
+    const id = e.place.id;
+    if (edits.names.has(id)) {
+      e.place.name = edits.names.get(id) || undefined;
+    }
+    const apart = [...edits.apart].flatMap((pair) => {
+      const [a, b] = pair.split('-').map(Number);
+      return a === id ? [b] : b === id ? [a] : [];
+    });
+    if (apart.length > 0) {
+      e.place.apart = apart.sort((a, b) => a - b);
+    }
+    const merged = places.filter((m) => m !== e && root(m) === e).map((m) => m.place.id);
+    if (merged.length > 0) {
+      e.place.merged = merged;
     }
   }
   const all = places

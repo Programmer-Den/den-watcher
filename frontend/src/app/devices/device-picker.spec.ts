@@ -193,6 +193,33 @@ describe('DevicePicker', () => {
     expect(pressed()).toEqual([false, true, false, false]);
   });
 
+  it('offers the Wi-Fi map once a phone is among the devices', () => {
+    show([
+      { id: 'local', name: '' },
+      { id: 'pi', name: 'Pi' },
+    ]);
+    expect(element().querySelector('.wifi-map')).toBeNull();
+
+    const devices = TestBed.inject(DeviceService);
+    devices.devices.set([
+      { id: 'local', name: '' },
+      { id: 'phone', name: 'Phone', kind: 'phone' },
+    ]);
+    fixture.detectChanges();
+    const map = element().querySelector<HTMLButtonElement>('.wifi-map')!;
+    expect(text(map)).toBe('Wi-Fi map');
+    map.click();
+    fixture.detectChanges();
+    expect(devices.wifiMap()).toBe(true);
+    expect(map.getAttribute('aria-pressed')).toBe('true');
+    expect(items().some((b) => b.getAttribute('aria-pressed') === 'true')).toBe(false);
+
+    element().querySelector<HTMLButtonElement>('.compare')!.click();
+    fixture.detectChanges();
+    expect(devices.wifiMap()).toBe(false);
+    expect(devices.comparing()).toBe(true);
+  });
+
   it('tells why a device does not answer, and a PC that is off is just not in use', () => {
     show([
       { id: 'local', name: '' },

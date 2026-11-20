@@ -68,7 +68,8 @@ What goes over the wire:
 | Browser | Hub | `GET /api/history?device=<id>&from=…&to=…` over the last 7 days: [when a disk is full](data.md#when-a-disk-is-full) | at most once an hour per device, while a *Disks* card shows |
 | Browser | Hub | `GET /api/history.csv?device=<id>&from=…&to=…`: the history shown, as a file | when *Download CSV* is clicked |
 | Browser | Hub | `GET /api/events?device=<id>&from=…&to=…`: what happened, [marked on the charts](data.md#events-on-the-charts) | with the chart data when the range or device changes, and at most every 30 s as it moves on |
-| Browser | Hub | `GET /api/wifi/positions?from=…&to=…`: the places the phones scanned the Wi-Fi networks at, under *Compare devices*, *Wi-Fi nearby*, *By position* | when the range changes, and every 5 min while it shows |
+| Browser | Hub | `GET /api/wifi/positions?from=…&to=…`: the places the phones scanned the Wi-Fi networks at, on the *Wi-Fi map* | when the range changes, and every 5 min while it shows |
+| Browser | Hub | `PUT /api/wifi/positions/{id}/name`, `PUT /api/wifi/positions/{id}/merged-into`, `POST /api/wifi/positions/{id}/apart`: a place's name, a merge and places kept apart, on the *Wi-Fi map* | when the user changes a place |
 | Browser | Hub | `GET /api/availability?device=<id>`: uptime of another device | every 10 s, while one is selected |
 | Browser | Hub | `GET /api/update`: running version and newer release | every hour |
 | Browser | Hub | `GET /api/devices/suggestion`: the device the page is open on, to fill in the *Devices* dialog | when the dialog opens |

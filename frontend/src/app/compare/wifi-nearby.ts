@@ -42,10 +42,9 @@ import {
   wifiChanges,
   wifiDevices,
 } from './wifi';
-import { WifiPositionsView } from './wifi-positions';
 
 /** The views of what the devices' Wi-Fi sees. */
-export type WifiView = 'who' | 'home' | 'channels' | 'where' | 'places' | 'positions' | 'changes';
+export type WifiView = 'who' | 'home' | 'channels' | 'where' | 'places' | 'changes';
 
 const VIEWS: { id: WifiView; label: MessageKey }[] = [
   { id: 'who', label: 'wifi.whoSeesWhat' },
@@ -53,7 +52,6 @@ const VIEWS: { id: WifiView; label: MessageKey }[] = [
   { id: 'channels', label: 'wifi.channels' },
   { id: 'where', label: 'wifi.where' },
   { id: 'places', label: 'wifi.places' },
-  { id: 'positions', label: 'wifi.positions' },
   { id: 'changes', label: 'wifi.changes' },
 ];
 
@@ -98,14 +96,7 @@ const PLACES_RETRY_MS = 10_000;
  */
 @Component({
   selector: 'app-wifi-nearby',
-  imports: [
-    DecimalPipe,
-    FormsModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    WifiPositionsView,
-  ],
+  imports: [DecimalPipe, FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule],
   templateUrl: './wifi-nearby.html',
   styleUrl: './wifi-nearby.css',
 })

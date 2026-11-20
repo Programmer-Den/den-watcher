@@ -1,0 +1,116 @@
+<div class="title">
+  <h2>{{ i18n.t('wifiMap.title') }}</h2>
+  <p class="detail">{{ i18n.t('wifiMap.intro') }}</p>
+</div>
+
+<div class="bar">
+  <div class="choices" role="group" [attr.aria-label]="i18n.t('history.range')">
+    @for (r of ranges; track r.seconds) {
+      <button type="button" [attr.aria-pressed]="r === range()" (click)="range.set(r)">
+        {{ i18n.t(r.label) }}
+      </button>
+    }
+  </div>
+  <input
+    type="search"
+    class="search"
+    [value]="search()"
+    [placeholder]="i18n.t('wifiMap.search')"
+    [attr.aria-label]="i18n.t('wifiMap.search')"
+    (input)="search.set($any($event.target).value)"
+  />
+</div>
+
+@if (answer()) {
+  @if (failed()) {
+    <p class="detail" role="status">{{ i18n.t('wifiPositions.failed') }}</p>
+  }
+  @if (places().length > 0) {
+    <div class="overview" [class.stale]="connection.lost() || failed()">
+      <nav class="places" [attr.aria-label]="i18n.t('wifiPositions.places')">
+        @if (named().length > 0) {
+          <h3>{{ i18n.t('wifiMap.named') }}</h3>
+          <ol>
+            @for (l of named(); track l.place.id) {
+              <li>
+                <ng-container *ngTemplateOutlet="item; context: { $implicit: l }"></ng-container>
+              </li>
+            }
+          </ol>
+        }
+        @if (others().length > 0) {
+          <h3>{{ i18n.t(named().length > 0 ? 'wifiMap.others' : 'wifiPositions.places') }}</h3>
+          <ol>
+            @for (l of listedOthers(); track l.place.id) {
+              <li>
+                <ng-container *ngTemplateOutlet="item; context: { $implicit: l }"></ng-container>
+              </li>
+            }
+          </ol>
+          @if (others().length > LIST_PLACES) {
+            <button type="button" class="link" (click)="showAll.set(!showAll())">
+              {{
+                showAll()
+                  ? i18n.t('phoneWifi.showFewer')
+                  : i18n.t('wifiPositions.showAll', { count: others().length })
+              }}
+            </button>
+          }
+        }
+        @if (named().length + others().length === 0) {
+          <p class="detail">{{ i18n.t('wifiMap.nothingFound') }}</p>
+        }
+      </nav>
+      <app-places-map
+        [map]="viewport"
+        [places]="places()"
+        [labels]="labels()"
+        [selected]="selected()"
+        (pick)="select($event)"
+      />
+    </div>
+    @if (selected() >= 0) {
+      <app-place-detail
+        [places]="places()"
+        [labels]="labels()"
+        [index]="selected()"
+        (pick)="select($event)"
+        (changed)="reload()"
+      />
+    }
+  } @else {
+    <p class="detail">{{ i18n.t('wifiPositions.none') }}</p>
+  }
+} @else if (failed()) {
+  <p class="detail">{{ i18n.t('wifiPositions.failed') }}</p>
+} @else {
+  <p class="detail">{{ i18n.t('dashboard.loading') }}</p>
+}
+
+<ng-template #item let-l>
+  <button
+    type="button"
+    class="pick"
+    [attr.aria-pressed]="l.index === selected()"
+    (click)="select(l.index)"
+  >
+    <span class="what">
+      <span class="label">{{ l.label }}</span>
+      <span class="hint">
+        {{
+          i18n.plural(
+            l.place.networks.length,
+            'phoneRoute.networks.one',
+            'phoneRoute.networks.other'
+          )
+        }}
+        @if (networkNames(l.place); as names) {
+          · {{ names }}
+        }
+      </span>
+    </span>
+    <span class="hint scans">{{
+      i18n.plural(l.place.scans, 'wifiPositions.scans.one', 'wifiPositions.scans.other')
+    }}</span>
+  </button>
+</ng-template>
