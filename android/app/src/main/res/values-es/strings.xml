@@ -44,7 +44,7 @@
     <string name="network_channel_name">Otras redes</string>
     <string name="network_channel_description">Cuando el hub responde en una red distinta de la habitual.</string>
     <string name="nearby_title">Redes Wi-Fi</string>
-    <string name="nearby_hint">Con ellas el hub sabe dónde estuvo este teléfono a lo largo del día: a qué Wi-Fi estuvo conectado y cuándo, en qué habitación de casa y en los lugares que nombres, como Trabajo. Android solo da los nombres de las redes con el permiso de ubicación; la app solo lee tu posición para la ruta, que puedes desactivar más abajo. Cada 5 minutos pide a Android que busque las redes al alcance, lo que gasta poca batería. Se guardan hasta que el teléfono vuelve a casa.</string>
+    <string name="nearby_hint">Con ellas el hub sabe dónde estuvo este teléfono a lo largo del día: a qué Wi-Fi estuvo conectado y cuándo, en qué habitación de casa y en los lugares que nombres, como Trabajo. Android solo da los nombres de las redes con el permiso de ubicación; la app solo lee tu posición para la ruta, que puedes desactivar más abajo. Cada 5 minutos pide a Android que busque las redes al alcance, cada 20 minutos mientras el teléfono no se mueve, lo que gasta poca batería. Se guardan hasta que el teléfono vuelve a casa.</string>
     <string name="nearby_off">No se leen.</string>
     <string name="nearby_open">Se leen solo mientras la app está abierta. Permítelo siempre para leerlas también con el teléfono en el bolsillo.</string>
     <string name="nearby_always">Se leen siempre, también cuando el teléfono está fuera.</string>

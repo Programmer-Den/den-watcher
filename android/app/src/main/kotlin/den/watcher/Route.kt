@@ -43,8 +43,9 @@ data class RoutePoint(val time: Long, val lat: Double, val lon: Double, val accu
 /**
  * Keeps the phone's location route: at every reading the newest position
  * Android has, from any app that asked for one, which costs nothing, and
- * every ASK_EVERY_MILLIS a position from the mobile and Wi-Fi networks, which
- * costs little, never from GPS. While saving battery the app asks for none
+ * every ASK_EVERY_MILLIS (Still.STILL_EVERY_MILLIS while the phone stands
+ * still) a position from the mobile and Wi-Fi networks, which costs little,
+ * never from GPS. While saving battery the app asks for none
  * and only keeps what Android has anyway. Android gives it only with the
  * location permission, the same one the Wi-Fi networks need, and while the
  * app is in the background only when it is allowed all the time.
@@ -114,8 +115,13 @@ object Route {
         }.isSuccess
     }
 
-    /** Whether to ask for a position at now, when the app last asked at last, both Unix milliseconds: also after the clock went back. */
-    fun askDue(last: Long, now: Long): Boolean = now - last >= ASK_EVERY_MILLIS || last > now
+    /**
+     * Whether to ask for a position at now, when the app last asked at last,
+     * both Unix milliseconds, once every has passed (ASK_EVERY_MILLIS, or
+     * Still.STILL_EVERY_MILLIS while the phone stands still): also after the
+     * clock went back.
+     */
+    fun askDue(last: Long, now: Long, every: Long = ASK_EVERY_MILLIS): Boolean = now - last >= every || last > now
 
     /**
      * Whether next is a new point of the route after last, the one kept
