@@ -204,3 +204,25 @@ form.status-page button {
   overflow-wrap: anywhere;
   user-select: all;
 }
+
+/* What needs a look in how the devices are set up, set off like a warning. */
+.health {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--warning-level);
+  border-radius: 4px;
+  background: var(--warning-level-surface);
+}
+
+.health ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.health li {
+  display: block;
+  min-height: 0;
+  padding: 0.25rem 0;
+  border-bottom: none;
+}

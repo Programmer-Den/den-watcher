@@ -151,6 +151,13 @@ export const es: Messages = {
   'devicesDialog.title': 'Dispositivos',
   'devicesDialog.intro':
     'Este dispositivo puede mostrar el uso de otros dispositivos de la red local que ejecutan Den-Watcher.',
+  'devicesDialog.healthTitle': 'Hay que revisar',
+  'devicesDialog.healthPairingNeeded': 'espera su código de emparejamiento',
+  'devicesDialog.healthPairingWrong': 'tiene un código de emparejamiento que no es el suyo',
+  'devicesDialog.healthVersion': 'usa la versión {version}, más antigua que la {hub} del hub',
+  'devicesDialog.healthAddOn': 'el complemento {addOn} se ha detenido',
+  'devicesDialog.healthClockAhead': 'su reloj va {time} adelantado respecto al hub',
+  'devicesDialog.healthClockBehind': 'su reloj va {time} atrasado respecto al hub',
   'devicesDialog.listTitle': 'Dispositivos añadidos',
   'devicesDialog.remove': 'Quitar',
   'devicesDialog.rename': 'Cambiar nombre',
@@ -375,6 +382,11 @@ export const es: Messages = {
   'update.available': 'La versión {latest} está disponible (este dispositivo tiene la {current}).',
   'update.github': 'Actualizaciones en GitHub',
   'update.whatsNew': 'Novedades',
+  'update.howDocker': 'Para actualizar, ejecuta esto en la carpeta de compose.yaml.',
+  'update.howLinux': 'Para actualizar, descomprime el nuevo archivo y ejecuta esto en su carpeta.',
+  'update.howWindows':
+    'Para actualizar, descarga el nuevo instalador desde la página de la versión y ejecútalo; conserva sus opciones.',
+  'update.keeps': 'El historial y los ajustes se conservan.',
   'update.partMissing':
     'No se pudo cargar esta parte de la página. Recarga la página para volver a intentarlo.',
   'format.time': 'HH:mm',
@@ -673,6 +685,7 @@ export const es: Messages = {
   'wifiMap.place': 'Lugar',
   'wifiMap.fromBest': 'Desde el mejor lugar',
   'wifiMap.showAllNetworks': 'Mostrar las {count} redes',
+  'wifiMap.noNetworks': 'Los teléfonos no captaron ninguna red en estos lugares.',
   'wifiMap.noNetworkFound': 'Ninguna red tiene este nombre.',
   'phoneWifi.segment': '{network}: {from} – {to}',
   'phoneWifi.byNetwork': 'Redes',

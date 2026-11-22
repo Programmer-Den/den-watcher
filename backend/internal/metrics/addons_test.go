@@ -3,6 +3,7 @@ package metrics
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -109,5 +110,43 @@ func TestWriteAddOnReportLeavesNoTemporaryFile(t *testing.T) {
 	}
 	if len(entries) != 1 || entries[0].Name() != "power.json" {
 		t.Errorf("folder holds %v, want only power.json", entries)
+	}
+}
+
+func TestAddOnsNameTheAddOnsWhoseReportWasLeftBehind(t *testing.T) {
+	dir := t.TempDir()
+	folder := openRoot(t, dir)
+	now := time.Now().UTC().Truncate(time.Second)
+	for name, at := range map[string]time.Time{"power.json": now, "gpu.json": now.Add(-time.Minute)} {
+		if err := WriteAddOnReport(folder, name, AddOnReport{Time: at}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(dir, "smart.json"), []byte("{"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	addOns := &AddOns{Dir: dir, MaxEntries: 64}
+
+	addOns.Read(now)
+
+	if got := addOns.Stopped(now); !slices.Equal(got, []string{"gpu", "smart"}) {
+		t.Errorf("Stopped() = %v, want the old gpu and the broken smart report", got)
+	}
+	if got := (*AddOns)(nil).Stopped(now); got != nil {
+		t.Errorf("Stopped() without add-ons = %v, want none", got)
+	}
+}
+
+func TestCleanAddOnNamesKeepsAFewShortNames(t *testing.T) {
+	names := make([]string, maxStoppedAddOns+5)
+	for i := range names {
+		names[i] = strings.Repeat("x", MaxTextLength+10)
+	}
+	names[0] = ""
+
+	got := CleanAddOnNames(names)
+
+	if len(got) != maxStoppedAddOns-1 || len(got[0]) > MaxTextLength {
+		t.Errorf("CleanAddOnNames() = %d names of %d bytes, want %d of at most %d", len(got), len(got[0]), maxStoppedAddOns-1, MaxTextLength)
 	}
 }

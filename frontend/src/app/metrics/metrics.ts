@@ -66,6 +66,16 @@ export interface Snapshot {
    * the hub itself, routers, checks and from hubs of older versions.
    */
   responseMilliseconds?: number;
+  /**
+   * The add-ons whose report was left behind on the device, as they stopped unexpectedly, by name;
+   * missing when there is none, and from devices of older versions.
+   */
+  addOnsStopped?: string[];
+  /**
+   * How far the device's clock is ahead of the hub's in seconds, behind when negative, as the hub
+   * measures it; missing on the hub itself, routers, checks, phones and from hubs of older versions.
+   */
+  clockOffsetSeconds?: number;
 }
 
 export interface Fan {

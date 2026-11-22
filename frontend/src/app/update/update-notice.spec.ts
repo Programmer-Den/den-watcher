@@ -63,4 +63,41 @@ describe('UpdateNotice', () => {
     fixture.detectChanges();
     expect(element().querySelector('.notice')).not.toBeNull();
   });
+
+  function flushWith(install?: string): void {
+    http.expectOne('/api/update').flush({
+      current: '0.1.0',
+      latest: '0.2.0',
+      url: 'https://github.com/x',
+      install,
+    });
+    fixture.detectChanges();
+  }
+
+  it('says how to update a Docker install', () => {
+    flushWith('docker');
+    expect(element().querySelector('code')?.textContent).toBe(
+      'docker compose pull && docker compose up -d',
+    );
+    expect(element().textContent).toContain('in the folder with compose.yaml');
+    expect(element().textContent).toContain('The history and settings stay.');
+  });
+
+  it('says how to update the Linux service', () => {
+    flushWith('linux');
+    expect(element().querySelector('code')?.textContent).toBe('sudo ./install.sh');
+    expect(element().textContent).toContain('unpack the new archive');
+  });
+
+  it('says how to update a Windows install', () => {
+    flushWith('windows');
+    expect(element().querySelector('code')).toBeNull();
+    expect(element().textContent).toContain('download the new installer');
+  });
+
+  it('says nothing about how to update when the backend cannot tell', () => {
+    flushWith(undefined);
+    expect(element().querySelector('.how')).toBeNull();
+    expect(element().textContent).toContain('Version 0.2.0 is available');
+  });
 });

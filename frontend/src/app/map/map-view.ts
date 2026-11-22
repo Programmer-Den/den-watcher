@@ -238,7 +238,11 @@ export class MapViewport {
   /** Zooms in on some of the places, all of them on the map, as the user would. */
   focus(places: LatLon[]): void {
     if (places.length > 0) {
-      this.moved.set(fitView(places, this.width, this.height, this.padding));
+      const view = fitView(places, this.width, this.height, this.padding);
+      const whole = this.whole();
+      // A focus that shows what the whole map does leaves it whole, so it is not zoomed.
+      const same = whole && view.zoom === whole.zoom && view.x === whole.x && view.y === whole.y;
+      this.moved.set(same ? null : view);
     }
   }
 

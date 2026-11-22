@@ -10,7 +10,9 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -45,11 +47,49 @@ type Status struct {
 	Latest string `json:"latest,omitempty"`
 	// URL is the page of that release, with what changed.
 	URL string `json:"url,omitempty"`
+	// Install is how this device was installed, for the page to say how to
+	// update it: "docker", "linux" (the archive's service) or "windows" (the
+	// installer); left out when it cannot tell, as on macOS. Only with Latest.
+	Install string `json:"install,omitempty"`
+}
+
+// Install kinds, see Status.Install.
+const (
+	InstallDocker  = "docker"
+	InstallLinux   = "linux"
+	InstallWindows = "windows"
+)
+
+// containerMarkers are files Docker (/.dockerenv) and Podman
+// (/run/.containerenv) put into every container.
+var containerMarkers = []string{"/.dockerenv", "/run/.containerenv"}
+
+// detectInstall tells how this device was installed on the system goos,
+// with exists telling whether a file exists.
+func detectInstall(goos string, exists func(string) bool) string {
+	switch goos {
+	case "windows":
+		return InstallWindows
+	case "linux":
+		for _, marker := range containerMarkers {
+			if exists(marker) {
+				return InstallDocker
+			}
+		}
+		return InstallLinux
+	}
+	return ""
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // Checker asks GitHub for the newest release every Interval.
 type Checker struct {
 	current string
+	install string
 	client  *http.Client
 	url     string
 
@@ -69,6 +109,7 @@ func NewChecker(current string) *Checker {
 	}
 	return &Checker{
 		current: current,
+		install: detectInstall(runtime.GOOS, fileExists),
 		client:  &http.Client{Timeout: 10 * time.Second},
 		url:     latestURL,
 	}
@@ -111,6 +152,7 @@ func (c *Checker) Status() Status {
 	if latest != "" && newer(latest, c.current) {
 		status.Latest = latest
 		status.URL = releaseURL + tag
+		status.Install = c.install
 	}
 	return status
 }
@@ -154,6 +196,12 @@ func (c *Checker) check(ctx context.Context) error {
 	c.latest, c.tag = latest, body.TagName
 	c.mu.Unlock()
 	return nil
+}
+
+// Newer reports whether version a is newer than b, when both are releases;
+// a build of main or a version that is no release is never newer or older.
+func Newer(a, b string) bool {
+	return release.MatchString(a) && release.MatchString(b) && newer(a, b)
 }
 
 // newer reports whether version a is newer than b; both are releases.

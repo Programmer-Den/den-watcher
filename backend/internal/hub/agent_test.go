@@ -335,3 +335,23 @@ func TestAgentUsesANewConnectionOpenedWhileTheOwnAddressesGainOne(t *testing.T) 
 type usageFunc func(ctx context.Context) (metrics.Snapshot, error)
 
 func (f usageFunc) Collect(ctx context.Context) (metrics.Snapshot, error) { return f(ctx) }
+
+func TestAgentMeasuresHowFarTheDevicesClockIsOff(t *testing.T) {
+	// A device that says how far its clock is off itself is not believed.
+	ahead := time.Now().UTC().Add(5 * time.Minute).Format(time.RFC3339)
+	device := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"time":"` + ahead + `","clockOffsetSeconds":1,"addOnsStopped":["power",""]}`))
+	}))
+	defer device.Close()
+
+	got, err := NewAgent(strings.TrimPrefix(device.URL, "http://")).Collect(context.Background())
+	if err != nil {
+		t.Fatalf("Collect() error = %v", err)
+	}
+	if got.ClockOffsetSeconds == nil || *got.ClockOffsetSeconds < 290 || *got.ClockOffsetSeconds > 300 {
+		t.Errorf("ClockOffsetSeconds = %v, want about 300", got.ClockOffsetSeconds)
+	}
+	if !reflect.DeepEqual(got.AddOnsStopped, []string{"power"}) {
+		t.Errorf("AddOnsStopped = %v, want power", got.AddOnsStopped)
+	}
+}

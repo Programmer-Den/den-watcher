@@ -53,6 +53,17 @@ describe('DemoBackend', () => {
     }
   });
 
+  it('lists one of each thing that needs a look, of devices the demo has', async () => {
+    const health = await firstValueFrom(devices.health());
+    const kinds = health.problems.map((p) => p.kind).sort();
+    expect(kinds).toEqual(['addOn', 'clock', 'pairing', 'version']);
+    for (const problem of health.problems) {
+      expect(FLEET.some((m) => m.device.id === problem.device)).toBe(true);
+    }
+    const waiting = FLEET.find((m) => m.device.pairing)!;
+    expect(health.problems.find((p) => p.kind === 'pairing')?.device).toBe(waiting.device.id);
+  });
+
   it('shows costs at a price of its own, and keeps the price a visitor enters', async () => {
     const http = TestBed.inject(HttpClient);
     try {

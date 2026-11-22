@@ -2,6 +2,22 @@
   margin: 0 0 1rem;
 }
 
+.notice p {
+  margin: 0;
+}
+
+.how {
+  margin-top: 0.25rem;
+  opacity: 0.8;
+}
+
+code {
+  display: block;
+  margin-top: 0.25rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
 a {
   color: inherit;
   font-weight: 500;

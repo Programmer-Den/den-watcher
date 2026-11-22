@@ -13,12 +13,17 @@ export interface UpdateStatus {
   latest?: string;
   /** The page of that release, with what changed. */
   url?: string;
+  /** How this device was installed, to say how to update it; only with latest. */
+  install?: 'docker' | 'linux' | 'windows';
 }
 
 /** How often the page asks whether a newer release exists; the backend asks GitHub once a day. */
 export const UPDATE_REFRESH_MS = 60 * 60 * 1000;
 
-/** Names a newer release when the backend found one, with a link to what changed. */
+/**
+ * Names a newer release when the backend found one, with a link to what changed
+ * and how to update this kind of install.
+ */
 @Component({
   selector: 'app-update-notice',
   templateUrl: './update-notice.html',
