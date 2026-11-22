@@ -107,8 +107,10 @@ jobs:
           version: v2.14.0
           working-directory: backend
 
+      # With the race detector, as the hub, the sampler and the phones run
+      # side by side.
       - name: Test
-        run: go test ./...
+        run: go test -race ./...
 
       - name: Check go.mod and go.sum are tidy
         run: go mod tidy -diff
