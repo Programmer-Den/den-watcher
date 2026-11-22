@@ -27,6 +27,7 @@ import { demoPhoneRoute } from './phone-route';
 import { demoPhoneScan } from './phone-scan';
 import { demoPhoneWifi } from './phone-wifi';
 import { DEMO_PLACES, demoWifi } from './wifi';
+import { demoTownWifi } from './town-wifi';
 import { DemoPlaceEdits, demoWifiPositions, emptyPlaceEdits } from './wifi-positions';
 
 /** How many days of history the demo hub keeps; more than 30 shows the "All" range. */
@@ -126,6 +127,11 @@ export class DemoBackend implements HttpBackend {
         anchorsFrom = from - (from % day);
       }
       return respond(request, demoWifiPositions(anchorsFrom, from, to, this.placeEdits));
+    }
+    if (request.method === 'GET' && url.pathname === '/api/wifi/town') {
+      const to = Math.min(Number(url.searchParams.get('to')), Math.floor(now) + 1);
+      const from = Math.max(Number(url.searchParams.get('from')), to - DEMO_RETENTION_DAYS * 86400);
+      return respond(request, demoTownWifi(from, to, Math.floor(now)));
     }
     if (request.method === 'GET' && url.pathname === '/api/phone/usage') {
       if (device !== DEMO_PHONE) {

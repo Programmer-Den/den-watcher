@@ -103,6 +103,7 @@ type PositionSource interface {
 	MergePositionPlace(ctx context.Context, id, into int64) error
 	SplitPositionPlace(ctx context.Context, id int64) error
 	KeepPositionPlacesApart(ctx context.Context, a, b int64) error
+	TownWiFi(ctx context.Context, from, to time.Time) (history.TownWiFi, error)
 }
 
 // positionsResponse is the body of GET /api/wifi/positions. Times are Unix
@@ -120,16 +121,10 @@ type positionsResponse struct {
 // the latest.
 func positionsHandler(source PositionSource, retention time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		from, fromErr := strconv.ParseInt(r.URL.Query().Get("from"), 10, 64)
-		to, toErr := strconv.ParseInt(r.URL.Query().Get("to"), 10, 64)
-		if fromErr != nil || toErr != nil || from >= to {
-			http.Error(w, "from and to must be Unix times in seconds, with from before to", http.StatusBadRequest)
+		from, to, ok := scanRange(w, r, retention)
+		if !ok {
 			return
 		}
-		now := time.Now()
-		kept := now.Add(-retention).Unix()
-		from = min(max(from, kept), now.Unix())
-		to = min(max(to, from+1), now.Unix()+1)
 		places, err := source.WiFiPositions(r.Context(), time.Unix(from, 0), time.Unix(to, 0))
 		if err != nil {
 			slog.Error("read the places of the phones' scans", "error", err)
@@ -141,4 +136,49 @@ func positionsHandler(source PositionSource, retention time.Duration) http.Handl
 		}
 		writeJSON(w, http.StatusOK, positionsResponse{From: from, To: to, Places: places})
 	}
+}
+
+// townResponse is the body of GET /api/wifi/town. Times are Unix seconds.
+type townResponse struct {
+	From int64 `json:"from"`
+	To   int64 `json:"to"`
+	history.TownWiFi
+}
+
+// townHandler serves GET /api/wifi/town?from=<unix seconds>&to=<unix
+// seconds>: where the hub learned the access points around town are from the
+// phones' scans with a GPS position, and the phones' ways in that range
+// placed by those access points alone. The range is limited as for
+// positionsHandler.
+func townHandler(source PositionSource, retention time.Duration) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		from, to, ok := scanRange(w, r, retention)
+		if !ok {
+			return
+		}
+		town, err := source.TownWiFi(r.Context(), time.Unix(from, 0), time.Unix(to, 0))
+		if err != nil {
+			slog.Error("place the phones by the Wi-Fi around town", "error", err)
+			http.Error(w, "could not place the phones by the Wi-Fi around town", http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusOK, townResponse{From: from, To: to, TownWiFi: town})
+	}
+}
+
+// scanRange reads the range of a request for the phones' scans, limited to
+// the retention period and ending now at the latest, in Unix seconds. It
+// answers a request without one and returns false.
+func scanRange(w http.ResponseWriter, r *http.Request, retention time.Duration) (from, to int64, ok bool) {
+	from, fromErr := strconv.ParseInt(r.URL.Query().Get("from"), 10, 64)
+	to, toErr := strconv.ParseInt(r.URL.Query().Get("to"), 10, 64)
+	if fromErr != nil || toErr != nil || from >= to {
+		http.Error(w, "from and to must be Unix times in seconds, with from before to", http.StatusBadRequest)
+		return 0, 0, false
+	}
+	now := time.Now()
+	kept := now.Add(-retention).Unix()
+	from = min(max(from, kept), now.Unix())
+	to = min(max(to, from+1), now.Unix()+1)
+	return from, to, true
 }

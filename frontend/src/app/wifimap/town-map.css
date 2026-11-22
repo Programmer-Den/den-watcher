@@ -1,0 +1,99 @@
+:host {
+  display: block;
+  /* The blue of an access point and the orange of a way by Wi-Fi, in both modes as the map's tiles. */
+  --ap: #1565c0;
+  --way: #e65100;
+  --casing: #fff;
+}
+
+figure {
+  margin: 0;
+}
+
+svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+  border-radius: var(--mat-sys-corner-medium);
+  background: var(--mat-sys-surface-container-high);
+}
+
+figcaption {
+  margin: 0.25rem 0 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.75em;
+  text-align: right;
+}
+
+.ap rect {
+  fill: var(--ap);
+  stroke: var(--casing);
+  stroke-width: 1.5;
+}
+
+.ap.yours rect {
+  fill: var(--way);
+}
+
+.ap.picked rect {
+  stroke-width: 2.5;
+}
+
+.ap text {
+  fill: #000;
+  font-size: 13px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--casing);
+  stroke-width: 3.5px;
+  stroke-linejoin: round;
+}
+
+.reach {
+  fill: rgb(21 101 192 / 15%);
+  stroke: var(--ap);
+  stroke-width: 1.5;
+}
+
+.hit {
+  fill: transparent;
+  stroke: none;
+  cursor: pointer;
+
+  &:hover {
+    fill: rgb(21 101 192 / 25%);
+  }
+}
+
+.sure {
+  fill: rgb(230 81 0 / 10%);
+  stroke: rgb(230 81 0 / 35%);
+  stroke-width: 1;
+}
+
+.wifi {
+  fill: none;
+  stroke: var(--way);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.wifi-dot {
+  fill: var(--casing);
+  stroke: var(--way);
+  stroke-width: 2;
+}
+
+.gps {
+  fill: none;
+  stroke: #424242;
+  stroke-width: 2.5;
+  stroke-dasharray: 6 5;
+  stroke-linejoin: round;
+}
+
+.gps-dot {
+  fill: #424242;
+}

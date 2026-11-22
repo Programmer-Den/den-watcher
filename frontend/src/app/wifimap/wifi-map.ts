@@ -13,6 +13,7 @@ import { signalLevel } from '../compare/wifi';
 import { NetworkDetail } from './network-detail';
 import { MapNetwork, mapNetworks, networkMatches } from './networks';
 import { PlaceDetail } from './place-detail';
+import { TownWifi } from './town-wifi';
 import { matches, placeLabel } from './places';
 import { MAP_HEIGHT, MAP_WIDTH, PlacesMap } from './places-map';
 
@@ -43,7 +44,7 @@ interface Listed {
  */
 @Component({
   selector: 'app-wifi-map',
-  imports: [NetworkDetail, NgTemplateOutlet, PlaceDetail, PlacesMap],
+  imports: [NetworkDetail, NgTemplateOutlet, PlaceDetail, PlacesMap, TownWifi],
   templateUrl: './wifi-map.html',
   styleUrl: './wifi-map.css',
 })
@@ -90,8 +91,11 @@ export class WifiMap {
   );
   protected readonly LIST_PLACES = LIST_PLACES;
 
-  /** Whether the list shows the places or the networks heard at them. */
-  protected readonly tab = signal<'places' | 'networks'>('places');
+  /**
+   * Whether the list shows the places, the networks heard at them, or the access points placed
+   * around town and the phones' ways placed by them.
+   */
+  protected readonly tab = signal<'places' | 'networks' | 'town'>('places');
 
   /** Every network heard at the places, the user's own first. */
   protected readonly networks = computed(() => mapNetworks(this.places()));
@@ -130,7 +134,7 @@ export class WifiMap {
     this.tab() === 'networks' ? (this.network()?.at[0]?.place ?? -1) : this.selected(),
   );
 
-  protected showTab(tab: 'places' | 'networks'): void {
+  protected showTab(tab: 'places' | 'networks' | 'town'): void {
     this.tab.set(tab);
     this.showAll.set(false);
   }

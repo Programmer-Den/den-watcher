@@ -157,6 +157,24 @@ describe('DemoBackend', () => {
     expect(answer.places.some((p) => (p.related?.length ?? 0) > 0)).toBe(true);
   });
 
+  it('places the access points around town and the phone by them alone', async () => {
+    const to = Math.floor(Date.now() / 1000);
+    const town = await firstValueFrom(metrics.townWifi(to - 7 * 86400, to));
+    expect(town.learned).toBeGreaterThan(100);
+    expect(town.accessPoints.length).toBeGreaterThan(5);
+    // The bus's network and the city's are heard all over town: left out.
+    expect(town.moving).toBeGreaterThan(0);
+    expect(town.accessPoints.some((a) => a.ssid === 'HVV Bus')).toBe(false);
+    expect(town.accessPoints.find((a) => a.ssid === 'Den')?.connected).toBe(true);
+    const [track] = town.tracks;
+    expect(track.device).toBe(DEMO_PHONE);
+    const placed = track.points.filter((p) => p.known > 0);
+    expect(placed.length).toBeGreaterThan(track.points.length / 2);
+    // Placed by Wi-Fi alone, mostly close to the GPS.
+    const off = placed.map((p) => p.gps!.offMeters!).sort((a, b) => a - b);
+    expect(off[Math.floor(off.length / 2)]).toBeLessThan(150);
+  });
+
   it('keeps the names and merges of the places on the Wi-Fi map for the visit', async () => {
     const to = Math.floor(Date.now() / 1000);
     const read = () => firstValueFrom(metrics.wifiPositions(to - 7 * 86400, to));

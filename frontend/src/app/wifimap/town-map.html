@@ -1,0 +1,69 @@
+<figure>
+  <app-map-frame [map]="map()">
+    <svg
+      [appMapZoom]="map()"
+      [attr.viewBox]="'0 0 ' + map().width + ' ' + map().height"
+      role="img"
+      [attr.aria-label]="i18n.t('townWifi.map')"
+    >
+      @for (t of map().tiles(); track t.href) {
+        @if (!failedTiles().has(t.href)) {
+          <image
+            [attr.href]="t.href"
+            [attr.x]="t.x"
+            [attr.y]="t.y"
+            [attr.width]="t.size"
+            [attr.height]="t.size"
+            (error)="tileFailed(t.href)"
+          />
+        }
+      }
+      @for (l of gpsLines(); track $index) {
+        @if (l.points.length > 1) {
+          <polyline class="gps" [attr.points]="l.path" />
+        } @else {
+          <circle class="gps-dot" [attr.cx]="l.points[0].x" [attr.cy]="l.points[0].y" r="3" />
+        }
+      }
+      @for (l of wifiLines(); track $index) {
+        @for (p of l.points; track $index) {
+          <circle class="sure" [attr.cx]="p.x" [attr.cy]="p.y" [attr.r]="p.r" />
+        }
+      }
+      @for (l of wifiLines(); track $index) {
+        <polyline class="wifi" [attr.points]="l.path" />
+        @for (p of l.points; track $index) {
+          <circle class="wifi-dot" [attr.cx]="p.x" [attr.cy]="p.y" r="3.5" />
+        }
+      }
+      @if (picked(); as p) {
+        <circle class="reach" [attr.cx]="p.x" [attr.cy]="p.y" [attr.r]="p.r" />
+      }
+      @for (s of spots(); track $index) {
+        <g
+          class="ap"
+          [class.picked]="$index === selected()"
+          [class.yours]="accessPoints()[$index].connected"
+          [attr.transform]="'translate(' + s.x + ' ' + s.y + ')'"
+        >
+          <rect
+            [attr.x]="$index === selected() ? -6 : -4"
+            [attr.y]="$index === selected() ? -6 : -4"
+            [attr.width]="$index === selected() ? 12 : 8"
+            [attr.height]="$index === selected() ? 12 : 8"
+            transform="rotate(45)"
+          />
+          @if ($index === selected()) {
+            <text x="12" dy="0.35em">
+              {{ accessPoints()[$index].ssid ?? i18n.t('phoneRoute.hiddenNetwork') }}
+            </text>
+          }
+          <circle class="hit" r="10" (click)="pick.emit($index)">
+            <title>{{ accessPoints()[$index].ssid ?? i18n.t('phoneRoute.hiddenNetwork') }}</title>
+          </circle>
+        </g>
+      }
+    </svg>
+  </app-map-frame>
+  <figcaption class="detail">{{ i18n.t('phoneRoute.attribution') }}</figcaption>
+</figure>
