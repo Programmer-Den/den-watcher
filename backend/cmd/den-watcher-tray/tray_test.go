@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/Programmer-Den/den-watcher/backend/internal/version"
 )
 
 func TestStateOf(t *testing.T) {
@@ -147,6 +149,13 @@ func TestEveryLanguageHasEveryText(t *testing.T) {
 				t.Errorf("%s: state %d has no text", language, s)
 			}
 		}
+	}
+}
+
+func TestStatusTextNamesTheVersion(t *testing.T) {
+	want := "Den-Watcher " + version.Version + ": Läuft"
+	if got := translations["de"].statusText(stateRunning); got != want {
+		t.Errorf("statusText = %q, want %q", got, want)
 	}
 }
 

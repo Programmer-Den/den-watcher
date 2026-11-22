@@ -99,6 +99,7 @@ class MainActivity : Activity() {
 
         findViewById<Button>(R.id.bluetooth).setOnClickListener { allowBluetooth() }
         findViewById<Button>(R.id.steps).setOnClickListener { allowSteps() }
+        findViewById<TextView>(R.id.version).text = getString(R.string.updates_version, appVersion(this))
         findViewById<Button>(R.id.updates).setOnClickListener { openInBrowser(RELEASES_URL) }
 
         for ((id, change) in dataSwitches) {

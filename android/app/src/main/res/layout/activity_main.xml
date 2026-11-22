@@ -378,6 +378,10 @@
                 android:text="@string/updates_title" />
 
             <TextView
+                android:id="@+id/version"
+                style="@style/Hint" />
+
+            <TextView
                 style="@style/Hint"
                 android:text="@string/updates_hint" />
 

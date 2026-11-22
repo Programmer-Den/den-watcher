@@ -217,6 +217,13 @@ describe('DemoBackend', () => {
     await expect(firstValueFrom(metrics.phoneScan(to, 'local-x'))).rejects.toBeTruthy();
   });
 
+  it("names the demo's version for the page's footer, and no newer release", async () => {
+    const http = TestBed.inject(HttpClient);
+    expect(await firstValueFrom(http.get('/api/update'))).toEqual({
+      current: demoVersion({}),
+    });
+  });
+
   it('shows a remote status page whose password cannot be changed', async () => {
     expect(await firstValueFrom(devices.statusPage())).toEqual(DEMO_STATUS_PAGE);
     const refused = await firstValueFrom(devices.setStatusPassword('new password', 'hub')).catch(

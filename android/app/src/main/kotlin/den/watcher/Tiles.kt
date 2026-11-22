@@ -23,7 +23,7 @@ import java.util.concurrent.Executors
  */
 class Tiles(context: Context, private val loaded: () -> Unit) {
     private val folder = File(context.cacheDir, "tiles")
-    private val userAgent = "Den-Watcher-Android/${version(context)} (+https://github.com/Programmer-Den/den-watcher)"
+    private val userAgent = "Den-Watcher-Android/${appVersion(context)} (+https://github.com/Programmer-Den/den-watcher)"
     private val memory = LruCache<String, Bitmap>(MEMORY_TILES)
     private val loading = mutableSetOf<String>()
     private val failed = mutableSetOf<String>()
@@ -118,8 +118,5 @@ class Tiles(context: Context, private val loaded: () -> Unit) {
 
         /** The largest tile read; OpenStreetMap's are a few dozen kilobytes. */
         const val MAX_TILE_BYTES = 512 * 1024
-
-        fun version(context: Context): String =
-            runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "dev"
     }
 }
