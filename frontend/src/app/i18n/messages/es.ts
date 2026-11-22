@@ -309,6 +309,11 @@ export const es: Messages = {
   'history.downloadFailed': 'No se pudo descargar el archivo.',
   'history.unreachable': 'No se puede leer el historial.',
   'history.loading': 'Cargando…',
+  'history.weekBefore': 'Semana anterior',
+  'history.weekBeforeTitle':
+    'Mostrar el mismo periodo una semana antes como línea tenue en los gráficos',
+  'history.weekBeforeLegend': 'Una semana antes',
+  'history.weekBeforeValue': 'una semana antes {value}',
   'history.unitMinutes': 'Minutos',
   'history.range1m': '1 min',
   'history.range5m': '5 min',

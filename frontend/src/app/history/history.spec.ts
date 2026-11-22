@@ -5,8 +5,15 @@ import { TestBed } from '@angular/core/testing';
 import { DeviceService, LOCAL_DEVICE } from '../devices/devices';
 import { TextParams, translate } from '../i18n/i18n';
 import { MessageKey } from '../i18n/messages/en';
-import { HistoryStore } from './history-store';
-import { DeviceCharts, chartsOf, devicePoints, extraChartsOf, valueChartsOf } from './history';
+import { HistoryStore, WEEK } from './history-store';
+import {
+  DeviceCharts,
+  chartsOf,
+  devicePoints,
+  extraChartsOf,
+  valueChartsOf,
+  withWeekBefore,
+} from './history';
 
 describe('chartsOf', () => {
   it('groups metrics into charts and adds up the network cards', () => {
@@ -308,5 +315,24 @@ describe('DeviceCharts', () => {
     // A device that turns out to be a router is charted as one.
     devices.devices.set([{ ...LOCAL_DEVICE, router: true }]);
     expect(charts.byCard()).not.toBe(first);
+  });
+});
+
+describe('withWeekBefore', () => {
+  it('gives each line the same line of the same chart a week before, moved on by a week', () => {
+    const now = chartsOf(
+      [
+        { metric: 'cpu', points: [{ time: WEEK + 60, value: 10 }] },
+        { metric: 'memory', points: [{ time: WEEK + 60, value: 50 }] },
+      ],
+      (key) => key,
+    );
+    const before = chartsOf([{ metric: 'cpu', points: [{ time: 60, value: 30 }] }], (key) => key);
+    const charts = withWeekBefore(now, before);
+    const cpu = charts.find((chart) => chart.card === 'cpu')!;
+    expect(cpu.lines[0].weekBefore).toEqual([{ time: WEEK + 60, value: 30 }]);
+    const memory = charts.find((chart) => chart.card === 'memory')!;
+    expect(memory.lines[0].weekBefore).toBeUndefined();
+    expect(withWeekBefore(now, [])).toBe(now);
   });
 });

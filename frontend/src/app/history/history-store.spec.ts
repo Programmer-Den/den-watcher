@@ -8,7 +8,13 @@ import { TestBed } from '@angular/core/testing';
 
 import { DeviceService } from '../devices/devices';
 import { History, Point } from '../metrics/metrics';
-import { HistoryStore, refreshIntervalMs } from './history-store';
+import {
+  HistoryStore,
+  WEEK,
+  WEEK_BEFORE_STORAGE_KEY,
+  refreshIntervalMs,
+  weekBeforeOffered,
+} from './history-store';
 
 const HISTORY: History = {
   from: 0,
@@ -73,6 +79,66 @@ describe('HistoryStore', () => {
     expect(request.request.params.get('device')).toBe('nas');
 
     watching.unsubscribe();
+  });
+});
+
+describe('HistoryStore with the week before', () => {
+  let store: HistoryStore;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    localStorage.removeItem(WEEK_BEFORE_STORAGE_KEY);
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    store = TestBed.inject(HistoryStore);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    http.verify();
+    localStorage.removeItem(WEEK_BEFORE_STORAGE_KEY);
+    vi.useRealTimers();
+  });
+
+  function tick(ms = 0): void {
+    TestBed.tick();
+    vi.advanceTimersByTime(ms);
+  }
+
+  const reads = () => http.match((r) => r.url === '/api/history');
+
+  it('reads the same range a week before for ranges from an hour to a week', () => {
+    store.span.set(3600);
+    const watching = store.watch.subscribe();
+    tick();
+    const [now, before] = reads().sort(
+      (a, b) => Number(b.request.params.get('to')) - Number(a.request.params.get('to')),
+    );
+    const to = Number(now.request.params.get('to'));
+    expect(Number(before.request.params.get('to'))).toBe(to - WEEK);
+    expect(Number(before.request.params.get('from'))).toBe(to - WEEK - 3600);
+    const earlier = { ...HISTORY, from: to - WEEK - 3600, to: to - WEEK };
+    before.flush(earlier);
+    now.flush(HISTORY);
+    expect(store.weekBeforeHistory()).toEqual(earlier);
+
+    // Switched off, it is no longer read, and kept so for the next visit.
+    store.toggleWeekBefore();
+    tick(60_000);
+    expect(store.weekBeforeHistory()).toBeNull();
+    expect(localStorage.getItem(WEEK_BEFORE_STORAGE_KEY)).toBe('false');
+    reads().forEach((r) => r.flush(HISTORY));
+    expect(reads()).toEqual([]);
+    watching.unsubscribe();
+  });
+
+  it('is offered only from an hour, which steps of a minute line up in, to a week', () => {
+    expect(weekBeforeOffered(30 * 60)).toBe(false);
+    expect(weekBeforeOffered(3600)).toBe(true);
+    expect(weekBeforeOffered(WEEK)).toBe(true);
+    expect(weekBeforeOffered(14 * 86400)).toBe(false);
   });
 });
 
