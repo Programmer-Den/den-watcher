@@ -492,18 +492,18 @@ func TestHistoryReturnsTheRequestedRange(t *testing.T) {
 	}
 }
 
-func TestHistoryLimitsTheRangeToTheRetention(t *testing.T) {
+func TestHistoryReachesBackPastTheRetentionAndEndsNow(t *testing.T) {
 	reader := &fakeHistory{}
 	handler := newHandler(device(fakeCollector{}, reader), 24*time.Hour, site)
 
-	rec := get(handler, "/api/history?from=0&to=9223372036854775807", "10.0.0.5:5000")
+	rec := get(handler, "/api/history?from=-5&to=9223372036854775807", "10.0.0.5:5000")
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
-	now := time.Now()
-	if reader.from.Before(now.Add(-25*time.Hour)) || reader.to.After(now.Add(time.Minute)) {
-		t.Errorf("read %v to %v, want at most the last day", reader.from, reader.to)
+	// The reader reads what is past the retention from the daily averages.
+	if reader.from.Unix() != 0 || reader.to.After(time.Now().Add(time.Minute)) {
+		t.Errorf("read %v to %v, want from 1970 up to now", reader.from, reader.to)
 	}
 }
 

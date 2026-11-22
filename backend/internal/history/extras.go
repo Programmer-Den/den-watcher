@@ -114,13 +114,15 @@ type brokenInfoKey struct {
 // deleteUnusedExtraInfo deletes the descriptions of extras that have no
 // values left and were not written since before. Recently written ones stay,
 // as their first values may not be stored yet. The extras that have values
-// are listed with one pass over the hourly values, which the primary key
-// cannot look up by metric.
+// are listed with one pass over the hourly and the daily values, which the
+// primary key cannot look up by metric; the daily ones are kept for good, so
+// their descriptions are too.
 func (s *Store) deleteUnusedExtraInfo(ctx context.Context, before time.Time) error {
 	_, err := s.db.ExecContext(ctx, `
 		DELETE FROM extra_info
 		WHERE written < ? AND (device, metric) NOT IN (
 			SELECT DISTINCT device, metric FROM samples_hourly WHERE metric LIKE 'extra:%'
+			UNION SELECT DISTINCT device, metric FROM samples_daily WHERE metric LIKE 'extra:%'
 		)`, before.Unix())
 	return err
 }

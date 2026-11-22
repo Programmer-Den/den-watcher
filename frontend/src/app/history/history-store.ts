@@ -18,12 +18,15 @@ export interface Range {
 
 /** A group of ranges picked in the first row; its ranges are picked in the second. */
 export interface RangeUnit {
-  id: 'minutes' | 'hours' | 'days' | 'all';
+  id: 'minutes' | 'hours' | 'days' | 'years';
   label: MessageKey;
   ranges: Range[];
 }
 
-/** The fixed ranges, grouped by unit. Retention longer than the longest of them adds the "All" unit. */
+/**
+ * The ranges, grouped by unit. Ranges that reach back past the backend's retention are read in whole
+ * days from its daily averages, which it keeps for good, so every range is offered on every hub.
+ */
 export const UNITS: RangeUnit[] = [
   {
     id: 'minutes',
@@ -55,6 +58,16 @@ export const UNITS: RangeUnit[] = [
       { label: 'history.range30d', seconds: 30 * 86400 },
     ],
   },
+  {
+    id: 'years',
+    label: 'history.unitYears',
+    ranges: [
+      { label: 'history.range90d', seconds: 90 * 86400 },
+      { label: 'history.range1y', seconds: 365 * 86400 },
+      { label: 'history.range2y', seconds: 2 * 365 * 86400 },
+      { label: 'history.range5y', seconds: 5 * 365 * 86400 },
+    ],
+  },
 ];
 
 /** A week, in seconds. */
@@ -78,9 +91,6 @@ export function weekBeforeOffered(spanSeconds: number): boolean {
  */
 const FULL_READ_EVERY = 12;
 
-/** How many days the backend keeps by default, used until it says otherwise. */
-const DEFAULT_RETENTION_DAYS = 30;
-
 /**
  * How often a range is read again: every 5 seconds for ranges of up to 30
  * minutes, which the backend has readings every 5 seconds for; every minute
@@ -96,8 +106,8 @@ export function refreshIntervalMs(spanSeconds: number): number {
 
 /**
  * The history of the picked device over the latest stretch of time, for everything on the page
- * that draws it. A unit (minutes, hours, days or all) and then a range of that unit pick how long
- * that stretch is, up to everything the backend keeps. It is read only while something watches it,
+ * that draws it. A unit (minutes, hours, days or years) and then a range of that unit pick how long
+ * that stretch is. It is read only while something watches it,
  * and once for all watchers.
  */
 @Injectable({ providedIn: 'root' })
@@ -122,29 +132,9 @@ export class HistoryStore {
    * while it is not shown or not read yet.
    */
   readonly weekBeforeHistory = signal<History | null>(null);
-  /**
-   * How long the backend keeps history, from its last answer; the hub keeps
-   * every device's for the same time, so a device switch does not reset it.
-   */
-  private readonly retentionDays = signal(DEFAULT_RETENTION_DAYS);
 
-  /**
-   * The units with at least one range within the retention, and "All" when
-   * more is kept than the longest of those ranges shows.
-   */
-  readonly units = computed((): RangeUnit[] => {
-    const retention = this.retentionDays() * 86400;
-    const units = UNITS.map((unit) => ({
-      ...unit,
-      ranges: unit.ranges.filter((range) => range.seconds <= retention),
-    })).filter((unit) => unit.ranges.length > 0);
-    const longest = Math.max(...units.flatMap((unit) => unit.ranges.map((range) => range.seconds)));
-    if (retention > longest) {
-      const label = 'history.rangeAll' as const;
-      units.push({ id: 'all', label, ranges: [{ label, seconds: retention }] });
-    }
-    return units;
-  });
+  /** The units and their ranges. */
+  readonly units = signal<readonly RangeUnit[]>(UNITS).asReadonly();
 
   /** The unit the shown range belongs to. */
   readonly unit = computed(
@@ -266,18 +256,6 @@ export class HistoryStore {
     this.unreachable.set(history === null);
     if (history) {
       this.history.set(history);
-      if (history.retentionDays) {
-        this.retentionDays.set(history.retentionDays);
-        // A range picked before the backend said how long it keeps history
-        // may be longer than that; the longest range offered stands in for it.
-        if (!this.unit()) {
-          this.span.set(this.longestRange());
-        }
-      }
     }
-  }
-
-  private longestRange(): number {
-    return Math.max(...this.units().flatMap((unit) => unit.ranges.map((range) => range.seconds)));
   }
 }
