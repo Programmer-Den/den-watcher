@@ -662,6 +662,7 @@ export const en = {
   'wifiMap.place': 'Place',
   'wifiMap.fromBest': 'From the best place',
   'wifiMap.showAllNetworks': 'Show all {count} networks',
+  'wifiMap.noNetworks': 'The phones heard no network at these places.',
   'wifiMap.noNetworkFound': 'No network has this name.',
   'phoneWifi.segment': '{network}: {from} – {to}',
   'phoneWifi.byNetwork': 'Networks',

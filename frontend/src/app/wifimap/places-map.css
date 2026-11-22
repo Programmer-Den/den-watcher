@@ -83,6 +83,8 @@ figcaption {
   stroke-width: 1;
 }
 
+/* How well the picked network was heard, in tones that read on the tiles, which look the same
+ * in light and dark mode. */
 [data-level='great'] {
   --level: #1b7f3b;
 }

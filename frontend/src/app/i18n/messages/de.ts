@@ -671,6 +671,7 @@ export const de: Messages = {
   'wifiMap.place': 'Ort',
   'wifiMap.fromBest': 'Vom besten Ort',
   'wifiMap.showAllNetworks': 'Alle {count} Netzwerke zeigen',
+  'wifiMap.noNetworks': 'Die Handys haben an diesen Orten kein Netzwerk empfangen.',
   'wifiMap.noNetworkFound': 'Kein Netzwerk hat diesen Namen.',
   'phoneWifi.segment': '{network}: {from} – {to}',
   'phoneWifi.byNetwork': 'WLANs',

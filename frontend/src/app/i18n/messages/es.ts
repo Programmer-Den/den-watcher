@@ -669,6 +669,7 @@ export const es: Messages = {
   'wifiMap.place': 'Lugar',
   'wifiMap.fromBest': 'Desde el mejor lugar',
   'wifiMap.showAllNetworks': 'Mostrar las {count} redes',
+  'wifiMap.noNetworks': 'Los teléfonos no captaron ninguna red en estos lugares.',
   'wifiMap.noNetworkFound': 'Ninguna red tiene este nombre.',
   'phoneWifi.segment': '{network}: {from} – {to}',
   'phoneWifi.byNetwork': 'Redes',
