@@ -19,6 +19,9 @@ import (
 // serviceName is the service the installer sets up.
 const serviceName = "DenWatcher"
 
+// releasesURL is the newest release, with the installers for every device.
+const releasesURL = "https://github.com/Programmer-Den/den-watcher/releases/latest"
+
 // checkEvery is how often the icon asks the service how it is.
 const checkEvery = 5 * time.Second
 

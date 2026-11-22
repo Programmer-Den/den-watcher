@@ -115,9 +115,6 @@ func newSettings(port, website string) settings {
 	return s
 }
 
-// releasesURL is the newest release, with the installers for every device.
-const releasesURL = "https://github.com/Programmer-Den/den-watcher/releases/latest"
-
 // pageURL is this PC's own page, when it shows one.
 func (s settings) pageURL() string {
 	return "http://localhost:" + s.port + "/"
