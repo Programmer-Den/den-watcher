@@ -164,6 +164,7 @@ export const en = {
   'changeLog.kind': 'Made {name} a {kind}',
   'changeLog.pairing': 'Changed the pairing code of {name}',
   'changeLog.release': 'Let {name} change its hub',
+  'changeLog.deleteRoute': 'Deleted the route of {name} on {day}',
   'changeLog.backup': 'Downloaded a backup',
   'changeLog.statusPassword': "Changed the remote status page's password",
   'changeLog.password': 'Chose the password',
@@ -307,6 +308,9 @@ export const en = {
   'passwordDialog.backupHint':
     'Keep the file private: it holds the addresses of your devices and the hash of the password.',
   'passwordDialog.backup': "Download a backup of the hub's database?",
+  'passwordDialog.deleteRoute':
+    'Delete the route of {device} on {day}, and the Wi-Fi networks it scanned then? This cannot be undone.',
+  'passwordDialog.confirmDelete': 'Delete',
   'passwordDialog.statusPassword': 'Set the password of the remote status page?',
   'passwordDialog.confirmStatus': 'Set',
   'history.unit': 'Unit of the time shown',
@@ -321,6 +325,10 @@ export const en = {
   'history.downloadFailed': 'Could not download the file.',
   'history.unreachable': 'The history cannot be read.',
   'history.loading': 'Loading…',
+  'history.weekBefore': 'Week before',
+  'history.weekBeforeTitle': 'Show the same time a week before as a faint line on the charts',
+  'history.weekBeforeLegend': 'A week before',
+  'history.weekBeforeValue': 'a week before {value}',
   'history.unitMinutes': 'Minutes',
   'history.range1m': '1 min',
   'history.range5m': '5 min',
@@ -704,6 +712,9 @@ export const en = {
   'phoneWifi.showAll': 'Show all {count} connections',
   'phoneWifi.showFewer': 'Show fewer',
   'phoneWifi.nearby': 'The networks in reach of the phone are under Compare devices, Wi-Fi nearby.',
+  'phoneRoute.deleteDay': 'Delete a day',
+  'phoneRoute.deleteButton': 'Delete its route',
+  'phoneRoute.deleted': 'The route of {day} was deleted.',
   'phoneRoute.title': 'Location route',
   'phoneRoute.none':
     "No route in this range. In the phone's Den-Watcher app, allow the location all the time and keep Location route on.",

@@ -16,6 +16,7 @@ export type ChangeAction =
   | 'release'
   | 'backup'
   | 'statusPassword'
+  | 'deleteRoute'
   | 'password'
   | 'wrongPassword';
 
@@ -28,7 +29,10 @@ export interface Change {
   action: ChangeAction;
   /** The id of the device it was made to. */
   device?: string;
-  /** The new name or kind, the name of an added device, or keepHistory on removing. */
+  /**
+   * The new name or kind, the name of an added device, keepHistory on removing, or the stretch of a
+   * route deleted, as from-to in Unix seconds.
+   */
   detail?: string;
 }
 
@@ -139,6 +143,13 @@ export class ChangeLog {
       case 'pairing':
       case 'release':
         return this.i18n.t(`changeLog.${change.action}`, { name });
+      case 'deleteRoute': {
+        const from = Number(detail.split('-')[0]);
+        return this.i18n.t('changeLog.deleteRoute', {
+          name,
+          day: formatDate(from * 1000, 'mediumDate', this.i18n.language()),
+        });
+      }
       case 'wrongPassword':
         return this.i18n.t(name ? 'changeLog.wrongPasswordFor' : 'changeLog.wrongPassword', {
           name,

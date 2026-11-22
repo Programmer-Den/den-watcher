@@ -162,6 +162,7 @@ export const es: Messages = {
   'changeLog.kind': '{name} pasó a ser «{kind}»',
   'changeLog.pairing': 'Se cambió el código de emparejamiento de {name}',
   'changeLog.release': 'Se permitió a {name} cambiar de hub',
+  'changeLog.deleteRoute': 'Se borró la ruta de {name} del {day}',
   'changeLog.backup': 'Se descargó una copia de seguridad',
   'changeLog.statusPassword': 'Se cambió la contraseña de la página de estado remota',
   'changeLog.password': 'Se eligió la contraseña',
@@ -310,6 +311,9 @@ export const es: Messages = {
   'passwordDialog.backupHint':
     'Guarda el archivo en privado: contiene las direcciones de tus dispositivos y el hash de la contraseña.',
   'passwordDialog.backup': '¿Descargar una copia de seguridad de la base de datos del hub?',
+  'passwordDialog.deleteRoute':
+    '¿Borrar la ruta de {device} del {day} y las redes Wi-Fi que detectó entonces? No se puede deshacer.',
+  'passwordDialog.confirmDelete': 'Borrar',
   'passwordDialog.statusPassword': '¿Establecer la contraseña de la página de estado remota?',
   'passwordDialog.confirmStatus': 'Establecer',
   'history.unit': 'Unidad del periodo mostrado',
@@ -325,6 +329,11 @@ export const es: Messages = {
   'history.downloadFailed': 'No se pudo descargar el archivo.',
   'history.unreachable': 'No se puede leer el historial.',
   'history.loading': 'Cargando…',
+  'history.weekBefore': 'Semana anterior',
+  'history.weekBeforeTitle':
+    'Mostrar el mismo periodo una semana antes como línea tenue en los gráficos',
+  'history.weekBeforeLegend': 'Una semana antes',
+  'history.weekBeforeValue': 'una semana antes {value}',
   'history.unitMinutes': 'Minutos',
   'history.range1m': '1 min',
   'history.range5m': '5 min',
@@ -712,6 +721,9 @@ export const es: Messages = {
   'phoneWifi.showFewer': 'Mostrar menos',
   'phoneWifi.nearby':
     'Las redes al alcance del teléfono están en Comparar dispositivos, Wi-Fi cercano.',
+  'phoneRoute.deleteDay': 'Borrar un día',
+  'phoneRoute.deleteButton': 'Borrar su ruta',
+  'phoneRoute.deleted': 'Se ha borrado la ruta del {day}.',
   'phoneRoute.title': 'Ruta',
   'phoneRoute.none':
     'No hay ruta en este periodo. En la app Den-Watcher del teléfono, permite la ubicación todo el tiempo y deja Ruta activada.',

@@ -162,6 +162,7 @@ export const de: Messages = {
   'changeLog.kind': '{name} zu „{kind}“ gemacht',
   'changeLog.pairing': 'Den Kopplungscode von {name} geändert',
   'changeLog.release': '{name} den Hub wechseln lassen',
+  'changeLog.deleteRoute': 'Die Route von {name} am {day} gelöscht',
   'changeLog.backup': 'Eine Sicherung heruntergeladen',
   'changeLog.statusPassword': 'Das Passwort der Statusseite für unterwegs geändert',
   'changeLog.password': 'Das Passwort gewählt',
@@ -311,6 +312,9 @@ export const de: Messages = {
   'passwordDialog.backupHint':
     'Die Datei gehört nicht in fremde Hände: Sie enthält die Adressen der Geräte und den Hash des Passworts.',
   'passwordDialog.backup': 'Eine Sicherung der Datenbank des Hubs herunterladen?',
+  'passwordDialog.deleteRoute':
+    'Die Route von {device} am {day} und die WLAN-Netze, die es dabei gescannt hat, löschen? Das lässt sich nicht rückgängig machen.',
+  'passwordDialog.confirmDelete': 'Löschen',
   'passwordDialog.statusPassword': 'Das Passwort der Statusseite für unterwegs setzen?',
   'passwordDialog.confirmStatus': 'Setzen',
   'history.unit': 'Einheit des angezeigten Zeitraums',
@@ -326,6 +330,11 @@ export const de: Messages = {
   'history.downloadFailed': 'Die Datei konnte nicht heruntergeladen werden.',
   'history.unreachable': 'Der Verlauf kann nicht gelesen werden.',
   'history.loading': 'Wird geladen…',
+  'history.weekBefore': 'Woche davor',
+  'history.weekBeforeTitle':
+    'Dieselbe Zeit eine Woche davor als blasse Linie in den Diagrammen zeigen',
+  'history.weekBeforeLegend': 'Eine Woche davor',
+  'history.weekBeforeValue': 'eine Woche davor {value}',
   'history.unitMinutes': 'Minuten',
   'history.range1m': '1 min',
   'history.range5m': '5 min',
@@ -715,6 +724,9 @@ export const de: Messages = {
   'phoneWifi.showFewer': 'Weniger zeigen',
   'phoneWifi.nearby':
     'Die WLANs in Reichweite des Handys stehen unter Geräte vergleichen, WLAN in der Nähe.',
+  'phoneRoute.deleteDay': 'Einen Tag löschen',
+  'phoneRoute.deleteButton': 'Seine Route löschen',
+  'phoneRoute.deleted': 'Die Route vom {day} wurde gelöscht.',
   'phoneRoute.title': 'Standortverlauf',
   'phoneRoute.none':
     'Kein Verlauf in diesem Zeitraum. Erlaube in der Den-Watcher-App des Handys den Standort immer und lass Standortverlauf an.',

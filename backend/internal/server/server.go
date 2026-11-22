@@ -94,6 +94,12 @@ type Site struct {
 	Password Password
 	// Retention is how long the history is kept.
 	Retention time.Duration
+	// PhoneRetention is how long where the phones were and their Wi-Fi are
+	// kept, from PHONE_RETENTION_DAYS; zero keeps them for good.
+	PhoneRetention time.Duration
+	// Routes deletes stretches of a phone's route, guarded by Password; nil
+	// leaves out DELETE /api/phones/{id}/route.
+	Routes RouteDeleter
 	// Files is the built website.
 	Files fs.FS
 	// Update tells the running version and whether a newer release exists;
@@ -218,6 +224,9 @@ func New(site Site) http.Handler {
 		if site.Changes != nil {
 			mux.HandleFunc("GET /api/changes", changes.latest)
 		}
+		if site.Routes != nil {
+			mux.HandleFunc("DELETE /api/phones/{id}/route", changes.deleteRoute(site.Devices, site.Routes))
+		}
 		mux.HandleFunc("POST "+hub.PhoneMinutesPath, pushHandler(site.Hub))
 		if site.Backups != nil {
 			mux.HandleFunc("POST /api/backup", changes.backup)
@@ -261,12 +270,12 @@ func New(site Site) http.Handler {
 	}
 	if site.WiFiConnections != nil {
 		mux.HandleFunc("GET /api/phone/wifi", forDevice(site.Devices, func(d Device) http.HandlerFunc {
-			return wifiConnectionHandler(d, site.WiFiConnections, site.Retention)
+			return wifiConnectionHandler(d, site.WiFiConnections, site.PhoneRetention)
 		}))
 	}
 	if site.Route != nil {
 		mux.HandleFunc("GET /api/phone/route", forDevice(site.Devices, func(d Device) http.HandlerFunc {
-			return routeHandler(d, site.Route, site.Retention)
+			return routeHandler(d, site.Route, site.PhoneRetention)
 		}))
 	}
 	if site.PhoneScans != nil {
@@ -275,7 +284,7 @@ func New(site Site) http.Handler {
 		}))
 	}
 	if site.Positions != nil {
-		mux.HandleFunc("GET /api/wifi/positions", positionsHandler(site.Positions, site.Retention))
+		mux.HandleFunc("GET /api/wifi/positions", positionsHandler(site.Positions, site.PhoneRetention))
 		mux.HandleFunc("PUT /api/wifi/positions/{id}/name", renamePlace(site.Positions))
 		mux.HandleFunc("PUT /api/wifi/positions/{id}/merged-into", mergePlace(site.Positions))
 		mux.HandleFunc("POST /api/wifi/positions/{id}/apart", keepPlacesApart(site.Positions))

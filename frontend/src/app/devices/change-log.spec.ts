@@ -57,11 +57,18 @@ describe('ChangeLog', () => {
       },
       { time: 1_700_000_000, address: '192.168.1.20', action: 'add', detail: 'Office PC' },
       { time: 1_699_999_990, address: '192.168.1.20', action: 'backup' },
+      {
+        time: 1_699_999_980,
+        address: '192.168.1.42',
+        action: 'deleteRoute',
+        device: 'office-pc',
+        detail: `${Date.UTC(2026, 2, 29, 12) / 1000}-${Date.UTC(2026, 2, 30, 12) / 1000}`,
+      },
     ];
     http.expectOne('/api/changes').flush({ changes });
     fixture.detectChanges();
     const items = [...element.querySelectorAll('li')].map((li) => li.textContent ?? '');
-    expect(items.length).toBe(5);
+    expect(items.length).toBe(6);
     expect(items[0]).toContain('Tried a wrong password for Office PC');
     expect(items[0]).toContain('from 192.168.1.23');
     expect(element.querySelector('li')!.classList).toContain('wrong');
@@ -70,6 +77,7 @@ describe('ChangeLog', () => {
     expect(items[2]).toContain('Removed old-pi, keeping its history');
     expect(items[3]).toContain('Added Office PC');
     expect(items[4]).toContain('Downloaded a backup');
+    expect(items[5]).toContain('Deleted the route of Office PC on Mar 29, 2026');
   });
 
   it('says so when there are none, or they cannot be read', () => {

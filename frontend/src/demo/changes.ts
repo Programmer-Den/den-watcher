@@ -13,6 +13,13 @@ export function demoChanges(now: number): Change[] {
     { time: at(2 * HOUR), address: '192.168.1.23', action: 'wrongPassword', device: 'linux-nas' },
     { time: at(1 * DAY + 3 * HOUR), address: '192.168.1.20', action: 'backup' },
     {
+      time: at(2 * DAY),
+      address: '192.168.1.42',
+      action: 'deleteRoute',
+      device: 'android-phone',
+      detail: `${at(5 * DAY)}-${at(4 * DAY)}`,
+    },
+    {
       time: at(3 * DAY),
       address: '192.168.1.20',
       action: 'rename',

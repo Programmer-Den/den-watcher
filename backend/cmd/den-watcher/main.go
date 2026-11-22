@@ -13,6 +13,8 @@
 //	                usage-control.db next to it, the name up to 4.0.0, is
 //	                renamed to it)
 //	RETENTION_DAYS  days of history to keep; older values are deleted (default 30)
+//	PHONE_RETENTION_DAYS  days to keep where the phones were and their Wi-Fi,
+//	                from 1 to 36500; empty keeps them for good (the default)
 //	HISTORY_MAX_ENTRIES  how many disks, temperature sensors, network cards and
 //	                GPUs each the history keeps per device (default 64)
 //	HISTORY_FLUSH_MINUTES  how many minutes of history wait in memory before
@@ -174,6 +176,12 @@ func run(ctx context.Context) error {
 		return err
 	}
 	retention := time.Duration(days) * 24 * time.Hour
+	// Empty keeps where the phones were and their Wi-Fi for good.
+	phoneDays, err := intSettingOr("PHONE_RETENTION_DAYS", 0, 36500, " of days, or leave it empty to keep them for good,")
+	if err != nil {
+		return err
+	}
+	phoneRetention := time.Duration(phoneDays) * 24 * time.Hour
 	port, err := pagePort(addr)
 	if err != nil {
 		return err
@@ -302,7 +310,7 @@ func run(ctx context.Context) error {
 		}
 		defer func() { _ = store.Close() }()
 		store.SetFlushInterval(time.Duration(flushMinutes) * time.Minute)
-		site, wait, err := withHistory(ctx, sampler, store, remotes, complete, retention, historyEntries, port, checkUpdates)
+		site, wait, err := withHistory(ctx, sampler, store, remotes, complete, retention, phoneRetention, historyEntries, port, checkUpdates)
 		if err != nil {
 			return err
 		}
@@ -398,7 +406,7 @@ func run(ctx context.Context) error {
 // function waits until they have stopped. Of each device's disks, sensors,
 // network cards and GPUs, the first historyEntries are kept. With
 // checkUpdates, a release asks GitHub for a newer one.
-func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.Store, fixed []hub.Device, complete bool, retention time.Duration, historyEntries int, pagePort string, checkUpdates bool) (server.Site, func(), error) {
+func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.Store, fixed []hub.Device, complete bool, retention, phoneRetention time.Duration, historyEntries int, pagePort string, checkUpdates bool) (server.Site, func(), error) {
 	devicesPassword, err := password.Open(ctx, store.DB())
 	if err != nil {
 		return server.Site{}, nil, err
@@ -455,14 +463,14 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 		return server.Site{}, nil, err
 	}
 
-	others, err = hub.New(ctx, store, fixed, complete, historyEntries, retention, pagePort, sampler.Reusing(reuseFor), watcher.Forget, happenings.Forget)
+	others, err = hub.New(ctx, store, fixed, complete, historyEntries, retention, phoneRetention, pagePort, sampler.Reusing(reuseFor), watcher.Forget, happenings.Forget)
 	if err != nil {
 		return server.Site{}, nil, err
 	}
 
 	recent := &history.Recent{}
 	recorder := &history.Recorder{Store: store, Recent: recent, Collector: sampler.Reusing(reuseFor), Device: history.LocalDevice, MaxEntries: historyEntries, WiFi: store}
-	pruner := &history.Pruner{Store: store, Retention: retention}
+	pruner := &history.Pruner{Store: store, Retention: retention, PhoneRetention: phoneRetention}
 	var recording sync.WaitGroup
 	recording.Go(func() { recorder.Run(ctx) })
 	recording.Go(func() { pruner.Run(ctx) })
@@ -481,12 +489,14 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 			hub:    others,
 			alerts: watcher,
 		},
-		Hub:       others,
-		Password:  devicesPassword,
-		Retention: retention,
-		PagePort:  pagePort,
-		Files:     web.Files(),
-		Update:    func() update.Status { return update.Status{Current: version.Version} },
+		Hub:            others,
+		Password:       devicesPassword,
+		Retention:      retention,
+		PhoneRetention: phoneRetention,
+		Routes:         store,
+		PagePort:       pagePort,
+		Files:          web.Files(),
+		Update:         func() update.Status { return update.Status{Current: version.Version} },
 
 		Minutes:         history.Reader{Store: store, Recent: recent, Device: history.LocalDevice},
 		Alerts:          watcher,

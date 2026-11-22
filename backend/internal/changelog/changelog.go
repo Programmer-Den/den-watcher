@@ -25,6 +25,9 @@ const (
 	ActionRelease        Action = "release"
 	ActionBackup         Action = "backup"
 	ActionStatusPassword Action = "statusPassword"
+	// ActionDeleteRoute is a stretch of a phone's route deleted; its detail
+	// is the stretch, as from-to in Unix seconds.
+	ActionDeleteRoute Action = "deleteRoute"
 	// ActionPassword is the password for changing devices being chosen, with
 	// the first change.
 	ActionPassword Action = "password"

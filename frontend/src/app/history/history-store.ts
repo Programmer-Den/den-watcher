@@ -1,6 +1,8 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { DOCUMENT, Injectable, computed, inject, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { Observable, catchError, defer, map, of, share, switchMap, tap } from 'rxjs';
+import { Observable, catchError, defer, map, merge, of, share, switchMap, tap } from 'rxjs';
+
+import { readStored, store } from '../browser';
 
 import { DeviceService } from '../devices/devices';
 import { MessageKey } from '../i18n/messages/en';
@@ -55,6 +57,20 @@ export const UNITS: RangeUnit[] = [
   },
 ];
 
+/** A week, in seconds. */
+export const WEEK = 7 * 86400;
+
+/** Where the choice to show the week before is kept between visits, in localStorage. */
+export const WEEK_BEFORE_STORAGE_KEY = 'weekBefore';
+
+/**
+ * Whether the charts can show the same time a week before for a range: from an hour, which the
+ * backend reads in minute averages now as a week ago, so the steps line up, up to a week.
+ */
+export function weekBeforeOffered(spanSeconds: number): boolean {
+  return spanSeconds >= 3600 && spanSeconds <= WEEK;
+}
+
 /**
  * How often a short range is read whole again instead of only its newest steps, in reads: once a
  * minute at a read every 5 seconds. It picks up the steps the backend filled in later, such as
@@ -89,12 +105,23 @@ export class HistoryStore {
   private readonly metrics = inject(MetricsService);
   private readonly devices = inject(DeviceService);
   private readonly page = inject(PageVisibility);
+  private readonly window = inject(DOCUMENT).defaultView;
 
   /** The length of the shown time, in seconds; opens on the last 30 minutes. */
   readonly span = signal(30 * 60);
 
   readonly history = signal<History | null>(null);
   readonly unreachable = signal(false);
+
+  /** Whether the charts show the same time a week before as faint lines; kept for the next visit. */
+  readonly weekBefore = signal(readStored(this.window, WEEK_BEFORE_STORAGE_KEY) !== 'false');
+  /** Whether the shown range can show the week before. */
+  readonly weekBeforeOffered = computed(() => weekBeforeOffered(this.span()));
+  /**
+   * The history of the same range a week before, as the backend answers it (not moved on), or null
+   * while it is not shown or not read yet.
+   */
+  readonly weekBeforeHistory = signal<History | null>(null);
   /**
    * How long the backend keeps history, from its last answer; the hub keeps
    * every device's for the same time, so a device switch does not reset it.
@@ -130,7 +157,14 @@ export class HistoryStore {
    * Reads the history while it is subscribed to and again as often as the range needs. For a
    * device that is not answering, the backend moves the stretch back to end at its last reading.
    */
-  readonly watch: Observable<unknown> = this.reads().pipe(share());
+  readonly watch: Observable<unknown> = merge(this.reads(), this.weekBeforeReads()).pipe(share());
+
+  /** Shows the week before, or stops showing it. */
+  toggleWeekBefore(): void {
+    const on = !this.weekBefore();
+    this.weekBefore.set(on);
+    store(this.window, WEEK_BEFORE_STORAGE_KEY, String(on));
+  }
 
   /** Shows the longest range of a unit, so switching units zooms in or out. */
   selectUnit(id: RangeUnit['id']): void {
@@ -198,6 +232,33 @@ export class HistoryStore {
         );
       }),
       tap((history) => this.received(history)),
+    );
+  }
+
+  /**
+   * Reads the same range a week before while it is shown, as often as the range itself. A week
+   * before that cannot be read is left out, without a notice.
+   */
+  private weekBeforeReads(): Observable<History | null> {
+    return toObservable(
+      computed(() => ({
+        span: this.span(),
+        device: this.devices.selectedId(),
+        on: this.weekBefore() && this.weekBeforeOffered(),
+      })),
+    ).pipe(
+      tap(() => this.weekBeforeHistory.set(null)),
+      switchMap(({ span, device, on }) =>
+        on
+          ? this.page.poll(refreshIntervalMs(span), () =>
+              defer(() => {
+                const to = nowSeconds() - WEEK;
+                return this.metrics.history(to - span, to, device).pipe(catchError(() => of(null)));
+              }),
+            )
+          : of(null),
+      ),
+      tap((history) => this.weekBeforeHistory.set(history)),
     );
   }
 
