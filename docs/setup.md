@@ -265,6 +265,8 @@ msiexec /i den-watcher-<version>-x64.msi REINSTALL=ALL REINSTALLMODE=m RESET_PAS
 msiexec /i den-watcher-<version>-x64.msi REINSTALL=ALL REINSTALLMODE=m
 ```
 
+**Changes made with the password**, at the very bottom of the dialog, lists what was changed on the hub with the password, newest first, with when and from which address: devices added, removed, renamed or given another kind or pairing code, a phone let change its hub, backups downloaded, the status page's password changed, and every try with a wrong password, which shows in red. It keeps the last `RETENTION_DAYS` and shows the newest 100.
+
 **Download backup** at the bottom of the dialog saves a copy of the hub's database, with the history and the devices, after asking for the password; see [Backups](database.md#backups).
 
 Removing a device deletes its history, availability and kind too, and its alerts, reboots and updates, unless *Keep its history* is ticked; adding a device with the same name within `RETENTION_DAYS` then continues them, and the *since* date of its availability moves on by the time it was removed. The history is kept under the device's name, so renaming a device (removing it and adding it under a new name) starts a new history.

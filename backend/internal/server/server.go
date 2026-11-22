@@ -123,6 +123,9 @@ type Site struct {
 	// Prometheus adds GET /metrics, the usage of every device for
 	// Prometheus, from PROMETHEUS.
 	Prometheus bool
+	// Changes keeps the changes made with Password and the tries with a
+	// wrong one; nil keeps none and leaves out GET /api/changes.
+	Changes ChangeLog
 	// Backups makes copies of the database, which POST /api/backup sends
 	// guarded by Password; nil leaves it out.
 	Backups Backups
@@ -203,7 +206,7 @@ func New(site Site) http.Handler {
 	mux.HandleFunc("GET /api/devices/metrics", fleetMetricsHandler(site.Devices))
 	mux.HandleFunc("GET /api/devices/health", healthHandler(site.Devices))
 	if site.Hub != nil && site.Password != nil {
-		changes := &deviceChanges{hub: site.Hub, password: site.Password, backups: site.Backups}
+		changes := &deviceChanges{hub: site.Hub, password: site.Password, backups: site.Backups, log: site.Changes}
 		mux.HandleFunc("GET /api/devices/suggestion", changes.suggest)
 		mux.HandleFunc("POST /api/devices", changes.add)
 		mux.HandleFunc("DELETE /api/devices/{id}", changes.remove)
@@ -212,6 +215,9 @@ func New(site Site) http.Handler {
 		mux.HandleFunc("PUT /api/devices/{id}/pairing", changes.setCode)
 		mux.HandleFunc("POST /api/phones", changes.addPhone)
 		mux.HandleFunc("POST /api/phones/{id}/release", changes.releasePhone)
+		if site.Changes != nil {
+			mux.HandleFunc("GET /api/changes", changes.latest)
+		}
 		mux.HandleFunc("POST "+hub.PhoneMinutesPath, pushHandler(site.Hub))
 		if site.Backups != nil {
 			mux.HandleFunc("POST /api/backup", changes.backup)

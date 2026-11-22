@@ -3,15 +3,19 @@ package server
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/Programmer-Den/den-watcher/backend/internal/changelog"
 	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 	"github.com/Programmer-Den/den-watcher/backend/internal/pairing"
 	"github.com/Programmer-Den/den-watcher/backend/internal/password"
@@ -427,5 +431,69 @@ func TestSuggestsTheVisitorsDevice(t *testing.T) {
 	devices.suggestFor = ""
 	if rec := send(handler, http.MethodGet, "/api/devices/suggestion", ""); rec.Code != http.StatusNoContent {
 		t.Errorf("without a suggestion: status = %d, want 204", rec.Code)
+	}
+}
+
+// fakeChangeLog keeps the changes in memory.
+type fakeChangeLog struct {
+	mu      sync.Mutex
+	entries []changelog.Entry
+}
+
+func (f *fakeChangeLog) Add(_ context.Context, now time.Time, e changelog.Entry) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	e.Time = now.Unix()
+	f.entries = append([]changelog.Entry{e}, f.entries...)
+}
+
+func (f *fakeChangeLog) Latest(context.Context) ([]changelog.Entry, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.entries), nil
+}
+
+func TestKeepsTheChangesAndTheWrongPasswordsInTheChangeLog(t *testing.T) {
+	log := &fakeChangeLog{}
+	handler := New(Site{Devices: DeviceList(device(fakeCollector{}, nil)), Hub: &fakeHub{}, Password: &fakePassword{}, Changes: log, Files: site})
+
+	send(handler, http.MethodPost, "/api/devices", `{"name":"Office PC","address":"192.168.1.30:9393","password":"correct horse"}`)
+	send(handler, http.MethodPut, "/api/devices/office-pc/name", `{"name":"Desk PC","password":"correct horse"}`)
+	send(handler, http.MethodDelete, "/api/devices/office-pc", `{"password":"wrong guess"}`)
+	send(handler, http.MethodDelete, "/api/devices/office-pc", `{"password":"correct horse","keepHistory":true}`)
+
+	rec := send(handler, http.MethodGet, "/api/changes", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /api/changes: status = %d, want 200", rec.Code)
+	}
+	var got struct {
+		Changes []changelog.Entry `json:"changes"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	want := []changelog.Entry{
+		{Address: "192.168.1.20", Action: changelog.ActionRemove, Device: "office-pc", Detail: "keepHistory"},
+		{Address: "192.168.1.20", Action: changelog.ActionWrongPassword, Device: "office-pc"},
+		{Address: "192.168.1.20", Action: changelog.ActionRename, Device: "office-pc", Detail: "Desk PC"},
+		{Address: "192.168.1.20", Action: changelog.ActionAdd, Detail: "Office PC"},
+		{Address: "192.168.1.20", Action: changelog.ActionPassword},
+	}
+	if len(got.Changes) != len(want) {
+		t.Fatalf("changes = %+v, want %+v", got.Changes, want)
+	}
+	for i, w := range want {
+		g := got.Changes[i]
+		g.Time = 0
+		if g != w {
+			t.Errorf("change %d = %+v, want %+v", i, g, w)
+		}
+	}
+}
+
+func TestHasNoChangeLogWithoutOne(t *testing.T) {
+	handler := newChangeHandler(&fakeHub{}, &fakePassword{password: "correct horse"})
+	if rec := send(handler, http.MethodGet, "/api/changes", ""); rec.Code != http.StatusNotFound {
+		t.Errorf("GET /api/changes without a change log: status = %d, want 404", rec.Code)
 	}
 }
