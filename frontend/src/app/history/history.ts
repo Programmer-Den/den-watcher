@@ -6,7 +6,7 @@ import { MessageKey } from '../i18n/messages/en';
 import { ExtraInfo, localized } from '../metrics/extras';
 import { History, Point, Series } from '../metrics/metrics';
 import { Category, byCategory, extraCategory, unitCard, valueCard } from '../dashboard/categories';
-import { HistoryStore } from './history-store';
+import { HistoryStore, WEEK } from './history-store';
 import { ChartData, ChartLine } from './line-chart';
 
 export interface Chart extends ChartData {
@@ -36,7 +36,12 @@ export class DeviceCharts {
     () => this.readByHub() || this.devices.selected()?.kind === 'phone',
   );
 
-  private readonly charts = computed(() => this.chartsOf(this.store.history()));
+  private readonly charts = computed(() =>
+    withWeekBefore(
+      this.chartsOf(this.store.history()),
+      this.chartsOf(this.store.weekBeforeHistory()),
+    ),
+  );
 
   /** The charts of each card that has any, by the card's id. */
   readonly byCard = computed(() => {
@@ -72,6 +77,33 @@ export class DeviceCharts {
       ...extraChartsOf(history.series, history.extras ?? {}, this.i18n.language()),
     ];
   }
+}
+
+/**
+ * The charts, each line with the same line of the same chart a week before, moved on by a week to
+ * line up with it. A line that has no values a week before has none.
+ */
+export function withWeekBefore(charts: Chart[], before: Chart[]): Chart[] {
+  if (before.length === 0) {
+    return charts;
+  }
+  const key = (chart: Chart) => `${chart.card} ${chart.title}`;
+  const earlier = new Map(before.map((chart) => [key(chart), chart]));
+  return charts.map((chart) => {
+    const then = earlier.get(key(chart));
+    if (!then) {
+      return chart;
+    }
+    return {
+      ...chart,
+      lines: chart.lines.map((line) => {
+        const points = then.lines.find((l) => l.label === line.label)?.points ?? [];
+        return points.length === 0
+          ? line
+          : { ...line, weekBefore: points.map((p) => ({ time: p.time + WEEK, value: p.value })) };
+      }),
+    };
+  });
 }
 
 /** The lines, each labelled label(its label). */

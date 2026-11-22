@@ -177,4 +177,35 @@
   } @else {
     <p class="detail">{{ i18n.t('dashboard.loading') }}</p>
   }
+  @if (route()) {
+    <div class="delete-day">
+      <label>
+        <span class="detail">{{ i18n.t('phoneRoute.deleteDay') }}</span>
+        <input
+          type="date"
+          name="delete-day"
+          [max]="today"
+          [value]="deleteDay()"
+          (change)="deleteDay.set($any($event.target).value)"
+        />
+      </label>
+      <button
+        type="button"
+        class="link"
+        (click)="deleteRoute()"
+        [disabled]="deleting() || !deleteDay()"
+      >
+        {{ i18n.t('phoneRoute.deleteButton') }}
+      </button>
+      @if (deleted(); as d) {
+        <p class="detail" role="status">
+          @if ('day' in d) {
+            {{ i18n.t('phoneRoute.deleted', { day: d.day }) }}
+          } @else {
+            {{ d.problem }}
+          }
+        </p>
+      }
+    </div>
+  }
 </section>

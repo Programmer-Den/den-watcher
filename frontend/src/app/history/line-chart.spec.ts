@@ -6,6 +6,7 @@ import {
   ChartData,
   ChartLine,
   LineChart,
+  chartTop,
   lineSegments,
   needsYear,
   niceCeiling,
@@ -91,6 +92,31 @@ describe('LineChart', () => {
     plot.dispatchEvent(new MouseEvent('pointerleave'));
     fixture.detectChanges();
     expect(element.querySelector('.tooltip')).toBeNull();
+  });
+
+  it('draws the week before faint behind its line, with its value at the pointer', () => {
+    const element = render([
+      {
+        label: 'CPU',
+        points: [{ time: 120, value: 12.5 }],
+        weekBefore: [
+          { time: 120, value: 40 },
+          { time: 900, value: 90 },
+        ],
+      },
+    ]);
+    const lines = drawn();
+    expect(lines.map((line) => line.faint)).toEqual([true, false]);
+    expect(lines[0].series).toBe(lines[1].series);
+    // Only the points within the range are drawn.
+    expect(lines[0].segments).toEqual([[{ x: 0.25, y: 0.6 }]]);
+    expect(element.querySelector('.legend')?.textContent).toContain('A week before');
+
+    const plot = element.querySelector('.plot') as HTMLElement;
+    plot.getBoundingClientRect = () => ({ left: 0, width: 600 }) as DOMRect;
+    plot.dispatchEvent(new MouseEvent('pointermove', { clientX: 150 }));
+    fixture.detectChanges();
+    expect(element.querySelector('.tooltip')?.textContent).toContain('a week before 40 %');
   });
 
   it('shares the moment under the pointer with the other shared charts', () => {
@@ -319,6 +345,14 @@ describe('needsYear', () => {
     expect(
       needsYear(seconds(new Date(2025, 11, 31, 23, 50)), seconds(new Date(2026, 0, 1, 0, 20))),
     ).toBe(true);
+  });
+});
+
+describe('chartTop', () => {
+  it('fits the week before too', () => {
+    const line = { label: 'Disk', points: [{ time: 0, value: 30 }] };
+    expect(chartTop([line], 'percent')).toBe(30);
+    expect(chartTop([{ ...line, weekBefore: [{ time: 0, value: 65 }] }], 'percent')).toBe(70);
   });
 });
 

@@ -1,6 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { of } from 'rxjs';
 
 import { DeviceService } from '../devices/devices';
 import { MapViewport } from '../map/map-view';
@@ -13,8 +15,11 @@ import {
   Place,
   ROUTE_REFRESH_MS,
   STOP_SECONDS,
+  dayStart,
   distance,
+  localDay,
   meters,
+  nextDay,
   places,
   routeMap,
   stops,
@@ -98,6 +103,18 @@ describe('the route', () => {
     // North is up.
     expect(map.end.y).toBeLessThan(map.start.y);
     expect(drawn([])).toBeNull();
+  });
+});
+
+describe('the day to delete', () => {
+  it('runs from midnight to midnight in the time zone of the browser', () => {
+    const start = dayStart('2026-03-29')!;
+    expect(new Date(start * 1000).getHours()).toBe(0);
+    expect(localDay(start * 1000)).toBe('2026-03-29');
+    expect(nextDay('2026-03-29')).toBe('2026-03-30');
+    expect(nextDay('2026-12-31')).toBe('2027-01-01');
+    expect(dayStart('')).toBeNull();
+    expect(dayStart('yesterday')).toBeNull();
   });
 });
 
@@ -263,5 +280,48 @@ describe('PhoneRouteCard', () => {
     vi.advanceTimersByTime(0);
     answer(day());
     expect(end()).toBe(whole);
+  });
+
+  it('deletes the route of a day with the password and reads it again', async () => {
+    answer(day());
+    const open = vi
+      .spyOn(TestBed.inject(MatDialog), 'open')
+      .mockReturnValue({ afterClosed: () => of({ password: 'secret' }) } as MatDialogRef<unknown>);
+    const element = fixture.nativeElement as HTMLElement;
+    const input = element.querySelector<HTMLInputElement>('.delete-day input')!;
+    input.value = '2026-03-29';
+    input.dispatchEvent(new Event('change'));
+    element.querySelector<HTMLButtonElement>('.delete-day button')!.click();
+    await vi.dynamicImportSettled();
+    expect(open).toHaveBeenCalled();
+    const request = http.expectOne('/api/phones/pixel/route');
+    expect(request.request.method).toBe('DELETE');
+    expect(request.request.body).toEqual({
+      password: 'secret',
+      from: dayStart('2026-03-29'),
+      to: dayStart('2026-03-30'),
+    });
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    fixture.detectChanges();
+    vi.advanceTimersByTime(0);
+    answer(day());
+    expect(element.querySelector('.delete-day [role=status]')!.textContent).toContain(
+      'was deleted',
+    );
+  });
+
+  it('tells why the route could not be deleted', async () => {
+    answer(day());
+    vi.spyOn(TestBed.inject(MatDialog), 'open').mockReturnValue({
+      afterClosed: () => of({ password: 'wrong' }),
+    } as MatDialogRef<unknown>);
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.delete-day button')!.click();
+    await vi.dynamicImportSettled();
+    http
+      .expectOne('/api/phones/pixel/route')
+      .flush({ problem: 'password' }, { status: 403, statusText: 'Forbidden' });
+    fixture.detectChanges();
+    expect(element.querySelector('.delete-day [role=status]')!.textContent).not.toBe('');
   });
 });

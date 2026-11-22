@@ -22,6 +22,8 @@ export interface CanvasLine {
   /** The color, by its place in the charts' palette (the `series-N` classes). */
   series: number;
   dashed: boolean;
+  /** Drawn thin and faint behind the others, as the same line a week before. */
+  faint?: boolean;
 }
 
 /**
@@ -29,6 +31,9 @@ export interface CanvasLine {
  * top or bottom is drawn whole instead of cut in half.
  */
 const BLEED = 4;
+
+/** How opaque a faint line is. */
+export const FAINT_ALPHA = 0.45;
 
 /**
  * Draws lines on a canvas with Canvas 2D, sharp on high-density screens: the canvas takes as many
@@ -160,6 +165,8 @@ export class ChartCanvas {
     context.lineCap = 'round';
     context.lineJoin = 'round';
     lines.forEach((line, index) => {
+      context.globalAlpha = line.faint ? FAINT_ALPHA : 1;
+      context.lineWidth = line.faint ? 1.5 : 2;
       context.setLineDash(line.dashed ? [6, 5] : []);
       context.strokeStyle = colors[index + 2];
       context.fillStyle = colors[index + 2];
@@ -188,6 +195,7 @@ export class ChartCanvas {
       }
       context.fill();
     });
+    context.globalAlpha = 1;
   }
 
   /** The colors asked for, from the ones read before while the color scheme is the same. */

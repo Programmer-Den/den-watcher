@@ -266,8 +266,9 @@ func (s *Store) cachedRange(ctx context.Context, device string, from, to time.Ti
 }
 
 // DeleteBefore deletes every minute stored before t and returns how many
-// were deleted. The hour t falls in keeps its average, as it still has values.
-// The daily averages stay, for good.
+// were deleted. Where the phones were and their Wi-Fi have a retention of
+// their own; see DeletePhoneDataBefore. The hour t falls in keeps its
+// average, as it still has values. The daily averages stay, for good.
 // The descriptions of extras without values left go too. The values are
 // deleted in chunks (see deleteChunks), so the first prune after a long
 // downtime, or after RETENTION_DAYS was lowered, does not keep the recorders
@@ -312,24 +313,52 @@ func (s *Store) DeleteBefore(ctx context.Context, t time.Time) (int64, error) {
 	if err != nil {
 		return deleted, err
 	}
+	s.shrinkLog(ctx, deleted+hourly+wifi+scans+uses)
+	return deleted, nil
+}
+
+// DeletePhoneDataBefore deletes where the phones were and the Wi-Fi they were
+// on and scanned before t, which have a retention of their own
+// (PHONE_RETENTION_DAYS, for good by default), in chunks as DeleteBefore
+// does, and the places of the scans the user told nothing of whose newest
+// scan is older. It returns how many rows were deleted.
+func (s *Store) DeletePhoneDataBefore(ctx context.Context, t time.Time) (int64, error) {
 	connections, err := s.deleteChunks(ctx, "wifi_connections", "device, start", `end_time < ?`, t.UnixMilli())
 	if err != nil {
-		return deleted, err
+		return connections, err
 	}
 	route, err := s.deleteChunks(ctx, "route_points", "device, phone_time", `time < ?`, t.UnixMilli())
 	if err != nil {
-		return deleted, err
+		return connections + route, err
 	}
 	phoneScans, err := s.deleteChunks(ctx, "phone_scans", "device, time", `time < ?`, t.Unix())
 	if err != nil {
-		return deleted, err
+		return connections + route + phoneScans, err
 	}
 	places, err := s.deleteOldPositionPlaces(ctx, t)
+	deleted := connections + route + phoneScans + places
 	if err != nil {
 		return deleted, err
 	}
-	s.shrinkLog(ctx, deleted+hourly+wifi+scans+uses+connections+route+phoneScans+places)
+	s.shrinkLog(ctx, deleted)
 	return deleted, nil
+}
+
+// DeleteRoute deletes where a phone was from from up to (not including) to,
+// and the scans of the Wi-Fi networks it made then, which tell the same, as
+// when the user takes a day of its route away. It returns how many points of
+// the route were deleted.
+func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Time) (int64, error) {
+	route, err := s.deleteChunks(ctx, "route_points", "device, phone_time", `device = ? AND time >= ? AND time < ?`, device, from.UnixMilli(), to.UnixMilli())
+	if err != nil {
+		return route, err
+	}
+	scans, err := s.deleteChunks(ctx, "phone_scans", "device, time", `device = ? AND time >= ? AND time < ?`, device, from.Unix(), to.Unix())
+	if err != nil {
+		return route, err
+	}
+	s.shrinkLog(ctx, route+scans)
+	return route, nil
 }
 
 // DeleteDevice deletes every value of one device, and how its extras are

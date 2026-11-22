@@ -25,6 +25,22 @@
     </div>
   }
 
+  @if (store.weekBeforeOffered()) {
+    <div class="choices">
+      <button
+        type="button"
+        class="week-before"
+        [attr.aria-pressed]="store.weekBefore()"
+        [title]="i18n.t('history.weekBeforeTitle')"
+        (click)="store.toggleWeekBefore()"
+      >
+        <span class="label"
+          ><span class="swatch" aria-hidden="true"></span>{{ i18n.t('history.weekBefore') }}</span
+        >
+      </button>
+    </div>
+  }
+
   <div class="shown">
     <p class="period">
       @if (store.history(); as h) {

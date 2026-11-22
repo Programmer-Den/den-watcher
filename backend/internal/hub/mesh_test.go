@@ -145,7 +145,7 @@ func TestTheAccessPointsOfAMeshAreNamedAfterItsDevices(t *testing.T) {
 func stoppedHub(t *testing.T, store *history.Store, fixed []Device) (*Hub, func()) {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
-	h, err := newHub(ctx, store, fixed, true, history.DefaultMaxEntries, 30*24*time.Hour, "9393", nil, true)
+	h, err := newHub(ctx, store, fixed, true, history.DefaultMaxEntries, 30*24*time.Hour, 0, "9393", nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}

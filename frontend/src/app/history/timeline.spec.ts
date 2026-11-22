@@ -37,6 +37,8 @@ describe('Timeline', () => {
       imports: [Timeline],
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
+    // The week before is read in a test of its own.
+    TestBed.inject(HistoryStore).weekBefore.set(false);
     http = TestBed.inject(HttpTestingController);
     // The range of HISTORY: a short range starts a span before the end the backend answers.
     TestBed.inject(HistoryStore).span.set(HISTORY.to - HISTORY.from);

@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { DeviceService } from '../devices/devices';
 import { History } from '../metrics/metrics';
+import { HistoryStore } from './history-store';
 import { RangePicker } from './range-picker';
 
 const NOW = new Date('2026-10-02T20:00:00Z');
@@ -33,6 +34,8 @@ describe('RangePicker', () => {
       imports: [RangePicker],
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
+    // The week before is read in a test of its own.
+    TestBed.inject(HistoryStore).weekBefore.set(false);
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(RangePicker);
   });

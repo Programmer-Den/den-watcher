@@ -154,6 +154,8 @@ Examples: `disk:/`, `network.receive:eth0`, `temperature:cpu_thermal`. Adding a 
 
 Per device, the first 64 sensors, disks, network cards and GPUs each by name are kept (`HISTORY_MAX_ENTRIES`), and the first 512 values of extras with `history: true` by metric name (8 × `HISTORY_MAX_ENTRIES`), as a hub also keeps of the minutes it fetches; a device that reports more is logged once, and the dashboard still shows them all. A sensor, disk, network card or GPU whose name would make a metric name longer than 256 bytes is left out of the history, which is logged once.
 
+*Week before*, next to the range above the charts for ranges from 1 hour to 7 days, draws each line of the charts a second time, thin and faint behind it, with its values of the same time a week before, so a usual Monday can be told from an unusual one; pointing at a chart tells that value too, as *a week before*. The page reads the range a week back for it, as often as the range itself; a week before with no values, as before the device was added, draws nothing. Shorter ranges have none, as their 5-second readings are not kept for a week, and longer ones none either, as the two lines would mostly cover the same days. The choice is kept in the browser; it is on until switched off.
+
 *Download CSV*, next to the range above the charts, saves the history of the device shown over the range shown as a CSV file for a spreadsheet, with a column for each metric and a row for each time in UTC, in the steps the charts show; on the timeline, zoomed in, a second one saves the stretch zoomed into. See [`GET /api/history.csv`](architecture.md#http-api).
 
 How these values are stored, averaged and deleted is described in [Database and history](database.md).

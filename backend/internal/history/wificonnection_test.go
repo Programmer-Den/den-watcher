@@ -46,7 +46,7 @@ func TestWiFiConnectionsGrowAndAreReadByTheirRange(t *testing.T) {
 	if got, err := store.WiFiConnections(ctx, "pixel", hour.Add(-time.Hour*24), hour.Add(24*time.Hour)); err != nil || len(got) != 0 {
 		t.Errorf("after the device was deleted: %+v, %v; want none", got, err)
 	}
-	if _, err := store.DeleteBefore(ctx, hour); err != nil {
+	if _, err := store.DeletePhoneDataBefore(ctx, hour); err != nil {
 		t.Fatal(err)
 	}
 	got, err = store.WiFiConnections(ctx, "other", hour.Add(-24*time.Hour), hour.Add(24*time.Hour))

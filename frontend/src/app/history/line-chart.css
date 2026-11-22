@@ -7,6 +7,12 @@
   background: linear-gradient(to right, var(--color) 40%, transparent 40% 60%, var(--color) 60%);
 }
 
+/* The week before, as faint as the canvas draws it, in the color of the text. */
+.swatch.faint {
+  background: currentColor;
+  opacity: 0.45;
+}
+
 .legend {
   display: flex;
   flex-wrap: wrap;

@@ -19,13 +19,23 @@ import { DeviceKind, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, kindName } from '
 /** What the password is asked for. */
 export interface PasswordDialogData {
   action:
-    'add' | 'remove' | 'rename' | 'kind' | 'pairing' | 'release' | 'backup' | 'statusPassword';
+    | 'add'
+    | 'remove'
+    | 'rename'
+    | 'kind'
+    | 'pairing'
+    | 'release'
+    | 'backup'
+    | 'statusPassword'
+    | 'deleteRoute';
   /** The name of the device that is changed; empty for a backup and the status page's password. */
   deviceName: string;
   /** For renaming: the new name. */
   newName?: string;
   /** For changing the kind: the new kind. */
   kind?: DeviceKind;
+  /** For deleting a day of a phone's route: the day, as the page writes it. */
+  day?: string;
   /** Whether the password has been chosen; if not, this change chooses it. */
   passwordSet: boolean;
 }
@@ -106,6 +116,8 @@ export class PasswordDialog {
         return this.i18n.t('passwordDialog.backup');
       case 'statusPassword':
         return this.i18n.t('passwordDialog.statusPassword');
+      case 'deleteRoute':
+        return this.i18n.t('passwordDialog.deleteRoute', { device, day: this.data.day ?? '' });
     }
   });
 
@@ -126,6 +138,8 @@ export class PasswordDialog {
         return this.i18n.t('passwordDialog.confirmBackup');
       case 'statusPassword':
         return this.i18n.t('passwordDialog.confirmStatus');
+      case 'deleteRoute':
+        return this.i18n.t('passwordDialog.confirmDelete');
     }
   });
 
