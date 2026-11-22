@@ -201,6 +201,7 @@ func New(site Site) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/devices", devicesHandler(site))
 	mux.HandleFunc("GET /api/devices/metrics", fleetMetricsHandler(site.Devices))
+	mux.HandleFunc("GET /api/devices/health", healthHandler(site.Devices))
 	if site.Hub != nil && site.Password != nil {
 		changes := &deviceChanges{hub: site.Hub, password: site.Password, backups: site.Backups}
 		mux.HandleFunc("GET /api/devices/suggestion", changes.suggest)

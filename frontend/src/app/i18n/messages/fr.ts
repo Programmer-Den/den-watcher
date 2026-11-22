@@ -149,6 +149,13 @@ export const fr: Messages = {
   'devicesDialog.title': 'Appareils',
   'devicesDialog.intro':
     'Cet appareil peut afficher l’utilisation d’autres appareils du réseau local sur lesquels Den-Watcher est lancé.',
+  'devicesDialog.healthTitle': 'À vérifier',
+  'devicesDialog.healthPairingNeeded': "attend son code d'appairage",
+  'devicesDialog.healthPairingWrong': "a un code d'appairage qui n'est pas le sien",
+  'devicesDialog.healthVersion': 'utilise la version {version}, plus ancienne que la {hub} du hub',
+  'devicesDialog.healthAddOn': "l'extension {addOn} s'est arrêtée",
+  'devicesDialog.healthClockAhead': 'son horloge avance de {time} sur celle du hub',
+  'devicesDialog.healthClockBehind': 'son horloge retarde de {time} sur celle du hub',
   'devicesDialog.listTitle': 'Appareils ajoutés',
   'devicesDialog.remove': 'Retirer',
   'devicesDialog.rename': 'Renommer',

@@ -39,12 +39,15 @@ import {
 import { saveFile } from '../browser';
 import { EnergyPriceForm } from '../energy/energy-price-form';
 import { I18n } from '../i18n/i18n';
+import { formatDuration } from '../metrics/format';
 import {
   ADD_KINDS,
   DEVICE_KINDS,
   Device,
   DeviceKind,
   DeviceService,
+  Health,
+  HealthProblem,
   LOCAL_DEVICE,
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
@@ -95,6 +98,25 @@ export class DevicesDialog {
   protected readonly others = computed(() =>
     this.devices.devices().filter((d) => d.id !== LOCAL_DEVICE.id),
   );
+
+  /** What needs a look in how the devices are set up; null until it is read, and when it cannot be. */
+  private readonly health = signal<Health | null>(null);
+
+  /** The things that need a look, each with the name of its device and what it is, in words. */
+  protected readonly healthProblems = computed(() => {
+    const health = this.health();
+    if (!health) {
+      return [];
+    }
+    const list = this.devices.devices();
+    return health.problems.map((problem) => {
+      const device = list.find((d) => d.id === problem.device);
+      return {
+        name: device ? deviceName(device, this.i18n) : problem.device,
+        text: this.healthText(problem, health.version),
+      };
+    });
+  });
 
   /** Whether the list of devices is shown; it can be folded away by hand. */
   protected readonly listOpen = signal(true);
@@ -183,6 +205,7 @@ export class DevicesDialog {
       .subscribe((code) => this.ownCode.set(code));
 
     this.loadStatusPage();
+    this.loadHealth();
 
     // Filled in only when nothing has been typed yet; a suggestion that
     // cannot be read leaves the form empty, as before.
@@ -349,6 +372,46 @@ export class DevicesDialog {
     });
   }
 
+  /** Says in words what needs a look about a device, for the version of the hub. */
+  private healthText(problem: HealthProblem, hubVersion: string): string {
+    switch (problem.kind) {
+      case 'pairing':
+        return this.i18n.t(
+          problem.detail === 'wrong'
+            ? 'devicesDialog.healthPairingWrong'
+            : 'devicesDialog.healthPairingNeeded',
+        );
+      case 'version':
+        return this.i18n.t('devicesDialog.healthVersion', {
+          version: problem.detail ?? '',
+          hub: hubVersion,
+        });
+      case 'addOn':
+        return this.i18n.t('devicesDialog.healthAddOn', { addOn: problem.detail ?? '' });
+      case 'clock': {
+        const seconds = problem.seconds ?? 0;
+        return this.i18n.t(
+          seconds < 0 ? 'devicesDialog.healthClockBehind' : 'devicesDialog.healthClockAhead',
+          { time: formatDuration(Math.abs(seconds), this.i18n) },
+        );
+      }
+    }
+  }
+
+  /**
+   * Reads what needs a look in how the devices are set up; a list that cannot be read is left out,
+   * as from a hub of an older version.
+   */
+  private loadHealth(): void {
+    this.devices
+      .health()
+      .pipe(
+        catchError(() => of(null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((health) => this.health.set(health));
+  }
+
   /** Reads the remote status page; one that cannot be read is left out, as when there is none. */
   private loadStatusPage(): void {
     this.devices
@@ -394,6 +457,7 @@ export class DevicesDialog {
               this.devices.load().pipe(
                 takeUntilDestroyed(this.destroyRef),
                 catchError(() => of(null)),
+                tap(() => this.loadHealth()),
               ),
             ),
           ),

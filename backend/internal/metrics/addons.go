@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 )
@@ -109,6 +110,43 @@ func (a *AddOns) Own(now time.Time) []OwnUsage {
 		}
 	}
 	return usages
+}
+
+// maxStoppedAddOns is how many stopped add-ons a snapshot names at most.
+const maxStoppedAddOns = 32
+
+// Stopped returns the names of the add-ons whose report the last Read found
+// but left out, as it was too old or could not be read: an add-on removes its
+// report when it ends, so one left behind means it stopped unexpectedly or
+// hangs. The name is the file's without .json, such as power.
+func (a *AddOns) Stopped(now time.Time) []string {
+	if a == nil {
+		return nil
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	var names []string
+	for _, file := range slices.Sorted(maps.Keys(a.files)) {
+		if !a.files[file].fresh(now) {
+			names = append(names, strings.TrimSuffix(filepath.Base(file), ".json"))
+		}
+	}
+	return CleanAddOnNames(names)
+}
+
+// CleanAddOnNames cuts the names of stopped add-ons another device sent down
+// to what is safe to show: at most maxStoppedAddOns, each cut like a text.
+func CleanAddOnNames(names []string) []string {
+	if len(names) > maxStoppedAddOns {
+		names = names[:maxStoppedAddOns]
+	}
+	var clean []string
+	for _, name := range names {
+		if name = CleanText(name); name != "" {
+			clean = append(clean, name)
+		}
+	}
+	return clean
 }
 
 // WiFi returns what the machine's Wi-Fi sees nearby, from the first report

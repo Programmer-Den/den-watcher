@@ -151,6 +151,13 @@ export const es: Messages = {
   'devicesDialog.title': 'Dispositivos',
   'devicesDialog.intro':
     'Este dispositivo puede mostrar el uso de otros dispositivos de la red local que ejecutan Den-Watcher.',
+  'devicesDialog.healthTitle': 'Hay que revisar',
+  'devicesDialog.healthPairingNeeded': 'espera su código de emparejamiento',
+  'devicesDialog.healthPairingWrong': 'tiene un código de emparejamiento que no es el suyo',
+  'devicesDialog.healthVersion': 'usa la versión {version}, más antigua que la {hub} del hub',
+  'devicesDialog.healthAddOn': 'el complemento {addOn} se ha detenido',
+  'devicesDialog.healthClockAhead': 'su reloj va {time} adelantado respecto al hub',
+  'devicesDialog.healthClockBehind': 'su reloj va {time} atrasado respecto al hub',
   'devicesDialog.listTitle': 'Dispositivos añadidos',
   'devicesDialog.remove': 'Quitar',
   'devicesDialog.rename': 'Cambiar nombre',

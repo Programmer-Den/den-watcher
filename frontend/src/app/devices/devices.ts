@@ -77,6 +77,27 @@ export interface Device {
   alerts?: Alert[];
 }
 
+/**
+ * One thing about how a device is set up that needs a look, as GET /api/devices/health lists it:
+ * `pairing` while it waits for its pairing code (`detail` `needed` or `wrong`), `version` when it
+ * runs an older release than the hub (`detail` its version), `addOn` for an add-on on it that
+ * stopped (`detail` its name) and `clock` when its clock is off from the hub's (`seconds` how far
+ * ahead, behind when negative).
+ */
+export interface HealthProblem {
+  /** The device's id, as in the list of devices. */
+  device: string;
+  kind: 'pairing' | 'version' | 'addOn' | 'clock';
+  detail?: string;
+  seconds?: number;
+}
+
+/** What needs a look in how the devices are set up, and the hub's version they are compared with. */
+export interface Health {
+  version: string;
+  problems: HealthProblem[];
+}
+
 /** Whether the hub reads the device itself, as it runs no den-watcher: a router or a check. */
 export function readByHub(device: Device): boolean {
   return !!device.router || !!device.checked;
@@ -321,6 +342,11 @@ export class DeviceService {
    */
   pairingCode(): Observable<string> {
     return this.http.get<{ code: string }>('/api/pairing').pipe(map((answer) => answer.code));
+  }
+
+  /** Reads what needs a look in how the devices are set up, all of them in one list. */
+  health(): Observable<Health> {
+    return this.http.get<Health>('/api/devices/health');
   }
 
   /** Gives a device added on the page another name; its history stays. */

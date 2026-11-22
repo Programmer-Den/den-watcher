@@ -162,6 +162,10 @@ func (a *Agent) Collect(ctx context.Context) (metrics.Snapshot, error) {
 	a.offset = 0
 	if !snapshot.Time.IsZero() {
 		a.offset = now.Sub(snapshot.Time).Round(time.Second)
+		if a.reader == nil {
+			ahead := snapshot.Time.Sub(now).Round(time.Second).Seconds()
+			snapshot.ClockOffsetSeconds = &ahead
+		}
 	}
 	snapshot.Time = now
 	a.latest, a.latestAt = snapshot, now
@@ -213,6 +217,9 @@ func (a *Agent) ask(ctx context.Context) (metrics.Snapshot, error) {
 	snapshot.WiFiNearby = metrics.CleanNearbyWiFi(snapshot.WiFiNearby)
 	snapshot.System = metrics.CleanSystem(snapshot.System)
 	snapshot.Version = metrics.CleanText(snapshot.Version)
+	snapshot.AddOnsStopped = metrics.CleanAddOnNames(snapshot.AddOnsStopped)
+	// The hub measures the clock itself over whatever the device sent.
+	snapshot.ClockOffsetSeconds = nil
 	return snapshot, nil
 }
 
