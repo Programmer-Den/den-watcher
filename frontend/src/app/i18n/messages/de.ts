@@ -292,6 +292,9 @@ export const de: Messages = {
   'passwordDialog.backupHint':
     'Die Datei gehört nicht in fremde Hände: Sie enthält die Adressen der Geräte und den Hash des Passworts.',
   'passwordDialog.backup': 'Eine Sicherung der Datenbank des Hubs herunterladen?',
+  'passwordDialog.deleteRoute':
+    'Die Route von {device} am {day} und die WLAN-Netze, die es dabei gescannt hat, löschen? Das lässt sich nicht rückgängig machen.',
+  'passwordDialog.confirmDelete': 'Löschen',
   'passwordDialog.statusPassword': 'Das Passwort der Statusseite für unterwegs setzen?',
   'passwordDialog.confirmStatus': 'Setzen',
   'history.unit': 'Einheit des angezeigten Zeitraums',
@@ -695,6 +698,9 @@ export const de: Messages = {
   'phoneWifi.showFewer': 'Weniger zeigen',
   'phoneWifi.nearby':
     'Die WLANs in Reichweite des Handys stehen unter Geräte vergleichen, WLAN in der Nähe.',
+  'phoneRoute.deleteDay': 'Einen Tag löschen',
+  'phoneRoute.deleteButton': 'Seine Route löschen',
+  'phoneRoute.deleted': 'Die Route vom {day} wurde gelöscht.',
   'phoneRoute.title': 'Standortverlauf',
   'phoneRoute.none':
     'Kein Verlauf in diesem Zeitraum. Erlaube in der Den-Watcher-App des Handys den Standort immer und lass Standortverlauf an.',

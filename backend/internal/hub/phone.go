@@ -210,6 +210,9 @@ type phone struct {
 	// regive lets the phone's key be given once more while it may change
 	// its hub, as when the answer that gave it was lost.
 	regive bool
+	// retention is how long its route and the Wi-Fi it was connected to are
+	// kept; 0 keeps them for good.
+	retention time.Duration
 
 	// pushing makes the pushes of one phone store their minutes one at a
 	// time, as each goes on from where the one before stopped.
@@ -446,7 +449,7 @@ func (p *phone) receiveUses(ctx context.Context, push Push, now time.Time) (int6
 // receiveConnections stores the connections to a Wi-Fi of a push, at their
 // times on the hub's clock, as the minutes are moved (see fetcher.receive),
 // and returns the largest ID among them, or 0 when it has none. A connection
-// that ended before the retention or starts in the future is left out, but
+// that ended before the phone's retention or starts in the future is left out, but
 // counts as had, so the phone deletes it, and so does one that makes no
 // sense, such as one without a name or that ends before it starts. One that
 // goes on into the future, as by a clock that jumped, ends now. The caller
@@ -461,7 +464,7 @@ func (p *phone) receiveConnections(ctx context.Context, push Push, now time.Time
 		ssid := cut(strings.TrimSpace(c.SSID), maxSSID)
 		start, end := c.Start+f.offset*1000, c.End+f.offset*1000
 		if ssid == "" || c.Start <= 0 || c.End < c.Start || start > latest ||
-			f.retention > 0 && end < now.Add(-f.retention).UnixMilli() {
+			p.retention > 0 && end < now.Add(-p.retention).UnixMilli() {
 			continue
 		}
 		connections = append(connections, history.WiFiConnection{
@@ -480,7 +483,7 @@ func (p *phone) receiveConnections(ctx context.Context, push Push, now time.Time
 // receiveRoute stores the points of the route of a push, at their times on
 // the hub's clock, as the minutes are moved (see fetcher.receive), and
 // returns the largest ID among them, or 0 when it has none. A point from
-// before the retention or the future is left out, but counts as had, so the
+// before the phone's retention or the future is left out, but counts as had, so the
 // phone deletes it, and so does one that makes no sense, such as one off the
 // globe or vaguer than maxAccuracy. The caller holds pushing.
 func (p *phone) receiveRoute(ctx context.Context, push Push, now time.Time) (int64, error) {
@@ -491,7 +494,7 @@ func (p *phone) receiveRoute(ctx context.Context, push Push, now time.Time) (int
 	for _, r := range push.Route {
 		after = max(after, r.ID)
 		at := r.Time + f.offset*1000
-		if r.Time <= 0 || at > latest || f.retention > 0 && at < now.Add(-f.retention).UnixMilli() ||
+		if r.Time <= 0 || at > latest || p.retention > 0 && at < now.Add(-p.retention).UnixMilli() ||
 			!(r.Lat >= -90 && r.Lat <= 90) || !(r.Lon >= -180 && r.Lon <= 180) ||
 			!(r.Accuracy >= 0 && r.Accuracy <= maxAccuracy) {
 			continue
