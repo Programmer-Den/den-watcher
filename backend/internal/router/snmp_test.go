@@ -110,7 +110,7 @@ type fakeSNMPAgent struct {
 	mu        sync.Mutex
 	community string
 	// agent signs and encrypts the v3 answers with the user's keys.
-	agent *snmpClient
+	agent *fakeEngine
 	user  string
 	mib   map[string]snmpValue
 	oids  []string
@@ -140,7 +140,9 @@ func (f *fakeSNMPAgent) address() string { return f.conn.LocalAddr().String() }
 func (f *fakeSNMPAgent) withUser(user, password string) {
 	engine, _ := hex.DecodeString("80001f8880e9630000d61ff449")
 	auth := localizeKey(passwordToKey(password), engine)
-	f.agent = &snmpClient{engineID: engine, boots: 7, engineTime: 100000, timeAt: time.Now(), authKey: auth, privKey: auth[:16], user: user, salt: 99}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.agent = &fakeEngine{engineID: engine, boots: 7, engineTime: 100000, timeAt: time.Now(), authKey: auth, privKey: auth[:16], user: user, salt: 99}
 	f.user = user
 }
 
@@ -564,11 +566,11 @@ func TestSNMPv3Refusals(t *testing.T) {
 	agent.withUser("monitor", "the right password")
 
 	_, err := newTestSNMP(t, agent, true, "monitor", "a wrong password").Collect(context.Background())
-	if err == nil || !strings.Contains(err.Error(), "refused the SNMPv3 password") {
+	if err == nil || !strings.Contains(err.Error(), "refused the SNMPv3 user or password") {
 		t.Errorf("a wrong password: %v", err)
 	}
 	_, err = newTestSNMP(t, agent, true, "someone", "the right password").Collect(context.Background())
-	if err == nil || !strings.Contains(err.Error(), "does not know the SNMPv3 user") {
+	if err == nil || !strings.Contains(err.Error(), "refused the SNMPv3 user or password") {
 		t.Errorf("an unknown user: %v", err)
 	}
 

@@ -22,6 +22,7 @@ A device started with `DATA_ONLY=true` serves no website, but its program still 
 | [fyne.io/systray](https://github.com/fyne-io/systray) | Apache-2.0 | The Windows tray icon |
 | [go-sysconf](https://github.com/tklauser/go-sysconf) (BSD-3-Clause), [numcpus](https://github.com/tklauser/numcpus) (Apache-2.0), [go-ole](https://github.com/go-ole/go-ole) (MIT), [wmi](https://github.com/yusufpapurcu/wmi) (MIT) | | Needed by gopsutil |
 | [go-humanize](https://github.com/dustin/go-humanize) (MIT), [google/uuid](https://github.com/google/uuid) (BSD-3-Clause), [bigfft](https://github.com/remyoudompheng/bigfft) (BSD-3-Clause), [go-isatty](https://github.com/mattn/go-isatty) (MIT), [go-strftime](https://github.com/ncruces/go-strftime) (MIT) | | Needed by modernc.org/sqlite |
+| [gosnmp](https://github.com/gosnmp/gosnmp) | BSD-2-Clause | Reading routers over SNMPv2c and SNMPv3 |
 | [godbus/dbus](https://github.com/godbus/dbus) | BSD-2-Clause | The Bluetooth add-on on Linux, which asks BlueZ over D-Bus; also needed by systray |
 | [Angular](https://github.com/angular/angular) | MIT | The website |
 | [Angular Material and CDK](https://github.com/angular/components) | MIT | The website's components and theme |

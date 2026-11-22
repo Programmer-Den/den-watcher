@@ -7,28 +7,6 @@ import (
 	"strings"
 )
 
-// The BER tags SNMP uses.
-const (
-	tagInteger      = 0x02
-	tagOctetString  = 0x04
-	tagNull         = 0x05
-	tagOID          = 0x06
-	tagSequence     = 0x30
-	tagIPAddress    = 0x40
-	tagCounter32    = 0x41
-	tagGauge32      = 0x42
-	tagTimeTicks    = 0x43
-	tagCounter64    = 0x46
-	tagNoSuchObject = 0x80
-	tagNoSuchInst   = 0x81
-	tagEndOfMIB     = 0x82
-
-	pduGet      = 0xa0
-	pduResponse = 0xa2
-	pduGetBulk  = 0xa5
-	pduReport   = 0xa8
-)
-
 // berElement encodes one element: its tag, length and content.
 func berElement(tag byte, content []byte) []byte {
 	out := []byte{tag}
@@ -240,30 +218,6 @@ func compareOIDs(a, b string) int {
 		}
 	}
 	return len(x) - len(y)
-}
-
-// snmpValue is the value of one variable in an answer.
-type snmpValue struct {
-	tag     byte
-	number  uint64
-	signed  int64
-	text    string
-	missing bool
-}
-
-// numeric returns the value as a number, for integers, counters, gauges and
-// time ticks.
-func (v snmpValue) numeric() (uint64, bool) {
-	switch v.tag {
-	case tagCounter32, tagGauge32, tagTimeTicks, tagCounter64:
-		return v.number, true
-	case tagInteger:
-		if v.signed < 0 {
-			return 0, false
-		}
-		return uint64(v.signed), true
-	}
-	return 0, false
 }
 
 func parseValue(tag byte, content []byte) (snmpValue, error) {
