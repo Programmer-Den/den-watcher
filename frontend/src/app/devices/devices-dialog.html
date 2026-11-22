@@ -3,6 +3,19 @@
 <mat-dialog-content>
   <p class="hint">{{ i18n.t('devicesDialog.intro') }}</p>
 
+  @if (healthProblems().length) {
+    <section class="health" aria-labelledby="devices-dialog-health">
+      <h3 id="devices-dialog-health">{{ i18n.t('devicesDialog.healthTitle') }}</h3>
+      <ul>
+        @for (problem of healthProblems(); track $index) {
+          <li>
+            <span class="name">{{ problem.name }}:</span> {{ problem.text }}
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
   @if (others().length) {
     <h3>
       <button

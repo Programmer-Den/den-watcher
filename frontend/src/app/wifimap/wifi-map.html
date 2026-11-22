@@ -82,7 +82,9 @@
               }}
             </button>
           }
-          @if (foundNetworks().length === 0) {
+          @if (networks().length === 0) {
+            <p class="detail">{{ i18n.t('wifiMap.noNetworks') }}</p>
+          } @else if (foundNetworks().length === 0) {
             <p class="detail">{{ i18n.t('wifiMap.noNetworkFound') }}</p>
           }
         </nav>

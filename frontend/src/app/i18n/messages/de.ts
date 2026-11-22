@@ -151,6 +151,13 @@ export const de: Messages = {
   'devicesDialog.title': 'Geräte',
   'devicesDialog.intro':
     'Dieses Gerät kann die Auslastung anderer Geräte im lokalen Netzwerk anzeigen, auf denen Den-Watcher läuft.',
+  'devicesDialog.healthTitle': 'Bitte prüfen',
+  'devicesDialog.healthPairingNeeded': 'wartet auf seinen Kopplungscode',
+  'devicesDialog.healthPairingWrong': 'hat einen Kopplungscode, der nicht seiner ist',
+  'devicesDialog.healthVersion': 'läuft mit Version {version}, älter als {hub} auf dem Hub',
+  'devicesDialog.healthAddOn': 'das Add-on {addOn} ist stehen geblieben',
+  'devicesDialog.healthClockAhead': 'seine Uhr geht gegenüber dem Hub {time} vor',
+  'devicesDialog.healthClockBehind': 'seine Uhr geht gegenüber dem Hub {time} nach',
   'devicesDialog.listTitle': 'Hinzugefügte Geräte',
   'devicesDialog.remove': 'Entfernen',
   'devicesDialog.rename': 'Umbenennen',
@@ -677,6 +684,7 @@ export const de: Messages = {
   'wifiMap.place': 'Ort',
   'wifiMap.fromBest': 'Vom besten Ort',
   'wifiMap.showAllNetworks': 'Alle {count} Netzwerke zeigen',
+  'wifiMap.noNetworks': 'Die Handys haben an diesen Orten kein Netzwerk empfangen.',
   'wifiMap.noNetworkFound': 'Kein Netzwerk hat diesen Namen.',
   'wifiMap.tabTown': 'WLAN in der Stadt',
   'townWifi.intro':

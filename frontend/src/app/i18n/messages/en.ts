@@ -153,6 +153,13 @@ export const en = {
   'devicesDialog.title': 'Devices',
   'devicesDialog.intro':
     'This device can show the usage of other devices on the local network that run Den-Watcher.',
+  'devicesDialog.healthTitle': 'Needs a look',
+  'devicesDialog.healthPairingNeeded': 'waits for its pairing code',
+  'devicesDialog.healthPairingWrong': 'has a pairing code that is not its own',
+  'devicesDialog.healthVersion': "runs version {version}, older than the hub's {hub}",
+  'devicesDialog.healthAddOn': 'the {addOn} add-on stopped',
+  'devicesDialog.healthClockAhead': "its clock is {time} ahead of the hub's",
+  'devicesDialog.healthClockBehind': "its clock is {time} behind the hub's",
   'devicesDialog.listTitle': 'Added devices',
   'devicesDialog.remove': 'Remove',
   'devicesDialog.rename': 'Rename',
@@ -667,6 +674,7 @@ export const en = {
   'wifiMap.place': 'Place',
   'wifiMap.fromBest': 'From the best place',
   'wifiMap.showAllNetworks': 'Show all {count} networks',
+  'wifiMap.noNetworks': 'The phones heard no network at these places.',
   'wifiMap.noNetworkFound': 'No network has this name.',
   'wifiMap.tabTown': 'Town Wi-Fi',
   'townWifi.intro':

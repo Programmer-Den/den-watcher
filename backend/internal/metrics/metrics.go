@@ -61,6 +61,15 @@ type Snapshot struct {
 	// leaves it out of its own snapshot, and so does a hub for itself and
 	// for the routers and checks it reads.
 	ResponseMilliseconds *float64 `json:"responseMilliseconds,omitempty"`
+	// AddOnsStopped are the add-ons whose report is still in the add-on
+	// folder but too old to use or unreadable, as the add-on stopped without
+	// removing it, by name, such as power. Left out when there is none.
+	AddOnsStopped []string `json:"addOnsStopped,omitempty"`
+	// ClockOffsetSeconds is how far the device's clock is ahead of the hub's
+	// (behind when negative), which the hub measures and sets itself when it
+	// reads the device, like ResponseMilliseconds; it includes the time the
+	// answer took, so a few seconds are no offset.
+	ClockOffsetSeconds *float64 `json:"clockOffsetSeconds,omitempty"`
 }
 
 // CPU is the processor usage across all cores and of each core. The clock,
@@ -201,16 +210,17 @@ func (c *Collector) Collect(ctx context.Context) (Snapshot, error) {
 			CachedBytes:    memory.Cached + memory.Buffers,
 			Swap:           readSwap(ctx, memory),
 		},
-		Temperatures: append(c.temperatures.read(ctx, now), c.gpus.temperatures(ctx)...),
-		Disks:        c.readDisks(ctx),
-		Network:      network,
-		GPUs:         c.gpus.read(ctx),
-		Throttling:   readThrottling(c.throttlingFile),
-		Battery:      c.batteries.read(),
-		Fans:         readFans(c.fans),
-		Extras:       c.readExtras(ctx, now),
-		WiFiNearby:   c.AddOns.WiFi(now),
-		System:       c.system,
+		Temperatures:  append(c.temperatures.read(ctx, now), c.gpus.temperatures(ctx)...),
+		Disks:         c.readDisks(ctx),
+		Network:       network,
+		GPUs:          c.gpus.read(ctx),
+		Throttling:    readThrottling(c.throttlingFile),
+		Battery:       c.batteries.read(),
+		Fans:          readFans(c.fans),
+		Extras:        c.readExtras(ctx, now),
+		WiFiNearby:    c.AddOns.WiFi(now),
+		System:        c.system,
+		AddOnsStopped: c.AddOns.Stopped(now),
 	}, nil
 }
 

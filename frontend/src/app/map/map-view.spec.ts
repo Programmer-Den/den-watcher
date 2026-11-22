@@ -132,4 +132,11 @@ describe('MapViewport', () => {
     map.showWhole();
     expect(map.view()).toEqual(whole);
   });
+
+  it('stays whole when a focus shows what the whole view does', () => {
+    const map = new MapViewport(WIDTH, HEIGHT);
+    map.show([south, north]);
+    map.focus([south, north]);
+    expect(map.zoomed()).toBe(false);
+  });
 });
