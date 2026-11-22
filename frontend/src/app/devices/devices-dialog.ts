@@ -40,6 +40,7 @@ import { saveFile } from '../browser';
 import { EnergyPriceForm } from '../energy/energy-price-form';
 import { I18n } from '../i18n/i18n';
 import { formatDuration } from '../metrics/format';
+import { ChangeLog } from './change-log';
 import {
   ADD_KINDS,
   DEVICE_KINDS,
@@ -72,6 +73,7 @@ const DEFAULT_PORT = 9393;
 @Component({
   selector: 'app-devices-dialog',
   imports: [
+    ChangeLog,
     EnergyPriceForm,
     FormsModule,
     MatButtonModule,
