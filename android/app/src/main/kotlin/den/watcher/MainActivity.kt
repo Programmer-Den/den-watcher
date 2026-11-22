@@ -99,6 +99,7 @@ class MainActivity : Activity() {
 
         findViewById<Button>(R.id.bluetooth).setOnClickListener { allowBluetooth() }
         findViewById<Button>(R.id.steps).setOnClickListener { allowSteps() }
+        findViewById<Button>(R.id.updates).setOnClickListener { openInBrowser(RELEASES_URL) }
 
         for ((id, change) in dataSwitches) {
             findViewById<Switch>(id).setOnCheckedChangeListener { _, on ->
@@ -439,7 +440,10 @@ class MainActivity : Activity() {
 
     /** Opens the hub's page in the browser, at the address that was saved. */
     private fun openHubPage() {
-        val url = HubAddress.pageUrl(settings.hubAddress) ?: return
+        openInBrowser(HubAddress.pageUrl(settings.hubAddress) ?: return)
+    }
+
+    private fun openInBrowser(url: String) {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (_: android.content.ActivityNotFoundException) {
@@ -467,6 +471,8 @@ class MainActivity : Activity() {
     }
 
     private companion object {
+        /** The newest release, with this app, the hub and the Windows installer. */
+        const val RELEASES_URL = "https://github.com/Programmer-Den/den-watcher/releases/latest"
         const val REFRESH_MILLIS = 5_000L
         const val NEARBY_REQUEST = 1
         const val BLUETOOTH_REQUEST = 2

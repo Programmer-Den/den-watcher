@@ -182,6 +182,7 @@ Its menu, opened with a click:
 - **Pairing code for the hub** shows the code the hub's *Devices* dialog asks for when this PC is added there (see [Add the devices on the hub](#4-add-the-devices-on-the-hub))
 - **Open hub (address)** opens the page of the hub that collects from this PC, at the address it names. The hub tells the PC its address each time it asks for the usage, so this needs no setup; until a hub has asked, the entry is greyed out. Any device on the local network could claim to be the hub, so check the address before opening it
 - **Open the page on this PC** appears when the PC shows the website itself (`WEBSITE=1`)
+- **Updates on GitHub** opens the newest release on GitHub, with the installers to update this PC and the other devices
 - **Pause** stops collecting until **Resume**. The service starts again with Windows
 - **Stop and exit** stops the service and closes the icon until the next login. The service starts again with Windows
 - **Start** appears when the service was stopped some other way

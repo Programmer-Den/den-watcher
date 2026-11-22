@@ -22,6 +22,7 @@ import { Mascot } from './mascot/mascot';
 import { ThemeToggle } from './theme/theme-toggle';
 import { MissingPart, MissingParts } from './update/missing-part';
 import { UpdateNotice } from './update/update-notice';
+import { UpdatesLink } from './update/updates-link';
 import { WifiMap } from './wifimap/wifi-map';
 
 @Component({
@@ -42,6 +43,7 @@ import { WifiMap } from './wifimap/wifi-map';
     Sidebar,
     ThemeToggle,
     UpdateNotice,
+    UpdatesLink,
     WifiMap,
   ],
   templateUrl: './app.html',

@@ -35,6 +35,9 @@
     <string name="save_battery_auto">Gerade von selbst an, da Androids Energiesparmodus an ist.</string>
     <string name="data_title">Was geschickt wird</string>
     <string name="data_hint">Nur die Daten, die du oben zum Sammeln gewählt hast, und nur an den Hub in deinem Netz. Android lässt keine App lesen, wie ausgelastet der Prozessor ist.</string>
+    <string name="updates_title">Updates</string>
+    <string name="updates_hint">Neue Versionen dieser App, des Hubs und des Windows-Installers gibt es auf GitHub. Updates werden nie von selbst installiert.</string>
+    <string name="updates_open">Updates auf GitHub</string>
     <string name="channel_name">Aufzeichnung</string>
     <string name="channel_description">Wird angezeigt, solange die App die Nutzung aufzeichnet, wie Android es verlangt.</string>
     <string name="notification_title">Zeichnet die Nutzung dieses Handys auf</string>

@@ -19,6 +19,9 @@ import (
 // serviceName is the service the installer sets up.
 const serviceName = "DenWatcher"
 
+// releasesURL is the newest release, with the installers for every device.
+const releasesURL = "https://github.com/Programmer-Den/den-watcher/releases/latest"
+
 // checkEvery is how often the icon asks the service how it is.
 const checkEvery = 5 * time.Second
 
@@ -59,7 +62,7 @@ type tray struct {
 	// addressOf is only used by refresh, which runs one at a time.
 	addressOf cachedAddress
 
-	status, address, pairing, openHub, openPage, toggle, stop *systray.MenuItem
+	status, address, pairing, openHub, openPage, updates, toggle, stop *systray.MenuItem
 }
 
 // ready builds the menu. windows/check-installer.ps1 clicks its entries by
@@ -76,6 +79,7 @@ func (t *tray) ready() {
 	systray.AddSeparator()
 	t.openHub = systray.AddMenuItem(t.text.noHub, "")
 	t.openPage = systray.AddMenuItem(t.text.openPage, "")
+	t.updates = systray.AddMenuItem(t.text.updates, "")
 	systray.AddSeparator()
 	t.toggle = systray.AddMenuItem(t.text.pause, "")
 	t.stop = systray.AddMenuItem(t.text.stopAndExit, "")
@@ -207,6 +211,8 @@ func (t *tray) handleClicks() {
 			link := t.settings.pageURL()
 			t.mu.Unlock()
 			openInBrowser(link)
+		case <-t.updates.ClickedCh:
+			openInBrowser(releasesURL)
 		case <-t.toggle.ClickedCh:
 			t.mu.Lock()
 			running := t.state.running()
