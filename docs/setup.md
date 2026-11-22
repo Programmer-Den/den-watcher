@@ -179,6 +179,7 @@ The bear in the taskbar's notification area shows whether Den-Watcher runs:
 
 Its menu, opened with a click:
 
+- the first line, also shown when the pointer rests on the icon, names the installed version and whether the service runs, such as *Den-Watcher 4.0.1: Running*
 - **Address** shows where other devices reach this PC, such as `192.168.1.23:9393`: the IPv4 address of the network adapter Windows uses for its default route (else the first private one) and the installer's port, looked up again every minute. This is the address to add on the hub's *Devices* dialog
 - **Pairing code for the hub** shows the code the hub's *Devices* dialog asks for when this PC is added there (see [Add the devices on the hub](#4-add-the-devices-on-the-hub))
 - **Open hub (address)** opens the page of the hub that collects from this PC, at the address it names. The hub tells the PC its address each time it asks for the usage, so this needs no setup; until a hub has asked, the entry is greyed out. Any device on the local network could claim to be the hub, so check the address before opening it

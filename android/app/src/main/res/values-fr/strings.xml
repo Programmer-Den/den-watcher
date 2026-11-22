@@ -36,6 +36,7 @@
     <string name="data_title">Ce qui est envoyé</string>
     <string name="data_hint">Uniquement les données que vous avez choisi de collecter ci-dessus, et uniquement au hub de votre réseau. Android ne laisse aucune app lire la charge du processeur.</string>
     <string name="updates_title">Mises à jour</string>
+    <string name="updates_version">Cette app est en version %1$s.</string>
     <string name="updates_hint">Les nouvelles versions de cette app, du hub et de l\'installateur Windows sont sur GitHub. Les mises à jour ne s\'installent jamais toutes seules.</string>
     <string name="updates_open">Mises à jour sur GitHub</string>
     <string name="channel_name">Enregistrement</string>

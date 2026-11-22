@@ -154,7 +154,8 @@ jobs:
           done
 
       # The tray program is a windowless GUI program, so no console opens with
-      # it. The test program runs the Windows-only tests on the Windows runner.
+      # it, and names the version in its menu as the service does on its page.
+      # The test program runs the Windows-only tests on the Windows runner.
       - name: Build the programs
         working-directory: backend
         env:
@@ -174,7 +175,8 @@ jobs:
                 go build -trimpath -ldflags="-s -w" -o "../dist/$arch/addons/$name.exe" "./$cmd"
             done
             CGO_ENABLED=0 GOOS=windows GOARCH="$arch" \
-              go build -trimpath -ldflags="-s -w -H=windowsgui" \
+              go build -trimpath \
+                -ldflags="-s -w -H=windowsgui -X github.com/Programmer-Den/den-watcher/backend/internal/version.Version=$VERSION" \
                 -o "../dist/$arch/den-watcher-tray.exe" ./cmd/den-watcher-tray
           done
           for pkg in cmd/den-watcher internal/{metrics,winservice,router,addons} internal/addons/{smart,power,pressure,kernel,wifi,memory,processes,bluetooth}; do

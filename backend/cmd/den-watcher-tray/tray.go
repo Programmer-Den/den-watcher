@@ -5,7 +5,8 @@
 // stops it and closes the icon, opens the page of the hub that collects
 // from this PC, or this PC's own page when it shows one, and tells the
 // pairing code a hub asks for when this PC is added there. It also opens
-// the newest release on GitHub, where the updates are downloaded.
+// the newest release on GitHub, where the updates are downloaded. The menu's
+// first line and the tooltip name the installed version.
 //
 // The installer starts it when someone logs in. The icons are drawn from the
 // website's mascot and theme by cmd/tray-icons before it is built.
@@ -24,7 +25,12 @@ import (
 	"time"
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/pairing"
+	"github.com/Programmer-Den/den-watcher/backend/internal/version"
 )
+
+// title starts the menu's first line and the tooltip: the program and the
+// version the installer put in place with it, "Den-Watcher 1.2.3".
+var title = "Den-Watcher " + version.Version
 
 // serviceState is what Windows tells about the service.
 type serviceState int
@@ -282,6 +288,11 @@ type texts struct {
 	openHub, noHub, openPage, updates, pause, resume, start, stopAndExit string
 	// startFailed and stopFailed take the error.
 	startFailed, stopFailed string
+}
+
+// statusText is the menu's first line and the tooltip: the version and the state.
+func (t texts) statusText(s state) string {
+	return title + ": " + t.stateText(s)
 }
 
 // stateText is how the menu and the tooltip name a state.

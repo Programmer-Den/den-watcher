@@ -23,6 +23,7 @@ import { ThemeToggle } from './theme/theme-toggle';
 import { MissingPart, MissingParts } from './update/missing-part';
 import { UpdateNotice } from './update/update-notice';
 import { UpdatesLink } from './update/updates-link';
+import { VersionFooter } from './update/version-footer';
 import { WifiMap } from './wifimap/wifi-map';
 
 @Component({
@@ -44,6 +45,7 @@ import { WifiMap } from './wifimap/wifi-map';
     ThemeToggle,
     UpdateNotice,
     UpdatesLink,
+    VersionFooter,
     WifiMap,
   ],
   templateUrl: './app.html',

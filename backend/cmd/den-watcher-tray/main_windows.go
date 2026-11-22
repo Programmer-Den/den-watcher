@@ -68,8 +68,8 @@ type tray struct {
 // ready builds the menu. windows/check-installer.ps1 clicks its entries by
 // their number, which counts the entries and separators in this order.
 func (t *tray) ready() {
-	systray.SetTooltip("Den-Watcher")
-	t.status = systray.AddMenuItem("Den-Watcher", "")
+	systray.SetTooltip(title)
+	t.status = systray.AddMenuItem(title, "")
 	t.status.Disable()
 	t.address = systray.AddMenuItem(t.text.address, "")
 	t.address.Disable()
@@ -152,9 +152,9 @@ func (t *tray) refresh() {
 		systray.SetIcon(data)
 		t.shown = icon
 	}
-	text := t.text.stateText(t.state)
-	systray.SetTooltip("Den-Watcher: " + text)
-	t.status.SetTitle("Den-Watcher: " + text)
+	text := t.text.statusText(t.state)
+	systray.SetTooltip(text)
+	t.status.SetTitle(text)
 	t.address.SetTitle(t.text.addressText(addr, found, t.settings.port))
 	if t.code != "" {
 		t.pairing.SetTitle(t.text.pairingText(t.code))

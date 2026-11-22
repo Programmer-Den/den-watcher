@@ -36,6 +36,7 @@
     <string name="data_title">Was geschickt wird</string>
     <string name="data_hint">Nur die Daten, die du oben zum Sammeln gewählt hast, und nur an den Hub in deinem Netz. Android lässt keine App lesen, wie ausgelastet der Prozessor ist.</string>
     <string name="updates_title">Updates</string>
+    <string name="updates_version">Diese App hat die Version %1$s.</string>
     <string name="updates_hint">Neue Versionen dieser App, des Hubs und des Windows-Installers gibt es auf GitHub. Updates werden nie von selbst installiert.</string>
     <string name="updates_open">Updates auf GitHub</string>
     <string name="channel_name">Aufzeichnung</string>

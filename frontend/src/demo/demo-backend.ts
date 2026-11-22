@@ -170,6 +170,10 @@ export class DemoBackend implements HttpBackend {
     if (request.method === 'GET' && url.pathname === '/api/status-page') {
       return respond(request, DEMO_STATUS_PAGE);
     }
+    if (request.method === 'GET' && url.pathname === '/api/update') {
+      // The version the page's footer names; the demo names no newer release.
+      return respond(request, { current: this.version });
+    }
     if (url.pathname === '/api/layout') {
       return this.layout(request);
     }
@@ -223,7 +227,6 @@ export class DemoBackend implements HttpBackend {
       case '/api/availability':
         return respond(request, availability(machine, now));
       default:
-        // No /api/update: the demo names no newer release.
         return fail(request, 404, 'not found');
     }
   }
