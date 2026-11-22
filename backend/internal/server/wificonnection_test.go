@@ -27,7 +27,7 @@ func (f *fakeWiFiConnections) WiFiConnections(_ context.Context, device string, 
 func TestServesAPhonesWiFiConnectionsWithinTheRetention(t *testing.T) {
 	source := &fakeWiFiConnections{}
 	devices := append(device(fakeCollector{}, nil), Device{ID: "pixel", Kind: hub.KindPhone, Metrics: fakeCollector{}})
-	handler := New(Site{Devices: DeviceList(devices), Files: site, WiFiConnections: source, Retention: 7 * 24 * time.Hour})
+	handler := New(Site{Devices: DeviceList(devices), Files: site, WiFiConnections: source, PhoneRetention: 7 * 24 * time.Hour})
 	now := time.Now()
 	rec := get(handler, "/api/phone/wifi?device=pixel&from=0&to="+strconv.FormatInt(now.Unix(), 10), "192.168.1.20:5000")
 	if rec.Code != http.StatusOK {

@@ -27,7 +27,7 @@ type wifiConnectionResponse struct {
 // wifiConnectionHandler serves GET /api/phone/wifi?device=<id>&from=<unix
 // seconds>&to=<unix seconds>: which Wi-Fi the phone was connected to in
 // that range and when, oldest first, which its app sends when its user
-// allowed it the Wi-Fi networks. The range is limited to the retention
+// allowed it the Wi-Fi networks. The range is limited to the phones' retention
 // period and ends now at the latest. Any other device has none.
 func wifiConnectionHandler(d Device, source WiFiConnectionSource, retention time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +42,7 @@ func wifiConnectionHandler(d Device, source WiFiConnectionSource, retention time
 			return
 		}
 		now := time.Now()
-		from = min(max(from, now.Add(-retention).Unix()), now.Unix())
+		from = min(max(from, keptSince(now, retention)), now.Unix())
 		to = min(max(to, from+1), now.Unix()+1)
 		connections, err := source.WiFiConnections(r.Context(), d.ID, time.Unix(from, 0), time.Unix(to, 0))
 		if err != nil {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+
+	"github.com/Programmer-Den/den-watcher/backend/internal/changelog"
 )
 
 // StatusPage is the remote status page, a minimal page on a port of its own
@@ -67,7 +69,7 @@ func (c *deviceChanges) setStatusPassword(page StatusPage) http.HandlerFunc {
 		if !readJSON(w, r, &request) {
 			return
 		}
-		c.change(w, r, request.Password, true, func() (any, error) {
+		c.change(w, r, request.Password, true, changelog.Entry{Action: changelog.ActionStatusPassword}, func() (any, error) {
 			// ChangePassword checks the new password's length.
 			if err := page.ChangePassword(r.Context(), request.NewPassword); err != nil {
 				return nil, err

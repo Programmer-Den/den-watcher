@@ -56,6 +56,8 @@ describe('Glance', () => {
       imports: [Glance],
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
+    // The week before is read in a test of its own.
+    TestBed.inject(HistoryStore).weekBefore.set(false);
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(Glance);
   });
