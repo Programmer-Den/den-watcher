@@ -1,0 +1,1 @@
+import{t as ne}from"./chunk-D1kNrEcI.js";import{t as Wt}from"./chunk-CLrIGUuF.js";import"./main-X3EZHU4X.js";import"./chunk-DRo-tIhO.js";import"./chunk-DP89R5og.js";import"./chunk-BpzxGhTX.js";function d(o,r){return o.get(Wt).open(ne,{data:r,injector:o}).afterClosed()}export{d as askPassword};
