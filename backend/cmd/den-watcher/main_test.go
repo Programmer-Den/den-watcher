@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
+	"github.com/Programmer-Den/den-watcher/backend/internal/server"
 )
 
 func TestDiskPaths(t *testing.T) {
@@ -204,6 +205,33 @@ func TestPrintPairingCodeAsksTheRunningDevice(t *testing.T) {
 	var out strings.Builder
 	if err := printPairingCode(&out); err == nil || !strings.Contains(err.Error(), "is it running") {
 		t.Fatalf("printPairingCode() without a running device = %v, want an error that asks whether it runs", err)
+	}
+}
+
+func TestCheckHealthAsksTheRunningDevice(t *testing.T) {
+	device := httptest.NewServer(server.NewDataOnly(nil, nil, nil, nil))
+	defer device.Close()
+	t.Setenv("LISTEN_ADDR", device.Listener.Addr().String())
+
+	if err := checkHealth(); err != nil {
+		t.Fatalf("checkHealth() with a running device = %v, want nil", err)
+	}
+	device.Close()
+	if err := checkHealth(); err == nil {
+		t.Fatal("checkHealth() without a running device = nil, want an error")
+	}
+}
+
+func TestCheckHealthFailsOnAServerError(t *testing.T) {
+	for status, healthy := range map[int]bool{http.StatusOK: true, http.StatusForbidden: true, http.StatusInternalServerError: false, http.StatusServiceUnavailable: false} {
+		device := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(status)
+		}))
+		t.Setenv("LISTEN_ADDR", device.Listener.Addr().String())
+		if err := checkHealth(); (err == nil) != healthy {
+			t.Errorf("checkHealth() when it answers %d = %v, want healthy %v", status, err, healthy)
+		}
+		device.Close()
 	}
 }
 
