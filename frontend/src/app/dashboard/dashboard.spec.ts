@@ -9,14 +9,8 @@ import { DeviceService, LOCAL_DEVICE } from '../devices/devices';
 import { I18n, LANGUAGE_STORAGE_KEY } from '../i18n/i18n';
 import { Extra } from '../metrics/extras';
 import { Snapshot } from '../metrics/metrics';
-import {
-  Dashboard,
-  REFRESH_INTERVAL_MS,
-  coreColumns,
-  extraCards,
-  extraSections,
-  hottestFirst,
-} from './dashboard';
+import { coreColumns, extraCards, extraSections, hottestFirst } from './cards';
+import { Dashboard, REFRESH_INTERVAL_MS } from './dashboard';
 import { CardSlot } from './card-slot';
 import { FitLabels } from './fit-labels';
 import { Arrangement } from './arrangement';
