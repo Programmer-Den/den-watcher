@@ -372,6 +372,12 @@ export const de: Messages = {
   'update.available': 'Version {latest} ist verfügbar (dieses Gerät hat {current}).',
   'update.github': 'Updates auf GitHub',
   'update.whatsNew': 'Was ist neu',
+  'update.howDocker': 'Zum Aktualisieren dies im Ordner mit compose.yaml ausführen.',
+  'update.howLinux':
+    'Zum Aktualisieren das neue Archiv entpacken und dies in seinem Ordner ausführen.',
+  'update.howWindows':
+    'Zum Aktualisieren das neue Installationsprogramm von der Release-Seite herunterladen und ausführen; es behält seine Optionen.',
+  'update.keeps': 'Verlauf und Einstellungen bleiben erhalten.',
   'update.partMissing':
     'Dieser Teil der Seite konnte nicht geladen werden. Lade die Seite neu, um es noch einmal zu versuchen.',
   'format.time': 'HH:mm',
