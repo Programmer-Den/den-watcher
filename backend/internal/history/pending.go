@@ -322,25 +322,32 @@ func (s *Store) write(ctx context.Context, byDevice map[string][]Minute) error {
 		}
 	}
 
-	if err := addAverages(ctx, tx, "samples_hourly", hours); err != nil {
+	if err := addAverages(ctx, tx, addHourlyAverage, hours); err != nil {
 		return err
 	}
-	if err := addAverages(ctx, tx, "samples_daily", days); err != nil {
+	if err := addAverages(ctx, tx, addDailyAverage, days); err != nil {
 		return err
 	}
 	return tx.Commit()
 }
 
+// addAverage adds the average of a number of values into the averages of a
+// table, weighted by how many values each is over.
+const addAverage = ` (device, time, metric, value, count) VALUES (?, ?, ?, ?, ?)
+	ON CONFLICT (device, time, metric) DO UPDATE SET
+		value = (value * count + excluded.value * excluded.count) / (count + excluded.count),
+		count = count + excluded.count`
+
+const (
+	addHourlyAverage = `INSERT INTO samples_hourly` + addAverage
+	addDailyAverage  = `INSERT INTO samples_daily` + addAverage
+)
+
 // addAverages adds the sums of sums, by device, metric and the start of their
-// hour or day, into the averages kept in table, samples_hourly or
-// samples_daily, one row per key however many minutes it is over.
-func addAverages(ctx context.Context, tx *sql.Tx, table string, sums map[hourKey]*hourSum) error {
-	// table is one of the two names above.
-	average, err := tx.PrepareContext(ctx, `
-		INSERT INTO `+table+` (device, time, metric, value, count) VALUES (?, ?, ?, ?, ?)
-		ON CONFLICT (device, time, metric) DO UPDATE SET
-			value = (value * count + excluded.value * excluded.count) / (count + excluded.count),
-			count = count + excluded.count`)
+// hour or day, into the averages with the statement add, addHourlyAverage or
+// addDailyAverage, one row per key however many minutes it is over.
+func addAverages(ctx context.Context, tx *sql.Tx, add string, sums map[hourKey]*hourSum) error {
+	average, err := tx.PrepareContext(ctx, add)
 	if err != nil {
 		return err
 	}
