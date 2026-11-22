@@ -32,6 +32,9 @@ import { DemoPlaceEdits, demoWifiPositions, emptyPlaceEdits } from './wifi-posit
 /** How many days of history the demo hub keeps; more than 30 shows the "All" range. */
 export const DEMO_RETENTION_DAYS = 90;
 
+/** How far back the demo's daily averages, kept past the retention as on a hub, reach. */
+export const DEMO_DAILY_DAYS = 2 * 365;
+
 /** Like the backend: readings every 5 s for the last 30 minutes, minute averages before that. */
 const RECENT_SPAN = 30 * 60;
 const RECENT_INTERVAL = 5;
@@ -417,10 +420,20 @@ export function history(machine: DemoMachine, from: number, to: number): History
   const span = Math.max(1, to - from);
   const interval = span <= RECENT_SPAN ? RECENT_INTERVAL : SAMPLE_INTERVAL;
   let step = Math.max(1, Math.ceil(span / interval / MAX_POINTS)) * interval;
-  if (step > 20 * 60) {
+  if (step > 86400) {
+    step = Math.ceil(step / 86400) * 86400;
+  } else if (step > 20 * 60) {
     step = Math.ceil(step / 3600) * 3600;
   }
-  const oldest = Math.max(from, to - DEMO_RETENTION_DAYS * 86400);
+  // A range that reaches back past the retention is read in whole days, from the daily averages.
+  const pastRetention = from < to - DEMO_RETENTION_DAYS * 86400;
+  if (pastRetention) {
+    step = Math.max(86400, step);
+  }
+  const oldest = Math.max(
+    from,
+    to - (pastRetention ? DEMO_DAILY_DAYS : DEMO_RETENTION_DAYS) * 86400,
+  );
   const points = new Map<string, { time: number; value: number }[]>();
   // A long step averages several moments, like the backend's averages smooth out short peaks.
   const samples = Math.min(8, Math.max(1, Math.round(step / RECENT_INTERVAL)));

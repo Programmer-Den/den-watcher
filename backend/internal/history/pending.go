@@ -3,6 +3,7 @@ package history
 import (
 	"cmp"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -291,6 +292,7 @@ func (s *Store) write(ctx context.Context, byDevice map[string][]Minute) error {
 	defer func() { _ = tx.Rollback() }()
 
 	hours := map[hourKey]*hourSum{}
+	days := map[hourKey]*hourSum{}
 	for device, minutes := range byDevice {
 		for _, minute := range minutes {
 			list := storableValues(ids, minute.Values)
@@ -310,12 +312,32 @@ func (s *Store) write(ctx context.Context, byDevice map[string][]Minute) error {
 				}
 				hours[key].sum += minute.Values[metric]
 				hours[key].count++
+				day := hourKey{device, metric, minute.Time / 86400 * 86400}
+				if days[day] == nil {
+					days[day] = &hourSum{}
+				}
+				days[day].sum += minute.Values[metric]
+				days[day].count++
 			}
 		}
 	}
 
+	if err := addAverages(ctx, tx, "samples_hourly", hours); err != nil {
+		return err
+	}
+	if err := addAverages(ctx, tx, "samples_daily", days); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// addAverages adds the sums of sums, by device, metric and the start of their
+// hour or day, into the averages kept in table, samples_hourly or
+// samples_daily, one row per key however many minutes it is over.
+func addAverages(ctx context.Context, tx *sql.Tx, table string, sums map[hourKey]*hourSum) error {
+	// table is one of the two names above.
 	average, err := tx.PrepareContext(ctx, `
-		INSERT INTO samples_hourly (device, time, metric, value, count) VALUES (?, ?, ?, ?, ?)
+		INSERT INTO `+table+` (device, time, metric, value, count) VALUES (?, ?, ?, ?, ?)
 		ON CONFLICT (device, time, metric) DO UPDATE SET
 			value = (value * count + excluded.value * excluded.count) / (count + excluded.count),
 			count = count + excluded.count`)
@@ -325,14 +347,14 @@ func (s *Store) write(ctx context.Context, byDevice map[string][]Minute) error {
 	defer func() { _ = average.Close() }()
 	// In the order of the primary key, so the rows of a device and hour are
 	// written to the same pages.
-	keys := slices.SortedFunc(maps.Keys(hours), func(a, b hourKey) int {
+	keys := slices.SortedFunc(maps.Keys(sums), func(a, b hourKey) int {
 		return cmp.Or(strings.Compare(a.device, b.device), cmp.Compare(a.hour, b.hour), strings.Compare(a.metric, b.metric))
 	})
 	for _, key := range keys {
-		h := hours[key]
+		h := sums[key]
 		if _, err := average.ExecContext(ctx, key.device, key.hour, key.metric, h.sum/float64(h.count), h.count); err != nil {
 			return fmt.Errorf("average %s: %w", key.metric, err)
 		}
 	}
-	return tx.Commit()
+	return nil
 }

@@ -18,6 +18,10 @@ type Reader struct {
 	Recent *Recent
 	// Device is the name the readings are stored under, such as LocalDevice.
 	Device string
+	// Retention is how long the minutes and hourly averages are kept; a range
+	// that starts before it is read in whole days from the daily averages,
+	// which are kept for good. Zero reads every range as if it were kept.
+	Retention time.Duration
 }
 
 // Range returns the values from from up to (not including) to, averaged over
@@ -30,6 +34,11 @@ type Reader struct {
 // longer range.
 func (r Reader) Range(ctx context.Context, from, to time.Time) ([]Series, time.Duration, error) {
 	span := to.Sub(from)
+	if r.Retention > 0 && from.Before(time.Now().Add(-r.Retention)) {
+		step := max(Day, (stepFor(span, SampleInterval)+Day-1)/Day*Day)
+		series, err := r.Store.cachedRange(ctx, r.Device, from, to, step)
+		return series, step, err
+	}
 	if span <= RecentSpan {
 		step := stepFor(span, RecentInterval)
 		if r.Recent.Covers(from) {
@@ -111,10 +120,14 @@ func (r Reader) ExtraInfo(ctx context.Context) (map[string]ExtraInfo, error) {
 // whole number of intervals between readings, so every step averages the
 // same number of them. A step of over 20 minutes is a whole number of hours,
 // as Store.Range reads it from the hourly averages: reading a week from the
-// minutes takes about 30 times as long, for detail a chart hardly shows.
+// minutes takes about 30 times as long, for detail a chart hardly shows. A
+// step of over a day is a whole number of days, read from the daily averages.
 func stepFor(span, interval time.Duration) time.Duration {
 	readings := (span/interval + maxPoints - 1) / maxPoints
 	step := max(1, readings) * interval
+	if step > Day {
+		return (step + Day - 1) / Day * Day
+	}
 	if step > 20*time.Minute {
 		step = (step + time.Hour - 1) / time.Hour * time.Hour
 	}

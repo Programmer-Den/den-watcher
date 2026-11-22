@@ -123,6 +123,11 @@ func TestDeleteBeforeDeletesTheDescriptionsOfExtrasWithoutValues(t *testing.T) {
 	if err := store.Add(ctx, "nas", now, map[string]float64{"extra:a/kept": 3}); err != nil {
 		t.Fatal(err)
 	}
+	// The daily averages are kept for good, so a value has none left only
+	// once they are gone too.
+	if _, err := store.db.ExecContext(ctx, `DELETE FROM samples_daily WHERE metric = 'extra:a/gone'`); err != nil {
+		t.Fatal(err)
+	}
 
 	if _, err := store.DeleteBefore(ctx, now.Add(-time.Hour)); err != nil {
 		t.Fatal(err)
@@ -134,6 +139,28 @@ func TestDeleteBeforeDeletesTheDescriptionsOfExtrasWithoutValues(t *testing.T) {
 	}
 	if _, ok := got["extra:a/gone"]; ok || len(got) != 2 {
 		t.Errorf("ExtraInfo() = %v, want kept (has values) and new (written recently)", got)
+	}
+}
+
+func TestDeleteBeforeKeepsTheDescriptionsOfExtrasWithDailyAverages(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	now := time.Now().Truncate(time.Hour)
+	old := now.Add(-48 * time.Hour)
+	if err := store.SetExtraInfo(ctx, "nas", map[string]ExtraInfo{"extra:a/old": {Label: "Old"}}, old); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Add(ctx, "nas", old, map[string]float64{"extra:a/old": 2}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := store.DeleteBefore(ctx, now.Add(-time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := store.ExtraInfo(ctx, "nas")
+	if err != nil || got["extra:a/old"].Label != "Old" {
+		t.Errorf("ExtraInfo() = %v, %v, want the description of the value the daily averages keep", got, err)
 	}
 }
 

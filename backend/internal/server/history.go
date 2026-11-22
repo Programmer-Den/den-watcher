@@ -36,8 +36,9 @@ type historyResponse struct {
 }
 
 // historyHandler serves GET /api/history?from=<unix seconds>&to=<unix seconds>:
-// the machine's usage in that range, averaged over steps. The range is limited to the retention period
-// and ends now at the latest. For a device that is not answering, a range
+// the machine's usage in that range, averaged over steps. The range ends now
+// at the latest; a range that reaches back past the retention period is read
+// in whole days, from the daily averages kept for good. For a device that is not answering, a range
 // that ends after its newest reading is moved back to end there, keeping its
 // length, so the page shows the last data there is instead of nothing.
 func historyHandler(d Device, retention time.Duration) http.HandlerFunc {
@@ -61,7 +62,9 @@ func readHistory(w http.ResponseWriter, r *http.Request, d Device, retention tim
 		return historyResponse{}, false
 	}
 	now := time.Now()
-	from = min(max(from, now.Add(-retention).Unix()), now.Unix())
+	// A range may reach back past the retention: it is then read in whole
+	// days from the daily averages, which are kept for good.
+	from = min(max(from, 0), now.Unix())
 	to = min(max(to, from+1), now.Unix()+1)
 
 	var lastReading int64
@@ -77,7 +80,7 @@ func readHistory(w http.ResponseWriter, r *http.Request, d Device, retention tim
 			if lastReading+1 < to {
 				span := to - from
 				to = lastReading + 1
-				from = min(max(to-span, now.Add(-retention).Unix()), to-1)
+				from = min(max(to-span, 0), to-1)
 			}
 		}
 	}

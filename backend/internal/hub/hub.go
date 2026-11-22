@@ -1003,7 +1003,7 @@ func (h *Hub) start(device Device, fixed bool, own []netip.Addr) {
 		Device:   device,
 		Fixed:    fixed,
 		Agent:    agent,
-		Reader:   history.Reader{Store: h.store, Recent: recent, Device: device.ID},
+		Reader:   history.Reader{Store: h.store, Recent: recent, Device: device.ID, Retention: h.retention},
 		db:       h.store.DB(),
 		watched:  watched,
 		stop:     stop,

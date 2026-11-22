@@ -12,19 +12,17 @@
   </div>
 
   @if (store.unit(); as u) {
-    @if (u.id !== 'all') {
-      <div class="choices ranges" role="group" [attr.aria-label]="i18n.t('history.range')">
-        @for (range of u.ranges; track range.seconds) {
-          <button
-            type="button"
-            [attr.aria-pressed]="range.seconds === store.span()"
-            (click)="store.span.set(range.seconds)"
-          >
-            <span class="label">{{ i18n.t(range.label) }}</span>
-          </button>
-        }
-      </div>
-    }
+    <div class="choices ranges" role="group" [attr.aria-label]="i18n.t('history.range')">
+      @for (range of u.ranges; track range.seconds) {
+        <button
+          type="button"
+          [attr.aria-pressed]="range.seconds === store.span()"
+          (click)="store.span.set(range.seconds)"
+        >
+          <span class="label">{{ i18n.t(range.label) }}</span>
+        </button>
+      }
+    </div>
   }
 
   <div class="shown">

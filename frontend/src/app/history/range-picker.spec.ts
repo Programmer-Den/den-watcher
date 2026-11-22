@@ -123,59 +123,30 @@ describe('RangePicker', () => {
     expect(respond().to).toBe(NOW_SECONDS + 180);
   });
 
-  it('offers all data when more than 30 days are kept', () => {
-    respond();
-    expect(labels(UNIT)).toEqual(['Minutes', 'Hours', 'Days']);
+  it('offers years, read past the retention from the daily averages', () => {
+    respond(7);
+    expect(labels(UNIT)).toEqual(['Minutes', 'Hours', 'Days', 'Long term']);
 
-    vi.advanceTimersByTime(5_000);
-    respond(90);
-    expect(labels(UNIT)).toEqual(['Minutes', 'Hours', 'Days', 'All']);
+    click(UNIT, 'Days');
+    respond(7);
+    expect(labels(RANGE)).toEqual(['1 d', '7 d', '14 d', '30 d']);
 
-    click(UNIT, 'All');
-    expect(respond(90).from).toBe(NOW_SECONDS + 5 - 90 * 86400);
-    expect(labels(RANGE)).toEqual([]);
+    click(UNIT, 'Long term');
+    expect(respond(7).from).toBe(NOW_SECONDS - 5 * 365 * 86400);
+    expect(labels(RANGE)).toEqual(['90 d', '1 y', '2 y', '5 y']);
+    click(RANGE, '1 y');
+    expect(respond(7).from).toBe(NOW_SECONDS - 365 * 86400);
   });
 
   it('writes the year in the period of a range over a year', () => {
-    respond(400);
+    respond();
     expect(element().querySelector('.period')?.textContent).not.toContain('2026');
 
-    click(UNIT, 'All');
-    respond(400);
-    const period = element().querySelector('.period')?.textContent ?? '';
-    expect(period).toContain('2025');
-    expect(period).toContain('2026');
-  });
-
-  it('offers only ranges within the retention', () => {
-    respond(7);
-    expect(labels(UNIT)).toEqual(['Minutes', 'Hours', 'Days']);
-    click(UNIT, 'Days');
-    respond(7);
-    expect(labels(RANGE)).toEqual(['1 d', '7 d']);
-  });
-
-  it('offers all data when more is kept than the longest range within the retention', () => {
-    respond(10);
-    expect(labels(UNIT)).toEqual(['Minutes', 'Hours', 'Days', 'All']);
-    click(UNIT, 'Days');
-    respond(10);
-    expect(labels(RANGE)).toEqual(['1 d', '7 d']);
-
-    click(UNIT, 'All');
-    expect(respond(10).from).toBe(NOW_SECONDS - 10 * 86400);
-  });
-
-  it('shows the longest range offered when the picked one is longer than the retention', () => {
+    click(UNIT, 'Long term');
     respond();
-    click(UNIT, 'Days');
-    // The 30 days were picked before the backend said it keeps 10.
-    expect(respond(10).from).toBe(NOW_SECONDS - 30 * 86400);
-
-    expect(respond(10).from).toBe(NOW_SECONDS - 10 * 86400);
-    expect(element().querySelector('.units button[aria-pressed=true]')?.textContent?.trim()).toBe(
-      'All',
-    );
+    const period = element().querySelector('.period')?.textContent ?? '';
+    expect(period).toContain('2021');
+    expect(period).toContain('2026');
   });
 
   it('downloads the period shown as CSV', () => {
@@ -209,16 +180,15 @@ describe('RangePicker', () => {
     respond();
   });
 
-  it('keeps the chosen "All" range while another device loads', () => {
+  it('keeps the chosen long-term range while another device loads', () => {
     respond(10);
-    click(UNIT, 'All');
+    click(UNIT, 'Long term');
     respond(10);
 
     TestBed.inject(DeviceService).selectedId.set('living-room-pi');
     fixture.detectChanges();
-    expect(labels(UNIT)).toEqual(['Minutes', 'Hours', 'Days', 'All']);
     expect(element().querySelector('.units button[aria-pressed=true]')?.textContent?.trim()).toBe(
-      'All',
+      'Long term',
     );
     respond(10);
   });

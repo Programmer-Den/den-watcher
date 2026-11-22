@@ -9,6 +9,7 @@ import { I18n } from '../app/i18n/i18n';
 import { fileNameOf } from '../app/history/csv-download';
 import { MetricsService } from '../app/metrics/metrics';
 import {
+  DEMO_DAILY_DAYS,
   DEMO_PAIRING_CODE,
   DEMO_RETENTION_DAYS,
   DEMO_STATUS_PAGE,
@@ -369,14 +370,16 @@ describe('DemoBackend', () => {
     expect(live.to).toBe(to);
   });
 
-  it('keeps the history within the retention and in at most 360 steps', async () => {
+  it('reads past the retention in whole days, as far as the daily averages reach', async () => {
     const to = Math.floor(Date.now() / 1000);
-    const history = await firstValueFrom(metrics.history(to - 365 * 86400, to, 'linux-nas'));
+    const history = await firstValueFrom(metrics.history(to - 5 * 365 * 86400, to, 'linux-nas'));
     expect(history.retentionDays).toBe(DEMO_RETENTION_DAYS);
+    expect(history.stepSeconds % 86400).toBe(0);
     const points = history.series.find((s) => s.metric === 'disk:/srv/data')?.points ?? [];
     expect(points.length).toBeGreaterThan(0);
     expect(points.length).toBeLessThanOrEqual(360);
-    expect(points[0].time).toBeGreaterThanOrEqual(to - DEMO_RETENTION_DAYS * 86400);
+    expect(points[0].time).toBeGreaterThanOrEqual(to - DEMO_DAILY_DAYS * 86400 - 86400 * 6);
+    expect(points[0].time).toBeLessThan(to - DEMO_RETENTION_DAYS * 86400);
   });
 
   it("keeps the Wi-Fi quality's history but not the signal's, with labels the hub keeps whole", async () => {

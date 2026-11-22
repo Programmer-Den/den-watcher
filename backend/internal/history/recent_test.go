@@ -248,7 +248,7 @@ func TestStepFor(t *testing.T) {
 		{7 * 24 * time.Hour, SampleInterval, time.Hour}, // 28 min, from the hourly averages
 		{14 * 24 * time.Hour, SampleInterval, time.Hour},
 		{30 * 24 * time.Hour, SampleInterval, 2 * time.Hour},
-		{365 * 24 * time.Hour, SampleInterval, 25 * time.Hour}, // 24 h 20 min, as whole hours
+		{365 * 24 * time.Hour, SampleInterval, 2 * Day}, // 24 h 20 min, as whole days
 	}
 	for _, tt := range tests {
 		if got := stepFor(tt.span, tt.interval); got != tt.want {

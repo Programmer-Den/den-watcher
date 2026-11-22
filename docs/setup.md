@@ -448,7 +448,7 @@ Settings are environment variables. In Docker they go in `.env` next to `compose
 | `PUBLIC_PORT` | the port of `LISTEN_ADDR`; `PORT` in Docker | the port the page is reachable on from the network. A hub sends it to the devices it collects from, so a Windows PC can link to the hub's page |
 | `DISK_PATHS` | `/`, or the system drive on Windows | comma-separated paths whose disks are shown; in Docker, mount each one read-only first |
 | `DATABASE_PATH` | `den-watcher.db` in the working folder; set by Docker, the Linux service and the Windows installer | the SQLite file for the history, or with `DATA_ONLY` for the usage kept for the hub |
-| `RETENTION_DAYS` | `30` | days of history to keep, 1 to 3650 |
+| `RETENTION_DAYS` | `30` | days of history to keep in minutes and hours, 1 to 3650; the average of each day is kept for good, for the *Long term* ranges ([Retention](database.md#retention)) |
 | `HISTORY_MAX_ENTRIES` | `64` | disks, sensors, network cards and GPUs each that the history keeps per device, and 8 times as many values of extras, 1 to 10000 |
 | `HISTORY_FLUSH_MINUTES` | `10` | minutes of history kept in memory before they are written to the database together, 1 to 60; a power cut loses what waits ([Writing](database.md#from-reading-to-chart)) |
 | `DEVICE_NAME` | *Host Hub* | how the page names this device |

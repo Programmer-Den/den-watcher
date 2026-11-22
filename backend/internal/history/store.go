@@ -23,7 +23,9 @@ const LocalDevice = "local"
 // schema keeps the history: history_minutes (see packedSchema) has the
 // values of every minute, and samples_hourly the average of each hour's
 // values per metric, and how many it is over, so ranges with steps of an hour
-// and more read 60 times fewer rows. Add keeps both up to date. Databases
+// and more read 60 times fewer rows. samples_daily has the same for each day,
+// and is not deleted with the retention, so the history reaches back years at
+// one row per day and metric. Add keeps all three up to date. Databases
 // from before version 3 had the minutes in samples, one row per value;
 // convertSamples moves them, and the migration to version 2 filled
 // samples_hourly for databases from before it.
@@ -37,7 +39,27 @@ CREATE TABLE IF NOT EXISTS samples_hourly (
 	PRIMARY KEY (device, time, metric)
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS samples_hourly_by_time ON samples_hourly (time);
+CREATE TABLE IF NOT EXISTS samples_daily (
+	device TEXT    NOT NULL,
+	time   INTEGER NOT NULL, -- Unix time in seconds, the start of the day in UTC
+	metric TEXT    NOT NULL,
+	value  REAL    NOT NULL, -- the average of the day's values so far
+	count  INTEGER NOT NULL, -- how many values the average is over
+	PRIMARY KEY (device, time, metric)
+) WITHOUT ROWID;
 `
+
+// dailyBackfill fills samples_daily from the hourly averages kept so far,
+// once, when the table is new.
+const dailyBackfill = `
+INSERT OR IGNORE INTO samples_daily (device, time, metric, value, count)
+SELECT device, time / 86400 * 86400, metric, SUM(value * count) / SUM(count), SUM(count)
+FROM samples_hourly
+GROUP BY device, time / 86400 * 86400, metric`
+
+// Day is the step of the daily averages, which are kept for good, past the
+// retention: ranges that reach back further than it are read from them.
+const Day = 24 * time.Hour
 
 // Store is the database the history is kept in.
 type Store struct {
@@ -85,6 +107,11 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	var hadDaily int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'samples_daily'`).Scan(&hadDaily); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	if _, err := db.ExecContext(ctx, schema+extraSchema+wifiSchema+appUseSchema+wifiConnectionSchema+routeSchema+phoneScanSchema+positionPlaceSchema); err != nil {
 		_ = db.Close()
 		return nil, err
@@ -94,6 +121,12 @@ func Open(ctx context.Context, path string) (*Store, error) {
 	if err := store.convertSamples(ctx); err != nil {
 		_ = db.Close()
 		return nil, err
+	}
+	if hadDaily == 0 {
+		if _, err := db.ExecContext(ctx, dailyBackfill); err != nil {
+			_ = db.Close()
+			return nil, fmt.Errorf("fill the daily averages: %w", err)
+		}
 	}
 	return store, nil
 }
@@ -154,7 +187,9 @@ func (s *Store) AddMinutes(ctx context.Context, device string, minutes []Minute)
 //
 // Steps of an hour and more are whole hours (see stepFor) and come from the
 // hourly averages, each weighted by how many values it is over: the same
-// averages as from the values themselves, from 60 times fewer rows.
+// averages as from the values themselves, from 60 times fewer rows. Steps of
+// whole days come from the daily averages the same way, which are kept past
+// the retention.
 //
 // Every step includes the whole step from falls in: the hours of a step of
 // hours are stored at their start, before from, and would be left out, and
@@ -166,9 +201,14 @@ func (s *Store) Range(ctx context.Context, device string, from, to time.Time, st
 	if step < time.Hour {
 		return s.rangeMinutes(ctx, device, start, to.Unix(), stepSeconds)
 	}
+	table := "samples_hourly"
+	if stepSeconds%int64(Day/time.Second) == 0 {
+		table = "samples_daily"
+	}
+	// table is one of the two names above.
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT metric, time / ?1 * ?1 AS bucket, SUM(value * count) / SUM(count)
-		FROM samples_hourly
+		FROM `+table+`
 		WHERE device = ?2 AND time >= ?3 AND time < ?4
 		GROUP BY metric, bucket
 		ORDER BY metric, bucket`, stepSeconds, device, start, to.Unix())
@@ -227,6 +267,7 @@ func (s *Store) cachedRange(ctx context.Context, device string, from, to time.Ti
 
 // DeleteBefore deletes every minute stored before t and returns how many
 // were deleted. The hour t falls in keeps its average, as it still has values.
+// The daily averages stay, for good.
 // The descriptions of extras without values left go too. The values are
 // deleted in chunks (see deleteChunks), so the first prune after a long
 // downtime, or after RETENTION_DAYS was lowered, does not keep the recorders
@@ -309,6 +350,11 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	if err != nil {
 		return err
 	}
+	daily, err := s.deleteChunks(ctx, "samples_daily", "device, time, metric", `device = ?`, device)
+	if err != nil {
+		return err
+	}
+	hourly += daily
 	if _, err := s.db.ExecContext(ctx, `DELETE FROM extra_info WHERE device = ?`, device); err != nil {
 		return err
 	}

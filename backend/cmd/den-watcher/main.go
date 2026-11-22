@@ -470,7 +470,7 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 				ID:      hub.LocalID,
 				Name:    localName,
 				Metrics: sampler,
-				History: history.Reader{Store: store, Recent: recent, Device: history.LocalDevice},
+				History: history.Reader{Store: store, Recent: recent, Device: history.LocalDevice, Retention: retention},
 			},
 			hub:    others,
 			alerts: watcher,
