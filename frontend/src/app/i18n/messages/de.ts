@@ -307,6 +307,11 @@ export const de: Messages = {
   'history.downloadFailed': 'Die Datei konnte nicht heruntergeladen werden.',
   'history.unreachable': 'Der Verlauf kann nicht gelesen werden.',
   'history.loading': 'Wird geladen…',
+  'history.weekBefore': 'Woche davor',
+  'history.weekBeforeTitle':
+    'Dieselbe Zeit eine Woche davor als blasse Linie in den Diagrammen zeigen',
+  'history.weekBeforeLegend': 'Eine Woche davor',
+  'history.weekBeforeValue': 'eine Woche davor {value}',
   'history.unitMinutes': 'Minuten',
   'history.range1m': '1 min',
   'history.range5m': '5 min',
