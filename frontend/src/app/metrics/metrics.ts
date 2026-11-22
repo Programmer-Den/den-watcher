@@ -302,6 +302,14 @@ export class MetricsService {
     return this.http.get<WiFiPositions>('/api/wifi/positions', { params: { from, to } });
   }
 
+  /**
+   * Where the hub learned the access points around town are, from the phones' scans with a GPS
+   * position, and the phones' ways from `from` to `to`, in Unix seconds, placed by them alone.
+   */
+  townWifi(from: number, to: number): Observable<TownWiFi> {
+    return this.http.get<TownWiFi>('/api/wifi/town', { params: { from, to } });
+  }
+
   /** Names a place of the phones' scans; an empty name takes its name away. */
   renamePosition(id: number, name: string): Observable<void> {
     return this.http.put<void>(`/api/wifi/positions/${id}/name`, { name });
@@ -422,6 +430,56 @@ export interface WiFiPositions {
   from: number;
   to: number;
   places: WiFiPosition[];
+}
+
+/** What GET /api/wifi/town answers: the access points placed around town and the phones' ways. */
+export interface TownWiFi {
+  from: number;
+  to: number;
+  /** How many scans with a GPS position the hub learned from, the oldest at `learnedFrom`. */
+  learned: number;
+  learnedFrom?: number;
+  /** How many access points were left out: heard too far apart (`moving`), or at one point only. */
+  moving: number;
+  once: number;
+  /** The placed access points, those heard at the most points first. */
+  accessPoints: TownAccessPoint[];
+  tracks: TownTrack[];
+}
+
+/** An access point the hub placed: the middle of where it was heard, and how far around that. */
+export interface TownAccessPoint {
+  id: string;
+  /** Left out for a hidden network. */
+  ssid?: string;
+  lat: number;
+  lon: number;
+  meters: number;
+  /** At how many points of the phones' routes it was heard, in how many scans. */
+  points: number;
+  scans: number;
+  signalPercent: number;
+  first: number;
+  last: number;
+  connected?: boolean;
+}
+
+/** One phone's way, placed by the access points it heard. */
+export interface TownTrack {
+  device: string;
+  points: TownTrackPoint[];
+}
+
+/** Where a scan places its phone; `known` is 0 for a scan without a placed access point, a gap. */
+export interface TownTrackPoint {
+  time: number;
+  known: number;
+  lat?: number;
+  lon?: number;
+  /** How sure the position is, in meters. */
+  meters?: number;
+  /** Where the phone's GPS was, and how far that is from the position by Wi-Fi. */
+  gps?: { lat: number; lon: number; offMeters?: number };
 }
 
 /** A place the phones scanned the Wi-Fi networks at, with all networks heard there. */

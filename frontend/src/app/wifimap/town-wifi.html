@@ -1,0 +1,202 @@
+<p class="detail">{{ i18n.t('townWifi.intro') }}</p>
+@if (answer(); as town) {
+  @if (failed()) {
+    <p class="detail" role="status">{{ i18n.t('townWifi.failed') }}</p>
+  }
+  <div class="overview" [class.stale]="connection.lost() || failed()">
+    <div class="places">
+      <div class="choices views" role="group" [attr.aria-label]="i18n.t('wifiMap.tabTown')">
+        <button
+          type="button"
+          [attr.aria-pressed]="view() === 'networks'"
+          (click)="showView('networks')"
+        >
+          {{ i18n.t('townWifi.networks') }}
+        </button>
+        <button type="button" [attr.aria-pressed]="view() === 'track'" (click)="showView('track')">
+          {{ i18n.t('townWifi.track') }}
+        </button>
+      </div>
+      @if (view() === 'networks') {
+        <ul class="summary">
+          <li>
+            {{
+              i18n.plural(town.accessPoints.length, 'townWifi.placed.one', 'townWifi.placed.other')
+            }}
+          </li>
+          @if (town.moving > 0) {
+            <li>{{ i18n.t('townWifi.moving', { count: town.moving }) }}</li>
+          }
+          @if (town.once > 0) {
+            <li>{{ i18n.t('townWifi.once', { count: town.once }) }}</li>
+          }
+          @if (town.learnedFrom) {
+            <li class="hint">
+              {{
+                i18n.t('townWifi.learned', {
+                  count: (town.learned | number) ?? '',
+                  date: time(town.learnedFrom, 'format.dayMonthYear'),
+                })
+              }}
+            </li>
+          }
+        </ul>
+        @if (town.accessPoints.length > 0) {
+          <ol>
+            @for (f of listed(); track f.ap.id) {
+              <li>
+                <button
+                  type="button"
+                  class="pick"
+                  [attr.aria-pressed]="f.index === selected()"
+                  (click)="pick(f.index)"
+                >
+                  <span class="what">
+                    <span class="label" [class.hidden]="!f.ap.ssid">
+                      {{ f.ap.ssid ?? i18n.t('phoneRoute.hiddenNetwork') }}
+                    </span>
+                    <span class="hint">
+                      {{ i18n.plural(f.ap.points, 'townWifi.points.one', 'townWifi.points.other') }}
+                      @if (f.ap.connected) {
+                        · {{ i18n.t('wifiMap.yours') }}
+                      }
+                    </span>
+                  </span>
+                  <span class="hint scans">{{
+                    i18n.t('townWifi.within', { meters: f.ap.meters })
+                  }}</span>
+                </button>
+              </li>
+            }
+          </ol>
+          @if (foundCount() > LIST_TOWN) {
+            <button type="button" class="link" (click)="showAll.set(!showAll())">
+              {{
+                showAll()
+                  ? i18n.t('phoneWifi.showFewer')
+                  : i18n.t('townWifi.showAll', { count: foundCount() })
+              }}
+            </button>
+          }
+          @if (foundCount() === 0) {
+            <p class="detail">{{ i18n.t('townWifi.nothingFound') }}</p>
+          }
+        } @else {
+          <p class="detail">{{ i18n.t('townWifi.none') }}</p>
+        }
+      } @else {
+        @if (days().length > 0) {
+          <ol>
+            @for (d of listedDays(); track d.key) {
+              <li>
+                <button
+                  type="button"
+                  class="pick"
+                  [attr.aria-pressed]="d.key === day()?.key"
+                  (click)="pickDay(d)"
+                >
+                  <span class="what">
+                    <span class="label">{{ name(d.device) }}</span>
+                    <span class="hint">
+                      {{
+                        i18n.t('townWifi.dayPlaced', {
+                          placed: d.placed,
+                          count: d.points.length,
+                        })
+                      }}
+                    </span>
+                  </span>
+                  <span class="hint scans">{{ time(d.start, 'format.dayMonth') }}</span>
+                </button>
+              </li>
+            }
+          </ol>
+          @if (days().length > LIST_TOWN) {
+            <button type="button" class="link" (click)="showAll.set(!showAll())">
+              {{
+                showAll()
+                  ? i18n.t('phoneWifi.showFewer')
+                  : i18n.t('townWifi.showAllDays', { count: days().length })
+              }}
+            </button>
+          }
+        } @else {
+          <p class="detail">{{ i18n.t('townWifi.noDays') }}</p>
+        }
+      }
+    </div>
+    <app-town-map
+      [map]="viewport"
+      [accessPoints]="view() === 'networks' ? accessPoints() : []"
+      [selected]="selected()"
+      [wifi]="wifiLines()"
+      [gps]="gpsLines()"
+      (pick)="pick($event)"
+    />
+  </div>
+
+  @if (view() === 'networks') {
+    @if (accessPoint(); as ap) {
+      <section class="detail-card">
+        <h3 class="name" [class.hidden]="!ap.ssid">
+          {{ ap.ssid ?? i18n.t('phoneRoute.hiddenNetwork') }}
+          @if (ap.connected) {
+            <span class="tag">{{ i18n.t('wifiMap.yours') }}</span>
+          }
+        </h3>
+        <dl>
+          <div>
+            <dt>{{ i18n.t('townWifi.heardAt') }}</dt>
+            <dd>{{ i18n.t('townWifi.pointsCount', { count: (ap.points | number) ?? '' }) }}</dd>
+          </div>
+          <div>
+            <dt>{{ i18n.t('wifiMap.scans') }}</dt>
+            <dd>{{ ap.scans | number }}</dd>
+          </div>
+          <div>
+            <dt>{{ i18n.t('wifiPositions.bestSignal') }}</dt>
+            <dd>{{ ap.signalPercent | number: '1.0-0' }} %</dd>
+          </div>
+          <div>
+            <dt>{{ i18n.t('townWifi.placedWithin') }}</dt>
+            <dd>{{ i18n.t('townWifi.within', { meters: ap.meters }) }}</dd>
+          </div>
+          <div>
+            <dt>{{ i18n.t('townWifi.firstLast') }}</dt>
+            <dd>
+              {{ time(ap.first, 'format.dayMonth') }} / {{ time(ap.last, 'format.dayMonth') }}
+            </dd>
+          </div>
+        </dl>
+        <p class="hint">{{ i18n.t('townWifi.reachHint') }}</p>
+      </section>
+    }
+  } @else if (day(); as d) {
+    <section class="detail-card">
+      <h3>
+        {{ name(d.device) }} · {{ time(d.start, 'format.dateTime') }} –
+        {{ time(d.end, 'format.time') }}
+      </h3>
+      <ul class="summary">
+        <li>{{ i18n.t('townWifi.placedOf', { placed: d.placed, count: d.points.length }) }}</li>
+        @if (off(); as o) {
+          <li>{{ i18n.t('townWifi.offGps', { middle: o.middle, most: o.most }) }}</li>
+        } @else {
+          <li>{{ i18n.t('townWifi.noGps') }}</li>
+        }
+        @if (d.gaps > 0) {
+          <li>{{ i18n.plural(d.gaps, 'townWifi.gaps.one', 'townWifi.gaps.other') }}</li>
+        }
+      </ul>
+      <p class="legend">
+        <span class="key wifi"></span> {{ i18n.t('townWifi.legendWifi') }}
+        <span class="key gps"></span> {{ i18n.t('townWifi.legendGps') }}
+      </p>
+      <p>{{ i18n.t('townWifi.howText') }}</p>
+    </section>
+  }
+} @else if (failed()) {
+  <p class="detail">{{ i18n.t('townWifi.failed') }}</p>
+} @else {
+  <p class="detail">{{ i18n.t('dashboard.loading') }}</p>
+}

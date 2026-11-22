@@ -141,6 +141,42 @@ func TestServesTheWiFiNetworksOfAllPhonesByPlace(t *testing.T) {
 	}
 }
 
+func (f *fakePositions) TownWiFi(_ context.Context, from, to time.Time) (history.TownWiFi, error) {
+	f.from, f.to = from, to
+	return history.TownWiFi{
+		Learned:      2,
+		AccessPoints: []history.TownAccessPoint{{ID: "a1b2c3d4e5f6", SSID: "Den", Lat: 53.57, Lon: 9.95, Meters: 40, Points: 2, Scans: 2}},
+		Tracks:       []history.TownTrack{{Device: "pixel", Points: []history.TownTrackPoint{{Time: 100, Known: 1, Lat: 53.57, Lon: 9.95, Meters: 40}}}},
+	}, f.err
+}
+
+func TestServesThePhonesPlacedByTheWiFiAroundTown(t *testing.T) {
+	source := &fakePositions{}
+	handler := New(Site{Devices: DeviceList(device(fakeCollector{}, nil)), Files: site, Positions: source, PhoneRetention: 30 * 24 * time.Hour})
+	now := time.Now()
+	rec := get(handler, "/api/wifi/town?from=0&to="+strconv.FormatInt(now.Unix()+3600, 10), "192.168.1.20:5000")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body)
+	}
+	var got townResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Learned != 2 || len(got.AccessPoints) != 1 || got.Tracks[0].Points[0].Known != 1 {
+		t.Errorf("body = %s", rec.Body)
+	}
+	if want := now.Add(-30 * 24 * time.Hour).Unix(); got.From < want-5 || source.from.Unix() != got.From || got.To > now.Unix()+5 {
+		t.Errorf("range = %d to %d, want the retention up to now", got.From, got.To)
+	}
+	if rec := get(handler, "/api/wifi/town?from=x&to=1", "192.168.1.20:5000"); rec.Code != http.StatusBadRequest {
+		t.Errorf("status of a time that is no number = %d, want 400", rec.Code)
+	}
+	source.err = errors.New("disk full")
+	if rec := get(handler, "/api/wifi/town?from=0&to=1", "192.168.1.20:5000"); rec.Code != http.StatusInternalServerError {
+		t.Errorf("status of a failed read = %d, want 500", rec.Code)
+	}
+}
+
 func (f *fakePositions) RenamePositionPlace(_ context.Context, id int64, name string) error {
 	f.changes = append(f.changes, fmt.Sprintf("rename %d %q", id, name))
 	return f.err

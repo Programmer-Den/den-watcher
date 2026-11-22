@@ -37,7 +37,14 @@
       >
         {{ i18n.t('wifiMap.tabNetworks', { count: networks().length }) }}
       </button>
+      <button type="button" [attr.aria-pressed]="tab() === 'town'" (click)="showTab('town')">
+        {{ i18n.t('wifiMap.tabTown') }}
+      </button>
     </div>
+  }
+  @if (tab() === 'town') {
+    <app-town-wifi [seconds]="range().seconds" [search]="search()" />
+  } @else if (places().length > 0) {
     <div class="overview" [class.stale]="connection.lost() || failed()">
       @if (tab() === 'networks') {
         <nav class="places" [attr.aria-label]="i18n.t('wifiMap.networks')">

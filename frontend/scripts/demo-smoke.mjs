@@ -104,9 +104,13 @@ for (const colorScheme of ['dark', 'light']) {
       await click(page, devices.nth(i));
       await page.locator('app-dashboard').first().waitFor();
     }
-    for (const title of ['Compare', 'Wi-Fi map', 'Home']) {
+    for (const title of ['Compare', 'Wi-Fi map']) {
       await click(page, page.locator(`button[title^="${title}"]`).first());
     }
+    for (const tab of ['Networks', 'Town Wi-Fi', 'Track by Wi-Fi']) {
+      await click(page, page.getByRole('button', { name: tab, exact: false }).first());
+    }
+    await click(page, page.locator('button[title^="Home"]').first());
     // Named by the number of active alerts while there are any, as in the demo.
     await click(page, page.locator('app-alerts-button button'));
     await page.getByRole('dialog').waitFor();
