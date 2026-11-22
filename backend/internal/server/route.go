@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Programmer-Den/den-watcher/backend/internal/changelog"
 	"github.com/Programmer-Den/den-watcher/backend/internal/history"
 	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 )
@@ -181,7 +182,9 @@ func (c *deviceChanges) deleteRoute(devices Devices, routes RouteDeleter) http.H
 			return
 		}
 		id := r.PathValue("id")
-		c.change(w, r, request.Password, true, func() (any, error) {
+		// The day deleted is told in the browser's time zone, which the hub does not know.
+		day := strconv.FormatInt(request.From, 10) + "-" + strconv.FormatInt(request.To, 10)
+		c.change(w, r, request.Password, true, changelog.Entry{Action: changelog.ActionDeleteRoute, Device: id, Detail: day}, func() (any, error) {
 			phone := slices.ContainsFunc(devices.List(), func(d Device) bool { return d.ID == id && d.Kind == hub.KindPhone })
 			if !phone {
 				return nil, &hub.InputError{Problem: hub.ProblemNotFound, Message: "there is no phone with this id"}

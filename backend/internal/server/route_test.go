@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Programmer-Den/den-watcher/backend/internal/changelog"
 	"github.com/Programmer-Den/den-watcher/backend/internal/history"
 	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 )
@@ -222,7 +223,8 @@ func (f *fakeRouteDeleter) DeleteRoute(_ context.Context, device string, from, t
 func TestDeletesAStretchOfAPhonesRouteWithThePassword(t *testing.T) {
 	routes := &fakeRouteDeleter{}
 	devices := append(device(fakeCollector{}, nil), Device{ID: "pixel", Kind: hub.KindPhone, Metrics: fakeCollector{}})
-	handler := New(Site{Devices: DeviceList(devices), Hub: &fakeHub{}, Password: &fakePassword{password: "correct horse"}, Files: site, Routes: routes})
+	log := &fakeChangeLog{}
+	handler := New(Site{Devices: DeviceList(devices), Hub: &fakeHub{}, Password: &fakePassword{password: "correct horse"}, Files: site, Routes: routes, Changes: log})
 
 	wrong := send(handler, http.MethodDelete, "/api/phones/pixel/route", `{"password":"wrong","from":86400,"to":172800}`)
 	if wrong.Code != http.StatusForbidden || routes.device != "" {
@@ -239,5 +241,8 @@ func TestDeletesAStretchOfAPhonesRouteWithThePassword(t *testing.T) {
 
 	if rec.Code != http.StatusNoContent || routes.device != "pixel" || routes.from.Unix() != 86400 || routes.to.Unix() != 172800 {
 		t.Errorf("status %d, deleted %q from %v to %v; want the day of pixel deleted", rec.Code, routes.device, routes.from, routes.to)
+	}
+	if latest := log.entries[0]; latest.Action != changelog.ActionDeleteRoute || latest.Device != "pixel" || latest.Detail != "86400-172800" {
+		t.Errorf("the change log's newest change = %+v, want the day of pixel deleted", latest)
 	}
 }

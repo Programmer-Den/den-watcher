@@ -94,6 +94,7 @@ import (
 
 	"github.com/Programmer-Den/den-watcher/backend/internal/addons"
 	"github.com/Programmer-Den/den-watcher/backend/internal/alerts"
+	"github.com/Programmer-Den/den-watcher/backend/internal/changelog"
 	"github.com/Programmer-Den/den-watcher/backend/internal/energy"
 	"github.com/Programmer-Den/den-watcher/backend/internal/events"
 	"github.com/Programmer-Den/den-watcher/backend/internal/history"
@@ -457,6 +458,11 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 		return server.Site{}, nil, err
 	}
 
+	changes, err := changelog.Open(ctx, store.DB(), retention)
+	if err != nil {
+		return server.Site{}, nil, err
+	}
+
 	others, err = hub.New(ctx, store, fixed, complete, historyEntries, retention, phoneRetention, pagePort, sampler.Reusing(reuseFor), watcher.Forget, happenings.Forget)
 	if err != nil {
 		return server.Site{}, nil, err
@@ -499,6 +505,7 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 		EnergyPrice:     energyPrice,
 		Backups:         store,
 		Events:          happenings,
+		Changes:         changes,
 		WiFi:            store,
 		AppUses:         store,
 		WiFiConnections: store,
