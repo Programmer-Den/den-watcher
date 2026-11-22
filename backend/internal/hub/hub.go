@@ -43,6 +43,9 @@ type Hub struct {
 	// retention is how long the history is kept; older minutes of a device
 	// are not fetched.
 	retention time.Duration
+	// phoneRetention is how long where the phones were and the Wi-Fi they
+	// were connected to are kept; 0 keeps them for good.
+	phoneRetention time.Duration
 	// pagePort is the port the hub's page is reachable on, which every
 	// device is told; see PagePortHeader.
 	pagePort string
@@ -115,14 +118,14 @@ type Hub struct {
 // it forgets while it starts. complete says fixed holds every device of the
 // settings; when one of them was left out for an error, it is false and the
 // devices missing from fixed are not forgotten at this start.
-func New(ctx context.Context, store *history.Store, fixed []Device, complete bool, historyEntries int, retention time.Duration, pagePort string, local Usage, forgetters ...Forgetter) (*Hub, error) {
-	return newHub(ctx, store, fixed, complete, historyEntries, retention, pagePort, local, false, forgetters...)
+func New(ctx context.Context, store *history.Store, fixed []Device, complete bool, historyEntries int, retention, phoneRetention time.Duration, pagePort string, local Usage, forgetters ...Forgetter) (*Hub, error) {
+	return newHub(ctx, store, fixed, complete, historyEntries, retention, phoneRetention, pagePort, local, false, forgetters...)
 }
 
 // newHub is New, with allowLoopback set before any device is collected from,
 // for tests.
-func newHub(ctx context.Context, store *history.Store, fixed []Device, complete bool, historyEntries int, retention time.Duration, pagePort string, local Usage, allowLoopback bool, forgetters ...Forgetter) (*Hub, error) {
-	h := &Hub{store: store, historyEntries: historyEntries, retention: retention, pagePort: pagePort, suggester: defaultSuggester(), ctx: ctx, local: local, allowLoopback: allowLoopback, forgetters: forgetters}
+func newHub(ctx context.Context, store *history.Store, fixed []Device, complete bool, historyEntries int, retention, phoneRetention time.Duration, pagePort string, local Usage, allowLoopback bool, forgetters ...Forgetter) (*Hub, error) {
+	h := &Hub{store: store, historyEntries: historyEntries, retention: retention, phoneRetention: phoneRetention, pagePort: pagePort, suggester: defaultSuggester(), ctx: ctx, local: local, allowLoopback: allowLoopback, forgetters: forgetters}
 	for _, schema := range []string{savedSchema, availabilitySchema, kindSchema, idSchema, pairingSchema, meshSchema, phoneKeySchema} {
 		if _, err := store.DB().ExecContext(ctx, schema); err != nil {
 			return nil, err
@@ -457,7 +460,7 @@ func (h *Hub) start(device Device, fixed bool, own []netip.Addr) {
 	var pushed *phone
 	switch {
 	case kind == KindPhone && device.Address == "":
-		pushed = &phone{minutes: &fetcher{store: h.store, device: device.ID, maxEntries: h.historyEntries, retention: h.retention}}
+		pushed = &phone{minutes: &fetcher{store: h.store, device: device.ID, maxEntries: h.historyEntries, retention: h.retention}, retention: h.phoneRetention}
 		device.Phone, device.Source = true, pushed
 	case kind == KindPhone:
 		// Kept from a phone removed with its history, whose name a device

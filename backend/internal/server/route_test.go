@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Programmer-Den/den-watcher/backend/internal/changelog"
 	"github.com/Programmer-Den/den-watcher/backend/internal/history"
 	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 )
@@ -30,7 +31,7 @@ func (f *fakeRoute) RoutePoints(_ context.Context, device string, from, to time.
 func TestServesAPhonesRouteWithinTheRetention(t *testing.T) {
 	source := &fakeRoute{}
 	devices := append(device(fakeCollector{}, nil), Device{ID: "pixel", Kind: hub.KindPhone, Metrics: fakeCollector{}})
-	handler := New(Site{Devices: DeviceList(devices), Files: site, Route: source, Retention: 7 * 24 * time.Hour})
+	handler := New(Site{Devices: DeviceList(devices), Files: site, Route: source, Retention: time.Hour, PhoneRetention: 7 * 24 * time.Hour})
 	now := time.Now()
 	rec := get(handler, "/api/phone/route?device=pixel&from=0&to="+strconv.FormatInt(now.Unix(), 10), "192.168.1.20:5000")
 	if rec.Code != http.StatusOK {
@@ -44,7 +45,7 @@ func TestServesAPhonesRouteWithinTheRetention(t *testing.T) {
 		t.Errorf("device %q, body = %+v", source.device, got)
 	}
 	if want := now.Add(-7 * 24 * time.Hour).Unix(); got.From < want-5 || source.from.Unix() != got.From {
-		t.Errorf("from = %d, want it moved to the start of the retention, %d", got.From, want)
+		t.Errorf("from = %d, want it moved to the start of the phones' retention, %d", got.From, want)
 	}
 
 	if rec := get(handler, "/api/phone/route?device=local&from=0&to=10", "192.168.1.20:5000"); rec.Code != http.StatusNotFound {
@@ -113,7 +114,7 @@ func (f *fakePositions) WiFiPositions(_ context.Context, from, to time.Time) ([]
 
 func TestServesTheWiFiNetworksOfAllPhonesByPlace(t *testing.T) {
 	source := &fakePositions{}
-	handler := New(Site{Devices: DeviceList(device(fakeCollector{}, nil)), Files: site, Positions: source, Retention: 30 * 24 * time.Hour})
+	handler := New(Site{Devices: DeviceList(device(fakeCollector{}, nil)), Files: site, Positions: source, PhoneRetention: 30 * 24 * time.Hour})
 	now := time.Now()
 	rec := get(handler, "/api/wifi/positions?from=0&to="+strconv.FormatInt(now.Unix()+3600, 10), "192.168.1.20:5000")
 	if rec.Code != http.StatusOK {
@@ -193,5 +194,55 @@ func TestChangesThePlacesOfThePhonesScans(t *testing.T) {
 		if rec := send(handler, http.MethodPut, "/api/wifi/positions/3/name", `{"name":"Home"}`); rec.Code != status {
 			t.Errorf("status for %v = %d, want %d", err, rec.Code, status)
 		}
+	}
+}
+
+func TestServesAPhonesWholeRouteWithoutARetentionOfItsOwn(t *testing.T) {
+	source := &fakeRoute{}
+	devices := append(device(fakeCollector{}, nil), Device{ID: "pixel", Kind: hub.KindPhone, Metrics: fakeCollector{}})
+	handler := New(Site{Devices: DeviceList(devices), Files: site, Route: source, Retention: time.Hour})
+
+	rec := get(handler, "/api/phone/route?device=pixel&from=1000&to=2000", "192.168.1.20:5000")
+
+	if rec.Code != http.StatusOK || source.from.Unix() != 1000 || source.to.Unix() != 2000 {
+		t.Errorf("status %d, read %v to %v; want the range asked for, kept for good", rec.Code, source.from, source.to)
+	}
+}
+
+// fakeRouteDeleter keeps what it was asked to delete.
+type fakeRouteDeleter struct {
+	device   string
+	from, to time.Time
+}
+
+func (f *fakeRouteDeleter) DeleteRoute(_ context.Context, device string, from, to time.Time) (int64, error) {
+	f.device, f.from, f.to = device, from, to
+	return 3, nil
+}
+
+func TestDeletesAStretchOfAPhonesRouteWithThePassword(t *testing.T) {
+	routes := &fakeRouteDeleter{}
+	devices := append(device(fakeCollector{}, nil), Device{ID: "pixel", Kind: hub.KindPhone, Metrics: fakeCollector{}})
+	log := &fakeChangeLog{}
+	handler := New(Site{Devices: DeviceList(devices), Hub: &fakeHub{}, Password: &fakePassword{password: "correct horse"}, Files: site, Routes: routes, Changes: log})
+
+	wrong := send(handler, http.MethodDelete, "/api/phones/pixel/route", `{"password":"wrong","from":86400,"to":172800}`)
+	if wrong.Code != http.StatusForbidden || routes.device != "" {
+		t.Fatalf("with a wrong password: status %d, deleted %q; want 403 and nothing deleted", wrong.Code, routes.device)
+	}
+	if rec := send(handler, http.MethodDelete, "/api/phones/local/route", `{"password":"correct horse","from":86400,"to":172800}`); rec.Code != http.StatusNotFound {
+		t.Errorf("status for a device that is no phone = %d, want 404", rec.Code)
+	}
+	if rec := send(handler, http.MethodDelete, "/api/phones/pixel/route", `{"password":"correct horse","from":5,"to":5}`); rec.Code != http.StatusBadRequest {
+		t.Errorf("status of an empty stretch = %d, want 400", rec.Code)
+	}
+
+	rec := send(handler, http.MethodDelete, "/api/phones/pixel/route", `{"password":"correct horse","from":86400,"to":172800}`)
+
+	if rec.Code != http.StatusNoContent || routes.device != "pixel" || routes.from.Unix() != 86400 || routes.to.Unix() != 172800 {
+		t.Errorf("status %d, deleted %q from %v to %v; want the day of pixel deleted", rec.Code, routes.device, routes.from, routes.to)
+	}
+	if latest := log.entries[0]; latest.Action != changelog.ActionDeleteRoute || latest.Device != "pixel" || latest.Detail != "86400-172800" {
+		t.Errorf("the change log's newest change = %+v, want the day of pixel deleted", latest)
 	}
 }

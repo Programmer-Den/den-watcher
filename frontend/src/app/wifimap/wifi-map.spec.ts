@@ -226,6 +226,39 @@ describe('the Wi-Fi map', () => {
     expect(element.querySelectorAll('g.place circle.heard').length).toBe(0);
   });
 
+  it('opens the networks tab zoomed to the first network, and follows the search', () => {
+    const heard = answer();
+    heard.places[1].networks.push({
+      ssid: 'Cafe',
+      signalPercent: 60,
+      last: 1800,
+      devices: [{ device: 'pixel', signalPercent: 60, last: 1800, scans: 3 }],
+    });
+    reply(heard);
+    button('Networks').click();
+    fixture.detectChanges();
+    // Den was heard at one of the two places, which the map zooms in on.
+    expect(element.querySelector('app-network-detail h3')?.textContent?.trim()).toBe('Den');
+    expect(element.querySelector<HTMLButtonElement>('button.whole')?.disabled).toBe(false);
+
+    // With nothing picked, the detail shows the first network the search finds.
+    search('cafe');
+    expect(element.querySelector('app-network-detail h3')?.textContent?.trim()).toBe('Cafe');
+  });
+
+  it('says when the phones heard no network at all, not that the search found none', () => {
+    const quiet = answer();
+    for (const p of quiet.places) {
+      p.networks = [];
+    }
+    reply(quiet);
+    button('Networks 0').click();
+    fixture.detectChanges();
+    const text = element.querySelector('.places')?.textContent ?? '';
+    expect(text).toContain('The phones heard no network at these places.');
+    expect(text).not.toContain('No network has this name');
+  });
+
   it('lists the named places first, by their names', () => {
     const named = answer();
     named.places.unshift(place(53.5, 2, { name: 'Café Nord' }));

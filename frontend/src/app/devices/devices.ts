@@ -328,6 +328,16 @@ export class DeviceService {
     return this.http.post<void>(`/api/phones/${encodeURIComponent(id)}/release`, { password });
   }
 
+  /**
+   * Deletes where a phone was from `from` up to `to`, in Unix seconds, and the scans of the Wi-Fi
+   * networks it made then.
+   */
+  deleteRoute(id: string, from: number, to: number, password: string): Observable<void> {
+    return this.http.delete<void>(`/api/phones/${encodeURIComponent(id)}/route`, {
+      body: { password, from, to },
+    });
+  }
+
   /** Changes the pairing code the hub sends a device, one from the hub's .env file too. */
   setCode(id: string, code: string, password: string): Observable<void> {
     return this.http.put<void>(`/api/devices/${encodeURIComponent(id)}/pairing`, {

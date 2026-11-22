@@ -304,18 +304,34 @@ h4 {
   }
 }
 
-[data-level='great'] {
-  --level: light-dark(#1b7f3b, #2ea05a);
+/* Deleting a day of the route, below the rest of the card. */
+.delete-day {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--mat-sys-outline-variant);
 }
-[data-level='good'] {
-  --level: light-dark(#4f8f2a, #5d9e3a);
+
+.delete-day label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
-[data-level='fair'] {
-  --level: light-dark(#a07a00, #b8901a);
+
+.delete-day input {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  padding: 0.125rem 0.375rem;
+  color-scheme: light dark;
 }
-[data-level='weak'] {
-  --level: light-dark(#c4561c, #c8642c);
-}
-[data-level='poor'] {
-  --level: light-dark(#b3261e, #b9443c);
+
+.delete-day p {
+  flex-basis: 100%;
+  margin: 0;
 }

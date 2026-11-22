@@ -23,6 +23,11 @@ export interface ChartLine {
    * keeps its color in every chart, also where a line before it is left out.
    */
   place?: number;
+  /**
+   * The same line a week before, at times moved on by a week so they line up with `points`; drawn
+   * faint behind it.
+   */
+  weekBefore?: Point[];
 }
 
 /** What a chart draws, as the history and the comparison make it. */
@@ -97,13 +102,18 @@ export class LineChart {
 
   protected readonly top = computed(() => chartTop(this.lines(), this.unit(), this.chart().max));
 
-  protected readonly canvasLines = computed(() =>
-    this.lines().map((line, index): CanvasLine => {
+  /** Whether any line shows itself a week before. */
+  protected readonly withWeekBefore = computed(() =>
+    this.lines().some((line) => (line.weekBefore?.length ?? 0) > 0),
+  );
+
+  protected readonly canvasLines = computed(() => {
+    const draw = (line: ChartLine, index: number, points: Point[], faint: boolean): CanvasLine => {
       const place = line.place ?? index;
       return {
         // A chart zoomed into a stretch draws only the points within it.
         segments: lineSegments(
-          line.points.filter((p) => p.time >= this.from() && p.time < this.to()),
+          points.filter((p) => p.time >= this.from() && p.time < this.to()),
           this.from(),
           this.to(),
           this.step(),
@@ -111,9 +121,17 @@ export class LineChart {
         ),
         series: place % COLORS,
         dashed: place >= COLORS,
+        faint,
       };
-    }),
-  );
+    };
+    // The week before goes first, so the lines of now are drawn over it.
+    return [
+      ...this.lines().flatMap((line, index) =>
+        line.weekBefore?.length ? [draw(line, index, line.weekBefore, true)] : [],
+      ),
+      ...this.lines().map((line, index) => draw(line, index, line.points, false)),
+    ];
+  });
 
   /** Whether the chart's dates need their year, so dates a year apart are told apart. */
   private readonly withYear = computed(() => needsYear(this.from(), this.to()));
@@ -185,6 +203,9 @@ export class LineChart {
       own: !this.shared() || this.pointer.source() === this,
       left: stepCenter(time, this.from(), this.to(), this.step()),
       values: this.lines().map((line) => line.points.find((p) => p.time === time)?.value ?? null),
+      weekBefore: this.lines().map(
+        (line) => line.weekBefore?.find((p) => p.time === time)?.value ?? null,
+      ),
       events: markersIn(
         this.markers(),
         time,
@@ -321,7 +342,11 @@ export function chartTop(lines: ChartLine[], unit: ChartUnit, max?: number): num
   if (max !== undefined) {
     return max;
   }
-  const highest = Math.max(0, ...lines.flatMap((line) => line.points.map((p) => p.value)));
+  // The week before fits too, so its faint line is not cut off at the top.
+  const highest = Math.max(
+    0,
+    ...lines.flatMap((line) => [...line.points, ...(line.weekBefore ?? [])].map((p) => p.value)),
+  );
   return niceCeiling(highest, unit);
 }
 

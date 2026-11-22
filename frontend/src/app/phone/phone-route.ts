@@ -1,11 +1,13 @@
 import { DecimalPipe, formatDate, formatNumber } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, Injector, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { catchError, of, switchMap } from 'rxjs';
+import { catchError, filter, of, switchMap } from 'rxjs';
 
 import { channelText, securityText, signalLevel } from '../compare/wifi';
 import { HubConnection } from '../connection/connection';
-import { DeviceService } from '../devices/devices';
+import { DeviceService, deviceName, problemMessage } from '../devices/devices';
+import type { PasswordDialogData } from '../devices/password-dialog';
+import { MissingParts } from '../update/missing-part';
 import { HistoryStore } from '../history/history-store';
 import { I18n } from '../i18n/i18n';
 import { formatDuration } from '../metrics/format';
@@ -192,8 +194,20 @@ export class PhoneRouteCard {
   private readonly devices = inject(DeviceService);
   private readonly store = inject(HistoryStore);
   private readonly page = inject(PageVisibility);
+  private readonly injector = inject(Injector);
+  private readonly parts = inject(MissingParts);
 
   protected readonly route = signal<PhoneRoute | null>(null);
+
+  /** The day picked to delete the route of, as YYYY-MM-DD in the browser's time zone. */
+  protected readonly deleteDay = signal(localDay(Date.now()));
+  /** The latest day that can be picked: today. */
+  protected readonly today = localDay(Date.now());
+  /** What deleting a day of the route said: the day deleted, a problem, or nothing yet. */
+  protected readonly deleted = signal<{ day: string } | { problem: string } | null>(null);
+  protected readonly deleting = signal(false);
+  /** Counts the deletions, so the route is read again after one. */
+  private readonly reload = signal(0);
 
   /** The map, which opens on the whole route and keeps the user's zoom as the route moves on. */
   protected readonly viewport = new MapViewport(MAP_WIDTH, MAP_HEIGHT, MAP_PADDING);
@@ -285,13 +299,58 @@ export class PhoneRouteCard {
     this.selectedTime.set(points.at(-1)?.time ?? null);
   }
 
+  /**
+   * Asks for the password and deletes the route of the picked day, from its midnight to the next in
+   * the browser's time zone, with the phone's scans of the Wi-Fi networks then.
+   */
+  protected async deleteRoute(): Promise<void> {
+    const day = this.deleteDay();
+    const start = dayStart(day);
+    const device = this.devices.devices().find((d) => d.id === this.devices.selectedId());
+    if (start === null || !device || this.deleting()) {
+      return;
+    }
+    const end = dayStart(nextDay(day))!;
+    const data: PasswordDialogData = {
+      action: 'deleteRoute',
+      deviceName: deviceName(device, this.i18n),
+      day: formatDate(start * 1000, 'fullDate', this.i18n.language()),
+      passwordSet: this.devices.passwordSet(),
+    };
+    this.deleted.set(null);
+    const { askPassword } = await this.parts.load(() => import('./ask-password'));
+    askPassword(this.injector, data)
+      .pipe(
+        filter((result) => result !== undefined),
+        switchMap((result) => {
+          this.deleting.set(true);
+          return this.devices.deleteRoute(device.id, start, end, result.password);
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.deleting.set(false);
+          this.deleted.set({ day: data.day ?? day });
+          this.reload.update((n) => n + 1);
+        },
+        error: (error: unknown) => {
+          this.deleting.set(false);
+          this.deleted.set({ problem: problemMessage(error, this.i18n) });
+        },
+      });
+  }
+
   protected tileFailed(href: string): void {
     this.failedTiles.update((failed) => new Set([...failed, href]));
   }
 
   constructor() {
     // The id, not the device: the list is read every few seconds, which would read the card again.
-    const asked = computed(() => ({ device: this.devices.selectedId(), span: this.store.span() }));
+    const asked = computed(() => ({
+      device: this.devices.selectedId(),
+      span: this.store.span(),
+      reload: this.reload(),
+    }));
     toObservable(asked)
       .pipe(
         switchMap(({ device, span }) => {
@@ -336,4 +395,27 @@ export class PhoneRouteCard {
       )
       .subscribe((answer) => this.scan.set(answer));
   }
+}
+
+/** The day of a time in milliseconds, as YYYY-MM-DD in the browser's time zone. */
+export function localDay(ms: number): string {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** The start of a day written as YYYY-MM-DD in the browser's time zone, in Unix seconds; null for no day. */
+export function dayStart(day: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!match) {
+    return null;
+  }
+  const start = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(start.getTime()) ? null : Math.floor(start.getTime() / 1000);
+}
+
+/** The day after a day written as YYYY-MM-DD, written the same way. */
+export function nextDay(day: string): string {
+  const [y, m, d] = day.split('-').map(Number);
+  return localDay(new Date(y, m - 1, d + 1).getTime());
 }

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Programmer-Den/den-watcher/backend/internal/changelog"
 	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 	"github.com/Programmer-Den/den-watcher/backend/internal/password"
 )
@@ -55,6 +56,14 @@ type Password interface {
 	Set(ctx context.Context, password string) error
 }
 
+// ChangeLog keeps the changes made with the password, and the tries with a
+// wrong one.
+type ChangeLog interface {
+	Add(ctx context.Context, now time.Time, e changelog.Entry)
+	// Latest returns the newest changes, the newest first.
+	Latest(ctx context.Context) ([]changelog.Entry, error)
+}
+
 // Problems with the password, next to the hub.Problem values.
 const (
 	problemPasswordLength = "passwordLength"
@@ -76,6 +85,8 @@ type deviceChanges struct {
 	password Password
 	// backups makes the copies of the database; nil when there is none.
 	backups Backups
+	// log keeps the changes; nil keeps none.
+	log ChangeLog
 
 	// mu makes changes happen one at a time, so two first changes cannot
 	// both choose the password. The password is checked before, so the wait
@@ -134,7 +145,7 @@ func (c *deviceChanges) add(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &request) {
 		return
 	}
-	c.change(w, r, request.Password, true, func() (any, error) {
+	c.change(w, r, request.Password, true, changelog.Entry{Action: changelog.ActionAdd, Detail: request.Name}, func() (any, error) {
 		kind, err := hub.ParseKind(request.Kind)
 		if err != nil {
 			return nil, err
@@ -150,7 +161,7 @@ func (c *deviceChanges) addPhone(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &request) {
 		return
 	}
-	c.change(w, r, request.Password, true, func() (any, error) {
+	c.change(w, r, request.Password, true, changelog.Entry{Action: changelog.ActionAddPhone, Detail: request.Name}, func() (any, error) {
 		device, err := c.hub.AddPhone(r.Context(), request.Name, request.Code)
 		return Device{ID: device.ID, Name: device.Name, Kind: hub.KindPhone, Removable: true}, err
 	})
@@ -162,7 +173,7 @@ func (c *deviceChanges) setKind(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &request) {
 		return
 	}
-	c.change(w, r, request.Password, true, func() (any, error) {
+	c.change(w, r, request.Password, true, changelog.Entry{Action: changelog.ActionKind, Device: r.PathValue("id"), Detail: request.Kind}, func() (any, error) {
 		kind, err := hub.ParseKind(request.Kind)
 		if err != nil {
 			return nil, err
@@ -178,7 +189,7 @@ func (c *deviceChanges) rename(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &request) {
 		return
 	}
-	c.change(w, r, request.Password, true, func() (any, error) {
+	c.change(w, r, request.Password, true, changelog.Entry{Action: changelog.ActionRename, Device: r.PathValue("id"), Detail: request.Name}, func() (any, error) {
 		return nil, c.hub.Rename(r.Context(), r.PathValue("id"), request.Name)
 	})
 }
@@ -190,7 +201,7 @@ func (c *deviceChanges) setCode(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &request) {
 		return
 	}
-	c.change(w, r, request.Password, true, func() (any, error) {
+	c.change(w, r, request.Password, true, changelog.Entry{Action: changelog.ActionPairing, Device: r.PathValue("id")}, func() (any, error) {
 		return nil, c.hub.SetCode(r.Context(), r.PathValue("id"), request.Code)
 	})
 }
@@ -202,7 +213,7 @@ func (c *deviceChanges) releasePhone(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &request) {
 		return
 	}
-	c.change(w, r, request.Password, true, func() (any, error) {
+	c.change(w, r, request.Password, true, changelog.Entry{Action: changelog.ActionRelease, Device: r.PathValue("id")}, func() (any, error) {
 		_, err := c.hub.ReleasePhone(r.PathValue("id"))
 		return nil, err
 	})
@@ -214,9 +225,34 @@ func (c *deviceChanges) remove(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &request) {
 		return
 	}
-	c.change(w, r, request.Password, true, func() (any, error) {
+	c.change(w, r, request.Password, true, removeEntry(r.PathValue("id"), request.KeepHistory), func() (any, error) {
 		return nil, c.hub.Remove(r.Context(), r.PathValue("id"), request.KeepHistory)
 	})
+}
+
+// removeEntry is the entry of the change log for removing a device, which
+// tells whether its history was kept.
+func removeEntry(id string, keepHistory bool) changelog.Entry {
+	e := changelog.Entry{Action: changelog.ActionRemove, Device: id}
+	if keepHistory {
+		e.Detail = "keepHistory"
+	}
+	return e
+}
+
+// latest serves GET /api/changes: the newest changes made with the
+// password, and the tries with a wrong one, the newest first.
+func (c *deviceChanges) latest(w http.ResponseWriter, r *http.Request) {
+	entries, err := c.log.Latest(r.Context())
+	if err != nil {
+		slog.Error("read the change log", "error", err)
+		http.Error(w, "could not read the change log", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, struct {
+		Changes []changelog.Entry `json:"changes"`
+	}{entries})
 }
 
 // suggest serves GET /api/devices/suggestion: the device the page is opened
@@ -234,14 +270,22 @@ func (c *deviceChanges) suggest(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, suggestion)
 }
 
-// change makes a change once the password is right. Without a password yet,
+// change makes a change once the password is right, and keeps it in the
+// change log as entry, from the sender's address. Without a password yet,
 // the change chooses it, but only when the change works. A change that is
 // not exclusive, as a backup, which can take minutes, does not hold up the
-// other changes once the password is chosen.
-func (c *deviceChanges) change(w http.ResponseWriter, r *http.Request, given string, exclusive bool, makeChange func() (any, error)) {
+// other changes once the password is chosen. A wrong password is kept in the
+// change log too.
+func (c *deviceChanges) change(w http.ResponseWriter, r *http.Request, given string, exclusive bool, entry changelog.Entry, makeChange func() (any, error)) {
 	// localNetworkOnly has already read the sender's address.
 	sender, _ := netip.ParseAddrPort(r.RemoteAddr)
 	from := sender.Addr()
+	entry.Address = from.Unmap().String()
+	keep := func(e changelog.Entry) {
+		if c.log != nil {
+			c.log.Add(r.Context(), time.Now(), e)
+		}
+	}
 	err := c.password.Check(r.Context(), from, given)
 	c.mu.Lock()
 	locked := true
@@ -259,6 +303,9 @@ func (c *deviceChanges) change(w http.ResponseWriter, r *http.Request, given str
 		err = password.CheckNew(given)
 	}
 	if err != nil {
+		if errors.Is(err, password.ErrWrong) {
+			keep(changelog.Entry{Address: entry.Address, Action: changelog.ActionWrongPassword, Device: entry.Device})
+		}
 		writeProblem(w, err)
 		return
 	}
@@ -278,7 +325,9 @@ func (c *deviceChanges) change(w http.ResponseWriter, r *http.Request, given str
 			return
 		}
 		slog.Info("the password for changing devices has been chosen")
+		keep(changelog.Entry{Address: entry.Address, Action: changelog.ActionPassword})
 	}
+	keep(entry)
 	if d, ok := result.(download); ok {
 		// A download may take long; other changes need not wait for it.
 		if locked {

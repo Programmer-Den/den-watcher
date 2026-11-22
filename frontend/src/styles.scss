@@ -374,3 +374,22 @@ progress::-moz-progress-bar {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+// How good a Wi-Fi signal is, from green to red, in tones that read on the page's background in
+// light and dark mode; an element with data-level draws itself in var(--level). The Wi-Fi map's
+// places keep tones of their own, as its tiles look the same in both modes.
+[data-level='great'] {
+  --level: light-dark(#1b7f3b, #2ea05a);
+}
+[data-level='good'] {
+  --level: light-dark(#4f8f2a, #5d9e3a);
+}
+[data-level='fair'] {
+  --level: light-dark(#a07a00, #b8901a);
+}
+[data-level='weak'] {
+  --level: light-dark(#c4561c, #c8642c);
+}
+[data-level='poor'] {
+  --level: light-dark(#b3261e, #b9443c);
+}

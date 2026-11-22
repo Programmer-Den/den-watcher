@@ -9,6 +9,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/Programmer-Den/den-watcher/backend/internal/changelog"
 )
 
 // Backups makes copies of the database for POST /api/backup.
@@ -60,7 +62,7 @@ func (c *deviceChanges) backup(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
-	c.change(w, r, request.Password, false, func() (any, error) {
+	c.change(w, r, request.Password, false, changelog.Entry{Action: changelog.ActionBackup}, func() (any, error) {
 		c.backingUp.Lock()
 		defer c.backingUp.Unlock()
 		path, err := c.backups.Backup(r.Context())

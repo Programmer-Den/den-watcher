@@ -17,6 +17,9 @@ const PruneInterval = 24 * time.Hour
 type Pruner struct {
 	Store     *Store
 	Retention time.Duration
+	// PhoneRetention is how long where the phones were and their Wi-Fi are
+	// kept; zero keeps them for good.
+	PhoneRetention time.Duration
 }
 
 // Run prunes until ctx is cancelled. Failures are logged and the next prune
@@ -44,5 +47,16 @@ func (p *Pruner) prune(ctx context.Context) {
 	}
 	if deleted > 0 {
 		slog.Info("deleted old history", "minutes", deleted)
+	}
+	if p.PhoneRetention <= 0 {
+		return
+	}
+	deleted, err = p.Store.DeletePhoneDataBefore(ctx, time.Now().Add(-p.PhoneRetention))
+	if err != nil {
+		slog.Error("delete old routes and Wi-Fi of the phones", "error", err)
+		return
+	}
+	if deleted > 0 {
+		slog.Info("deleted old routes and Wi-Fi of the phones", "rows", deleted)
 	}
 }

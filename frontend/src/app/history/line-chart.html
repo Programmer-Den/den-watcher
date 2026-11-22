@@ -1,9 +1,16 @@
 <ng-template #formatted let-value>{{ format(value) }}</ng-template>
 
-@if (lines().length > 1) {
+@if (lines().length > 1 || withWeekBefore()) {
   <ul class="legend">
-    @for (line of lines(); track $index; let i = $index) {
-      <li><span class="swatch" [class]="seriesClass(line, i)"></span>{{ line.label }}</li>
+    @if (lines().length > 1) {
+      @for (line of lines(); track $index; let i = $index) {
+        <li><span class="swatch" [class]="seriesClass(line, i)"></span>{{ line.label }}</li>
+      }
+    }
+    @if (withWeekBefore()) {
+      <li class="week-before">
+        <span class="swatch faint"></span>{{ i18n.t('history.weekBeforeLegend') }}
+      </li>
     }
   </ul>
 }
@@ -60,6 +67,11 @@
               </strong>
               @if (lines().length > 1) {
                 <span class="label">{{ line.label }}</span>
+              }
+              @if (r.weekBefore[i] !== null) {
+                <span class="label before">{{
+                  i18n.t('history.weekBeforeValue', { value: format(r.weekBefore[i]!) })
+                }}</span>
               }
             </p>
           }

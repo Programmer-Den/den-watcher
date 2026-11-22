@@ -60,6 +60,9 @@ services:
       DISK_PATHS: ${DISK_PATHS:-/}
       # Days of history to keep; older values are deleted automatically.
       RETENTION_DAYS: ${RETENTION_DAYS:-30}
+      # Days to keep where the phones were and their Wi-Fi; empty keeps them
+      # for good.
+      PHONE_RETENTION_DAYS: ${PHONE_RETENTION_DAYS:-}
       # How many disks, sensors, network cards and GPUs each the history keeps
       # per device (default 64).
       HISTORY_MAX_ENTRIES: ${HISTORY_MAX_ENTRIES:-}

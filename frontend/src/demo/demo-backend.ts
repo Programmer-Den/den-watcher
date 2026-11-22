@@ -20,6 +20,7 @@ import { EMPTY_LAYOUT } from '../app/dashboard/page-layout';
 import { History, Series } from '../app/metrics/metrics';
 import { DEMO_BUILD, demoVersion } from './demo-build';
 import { alertLog, fleetAlerts } from './alerts';
+import { demoChanges } from './changes';
 import { demoEvents } from './events';
 import { demoHealth } from './health';
 import { DEMO_GROUPS, DemoMachine, FLEET, extraInfoOf, offlineSince, snapshotOf } from './fleet';
@@ -110,6 +111,9 @@ export class DemoBackend implements HttpBackend {
           ]),
         ),
       );
+    }
+    if (request.method === 'GET' && url.pathname === '/api/changes') {
+      return respond(request, { changes: demoChanges(now) });
     }
     if (request.method === 'GET' && url.pathname === '/api/devices/health') {
       return respond(request, demoHealth(this.version));
