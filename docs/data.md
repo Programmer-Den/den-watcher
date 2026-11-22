@@ -46,6 +46,8 @@ When the network counters cannot be read, as when Windows loses an adapter durin
 | `extras` | values beyond the fields above, which the device describes itself; see [Extras](#extras) |
 | `system` | what the machine is, read once at start: `os` (name and version), `kernel`, `architecture`, `cpu` (model), `maker` and `model` of the board or PC; each left out where unknown, and the whole field by devices from before it was reported. Never serial numbers or network card addresses |
 | `responseMilliseconds` | set by a hub on the snapshots it serves of the other devices: how long the device took to answer its last `GET /api/metrics`; a device leaves it out of its own, and the hub replaces whatever a device sends |
+| `addOnsStopped` | the [add-ons](setup.md#add-ons) whose report was left behind in the add-on folder, too old to use (30 seconds) or unreadable, by name, such as `power`: an add-on removes its report when it ends, so one left behind stopped unexpectedly or hangs. Left out when there is none; a hub keeps at most 32 names of a device, each cut to 80 characters |
+| `clockOffsetSeconds` | set by a hub on the snapshots it serves of the other devices, like `responseMilliseconds`: how many seconds the device's clock is ahead of the hub's, behind when negative, measured from the time the device sends and when its answer arrived, so it includes the time the answer took and a reading the device kept for up to 2 seconds |
 
 Sensors and GPUs that share a name are numbered (`coretemp 1`, `coretemp 2`), so every name stands for one sensor in the history.
 

@@ -156,6 +156,12 @@ func (c *Checker) check(ctx context.Context) error {
 	return nil
 }
 
+// Newer reports whether version a is newer than b, when both are releases;
+// a build of main or a version that is no release is never newer or older.
+func Newer(a, b string) bool {
+	return release.MatchString(a) && release.MatchString(b) && newer(a, b)
+}
+
 // newer reports whether version a is newer than b; both are releases.
 func newer(a, b string) bool {
 	pa, pb := parts(a), parts(b)

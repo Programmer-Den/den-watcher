@@ -21,6 +21,7 @@ import { History, Series } from '../app/metrics/metrics';
 import { DEMO_BUILD, demoVersion } from './demo-build';
 import { alertLog, fleetAlerts } from './alerts';
 import { demoEvents } from './events';
+import { demoHealth } from './health';
 import { DEMO_GROUPS, DemoMachine, FLEET, extraInfoOf, offlineSince, snapshotOf } from './fleet';
 import { DEMO_PHONE, demoPhoneUsage } from './phone-usage';
 import { demoPhoneRoute } from './phone-route';
@@ -109,6 +110,9 @@ export class DemoBackend implements HttpBackend {
           ]),
         ),
       );
+    }
+    if (request.method === 'GET' && url.pathname === '/api/devices/health') {
+      return respond(request, demoHealth(this.version));
     }
     if (request.method === 'GET' && url.pathname === '/api/wifi') {
       const to = Math.min(Number(url.searchParams.get('to')), Math.floor(now) + 1);

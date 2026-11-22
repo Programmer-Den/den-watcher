@@ -64,6 +64,8 @@ describe('DevicesDialog', () => {
       .match('/api/status-page')
       .filter((r) => !r.cancelled)
       .forEach((r) => r.flush({ enabled: false, passwordSet: false }));
+    // Tests that do not look at what needs a look leave it unanswered.
+    http.match('/api/devices/health');
     // The energy price has a form of its own, which its own tests cover.
     http.match('/api/energy-price');
     // The marks of the charts are read alongside the history; these tests leave them unanswered.
@@ -96,6 +98,41 @@ describe('DevicesDialog', () => {
     const buttons = Array.from(element().querySelectorAll('form .kind button'));
     return buttons.find((b) => b.textContent?.trim() === label) as HTMLButtonElement;
   }
+
+  it('lists what needs a look in how the devices are set up', async () => {
+    http.expectOne('/api/devices/health').flush({
+      version: '3.10.2',
+      problems: [
+        { device: 'local', kind: 'addOn', detail: 'power' },
+        { device: 'pi', kind: 'version', detail: '3.9.1' },
+        { device: 'pi', kind: 'clock', seconds: -312 },
+        { device: 'office-pc', kind: 'clock', seconds: 90 },
+        { device: 'office-pc', kind: 'pairing', detail: 'wrong' },
+      ],
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const items = Array.from(element().querySelectorAll('.health li')).map((li) =>
+      li.textContent?.replace(/\s+/g, ' ').trim(),
+    );
+    expect(element().querySelector('.health h3')?.textContent).toContain('Needs a look');
+    expect(items).toEqual([
+      'Host Hub: the power add-on stopped',
+      "Pi: runs version 3.9.1, older than the hub's 3.10.2",
+      "Pi: its clock is 5 min behind the hub's",
+      "Office PC: its clock is 1 min ahead of the hub's",
+      'Office PC: has a pairing code that is not its own',
+    ]);
+  });
+
+  it('shows no list of what needs a look when all is well or it cannot be read', async () => {
+    http.expectOne('/api/devices/health').flush('no', { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(element().querySelector('.health')).toBeNull();
+  });
 
   it('fills in the device the page is open on', async () => {
     await suggest({ address: '192.168.1.47:9393', name: 'Kitchen tablet', kind: 'pc' });
