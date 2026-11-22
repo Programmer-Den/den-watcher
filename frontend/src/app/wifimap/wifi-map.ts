@@ -105,11 +105,13 @@ export class WifiMap {
   /** The key of the picked network, which stays picked as the places are read again. */
   private readonly pickedNetwork = signal<string | null>(null);
 
-  /** The picked network, or the first one while none is (or the picked one is gone). */
+  /**
+   * The picked network, or the first one the search finds while none is (or the picked one is
+   * gone), so the detail never shows a network the list hides.
+   */
   protected readonly network = computed((): MapNetwork | undefined => {
     const key = this.pickedNetwork();
-    const networks = this.networks();
-    return networks.find((n) => n.key === key) ?? networks[0];
+    return this.networks().find((n) => n.key === key) ?? this.foundNetworks()[0];
   });
 
   /** How well the picked network was heard at each place, on the networks tab. */
@@ -131,13 +133,33 @@ export class WifiMap {
   );
 
   protected showTab(tab: 'places' | 'networks'): void {
+    if (tab === this.tab()) {
+      return;
+    }
     this.tab.set(tab);
     this.showAll.set(false);
+    if (tab === 'networks') {
+      // The map shows where the network the tab opens on reaches, as when it is picked.
+      const network = this.network();
+      if (network) {
+        this.focusOn(network);
+      }
+    } else {
+      // Back on the places, a zoomed map follows the picked one again.
+      const place = this.places()[this.selected()];
+      if (place && this.viewport.zoomed()) {
+        this.viewport.centerOn(place);
+      }
+    }
   }
 
   protected selectNetwork(network: MapNetwork): void {
     this.pickedNetwork.set(network.key);
-    // The map shows where it reaches.
+    this.focusOn(network);
+  }
+
+  /** Shows where a network reaches on the map. */
+  private focusOn(network: MapNetwork): void {
     this.viewport.focus(network.at.map((s) => this.places()[s.place]));
   }
 
