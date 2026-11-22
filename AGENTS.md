@@ -48,7 +48,7 @@ Before submitting changes:
 - Run `bash ci/check-demo-covers-addons.sh`: a new add-on needs a `<name>AddOn()` in `frontend/src/demo/fleet.ts` used by a demo device. Any other change the page shows (a new card, value or field) gets mock data in the demo in the same pull request too
 - Run `bash -n` and `shellcheck` on every changed shell script
 - Backend, in `backend/`: `gofmt -l .` (must print nothing), `golangci-lint run`, `go test -race ./...`, `go mod tidy -diff` and `go tool govulncheck ./...`
-- Frontend, in `frontend/`: `npm run format:check`, `npm run lint` (includes the circular import check), `npm audit --audit-level=high`, `npm test` and `npm run build`
+- Frontend, in `frontend/`: `npm run format:check`, `npm run lint` (includes the circular import check), `npm audit --audit-level=high`, `npm test`, `npm run build`, and `npm run build:demo` followed by `npm run test:demo` (every view of the demo in Chrome, no errors)
 - Add tests for new code
 - Keep CI fast: every check that runs on a pull request should finish within a few minutes
 
