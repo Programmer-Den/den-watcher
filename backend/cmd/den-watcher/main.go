@@ -122,6 +122,13 @@ func main() {
 		addons.RunHost(os.Getenv("ADDONS_DIR"))
 		return
 	}
+	if len(os.Args) == 2 && os.Args[1] == healthcheckArgument {
+		if err := checkHealth(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) == 2 && os.Args[1] == pairingCodeArgument {
 		if err := printPairingCode(os.Stdout); err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -557,6 +564,49 @@ func logPairingCode(p *pairing.Pairing) {
 	slog.Info("to collect from this device, a hub asks for its pairing code, which den-watcher pairing-code prints too", "code", p.Code())
 }
 
+// healthcheckArgument makes the program check that the den-watcher running on
+// this machine answers, for Docker's health check: the image has no shell or
+// curl to ask it with.
+const healthcheckArgument = "healthcheck"
+
+// checkHealth asks the den-watcher running on this machine, at LISTEN_ADDR,
+// whether it answers. It asks GET /api/hub, which both the website and
+// DATA_ONLY serve and which reads nothing but memory. Any answer but a
+// server error counts: with LISTEN_ADDR set to one address of the machine,
+// the request comes from that address instead of localhost and is refused.
+func checkHealth() error {
+	url, err := localURL("/api/hub")
+	if err != nil {
+		return err
+	}
+	client := &http.Client{Timeout: 5 * time.Second}
+	response, err := client.Get(url)
+	if err != nil {
+		return fmt.Errorf("den-watcher on this machine does not answer: %w", err)
+	}
+	_ = response.Body.Close()
+	if response.StatusCode >= http.StatusInternalServerError {
+		return fmt.Errorf("den-watcher on this machine answered %s", response.Status)
+	}
+	return nil
+}
+
+// localURL is the address of path on the den-watcher running on this machine,
+// at LISTEN_ADDR.
+func localURL(path string) (string, error) {
+	addr := cmp.Or(os.Getenv("LISTEN_ADDR"), ":9393")
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "", fmt.Errorf("LISTEN_ADDR is %q; set it to an address and port such as :9393", addr)
+	}
+	// A LISTEN_ADDR of one address, such as 192.168.1.5:9393, is not
+	// answered on localhost.
+	if ip := net.ParseIP(host); host == "" || ip != nil && ip.IsUnspecified() {
+		host = "localhost"
+	}
+	return "http://" + net.JoinHostPort(host, port) + path, nil
+}
+
 // pairingCodeArgument makes the program print the pairing code of the
 // den-watcher running on this machine, for a device without a website.
 const pairingCodeArgument = "pairing-code"
@@ -564,19 +614,12 @@ const pairingCodeArgument = "pairing-code"
 // printPairingCode asks the den-watcher running on this machine, at
 // LISTEN_ADDR, for its pairing code and writes it to out.
 func printPairingCode(out io.Writer) error {
-	addr := cmp.Or(os.Getenv("LISTEN_ADDR"), ":9393")
-	host, port, err := net.SplitHostPort(addr)
+	url, err := localURL("/api/pairing")
 	if err != nil {
-		return fmt.Errorf("LISTEN_ADDR is %q; set it to an address and port such as :9393", addr)
+		return err
 	}
-	// A LISTEN_ADDR of one address, such as 192.168.1.5:9393, is not
-	// answered on localhost.
-	if ip := net.ParseIP(host); host == "" || ip != nil && ip.IsUnspecified() {
-		host = "localhost"
-	}
-	url := "http://" + net.JoinHostPort(host, port) + "/api/pairing"
 	client := &http.Client{Timeout: 5 * time.Second}
-	response, err := client.Get(url) //nolint:gosec // this machine, at LISTEN_ADDR
+	response, err := client.Get(url)
 	if err != nil {
 		return fmt.Errorf("ask den-watcher on this machine for its pairing code: %w; is it running, with LISTEN_ADDR as here?", err)
 	}

@@ -26,6 +26,15 @@ services:
     build: .
     image: ghcr.io/programmer-den/den-watcher:${IMAGE_TAG:-latest}
     restart: unless-stopped
+    # Shows in docker ps whether the program still answers, not only whether
+    # it runs. Docker itself only marks the container unhealthy; it does not
+    # restart it for that.
+    healthcheck:
+      test: ["CMD", "/den-watcher", "healthcheck"]
+      interval: 1m
+      timeout: 10s
+      start_period: 30s
+      retries: 3
     # Published over IPv4 only. The program refuses requests from outside the
     # local network by the client's address, and Docker's proxy would hand
     # IPv6 connections over from its own internal address instead; browsers

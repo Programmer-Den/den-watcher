@@ -52,6 +52,7 @@ What `compose.yaml` sets up:
 - a `data` volume for the [database](database.md), kept across updates
 - a read-only container running as a non-root user, with every capability dropped and `no-new-privileges`
 - the port published over IPv4 only, so the program sees each client's real address. A browser that tries IPv6 first falls back to IPv4 by itself
+- a health check: every minute `/den-watcher healthcheck` asks the program on its own port whether it answers, so `docker compose ps` shows it as `healthy`, or as `unhealthy` after three missed answers in a row while it still runs. Docker only marks it; to have it restarted then, a tool such as the host's monitoring has to act on it
 
 `IMAGE_TAG` in `.env` picks the version: `latest` (default) is the newest release, a release such as `0.1.0` stays on it, and `main` follows every change on the main branch, for testing. `docker compose up -d --build` builds the image from the checkout instead.
 
@@ -502,7 +503,7 @@ Deploying to the maintainer's Pi lives in the private settings repository rpi-de
 
 | Symptom | Cause and fix |
 | --- | --- |
-| A device shows a red dot | The hub has had no answer for 20 seconds. Check that the device is on and den-watcher runs on it (`docker compose ps`, `systemctl status den-watcher`, or the *Den-Watcher* service on Windows), and that the address and port on the hub are right |
+| A device shows a red dot | The hub has had no answer for 20 seconds. Check that the device is on and den-watcher runs on it and is `healthy` (`docker compose ps`, `systemctl status den-watcher`, or the *Den-Watcher* service on Windows), and that the address and port on the hub are right |
 | A red banner says the Host Hub is not answering, and the other devices have hollow dots | The page lost its connection to the hub, which all values come through, so nothing on it is live. Check that the hub is on and den-watcher runs on it (`docker compose ps` or `systemctl status den-watcher`), and that your phone or PC is still on the same network. The page keeps trying and clears the banner by itself as soon as the hub answers |
 | A Windows PC cannot be added or stays red | The network is set to public, so the firewall blocks the port. Switch it to private in the Windows settings |
 | "no den-watcher answers at …" when adding | Nothing answered at that address within 4 seconds; the hub's log says why. Open `http://<address>/api/metrics` from the hub's network to check |

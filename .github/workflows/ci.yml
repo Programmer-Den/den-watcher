@@ -212,6 +212,8 @@ jobs:
             echo "not every container is running" >&2
             exit 1
           fi
+          # The command compose.yaml's health check runs.
+          docker compose exec -T den-watcher /den-watcher healthcheck
           docker compose down -v
           # The image itself makes the old file, with the old name set.
           image=ghcr.io/programmer-den/den-watcher:ci
