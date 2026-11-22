@@ -1,10 +1,25 @@
 @if (status(); as s) {
   @if (s.latest && s.url) {
-    <p class="notice" role="status">
-      {{ i18n.t('update.available', { latest: s.latest, current: s.current }) }}
-      <a [href]="s.url" target="_blank" rel="noopener noreferrer">{{
-        i18n.t('update.whatsNew')
-      }}</a>
-    </p>
+    <div class="notice" role="status">
+      <p>
+        {{ i18n.t('update.available', { latest: s.latest, current: s.current }) }}
+        <a [href]="s.url" target="_blank" rel="noopener noreferrer">{{
+          i18n.t('update.whatsNew')
+        }}</a>
+      </p>
+      @switch (s.install) {
+        @case ('docker') {
+          <p class="how">{{ i18n.t('update.howDocker') }} {{ i18n.t('update.keeps') }}</p>
+          <code>docker compose pull && docker compose up -d</code>
+        }
+        @case ('linux') {
+          <p class="how">{{ i18n.t('update.howLinux') }} {{ i18n.t('update.keeps') }}</p>
+          <code>sudo ./install.sh</code>
+        }
+        @case ('windows') {
+          <p class="how">{{ i18n.t('update.howWindows') }} {{ i18n.t('update.keeps') }}</p>
+        }
+      }
+    </div>
   }
 }

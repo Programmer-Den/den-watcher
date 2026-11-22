@@ -488,7 +488,7 @@ docker compose up -d
 
 The history and settings stay in every case. What changed is on the [releases page](https://github.com/Programmer-Den/den-watcher/releases). When a new version changes the database layout, it keeps a copy of the old file first ([details](database.md#updates-to-the-layout)), except the update to 3.x: it keeps no copy, so download a backup first (**Download backup** in the devices dialog, see [Backups](database.md#backups)).
 
-On a release, the hub checks GitHub once a day for a newer one (an hour after a failed check), without an account, and the page names it with a link. Nothing is downloaded or installed; updating stays your step. Builds of `main` and data-only devices never check. `UPDATE_CHECK=false` turns it off.
+On a release, the hub checks GitHub once a day for a newer one (an hour after a failed check), without an account, and the page names it with a link and the steps above for its kind of install (Docker, the Linux service or Windows). Nothing is downloaded or installed; updating stays your step. Builds of `main` and data-only devices never check. `UPDATE_CHECK=false` turns it off.
 
 **Port change after 0.1.0:** version 0.1.0 and builds before the change listened on 8080. Existing installs keep their port: a Docker install that set `PORT` in `.env`, a Windows install, which remembers the port it was installed with, and a Linux service with `LISTEN_ADDR` in `/etc/den-watcher.env`. A Docker install that never set `PORT` moves to 9393 after `git pull` and `docker compose up -d`; set `PORT=8080` in `.env` to stay on the old port, or update the address on the hub's *Devices* dialog.
 

@@ -367,6 +367,11 @@ export const en = {
   'update.available': 'Version {latest} is available (this device runs {current}).',
   'update.github': 'Updates on GitHub',
   'update.whatsNew': "What's new",
+  'update.howDocker': 'To update, run this in the folder with compose.yaml.',
+  'update.howLinux': 'To update, unpack the new archive and run this in its folder.',
+  'update.howWindows':
+    'To update, download the new installer from the release page and run it; it keeps its options.',
+  'update.keeps': 'The history and settings stay.',
   'update.partMissing': 'This part of the page could not be loaded. Reload the page to try again.',
   // Date patterns for Angular's date pipe; American English uses a 12-hour clock.
   'format.time': 'HH:mm',

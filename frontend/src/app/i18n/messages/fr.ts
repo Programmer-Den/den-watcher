@@ -370,6 +370,12 @@ export const fr: Messages = {
   'update.available': 'La version {latest} est disponible (cet appareil a la {current}).',
   'update.github': 'Mises à jour sur GitHub',
   'update.whatsNew': 'Nouveautés',
+  'update.howDocker': 'Pour mettre à jour, lancez ceci dans le dossier de compose.yaml.',
+  'update.howLinux':
+    'Pour mettre à jour, décompressez la nouvelle archive et lancez ceci dans son dossier.',
+  'update.howWindows':
+    "Pour mettre à jour, téléchargez le nouveau programme d'installation depuis la page de la version et lancez-le ; il garde ses options.",
+  'update.keeps': "L'historique et les réglages sont conservés.",
   'update.partMissing':
     'Cette partie de la page n’a pas pu être chargée. Rechargez la page pour réessayer.',
   'format.time': 'HH:mm',
