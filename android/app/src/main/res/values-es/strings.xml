@@ -35,6 +35,9 @@
     <string name="save_battery_auto">Activado solo ahora, porque el ahorro de batería de Android está activado.</string>
     <string name="data_title">Qué se envía</string>
     <string name="data_hint">Solo los datos que has elegido recopilar arriba, y solo al hub de tu red. Android no deja que ninguna app lea lo ocupado que está el procesador.</string>
+    <string name="updates_title">Actualizaciones</string>
+    <string name="updates_hint">Las nuevas versiones de esta app, del hub y del instalador de Windows están en GitHub. Las actualizaciones nunca se instalan solas.</string>
+    <string name="updates_open">Actualizaciones en GitHub</string>
     <string name="channel_name">Registro</string>
     <string name="channel_description">Se muestra mientras la app registra el uso, como pide Android.</string>
     <string name="notification_title">Registrando el uso de este móvil</string>

@@ -368,6 +368,7 @@ export const fr: Messages = {
   'bytes.unit.gib': 'Gio',
   'bytes.unit.tib': 'Tio',
   'update.available': 'La version {latest} est disponible (cet appareil a la {current}).',
+  'update.github': 'Mises à jour sur GitHub',
   'update.whatsNew': 'Nouveautés',
   'update.partMissing':
     'Cette partie de la page n’a pas pu être chargée. Rechargez la page pour réessayer.',

@@ -370,6 +370,7 @@ export const de: Messages = {
   'bytes.unit.gib': 'GiB',
   'bytes.unit.tib': 'TiB',
   'update.available': 'Version {latest} ist verfügbar (dieses Gerät hat {current}).',
+  'update.github': 'Updates auf GitHub',
   'update.whatsNew': 'Was ist neu',
   'update.partMissing':
     'Dieser Teil der Seite konnte nicht geladen werden. Lade die Seite neu, um es noch einmal zu versuchen.',

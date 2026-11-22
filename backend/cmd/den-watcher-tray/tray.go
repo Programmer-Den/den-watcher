@@ -4,7 +4,8 @@
 // while it is paused or starting. Its menu pauses and resumes the service,
 // stops it and closes the icon, opens the page of the hub that collects
 // from this PC, or this PC's own page when it shows one, and tells the
-// pairing code a hub asks for when this PC is added there.
+// pairing code a hub asks for when this PC is added there. It also opens
+// the newest release on GitHub, where the updates are downloaded.
 //
 // The installer starts it when someone logs in. The icons are drawn from the
 // website's mascot and theme by cmd/tray-icons before it is built.
@@ -113,6 +114,9 @@ func newSettings(port, website string) settings {
 	}
 	return s
 }
+
+// releasesURL is the newest release, with the installers for every device.
+const releasesURL = "https://github.com/Programmer-Den/den-watcher/releases/latest"
 
 // pageURL is this PC's own page, when it shows one.
 func (s settings) pageURL() string {
@@ -278,7 +282,7 @@ type texts struct {
 	// pairing names the line with the pairing code.
 	pairing string
 
-	openHub, noHub, openPage, pause, resume, start, stopAndExit string
+	openHub, noHub, openPage, updates, pause, resume, start, stopAndExit string
 	// startFailed and stopFailed take the error.
 	startFailed, stopFailed string
 }
@@ -302,7 +306,7 @@ var translations = map[string]texts{
 		address: "Address", noNetwork: "no local network", pairing: "Pairing code for the hub",
 		running: "Running", starting: "Starting", stopping: "Stopping",
 		notAnswering: "Running, but not answering", stopped: "Stopped", paused: "Paused", missing: "Not installed",
-		openHub: "Open hub", noHub: "Open hub (no hub has asked yet)", openPage: "Open the page on this PC",
+		openHub: "Open hub", noHub: "Open hub (no hub has asked yet)", openPage: "Open the page on this PC", updates: "Updates on GitHub",
 		pause: "Pause", resume: "Resume", start: "Start", stopAndExit: "Stop and exit",
 		startFailed: "Could not start Den-Watcher: %v", stopFailed: "Could not stop Den-Watcher: %v",
 	},
@@ -310,7 +314,7 @@ var translations = map[string]texts{
 		address: "Adresse", noNetwork: "kein lokales Netzwerk", pairing: "Kopplungscode für den Hub",
 		running: "Läuft", starting: "Startet", stopping: "Wird gestoppt",
 		notAnswering: "Läuft, antwortet aber nicht", stopped: "Gestoppt", paused: "Pausiert", missing: "Nicht installiert",
-		openHub: "Hub öffnen", noHub: "Hub öffnen (noch hat kein Hub gefragt)", openPage: "Seite auf diesem PC öffnen",
+		openHub: "Hub öffnen", noHub: "Hub öffnen (noch hat kein Hub gefragt)", openPage: "Seite auf diesem PC öffnen", updates: "Updates auf GitHub",
 		pause: "Pausieren", resume: "Fortsetzen", start: "Starten", stopAndExit: "Stoppen und beenden",
 		startFailed: "Den-Watcher konnte nicht gestartet werden: %v", stopFailed: "Den-Watcher konnte nicht gestoppt werden: %v",
 	},
@@ -318,7 +322,7 @@ var translations = map[string]texts{
 		address: "Adresse", noNetwork: "aucun réseau local", pairing: "Code d'appairage pour le hub",
 		running: "En marche", starting: "Lancement", stopping: "Arrêt en cours",
 		notAnswering: "En marche, mais ne répond pas", stopped: "Arrêté", paused: "En pause", missing: "Non installé",
-		openHub: "Ouvrir le hub", noHub: "Ouvrir le hub (aucun hub n'a encore demandé)", openPage: "Ouvrir la page sur ce PC",
+		openHub: "Ouvrir le hub", noHub: "Ouvrir le hub (aucun hub n'a encore demandé)", openPage: "Ouvrir la page sur ce PC", updates: "Mises à jour sur GitHub",
 		pause: "Mettre en pause", resume: "Reprendre", start: "Démarrer", stopAndExit: "Arrêter et quitter",
 		startFailed: "Impossible de démarrer Den-Watcher : %v", stopFailed: "Impossible d'arrêter Den-Watcher : %v",
 	},
@@ -326,7 +330,7 @@ var translations = map[string]texts{
 		address: "Dirección", noNetwork: "sin red local", pairing: "Código de emparejamiento para el hub",
 		running: "En marcha", starting: "Iniciando", stopping: "Deteniendo",
 		notAnswering: "En marcha, pero no responde", stopped: "Detenido", paused: "En pausa", missing: "No instalado",
-		openHub: "Abrir el hub", noHub: "Abrir el hub (ningún hub ha preguntado aún)", openPage: "Abrir la página en este PC",
+		openHub: "Abrir el hub", noHub: "Abrir el hub (ningún hub ha preguntado aún)", openPage: "Abrir la página en este PC", updates: "Actualizaciones en GitHub",
 		pause: "Pausar", resume: "Reanudar", start: "Iniciar", stopAndExit: "Detener y salir",
 		startFailed: "No se pudo iniciar Den-Watcher: %v", stopFailed: "No se pudo detener Den-Watcher: %v",
 	},

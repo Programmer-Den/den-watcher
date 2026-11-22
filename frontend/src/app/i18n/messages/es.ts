@@ -369,6 +369,7 @@ export const es: Messages = {
   'bytes.unit.gib': 'GiB',
   'bytes.unit.tib': 'TiB',
   'update.available': 'La versión {latest} está disponible (este dispositivo tiene la {current}).',
+  'update.github': 'Actualizaciones en GitHub',
   'update.whatsNew': 'Novedades',
   'update.partMissing':
     'No se pudo cargar esta parte de la página. Recarga la página para volver a intentarlo.',

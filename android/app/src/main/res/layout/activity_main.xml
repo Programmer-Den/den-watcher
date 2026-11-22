@@ -370,5 +370,21 @@
                 style="@style/Hint"
                 android:text="@string/data_hint" />
         </LinearLayout>
+
+        <LinearLayout style="@style/Card">
+
+            <TextView
+                style="@style/Heading"
+                android:text="@string/updates_title" />
+
+            <TextView
+                style="@style/Hint"
+                android:text="@string/updates_hint" />
+
+            <Button
+                android:id="@+id/updates"
+                style="@style/Button.Outlined"
+                android:text="@string/updates_open" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

@@ -365,6 +365,7 @@ export const en = {
   'bytes.unit.gib': 'GiB',
   'bytes.unit.tib': 'TiB',
   'update.available': 'Version {latest} is available (this device runs {current}).',
+  'update.github': 'Updates on GitHub',
   'update.whatsNew': "What's new",
   'update.partMissing': 'This part of the page could not be loaded. Reload the page to try again.',
   // Date patterns for Angular's date pipe; American English uses a 12-hour clock.

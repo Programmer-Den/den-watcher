@@ -36,6 +36,9 @@
     <string name="save_battery_auto">On by itself now, as Android\'s battery saver is on.</string>
     <string name="data_title">What is sent</string>
     <string name="data_hint">Only the data you chose to collect above, and only to the hub on your network. Android lets no app read how busy the processor is.</string>
+    <string name="updates_title">Updates</string>
+    <string name="updates_hint">New versions of this app, the hub and the Windows installer are on GitHub. Updates are never installed by themselves.</string>
+    <string name="updates_open">Updates on GitHub</string>
     <string name="channel_name">Recording</string>
     <string name="channel_description">Shown while the app records the usage, as Android asks for.</string>
     <string name="notification_title">Recording this phone\'s usage</string>
