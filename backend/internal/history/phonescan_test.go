@@ -46,7 +46,7 @@ func TestPhoneScansAreReadClosestToATime(t *testing.T) {
 		t.Errorf("scan of another phone = %+v, %v; want none", got, err)
 	}
 
-	if _, err := store.DeleteBefore(ctx, hour.Add(time.Minute)); err != nil {
+	if _, err := store.DeletePhoneDataBefore(ctx, hour.Add(time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 	if got, err := store.PhoneScanNear(ctx, "pixel", hour, 5*time.Minute); err != nil || got == nil || got.Time != hour.Add(5*time.Minute).Unix() {

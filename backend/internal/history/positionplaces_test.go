@@ -200,7 +200,7 @@ func TestOldPlacesAreDeletedUnlessTheUserToldOfThem(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := store.DeleteBefore(ctx, day.Add(24*time.Hour)); err != nil {
+	if _, err := store.DeletePhoneDataBefore(ctx, day.Add(24*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	var ids []int64

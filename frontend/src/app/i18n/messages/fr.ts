@@ -290,6 +290,9 @@ export const fr: Messages = {
   'passwordDialog.backupHint':
     'Gardez le fichier privé : il contient les adresses de vos appareils et le hachage du mot de passe.',
   'passwordDialog.backup': 'Télécharger une sauvegarde de la base de données du hub ?',
+  'passwordDialog.deleteRoute':
+    "Supprimer l'itinéraire de {device} du {day} et les réseaux Wi-Fi qu'il a détectés alors ? Cette action est définitive.",
+  'passwordDialog.confirmDelete': 'Supprimer',
   'passwordDialog.statusPassword': 'Définir le mot de passe de la page d’état à distance ?',
   'passwordDialog.confirmStatus': 'Définir',
   'history.unit': 'Unité de la période affichée',
@@ -694,6 +697,9 @@ export const fr: Messages = {
   'phoneWifi.showFewer': 'Afficher moins',
   'phoneWifi.nearby':
     'Les réseaux à portée du téléphone sont dans Comparer les appareils, Wi-Fi à proximité.',
+  'phoneRoute.deleteDay': 'Supprimer un jour',
+  'phoneRoute.deleteButton': 'Supprimer son itinéraire',
+  'phoneRoute.deleted': "L'itinéraire du {day} a été supprimé.",
   'phoneRoute.title': 'Trajet',
   'phoneRoute.none':
     "Aucun trajet sur cette période. Dans l'app Den-Watcher du téléphone, autorisez la localisation tout le temps et laissez Trajet activé.",

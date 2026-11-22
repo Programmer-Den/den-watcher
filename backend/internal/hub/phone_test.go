@@ -547,6 +547,7 @@ func TestThePhonesRouteIsStoredAtTheHubsTime(t *testing.T) {
 	ctx := context.Background()
 	store := openTestStore(t)
 	h := openTestHub(t, store, nil)
+	h.phoneRetention = 60 * 24 * time.Hour
 	if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
 		t.Fatalf("AddPhone() error = %v", err)
 	}
@@ -569,7 +570,7 @@ func TestThePhonesRouteIsStoredAtTheHubsTime(t *testing.T) {
 	if answer.RouteAfter != 5 {
 		t.Errorf("RouteAfter = %d, want the largest ID of the push, 5", answer.RouteAfter)
 	}
-	got, err := store.RoutePoints(ctx, "pixel", now.Add(-5*time.Hour), now.Add(time.Minute))
+	got, err := store.RoutePoints(ctx, "pixel", now.Add(-90*24*time.Hour), now.Add(time.Minute))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -589,6 +590,41 @@ func TestThePhonesRouteIsStoredAtTheHubsTime(t *testing.T) {
 
 	if _, err := h.Receive(ctx, "7KQM-X2RP", Push{Now: phoneNow.Unix(), Route: make([]PhonePoint, RoutePerPush+1)}); !errors.Is(err, ErrPushTooLarge) {
 		t.Errorf("Receive() with %d points error = %v, want %v", RoutePerPush+1, err, ErrPushTooLarge)
+	}
+}
+
+func TestThePhonesRouteHasNoRetentionByDefault(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	h := openTestHub(t, store, nil)
+	if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+		t.Fatalf("AddPhone() error = %v", err)
+	}
+	// Kept on the phone for longer than the history's 30 days, as while it
+	// was away.
+	now := time.Now()
+	old := now.Add(-61 * 24 * time.Hour)
+	push := Push{
+		Now:         now.Unix(),
+		Route:       []PhonePoint{{ID: 1, Time: old.UnixMilli(), Lat: 53.5, Lon: 9.9, Accuracy: 10}},
+		Connections: []PhoneConnection{{ID: 1, SSID: "Home", Start: old.UnixMilli(), End: old.Add(time.Hour).UnixMilli()}},
+	}
+	if _, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil {
+		t.Fatal(err)
+	}
+	points, err := store.RoutePoints(ctx, "pixel", now.Add(-90*24*time.Hour), now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(points) != 1 {
+		t.Errorf("points = %+v, want the one from 61 days ago", points)
+	}
+	connections, err := store.WiFiConnections(ctx, "pixel", now.Add(-90*24*time.Hour), now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(connections) != 1 {
+		t.Errorf("connections = %+v, want the one from 61 days ago", connections)
 	}
 }
 

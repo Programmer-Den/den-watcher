@@ -303,3 +303,35 @@ h4 {
     background: var(--level);
   }
 }
+
+/* Deleting a day of the route, below the rest of the card. */
+.delete-day {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+.delete-day label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.delete-day input {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  padding: 0.125rem 0.375rem;
+  color-scheme: light dark;
+}
+
+.delete-day p {
+  flex-basis: 100%;
+  margin: 0;
+}
