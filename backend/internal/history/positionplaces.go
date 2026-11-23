@@ -275,33 +275,74 @@ func keepApart(ctx context.Context, tx *sql.Tx, a, b int64) error {
 	return err
 }
 
-// deleteOldPositionPlaces deletes the places whose newest scan is before t
-// and that the user told nothing of (see deleteUntoldPositionPlaces). Their
-// scans are gone, and a new scan there starts a new place.
-func (s *Store) deleteOldPositionPlaces(ctx context.Context, t time.Time) (int64, error) {
-	return s.deleteUntoldPositionPlaces(ctx, t.Unix())
-}
+// untoldPlace is the condition of a place the user told nothing of: no
+// name, not merged, nothing merged into it and not kept apart from another.
+// Such a place tells only where the phones scanned, which the scans tell too;
+// the next look at the Wi-Fi map starts it again from the scans that are
+// left, with a new ID. A place the user told something of is kept for good.
+const untoldPlace = `name = '' AND merged_into IS NULL
+	AND id NOT IN (SELECT merged_into FROM position_places WHERE merged_into IS NOT NULL)
+	AND id NOT IN (SELECT a FROM position_places_apart)
+	AND id NOT IN (SELECT b FROM position_places_apart)`
 
-// deleteUntoldPositionPlaces deletes the places whose newest scan is before
-// before, in Unix seconds, and that the user told nothing of: no name, not merged, nothing merged into them
-// and not kept apart from another. They tell only where the phones scanned,
-// which the scans tell too; the next look at the Wi-Fi map starts them again
-// from the scans that are left, with new IDs.
-func (s *Store) deleteUntoldPositionPlaces(ctx context.Context, before int64) (int64, error) {
+// deleteOldPositionPlaces deletes the places whose newest scan is before t
+// and that the user told nothing of (see untoldPlace). Their scans are gone,
+// and a new scan there starts a new place.
+func (s *Store) deleteOldPositionPlaces(ctx context.Context, t time.Time) (int64, error) {
 	s.placing.Lock()
 	defer s.placing.Unlock()
-	result, err := s.db.ExecContext(ctx, `
-		DELETE FROM position_places WHERE last < ? AND name = '' AND merged_into IS NULL
-		AND id NOT IN (SELECT merged_into FROM position_places WHERE merged_into IS NOT NULL)
-		AND id NOT IN (SELECT a FROM position_places_apart)
-		AND id NOT IN (SELECT b FROM position_places_apart)`, before)
+	result, err := s.db.ExecContext(ctx, `DELETE FROM position_places WHERE last < ? AND `+untoldPlace, t.Unix())
 	if err != nil {
 		return 0, err
 	}
-	if _, err := s.db.ExecContext(ctx, `
-		DELETE FROM position_places_apart
-		WHERE a NOT IN (SELECT id FROM position_places) OR b NOT IN (SELECT id FROM position_places)`); err != nil {
+	return result.RowsAffected()
+}
+
+// deletePositionPlacesNear deletes the places the user told nothing of (see
+// untoldPlace) within PositionMeters of one of points, as where a phone was
+// on a day of its route that the user deletes.
+func (s *Store) deletePositionPlacesNear(ctx context.Context, points []PhonePoint) (int64, error) {
+	if len(points) == 0 {
+		return 0, nil
+	}
+	s.placing.Lock()
+	defer s.placing.Unlock()
+	rows, err := s.db.QueryContext(ctx, `SELECT id, lat, lon FROM position_places WHERE `+untoldPlace)
+	if err != nil {
 		return 0, err
 	}
-	return result.RowsAffected()
+	var near []int64
+	err = scanRows(rows, func() error {
+		var id int64
+		var lat, lon float64
+		if err := rows.Scan(&id, &lat, &lon); err != nil {
+			return err
+		}
+		for _, p := range points {
+			if distanceMeters(lat, lon, p.Lat, p.Lon) <= PositionMeters {
+				near = append(near, id)
+				break
+			}
+		}
+		return nil
+	})
+	if err != nil || len(near) == 0 {
+		return 0, err
+	}
+	var deleted int64
+	err = s.inTx(ctx, func(tx *sql.Tx) error {
+		for _, id := range near {
+			result, err := tx.ExecContext(ctx, `DELETE FROM position_places WHERE id = ?`, id)
+			if err != nil {
+				return err
+			}
+			n, err := result.RowsAffected()
+			if err != nil {
+				return err
+			}
+			deleted += n
+		}
+		return nil
+	})
+	return deleted, err
 }

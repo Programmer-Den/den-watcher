@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math"
 	"strings"
 	"sync"
 	"time"
@@ -379,8 +378,20 @@ func (s *Store) DeletePhoneDataBefore(ctx context.Context, t time.Time) (int64, 
 // had not sent yet, is left out too. It returns how many points of the route
 // were deleted.
 func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Time) (int64, error) {
+	// Only what was recorded up to now is left out later: what the phone
+	// records from now on is new, even within the stretch.
+	if until := time.Now(); to.After(until) {
+		to = until
+	}
+	if !to.After(from) {
+		return 0, nil
+	}
 	if _, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO route_deleted (device, start_time, end_time) VALUES (?, ?, ?)`,
 		device, from.UnixMilli(), to.UnixMilli()); err != nil {
+		return 0, err
+	}
+	points, err := s.routePointsAll(ctx, device, from, to)
+	if err != nil {
 		return 0, err
 	}
 	route, err := s.deleteChunks(ctx, "route_points", "device, phone_time", `device = ? AND time >= ? AND time < ?`, device, from.UnixMilli(), to.UnixMilli())
@@ -395,12 +406,42 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 	if err != nil {
 		return route, err
 	}
-	places, err := s.deleteUntoldPositionPlaces(ctx, math.MaxInt64)
+	places, err := s.deletePositionPlacesNear(ctx, points)
 	if err != nil {
 		return route, err
 	}
 	s.shrinkLog(ctx, route+scans+connections+places)
 	return route, nil
+}
+
+// routePointsAll returns where the phone stored as device was from from up to
+// (not including) to, each place once: the points rounded to about 10 m.
+func (s *Store) routePointsAll(ctx context.Context, device string, from, to time.Time) ([]PhonePoint, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT DISTINCT round(lat, 4), round(lon, 4) FROM route_points
+		WHERE device = ? AND time >= ? AND time < ?`, device, from.UnixMilli(), to.UnixMilli())
+	if err != nil {
+		return nil, err
+	}
+	var points []PhonePoint
+	err = scanRows(rows, func() error {
+		var p PhonePoint
+		if err := rows.Scan(&p.Lat, &p.Lon); err != nil {
+			return err
+		}
+		points = append(points, p)
+		return nil
+	})
+	return points, err
+}
+
+// DeletedRouteAt tells whether the user deleted the stretch of the route of
+// the phone stored as device that at falls into (see DeleteRoute).
+func (s *Store) DeletedRouteAt(ctx context.Context, device string, at time.Time) (bool, error) {
+	var deleted bool
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM route_deleted WHERE device = ? AND ? >= start_time AND ? < end_time)`,
+		device, at.UnixMilli(), at.UnixMilli()).Scan(&deleted)
+	return deleted, err
 }
 
 // DeleteDevice deletes every value of one device, and how its extras are

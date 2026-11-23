@@ -309,7 +309,7 @@ export const en = {
     'Keep the file private: it holds the addresses of your devices and the hash of the password.',
   'passwordDialog.backup': "Download a backup of the hub's database?",
   'passwordDialog.deleteRoute':
-    'Delete the route of {device} on {day}, and the Wi-Fi networks it scanned then? This cannot be undone.',
+    'Delete the route of {device} on {day}, with the Wi-Fi networks it scanned and was connected to then, and the unnamed places of the Wi-Fi map it was at? What it sends of that day later is left out too. This cannot be undone.',
   'passwordDialog.confirmDelete': 'Delete',
   'passwordDialog.statusPassword': 'Set the password of the remote status page?',
   'passwordDialog.confirmStatus': 'Set',

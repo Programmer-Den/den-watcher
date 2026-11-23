@@ -209,8 +209,8 @@ type deleteRouteRequest struct {
 }
 
 // deleteRoute serves DELETE /api/phones/{id}/route: deletes where the phone
-// was from from up to (not including) to, and its scans of the Wi-Fi
-// networks then, as when a day of its route should not be kept.
+// was from from up to (not including) to, and what tells the same (see
+// history.Store.DeleteRoute), as when a day of its route should not be kept.
 func (c *deviceChanges) deleteRoute(devices Devices, routes RouteDeleter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var request deleteRouteRequest

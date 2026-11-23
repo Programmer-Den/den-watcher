@@ -301,7 +301,7 @@ export class PhoneRouteCard {
 
   /**
    * Asks for the password and deletes the route of the picked day, from its midnight to the next in
-   * the browser's time zone, with the phone's scans of the Wi-Fi networks then.
+   * the browser's time zone, with what tells the same (see DELETE /api/phones/{id}/route).
    */
   protected async deleteRoute(): Promise<void> {
     const day = this.deleteDay();

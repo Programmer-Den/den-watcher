@@ -142,7 +142,9 @@ func TestDeleteRouteTakesWhatTellsWhereThePhoneWasAndKeepsItOut(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	places := placesBy(t, store, day, day.Add(day24))
+	// A place the phone was at on another day only stays.
+	scanAt(t, store, day.Add(-day24), 53.5300, 9.9900, "Station")
+	places := placesBy(t, store, day.Add(-day24), day.Add(day24))
 	if err := store.RenamePositionPlace(ctx, places["Den"].ID, "Home"); err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +154,7 @@ func TestDeleteRouteTakesWhatTellsWhereThePhoneWasAndKeepsItOut(t *testing.T) {
 	}
 
 	var names []string
-	rows, err := store.db.QueryContext(ctx, `SELECT name FROM position_places`)
+	rows, err := store.db.QueryContext(ctx, `SELECT name FROM position_places ORDER BY name`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,8 +166,8 @@ func TestDeleteRouteTakesWhatTellsWhereThePhoneWasAndKeepsItOut(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(names, []string{"Home"}) {
-		t.Errorf("places left = %q; want only the one the user named", names)
+	if !slices.Equal(names, []string{"", "Home"}) {
+		t.Errorf("places left = %q; want the one the user named and the station of another day", names)
 	}
 	if got, err := store.WiFiConnections(ctx, "pixel", day, day.Add(day24)); err != nil || len(got) != 0 {
 		t.Errorf("connections left = %+v, %v; want none", got, err)
@@ -182,7 +184,7 @@ func TestDeleteRouteTakesWhatTellsWhereThePhoneWasAndKeepsItOut(t *testing.T) {
 		t.Errorf("points of the deleted day = %+v, %v; want none", left, err)
 	}
 	var scans int
-	if err := store.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM phone_scans`).Scan(&scans); err != nil || scans != 0 {
+	if err := store.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM phone_scans WHERE time >= ?`, day.Unix()).Scan(&scans); err != nil || scans != 0 {
 		t.Errorf("scans of the deleted day = %d, %v; want none", scans, err)
 	}
 	if got, err := store.WiFiConnections(ctx, "pixel", day, day.Add(day24)); err != nil || len(got) != 0 {
@@ -192,6 +194,30 @@ func TestDeleteRouteTakesWhatTellsWhereThePhoneWasAndKeepsItOut(t *testing.T) {
 	scanAt(t, store, day.Add(day24+time.Hour), 53.5612, 9.9615, "Cafe")
 	if left, err := store.RoutePoints(ctx, "pixel", day, day.Add(2*day24)); err != nil || len(left) != 1 {
 		t.Errorf("points of the next day = %+v, %v; want one", left, err)
+	}
+}
+
+func TestDeleteRouteOfTodayKeepsWhatComesAfterIt(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	now := time.Now()
+	today := now.Truncate(day24)
+	scanAt(t, store, now.Add(-time.Minute), 53.5755, 9.9530, "Den")
+
+	if _, err := store.DeleteRoute(ctx, "pixel", today, today.Add(day24)); err != nil {
+		t.Fatal(err)
+	}
+	if deleted, err := store.DeletedRouteAt(ctx, "pixel", now.Add(-time.Minute)); err != nil || !deleted {
+		t.Errorf("DeletedRouteAt(a minute ago) = %v, %v; want true", deleted, err)
+	}
+	// Recorded after the delete, so it is stored.
+	later := time.Now().Add(time.Minute)
+	scanAt(t, store, later, 53.5755, 9.9530, "Den")
+	if left, err := store.RoutePoints(ctx, "pixel", today, today.Add(day24)); err != nil || len(left) != 1 {
+		t.Errorf("points of today = %+v, %v; want the one after the delete", left, err)
+	}
+	if deleted, err := store.DeletedRouteAt(ctx, "pixel", later); err != nil || deleted {
+		t.Errorf("DeletedRouteAt(after the delete) = %v, %v; want false", deleted, err)
 	}
 }
 

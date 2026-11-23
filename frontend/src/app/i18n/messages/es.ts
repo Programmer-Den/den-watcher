@@ -312,7 +312,7 @@ export const es: Messages = {
     'Guarda el archivo en privado: contiene las direcciones de tus dispositivos y el hash de la contraseña.',
   'passwordDialog.backup': '¿Descargar una copia de seguridad de la base de datos del hub?',
   'passwordDialog.deleteRoute':
-    '¿Borrar la ruta de {device} del {day} y las redes Wi-Fi que detectó entonces? No se puede deshacer.',
+    '¿Borrar la ruta de {device} del {day}, con las redes Wi-Fi que detectó y a las que estuvo conectado entonces, y los lugares sin nombre del mapa Wi-Fi donde estuvo? Lo que envíe más tarde de ese día también se descartará. No se puede deshacer.',
   'passwordDialog.confirmDelete': 'Borrar',
   'passwordDialog.statusPassword': '¿Establecer la contraseña de la página de estado remota?',
   'passwordDialog.confirmStatus': 'Establecer',

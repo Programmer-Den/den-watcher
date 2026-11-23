@@ -681,3 +681,54 @@ func TestAScanThatWasNotStoredComesAgain(t *testing.T) {
 		t.Errorf("access points %+v, want the scan counted once", seen.AccessPoints)
 	}
 }
+
+func TestThePhonesScansAreKeptAndCountedEachByItsOwnRetention(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	h := openTestHub(t, store, nil)
+	h.phoneRetention = 24 * time.Hour
+	if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+		t.Fatalf("AddPhone() error = %v", err)
+	}
+	now := time.Now()
+	// The user deleted the route of a stretch two hours ago.
+	if _, err := store.DeleteRoute(ctx, "pixel", now.Add(-130*time.Minute), now.Add(-110*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	ap := metrics.NearbyAccessPoint{ID: "0000000000aa", Box: "0000000000bb", SSID: "Office", SignalPercent: 60}
+	old, deleted := now.Add(-3*24*time.Hour), now.Add(-2*time.Hour)
+	push := Push{Now: now.Unix(), WiFi: []PhoneScan{
+		{Time: old.Unix(), AccessPoints: []metrics.NearbyAccessPoint{ap}},
+		{Time: deleted.Unix(), AccessPoints: []metrics.NearbyAccessPoint{ap}},
+	}}
+	if _, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Flush(ctx); err != nil {
+		t.Fatal(err)
+	}
+	// Older than the phone's retention: not kept on its own, but in the sums.
+	if scan, err := store.PhoneScanNear(ctx, "pixel", old, time.Minute); err != nil || scan != nil {
+		t.Errorf("scan from 3 days ago = %+v, %v; want none kept", scan, err)
+	}
+	// Of the deleted stretch: in neither.
+	if scan, err := store.PhoneScanNear(ctx, "pixel", deleted, time.Minute); err != nil || scan != nil {
+		t.Errorf("scan of the deleted stretch = %+v, %v; want none kept", scan, err)
+	}
+	seen, err := store.WiFi(ctx, now.Add(-4*24*time.Hour), now.Add(time.Minute), time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(seen.AccessPoints) != 1 {
+		t.Fatalf("access points %+v, want the one the phone saw", seen.AccessPoints)
+	}
+	var hours []int64
+	for _, point := range seen.AccessPoints[0].SeenBy[0].Points {
+		if point.Seen > 0 {
+			hours = append(hours, point.Time)
+		}
+	}
+	if len(hours) != 1 || hours[0] != old.Truncate(time.Hour).Unix() {
+		t.Errorf("hours seen %v, want only the one of 3 days ago, %d", hours, old.Truncate(time.Hour).Unix())
+	}
+}

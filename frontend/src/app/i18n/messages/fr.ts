@@ -311,7 +311,7 @@ export const fr: Messages = {
     'Gardez le fichier privé : il contient les adresses de vos appareils et le hachage du mot de passe.',
   'passwordDialog.backup': 'Télécharger une sauvegarde de la base de données du hub ?',
   'passwordDialog.deleteRoute':
-    "Supprimer l'itinéraire de {device} du {day} et les réseaux Wi-Fi qu'il a détectés alors ? Cette action est définitive.",
+    "Supprimer l'itinéraire de {device} du {day}, avec les réseaux Wi-Fi qu'il a détectés et auxquels il était connecté, et les lieux sans nom de la carte Wi-Fi où il était ? Ce qu'il enverra plus tard de ce jour sera aussi ignoré. Cette action est définitive.",
   'passwordDialog.confirmDelete': 'Supprimer',
   'passwordDialog.statusPassword': 'Définir le mot de passe de la page d’état à distance ?',
   'passwordDialog.confirmStatus': 'Définir',
