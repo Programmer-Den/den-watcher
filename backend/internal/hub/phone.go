@@ -374,8 +374,10 @@ func (p *phone) receive(ctx context.Context, push Push, now time.Time, key []byt
 // Wi-Fi history, at their time on the hub's clock, as the minutes are moved
 // (see fetcher.receive), keeps each of them on its own too, for the points
 // of the phone's route, and returns the phone's time of the newest scan it
-// has. A scan older than the retention or from the future is left out, but
-// counts as had, so the phone deletes it. The caller holds pushing.
+// has. A scan is kept on its own within the phone's retention and counted
+// into the Wi-Fi history within that of the minutes; one older than both or
+// from the future is left out, but counts as had, so the phone deletes it.
+// The caller holds pushing.
 func (p *phone) receiveWiFi(ctx context.Context, push Push, now time.Time) (int64, error) {
 	f := p.minutes
 	if p.wifiAfter > push.Now {
@@ -386,27 +388,58 @@ func (p *phone) receiveWiFi(ctx context.Context, push Push, now time.Time) (int6
 	slices.SortStableFunc(scans, func(a, b PhoneScan) int { return cmp.Compare(a.Time, b.Time) })
 	after := p.wifiAfter
 	var found []history.FoundScan
-	var nearby []*metrics.NearbyWiFi
+	type countedScan struct {
+		at     time.Time
+		nearby *metrics.NearbyWiFi
+	}
+	var counted []countedScan
 	for _, scan := range scans {
 		if scan.Time <= after {
 			continue
 		}
 		after = scan.Time
 		at := time.Unix(scan.Time+f.offset, 0)
-		if at.After(now.Add(maxClockJitter)) || f.retention > 0 && at.Before(now.Add(-f.retention)) {
+		if at.After(now.Add(maxClockJitter)) {
+			continue
+		}
+		// The phone's own scans have the phone's retention, the hourly sums
+		// that of the minutes; each is judged on its own.
+		keep := p.retention <= 0 || !at.Before(now.Add(-p.retention))
+		count := f.retention <= 0 || !at.Before(now.Add(-f.retention))
+		if !keep && !count {
 			continue
 		}
 		cleaned := metrics.CleanNearbyWiFi(&metrics.NearbyWiFi{AccessPoints: scan.AccessPoints})
-		found = append(found, history.FoundScan{At: at, Found: cleaned.AccessPoints})
-		nearby = append(nearby, cleaned)
+		if keep {
+			found = append(found, history.FoundScan{At: at, Found: cleaned.AccessPoints})
+		}
+		if count {
+			counted = append(counted, countedScan{at: at, nearby: cleaned})
+		}
 	}
 	// Stored first, so scans that could not be stored are neither counted
 	// nor taken as had, and come again with the next push.
 	if err := f.store.AddPhoneScans(ctx, f.device, found); err != nil {
 		return 0, err
 	}
-	for i, scan := range found {
-		f.store.AddWiFi(f.device, scan.At, nearby[i])
+	// A scan of a stretch of the route the user deleted, sent only now, is
+	// left out of the sums too, as it was of the phone's own scans. After an
+	// error none was counted, and all come again.
+	var deleted [][2]int64
+	if len(counted) > 0 {
+		var err error
+		if deleted, err = f.store.DeletedStretches(ctx, f.device); err != nil {
+			return 0, err
+		}
+	}
+	add := counted[:0]
+	for _, scan := range counted {
+		if !history.DeletedRouteIn(deleted, scan.at) {
+			add = append(add, scan)
+		}
+	}
+	for _, scan := range add {
+		f.store.AddWiFi(f.device, scan.at, scan.nearby)
 	}
 	p.wifiAfter = after
 	return p.wifiAfter, nil

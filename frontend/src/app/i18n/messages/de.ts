@@ -313,7 +313,7 @@ export const de: Messages = {
     'Die Datei gehört nicht in fremde Hände: Sie enthält die Adressen der Geräte und den Hash des Passworts.',
   'passwordDialog.backup': 'Eine Sicherung der Datenbank des Hubs herunterladen?',
   'passwordDialog.deleteRoute':
-    'Die Route von {device} am {day} und die WLAN-Netze, die es dabei gescannt hat, löschen? Das lässt sich nicht rückgängig machen.',
+    'Die Route von {device} am {day} löschen, mit seinen WLAN-Scans und -Verbindungen und den Orten der WLAN-Karte, an denen es war und die Sie nicht benannt, zusammengeführt oder getrennt gehalten haben? Was es von diesem Tag bis jetzt aufgezeichnet hat und später sendet, wird ebenfalls verworfen; der stündliche WLAN-Verlauf bleibt. Das lässt sich nicht rückgängig machen.',
   'passwordDialog.confirmDelete': 'Löschen',
   'passwordDialog.statusPassword': 'Das Passwort der Statusseite für unterwegs setzen?',
   'passwordDialog.confirmStatus': 'Setzen',

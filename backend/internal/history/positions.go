@@ -133,6 +133,11 @@ type positionPoint struct {
 // the range moves on or changes. Of the scans in the range, the newest
 // MaxPositionScans are read.
 func (s *Store) WiFiPositions(ctx context.Context, from, to time.Time) ([]WiFiPosition, error) {
+	// One at a time, so two reads do not both start a place at the same spot,
+	// and from the scans of now, so none start one again from scans that
+	// DeleteRoute deletes meanwhile.
+	s.placing.Lock()
+	defer s.placing.Unlock()
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT device, time, networks FROM phone_scans
 		WHERE time >= ? AND time < ? ORDER BY time DESC LIMIT ?`, from.Unix(), to.Unix(), MaxPositionScans)
@@ -177,9 +182,6 @@ func (s *Store) WiFiPositions(ctx context.Context, from, to time.Time) ([]WiFiPo
 		return nil, err
 	}
 
-	// One at a time, so two reads do not both start a place at the same spot.
-	s.placing.Lock()
-	defer s.placing.Unlock()
 	grouper, err := s.positionGrouper(ctx)
 	if err != nil {
 		return nil, err

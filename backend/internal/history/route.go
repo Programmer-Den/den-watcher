@@ -20,7 +20,19 @@ CREATE TABLE IF NOT EXISTS route_points (
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS route_points_by_time ON route_points (device, time);
 CREATE INDEX IF NOT EXISTS route_points_by_age ON route_points (time);
+CREATE TABLE IF NOT EXISTS route_deleted (
+	device     TEXT    NOT NULL,
+	start_time INTEGER NOT NULL, -- Unix milliseconds on the hub's clock
+	end_time   INTEGER NOT NULL, -- the same, not included
+	PRIMARY KEY (device, start_time, end_time)
+) WITHOUT ROWID;
 `
+
+// notDeleted is the condition of an INSERT ... SELECT that leaves out a row
+// of device ?1 at the hub's time ?3, in Unix milliseconds, that falls into a
+// stretch the user deleted (see DeleteRoute), as when the phone sends what
+// it had not sent yet of that stretch only afterwards.
+const notDeleted = `NOT EXISTS (SELECT 1 FROM route_deleted WHERE device = ?1 AND ?3 >= start_time AND ?3 < end_time)`
 
 // RoutePoint is where a phone was at one time.
 type RoutePoint struct {
@@ -32,7 +44,7 @@ type RoutePoint struct {
 }
 
 // AddRoutePoints stores where a phone was. A point stored already is kept as
-// it is.
+// it is, and one in a stretch the user deleted is left out.
 func (s *Store) AddRoutePoints(ctx context.Context, device string, points []RoutePoint) error {
 	if len(points) == 0 {
 		return nil
@@ -43,7 +55,8 @@ func (s *Store) AddRoutePoints(ctx context.Context, device string, points []Rout
 	}
 	defer func() { _ = tx.Rollback() }()
 	insert, err := tx.PrepareContext(ctx, `
-		INSERT INTO route_points (device, phone_time, time, lat, lon, accuracy) VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO route_points (device, phone_time, time, lat, lon, accuracy)
+		SELECT ?1, ?2, ?3, ?4, ?5, ?6 WHERE `+notDeleted+`
 		ON CONFLICT (device, phone_time) DO NOTHING`)
 	if err != nil {
 		return err

@@ -58,7 +58,8 @@ type FoundScan struct {
 
 // AddPhoneScans stores the scans of the phone stored as device, all in one
 // transaction, so either all of them are stored or none is. A scan stored
-// already at the same second is kept as it is.
+// already at the same second is kept as it is, and one in a stretch the user
+// deleted is left out.
 func (s *Store) AddPhoneScans(ctx context.Context, device string, scans []FoundScan) error {
 	if len(scans) == 0 {
 		return nil
@@ -69,7 +70,8 @@ func (s *Store) AddPhoneScans(ctx context.Context, device string, scans []FoundS
 	}
 	defer func() { _ = tx.Rollback() }()
 	insert, err := tx.PrepareContext(ctx, `
-		INSERT INTO phone_scans (device, time, networks) VALUES (?, ?, ?)
+		INSERT INTO phone_scans (device, time, networks)
+		SELECT ?1, ?2, ?4 WHERE `+notDeleted+`
 		ON CONFLICT (device, time) DO NOTHING`)
 	if err != nil {
 		return err
@@ -80,7 +82,7 @@ func (s *Store) AddPhoneScans(ctx context.Context, device string, scans []FoundS
 		if err != nil {
 			return err
 		}
-		if _, err := insert.ExecContext(ctx, device, scan.At.Unix(), string(data)); err != nil {
+		if _, err := insert.ExecContext(ctx, device, scan.At.Unix(), scan.At.Unix()*1000, string(data)); err != nil {
 			return err
 		}
 	}

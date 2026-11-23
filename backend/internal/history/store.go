@@ -368,10 +368,56 @@ func (s *Store) DeletePhoneDataBefore(ctx context.Context, t time.Time) (int64, 
 }
 
 // DeleteRoute deletes where a phone was from from up to (not including) to,
-// and the scans of the Wi-Fi networks it made then, which tell the same, as
-// when the user takes a day of its route away. It returns how many points of
-// the route were deleted.
-func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Time) (int64, error) {
+// and what tells the same: the scans of the Wi-Fi networks it made then, the
+// Wi-Fi connections that started then and the places of the Wi-Fi map the
+// user told nothing of, as when the user takes a day of its route away. The
+// hub remembers the stretch, so what the phone sends of it later, which it
+// had not sent yet, is left out too. It returns how many points of the route
+// were deleted.
+func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Time) (_ int64, err error) {
+	// Only what was recorded up to now is left out later: what the phone
+	// records from now on is new, even within the stretch. The slack covers
+	// a phone's clock a little ahead, whose points the hub takes too.
+	// Held throughout, so a look at the Wi-Fi map does not start places
+	// again from scans read before they were deleted (see WiFiPositions), and
+	// two deletions, or one and DeleteDevice, do not mix their stretches.
+	s.placing.Lock()
+	defer s.placing.Unlock()
+	end := to
+	if until := time.Now().Add(deletedRouteSlack); end.After(until) {
+		end = until
+	}
+	if end.After(from) {
+		// err is the named result, which the deferred cleanup reads.
+		var result sql.Result
+		result, err = s.db.ExecContext(ctx, `INSERT OR IGNORE INTO route_deleted (device, start_time, end_time) VALUES (?, ?, ?)`,
+			device, from.UnixMilli(), end.UnixMilli())
+		if err != nil {
+			return 0, err
+		}
+		// When the deletion fails, the stretch is not remembered either, so
+		// what the phone sends of it later is not lost next to what is left.
+		if added, _ := result.RowsAffected(); added > 0 {
+			defer func() {
+				if err != nil {
+					_, _ = s.db.ExecContext(context.WithoutCancel(ctx), `DELETE FROM route_deleted WHERE device = ? AND start_time = ? AND end_time = ?`,
+						device, from.UnixMilli(), end.UnixMilli())
+				}
+			}()
+		}
+	}
+	// A scan is placed at a point up to positionBefore before it or
+	// positionAfter after it, so those points can have started a place too.
+	points, err := s.routePointsAll(ctx, device, from.Add(-positionBefore), to.Add(positionAfter))
+	if err != nil {
+		return 0, err
+	}
+	// The places first, as they are found by the points: a retry after a
+	// failure later on still finds them.
+	places, err := s.deletePositionPlacesNear(ctx, points)
+	if err != nil {
+		return 0, err
+	}
 	route, err := s.deleteChunks(ctx, "route_points", "device, phone_time", `device = ? AND time >= ? AND time < ?`, device, from.UnixMilli(), to.UnixMilli())
 	if err != nil {
 		return route, err
@@ -380,8 +426,78 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 	if err != nil {
 		return route, err
 	}
-	s.shrinkLog(ctx, route+scans)
+	connections, err := s.cutWiFiConnections(ctx, device, from, to)
+	if err != nil {
+		return route, err
+	}
+	s.shrinkLog(ctx, route+scans+connections+places)
 	return route, nil
+}
+
+// deletedRouteSlack is how far past now a deleted stretch reaches, as the hub
+// takes a phone's points up to 10 seconds in the future (hub.maxClockJitter).
+const deletedRouteSlack = 10 * time.Second
+
+// cutWiFiConnections takes the stretch from from up to to out of the Wi-Fi
+// connections of the phone stored as device: one within it is deleted, one
+// that started in it starts at its end, and one that ends in it ends at its
+// start. One over the whole stretch is kept, and WiFiConnections leaves the
+// stretch out of it, as of one the phone sends again with a later end. It
+// returns how many were deleted.
+func (s *Store) cutWiFiConnections(ctx context.Context, device string, from, to time.Time) (int64, error) {
+	var deleted int64
+	err := s.inTx(ctx, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `UPDATE wifi_connections SET end_time = ?2 WHERE device = ?1 AND time < ?2 AND end_time > ?2 AND end_time <= ?3`,
+			device, from.UnixMilli(), to.UnixMilli()); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE wifi_connections SET time = ?3 WHERE device = ?1 AND time >= ?2 AND time < ?3 AND end_time > ?3`,
+			device, from.UnixMilli(), to.UnixMilli()); err != nil {
+			return err
+		}
+		result, err := tx.ExecContext(ctx, `DELETE FROM wifi_connections WHERE device = ? AND time >= ? AND time < ?`,
+			device, from.UnixMilli(), to.UnixMilli())
+		if err != nil {
+			return err
+		}
+		deleted, err = result.RowsAffected()
+		return err
+	})
+	return deleted, err
+}
+
+// routePointsAll returns where the phone stored as device was from from up to
+// (not including) to, each place once: the points precise enough to place a
+// scan (PositionMaxAccuracy), as only they started places.
+func (s *Store) routePointsAll(ctx context.Context, device string, from, to time.Time) ([]PhonePoint, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT DISTINCT lat, lon FROM route_points
+		WHERE device = ? AND time >= ? AND time < ? AND accuracy <= ?`, device, from.UnixMilli(), to.UnixMilli(), PositionMaxAccuracy)
+	if err != nil {
+		return nil, err
+	}
+	var points []PhonePoint
+	err = scanRows(rows, func() error {
+		var p PhonePoint
+		if err := rows.Scan(&p.Lat, &p.Lon); err != nil {
+			return err
+		}
+		points = append(points, p)
+		return nil
+	})
+	return points, err
+}
+
+// DeletedRouteIn tells whether at falls into one of stretches, as
+// DeletedStretches returns them.
+func DeletedRouteIn(stretches [][2]int64, at time.Time) bool {
+	ms := at.UnixMilli()
+	for _, stretch := range stretches {
+		if ms >= stretch[0] && ms < stretch[1] {
+			return true
+		}
+	}
+	return false
 }
 
 // DeleteDevice deletes every value of one device, and how its extras are
@@ -394,6 +510,14 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	s.wifi.forget(device)
 	s.flushing.Unlock()
 	s.cache.forget(device)
+	// First, so a phone added again under the same id never inherits its
+	// deleted stretches, even when a later step fails or is cut short.
+	s.placing.Lock()
+	_, err := s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device)
+	s.placing.Unlock()
+	if err != nil {
+		return err
+	}
 	deleted, err := s.deleteChunks(ctx, "history_minutes", "device, time", `device = ?`, device)
 	if err != nil {
 		return err

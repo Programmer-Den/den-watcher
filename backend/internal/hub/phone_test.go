@@ -165,7 +165,7 @@ func TestThePhonesScansCountAtTheirOwnTime(t *testing.T) {
 	}
 	// The phone's clock is an hour behind; it kept a scan from three hours
 	// ago, while it was away, one from now and one from before the
-	// retention, sent out of order.
+	// retention of the minutes, sent out of order.
 	now := time.Now()
 	phoneNow := now.Add(-time.Hour)
 	ap := metrics.NearbyAccessPoint{ID: "0000000000aa", Box: "0000000000bb", SSID: "Office", SignalPercent: 60}
@@ -210,6 +210,11 @@ func TestThePhonesScansCountAtTheirOwnTime(t *testing.T) {
 	}
 	if scan == nil || len(scan.Networks) != 1 || scan.Networks[0].SSID != "Office" {
 		t.Errorf("scan from three hours ago = %+v, want the one with Office", scan)
+	}
+	// The one from before the retention of the minutes too, as the phones'
+	// scans are kept for good by default, but it is not in the hourly sums.
+	if scan, err := store.PhoneScanNear(ctx, "pixel", now.Add(-60*24*time.Hour), time.Minute); err != nil || scan == nil {
+		t.Errorf("scan from 60 days ago = %+v, %v; want it kept", scan, err)
 	}
 
 	if _, err := h.Receive(ctx, "7KQM-X2RP", Push{Now: phoneNow.Unix(), WiFi: make([]PhoneScan, ScansPerPush+1)}); !errors.Is(err, ErrPushTooLarge) {
@@ -674,5 +679,56 @@ func TestAScanThatWasNotStoredComesAgain(t *testing.T) {
 	}
 	if len(seen.AccessPoints) != 1 || seen.AccessPoints[0].SeenBy[0].Points[0].Seen != 1 {
 		t.Errorf("access points %+v, want the scan counted once", seen.AccessPoints)
+	}
+}
+
+func TestThePhonesScansAreKeptAndCountedEachByItsOwnRetention(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	h := openTestHub(t, store, nil)
+	h.phoneRetention = 24 * time.Hour
+	if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+		t.Fatalf("AddPhone() error = %v", err)
+	}
+	now := time.Now()
+	// The user deleted the route of a stretch two hours ago.
+	if _, err := store.DeleteRoute(ctx, "pixel", now.Add(-130*time.Minute), now.Add(-110*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	ap := metrics.NearbyAccessPoint{ID: "0000000000aa", Box: "0000000000bb", SSID: "Office", SignalPercent: 60}
+	old, deleted := now.Add(-3*24*time.Hour), now.Add(-2*time.Hour)
+	push := Push{Now: now.Unix(), WiFi: []PhoneScan{
+		{Time: old.Unix(), AccessPoints: []metrics.NearbyAccessPoint{ap}},
+		{Time: deleted.Unix(), AccessPoints: []metrics.NearbyAccessPoint{ap}},
+	}}
+	if _, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Flush(ctx); err != nil {
+		t.Fatal(err)
+	}
+	// Older than the phone's retention: not kept on its own, but in the sums.
+	if scan, err := store.PhoneScanNear(ctx, "pixel", old, time.Minute); err != nil || scan != nil {
+		t.Errorf("scan from 3 days ago = %+v, %v; want none kept", scan, err)
+	}
+	// Of the deleted stretch: in neither.
+	if scan, err := store.PhoneScanNear(ctx, "pixel", deleted, time.Minute); err != nil || scan != nil {
+		t.Errorf("scan of the deleted stretch = %+v, %v; want none kept", scan, err)
+	}
+	seen, err := store.WiFi(ctx, now.Add(-4*24*time.Hour), now.Add(time.Minute), time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(seen.AccessPoints) != 1 {
+		t.Fatalf("access points %+v, want the one the phone saw", seen.AccessPoints)
+	}
+	var hours []int64
+	for _, point := range seen.AccessPoints[0].SeenBy[0].Points {
+		if point.Seen > 0 {
+			hours = append(hours, point.Time)
+		}
+	}
+	if len(hours) != 1 || hours[0] != old.Truncate(time.Hour).Unix() {
+		t.Errorf("hours seen %v, want only the one of 3 days ago, %d", hours, old.Truncate(time.Hour).Unix())
 	}
 }

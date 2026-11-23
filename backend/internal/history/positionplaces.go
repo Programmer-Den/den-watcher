@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"time"
@@ -26,6 +27,11 @@ CREATE TABLE IF NOT EXISTS position_places (
 	name        TEXT    NOT NULL DEFAULT '',
 	merged_into INTEGER                     -- the place its scans count to, or NULL
 );
+CREATE TABLE IF NOT EXISTS position_place_last_id (
+	one     INTEGER PRIMARY KEY CHECK (one = 1),
+	last_id INTEGER NOT NULL -- the highest ID a place ever had, so none is given twice
+);
+INSERT OR IGNORE INTO position_place_last_id (one, last_id) SELECT 1, COALESCE(MAX(id), 0) FROM position_places;
 CREATE TABLE IF NOT EXISTS position_places_apart (
 	a INTEGER NOT NULL, -- the two places, a < b, never suggested as one
 	b INTEGER NOT NULL,
@@ -100,9 +106,18 @@ func (s *Store) keepPositionPlaces(ctx context.Context, g *positionGrouper) erro
 				}
 				continue
 			}
-			err := tx.QueryRowContext(ctx, `INSERT INTO position_places (lat, lon, last) VALUES (?, ?, ?) RETURNING id`,
+			// A new ID above every one given so far, also those of places
+			// deleted since, so a page still showing one changes no other.
+			err := tx.QueryRowContext(ctx, `
+				INSERT INTO position_places (id, lat, lon, last) VALUES (
+					max(COALESCE((SELECT MAX(id) FROM position_places), 0),
+						COALESCE((SELECT last_id FROM position_place_last_id), 0)) + 1, ?, ?, ?)
+				RETURNING id`,
 				place.lat, place.lon, place.newest).Scan(&place.id)
 			if err != nil {
+				return err
+			}
+			if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO position_place_last_id (one, last_id) VALUES (1, ?)`, place.id); err != nil {
 				return err
 			}
 			g.byID[place.id] = slices.Index(g.places, place)
@@ -162,13 +177,25 @@ func (s *Store) RenamePositionPlace(ctx context.Context, id int64, name string) 
 			return err
 		}
 		if name != "" {
-			var other int64
-			err := tx.QueryRowContext(ctx, `SELECT id FROM position_places WHERE lower(name) = lower(?) AND id != ?`, name, root).Scan(&other)
-			if err == nil {
-				return &PlaceInputError{fmt.Sprintf("another place is named %q", name)}
-			}
-			if !errors.Is(err, sql.ErrNoRows) {
+			// Compared here, as SQLite's lower() changes only A to Z, not Ü.
+			rows, err := tx.QueryContext(ctx, `SELECT name FROM position_places WHERE name != '' AND id != ?`, root)
+			if err != nil {
 				return err
+			}
+			taken := false
+			err = scanRows(rows, func() error {
+				var other string
+				if err := rows.Scan(&other); err != nil {
+					return err
+				}
+				taken = taken || strings.EqualFold(other, name)
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			if taken {
+				return &PlaceInputError{fmt.Sprintf("another place is named %q", name)}
 			}
 		}
 		_, err = tx.ExecContext(ctx, `UPDATE position_places SET name = ? WHERE id = ?`, name, root)
@@ -250,22 +277,103 @@ func keepApart(ctx context.Context, tx *sql.Tx, a, b int64) error {
 	return err
 }
 
+// untoldPlace is the condition of a place the user told nothing of: no
+// name, not merged, nothing merged into it and not kept apart from another.
+// Such a place tells only where the phones scanned, which the scans tell too;
+// the next look at the Wi-Fi map starts it again from the scans that are
+// left, with a new ID. A place the user told something of is kept for good.
+const untoldPlace = `name = '' AND merged_into IS NULL
+	AND id NOT IN (SELECT merged_into FROM position_places WHERE merged_into IS NOT NULL)
+	AND id NOT IN (SELECT a FROM position_places_apart)
+	AND id NOT IN (SELECT b FROM position_places_apart)`
+
 // deleteOldPositionPlaces deletes the places whose newest scan is before t
-// and that the user told nothing of: no name, not merged, nothing merged
-// into them. Their scans are gone, and a new scan there starts a new place.
+// and that the user told nothing of (see untoldPlace). Their scans are gone,
+// and a new scan there starts a new place.
 func (s *Store) deleteOldPositionPlaces(ctx context.Context, t time.Time) (int64, error) {
 	s.placing.Lock()
 	defer s.placing.Unlock()
-	result, err := s.db.ExecContext(ctx, `
-		DELETE FROM position_places WHERE last < ? AND name = '' AND merged_into IS NULL
-		AND id NOT IN (SELECT merged_into FROM position_places WHERE merged_into IS NOT NULL)`, t.Unix())
+	result, err := s.db.ExecContext(ctx, `DELETE FROM position_places WHERE last < ? AND `+untoldPlace, t.Unix())
 	if err != nil {
 		return 0, err
 	}
-	if _, err := s.db.ExecContext(ctx, `
-		DELETE FROM position_places_apart
-		WHERE a NOT IN (SELECT id FROM position_places) OR b NOT IN (SELECT id FROM position_places)`); err != nil {
+	return result.RowsAffected()
+}
+
+// deletePositionPlacesNear deletes the places the user told nothing of (see
+// untoldPlace) within PositionMeters of one of points, as where a phone was
+// on a day of its route that the user deletes. The caller holds placing.
+func (s *Store) deletePositionPlacesNear(ctx context.Context, points []PhonePoint) (int64, error) {
+	if len(points) == 0 {
+		return 0, nil
+	}
+	// The points by cells of nearCell degrees, so each place is compared
+	// only with the points of its cell and the ones around it.
+	cells := map[[2]int64][]PhonePoint{}
+	for _, p := range points {
+		key := nearCellOf(p.Lat, p.Lon)
+		cells[key] = append(cells[key], p)
+	}
+	// Read first and deleted in a transaction that starts with a write, so
+	// the busy timeout covers a write of another connection meanwhile; the
+	// delete checks again, so a name given meanwhile keeps the place.
+	rows, err := s.db.QueryContext(ctx, `SELECT id, lat, lon FROM position_places WHERE `+untoldPlace)
+	if err != nil {
 		return 0, err
 	}
-	return result.RowsAffected()
+	var near []int64
+	err = scanRows(rows, func() error {
+		var id int64
+		var lat, lon float64
+		if err := rows.Scan(&id, &lat, &lon); err != nil {
+			return err
+		}
+		if nearAny(cells, lat, lon) {
+			near = append(near, id)
+		}
+		return nil
+	})
+	if err != nil || len(near) == 0 {
+		return 0, err
+	}
+	var deleted int64
+	err = s.inTx(ctx, func(tx *sql.Tx) error {
+		for _, id := range near {
+			result, err := tx.ExecContext(ctx, `DELETE FROM position_places WHERE id = ? AND `+untoldPlace, id)
+			if err != nil {
+				return err
+			}
+			n, err := result.RowsAffected()
+			if err != nil {
+				return err
+			}
+			deleted += n
+		}
+		return nil
+	})
+	return deleted, err
+}
+
+// nearCell is the size of the cells deletePositionPlacesNear sorts points
+// into, in degrees: about 1.1 km north to south, and still more than
+// PositionMeters east to west up to 84 degrees north or south.
+const nearCell = 0.01
+
+func nearCellOf(lat, lon float64) [2]int64 {
+	return [2]int64{int64(math.Floor(lat / nearCell)), int64(math.Floor(lon / nearCell))}
+}
+
+// nearAny tells whether a point of cells is within PositionMeters of lat, lon.
+func nearAny(cells map[[2]int64][]PhonePoint, lat, lon float64) bool {
+	c := nearCellOf(lat, lon)
+	for dy := int64(-1); dy <= 1; dy++ {
+		for dx := int64(-1); dx <= 1; dx++ {
+			for _, p := range cells[[2]int64{c[0] + dy, c[1] + dx}] {
+				if distanceMeters(lat, lon, p.Lat, p.Lon) <= PositionMeters {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

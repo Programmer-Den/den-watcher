@@ -3,6 +3,7 @@ package history
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -216,13 +217,77 @@ func TestOldPlacesAreDeletedUnlessTheUserToldOfThem(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	want := []int64{places["Den"].ID, places["Cafe"].ID, places["Gym"].ID, places["Station"].ID}
+	// The park is old, but kept apart from the station, which the user told.
+	want := []int64{places["Den"].ID, places["Cafe"].ID, places["Gym"].ID, places["Park"].ID, places["Station"].ID}
 	slices.Sort(want)
 	if !slices.Equal(ids, want) {
-		t.Errorf("kept places %v, want %v: the named, the merged and the recent ones", ids, want)
+		t.Errorf("kept places %v, want %v: the named, the merged, the kept apart and the recent ones", ids, want)
 	}
 	var apart int
-	if err := store.db.QueryRowContext(ctx, `SELECT count(*) FROM position_places_apart`).Scan(&apart); err != nil || apart != 0 {
-		t.Errorf("%d places kept apart, %v; want none once the park is gone", apart, err)
+	if err := store.db.QueryRowContext(ctx, `SELECT count(*) FROM position_places_apart`).Scan(&apart); err != nil || apart != 1 {
+		t.Errorf("%d places kept apart, %v; want the park and the station still", apart, err)
+	}
+}
+
+func TestPlaceNamesDifferInMoreThanTheCase(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	day := time.Date(2026, 11, 5, 10, 0, 0, 0, time.UTC)
+	scanAt(t, store, day, 53.5755, 9.9530, "Den")
+	scanAt(t, store, day.Add(time.Hour), 53.5400, 9.9800, "Park")
+	places := placesBy(t, store, day, day.Add(24*time.Hour))
+	if err := store.RenamePositionPlace(ctx, places["Den"].ID, "Büro"); err != nil {
+		t.Fatal(err)
+	}
+	var input *PlaceInputError
+	if err := store.RenamePositionPlace(ctx, places["Park"].ID, "BÜRO"); !errors.As(err, &input) {
+		t.Errorf("RenamePositionPlace(BÜRO) = %v; want it refused, as Büro is taken", err)
+	}
+	// The place itself may change the case of its own name.
+	if err := store.RenamePositionPlace(ctx, places["Den"].ID, "BÜRO"); err != nil {
+		t.Errorf("RenamePositionPlace(BÜRO) of Büro itself = %v", err)
+	}
+}
+
+func TestAPlaceIDIsNeverGivenTwice(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	day := time.Date(2026, 11, 5, 10, 0, 0, 0, time.UTC)
+	scanAt(t, store, day, 53.5755, 9.9530, "Den")
+	scanAt(t, store, day.Add(time.Hour), 53.5400, 9.9800, "Park")
+	old := placesBy(t, store, day, day.Add(24*time.Hour))["Park"].ID
+
+	// The park, the newest place, is deleted with its scans, and a new place
+	// is started.
+	if _, err := store.DeletePhoneDataBefore(ctx, day.Add(2*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	scanAt(t, store, day.Add(48*time.Hour), 53.5300, 9.9900, "Station")
+	if got := placesBy(t, store, day, day.Add(72*time.Hour))["Station"].ID; got <= old {
+		t.Errorf("the new place's ID = %d; want one above %d, the deleted park's", got, old)
+	}
+}
+
+func TestTheLastPlaceIDIsKnownAfterAnUpgrade(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "history.db")
+	store, err := Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A database from before position_place_last_id, with places up to 40.
+	if _, err := store.db.ExecContext(ctx, `DROP TABLE position_place_last_id;
+		INSERT INTO position_places (id, lat, lon, last) VALUES (39, 1, 1, 1), (40, 2, 2, 1)`); err != nil {
+		t.Fatal(err)
+	}
+	_ = store.Close()
+	store, err = Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = store.Close() }()
+	var last int64
+	if err := store.db.QueryRowContext(ctx, `SELECT last_id FROM position_place_last_id`).Scan(&last); err != nil || last != 40 {
+		t.Errorf("last place ID = %d, %v; want 40", last, err)
 	}
 }

@@ -2,6 +2,7 @@ package history
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 )
@@ -55,5 +56,28 @@ func TestWiFiConnectionsGrowAndAreReadByTheirRange(t *testing.T) {
 	}
 	if len(got) != 2 || got[0].SSID != "Work" || got[1].SSID != "Café" {
 		t.Errorf("after the retention: %+v, want the ones that end after it, Work and Café", got)
+	}
+}
+
+func TestWithoutStretches(t *testing.T) {
+	for _, tt := range []struct {
+		start, end int64
+		stretches  [][2]int64
+		want       [][2]int64
+	}{
+		{10, 20, nil, [][2]int64{{10, 20}}},
+		{10, 20, [][2]int64{{0, 5}, {25, 30}}, [][2]int64{{10, 20}}},
+		{10, 20, [][2]int64{{0, 12}}, [][2]int64{{12, 20}}},
+		{10, 20, [][2]int64{{15, 30}}, [][2]int64{{10, 15}}},
+		{10, 20, [][2]int64{{12, 14}, {16, 18}}, [][2]int64{{10, 12}, {14, 16}, {18, 20}}},
+		{10, 20, [][2]int64{{5, 15}, {15, 25}}, nil},
+		{10, 20, [][2]int64{{0, 20}}, nil},
+		{10, 20, [][2]int64{{20, 30}}, [][2]int64{{10, 20}}},
+		{10, 10, nil, [][2]int64{{10, 10}}},
+		{10, 10, [][2]int64{{5, 15}}, nil},
+	} {
+		if got := withoutStretches(tt.start, tt.end, tt.stretches); !slices.Equal(got, tt.want) {
+			t.Errorf("withoutStretches(%d, %d, %v) = %v, want %v", tt.start, tt.end, tt.stretches, got, tt.want)
+		}
 	}
 }

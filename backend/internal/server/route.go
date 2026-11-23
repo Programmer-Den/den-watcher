@@ -208,17 +208,25 @@ type deleteRouteRequest struct {
 	To       int64  `json:"to"`
 }
 
+// maxDeletedRouteSeconds is the longest stretch one request deletes: a day,
+// which can be 25 hours, with room to spare.
+const maxDeletedRouteSeconds = 2 * 24 * 60 * 60
+
+// maxUnixSeconds is the end of the year 9999, beyond which a time in
+// milliseconds could overflow.
+const maxUnixSeconds = 253402300799
+
 // deleteRoute serves DELETE /api/phones/{id}/route: deletes where the phone
-// was from from up to (not including) to, and its scans of the Wi-Fi
-// networks then, as when a day of its route should not be kept.
+// was from from up to (not including) to, and what tells the same (see
+// history.Store.DeleteRoute), as when a day of its route should not be kept.
 func (c *deviceChanges) deleteRoute(devices Devices, routes RouteDeleter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var request deleteRouteRequest
 		if !readJSON(w, r, &request) {
 			return
 		}
-		if request.From < 0 || request.From >= request.To {
-			writeJSON(w, http.StatusBadRequest, problemResponse{problemRequest, "from and to must be Unix times in seconds, with from before to"})
+		if request.From < 0 || request.From >= request.To || request.To-request.From > maxDeletedRouteSeconds || request.To > maxUnixSeconds {
+			writeJSON(w, http.StatusBadRequest, problemResponse{problemRequest, "from and to must be Unix times in seconds up to the year 9999, with from before to and at most two days apart"})
 			return
 		}
 		id := r.PathValue("id")
