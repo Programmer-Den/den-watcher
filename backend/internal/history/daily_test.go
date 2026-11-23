@@ -122,7 +122,7 @@ func TestOpenFillsTheDailyAveragesAgainWhenTheLastTryFailed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 	var value float64
 	if err := store.db.QueryRowContext(ctx, `SELECT value FROM samples_daily WHERE time = ?`, day).Scan(&value); err != nil || value != 10 {
 		t.Errorf("the day = %v, %v; want 10", value, err)

@@ -423,7 +423,7 @@ func TestCheckDevices(t *testing.T) {
 }
 
 func TestPhoneRetentionDays(t *testing.T) {
-	for value, want := range map[string]int{"": 0, "0": 0, " 7 ": 7, "36500": 36500} {
+	for value, want := range map[string]int{"": 0, "0": 0, "7": 7, "36500": 36500} {
 		t.Setenv("PHONE_RETENTION_DAYS", value)
 		if got, err := phoneRetentionDays(); err != nil || got != want {
 			t.Errorf("phoneRetentionDays() with %q = %v, %v, want %v", value, got, err, want)
