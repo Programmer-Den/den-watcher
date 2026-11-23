@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"time"
@@ -305,34 +306,39 @@ func (s *Store) deletePositionPlacesNear(ctx context.Context, points []PhonePoin
 	if len(points) == 0 {
 		return 0, nil
 	}
+	// The points by cells of nearCell degrees, so each place is compared
+	// only with the points of its cell and the ones around it.
+	cells := map[[2]int64][]PhonePoint{}
+	for _, p := range points {
+		key := nearCellOf(p.Lat, p.Lon)
+		cells[key] = append(cells[key], p)
+	}
 	s.placing.Lock()
 	defer s.placing.Unlock()
-	rows, err := s.db.QueryContext(ctx, `SELECT id, lat, lon FROM position_places WHERE `+untoldPlace)
-	if err != nil {
-		return 0, err
-	}
-	var near []int64
-	err = scanRows(rows, func() error {
-		var id int64
-		var lat, lon float64
-		if err := rows.Scan(&id, &lat, &lon); err != nil {
+	var deleted int64
+	err := s.inTx(ctx, func(tx *sql.Tx) error {
+		rows, err := tx.QueryContext(ctx, `SELECT id, lat, lon FROM position_places WHERE `+untoldPlace)
+		if err != nil {
 			return err
 		}
-		for _, p := range points {
-			if distanceMeters(lat, lon, p.Lat, p.Lon) <= PositionMeters {
-				near = append(near, id)
-				break
+		var near []int64
+		err = scanRows(rows, func() error {
+			var id int64
+			var lat, lon float64
+			if err := rows.Scan(&id, &lat, &lon); err != nil {
+				return err
 			}
+			if nearAny(cells, lat, lon) {
+				near = append(near, id)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
 		}
-		return nil
-	})
-	if err != nil || len(near) == 0 {
-		return 0, err
-	}
-	var deleted int64
-	err = s.inTx(ctx, func(tx *sql.Tx) error {
 		for _, id := range near {
-			result, err := tx.ExecContext(ctx, `DELETE FROM position_places WHERE id = ?`, id)
+			// Checked again, so a name given meanwhile keeps the place.
+			result, err := tx.ExecContext(ctx, `DELETE FROM position_places WHERE id = ? AND `+untoldPlace, id)
 			if err != nil {
 				return err
 			}
@@ -345,4 +351,28 @@ func (s *Store) deletePositionPlacesNear(ctx context.Context, points []PhonePoin
 		return nil
 	})
 	return deleted, err
+}
+
+// nearCell is the size of the cells deletePositionPlacesNear sorts points
+// into, in degrees: about 1.1 km north to south, and still more than
+// PositionMeters east to west up to 85 degrees north or south.
+const nearCell = 0.01
+
+func nearCellOf(lat, lon float64) [2]int64 {
+	return [2]int64{int64(math.Floor(lat / nearCell)), int64(math.Floor(lon / nearCell))}
+}
+
+// nearAny tells whether a point of cells is within PositionMeters of lat, lon.
+func nearAny(cells map[[2]int64][]PhonePoint, lat, lon float64) bool {
+	c := nearCellOf(lat, lon)
+	for dy := int64(-1); dy <= 1; dy++ {
+		for dx := int64(-1); dx <= 1; dx++ {
+			for _, p := range cells[[2]int64{c[0] + dy, c[1] + dx}] {
+				if distanceMeters(lat, lon, p.Lat, p.Lon) <= PositionMeters {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

@@ -363,9 +363,6 @@ func (s *Store) DeletePhoneDataBefore(ctx context.Context, t time.Time) (int64, 
 	if err != nil {
 		return deleted, err
 	}
-	if _, err := s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE end_time < ?`, t.UnixMilli()); err != nil {
-		return deleted, err
-	}
 	s.shrinkLog(ctx, deleted)
 	return deleted, nil
 }
@@ -379,16 +376,17 @@ func (s *Store) DeletePhoneDataBefore(ctx context.Context, t time.Time) (int64, 
 // were deleted.
 func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Time) (int64, error) {
 	// Only what was recorded up to now is left out later: what the phone
-	// records from now on is new, even within the stretch.
-	if until := time.Now(); to.After(until) {
-		to = until
+	// records from now on is new, even within the stretch. The slack covers
+	// a phone's clock a little ahead, whose points the hub takes too.
+	end := to
+	if until := time.Now().Add(deletedRouteSlack); end.After(until) {
+		end = until
 	}
-	if !to.After(from) {
-		return 0, nil
-	}
-	if _, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO route_deleted (device, start_time, end_time) VALUES (?, ?, ?)`,
-		device, from.UnixMilli(), to.UnixMilli()); err != nil {
-		return 0, err
+	if end.After(from) {
+		if _, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO route_deleted (device, start_time, end_time) VALUES (?, ?, ?)`,
+			device, from.UnixMilli(), end.UnixMilli()); err != nil {
+			return 0, err
+		}
 	}
 	points, err := s.routePointsAll(ctx, device, from, to)
 	if err != nil {
@@ -413,6 +411,10 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 	s.shrinkLog(ctx, route+scans+connections+places)
 	return route, nil
 }
+
+// deletedRouteSlack is how far past now a deleted stretch reaches, as the hub
+// takes a phone's points up to 10 seconds in the future (hub.maxClockJitter).
+const deletedRouteSlack = 10 * time.Second
 
 // routePointsAll returns where the phone stored as device was from from up to
 // (not including) to, each place once: the points rounded to about 10 m.

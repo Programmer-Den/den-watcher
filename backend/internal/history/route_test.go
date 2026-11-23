@@ -201,10 +201,15 @@ func TestDeleteRouteOfTodayKeepsWhatComesAfterIt(t *testing.T) {
 	ctx := context.Background()
 	store := openTestStore(t)
 	now := time.Now()
-	today := now.Truncate(day24)
 	scanAt(t, store, now.Add(-time.Minute), 53.5755, 9.9530, "Den")
+	// Connected since an hour ago, and still.
+	home := WiFiConnection{SSID: "Home", PhoneStart: 1, Start: now.Add(-time.Hour).UnixMilli(), End: now.UnixMilli()}
+	if err := store.AddWiFiConnections(ctx, "pixel", []WiFiConnection{home}); err != nil {
+		t.Fatal(err)
+	}
 
-	if _, err := store.DeleteRoute(ctx, "pixel", today, today.Add(day24)); err != nil {
+	// The stretch reaches into the future, as today until midnight would.
+	if _, err := store.DeleteRoute(ctx, "pixel", now.Add(-2*time.Hour), now.Add(22*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	if deleted, err := store.DeletedRouteAt(ctx, "pixel", now.Add(-time.Minute)); err != nil || !deleted {
@@ -213,11 +218,21 @@ func TestDeleteRouteOfTodayKeepsWhatComesAfterIt(t *testing.T) {
 	// Recorded after the delete, so it is stored.
 	later := time.Now().Add(time.Minute)
 	scanAt(t, store, later, 53.5755, 9.9530, "Den")
-	if left, err := store.RoutePoints(ctx, "pixel", today, today.Add(day24)); err != nil || len(left) != 1 {
-		t.Errorf("points of today = %+v, %v; want the one after the delete", left, err)
+	if left, err := store.RoutePoints(ctx, "pixel", now.Add(-2*time.Hour), now.Add(22*time.Hour)); err != nil || len(left) != 1 {
+		t.Errorf("points = %+v, %v; want the one after the delete", left, err)
 	}
 	if deleted, err := store.DeletedRouteAt(ctx, "pixel", later); err != nil || deleted {
 		t.Errorf("DeletedRouteAt(after the delete) = %v, %v; want false", deleted, err)
+	}
+	// The connection, sent again with its new end, is kept from the end of
+	// the deleted stretch on.
+	home.End = later.UnixMilli()
+	if err := store.AddWiFiConnections(ctx, "pixel", []WiFiConnection{home}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := store.WiFiConnections(ctx, "pixel", now.Add(-2*time.Hour), now.Add(time.Hour))
+	if err != nil || len(got) != 1 || got[0].Start < now.Unix() || got[0].End != later.Unix() {
+		t.Errorf("connections = %+v, %v; want Home from the delete on, ending %d", got, err, later.Unix())
 	}
 }
 
