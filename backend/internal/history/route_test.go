@@ -324,3 +324,21 @@ func TestDeleteDeviceForgetsItsDeletedStretches(t *testing.T) {
 		t.Errorf("other's deleted stretches = %v, %v; want its one", stretches, err)
 	}
 }
+
+func TestDeleteRouteForgetsTheStretchWhenItFails(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	day := time.Date(2026, 11, 5, 0, 0, 0, 0, time.UTC)
+	// A later step of the deletion fails.
+	if _, err := store.db.ExecContext(ctx, `DROP TABLE wifi_connections`); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := store.DeleteRoute(ctx, "pixel", day, day.Add(day24)); err == nil {
+		t.Fatal("DeleteRoute() without wifi_connections did not fail")
+	}
+
+	if stretches, err := store.DeletedStretches(ctx, "pixel"); err != nil || len(stretches) != 0 {
+		t.Errorf("deleted stretches = %v, %v; want none after the failed deletion", stretches, err)
+	}
+}

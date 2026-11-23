@@ -388,7 +388,9 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 		end = until
 	}
 	if end.After(from) {
-		result, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO route_deleted (device, start_time, end_time) VALUES (?, ?, ?)`,
+		// err is the named result, which the deferred cleanup reads.
+		var result sql.Result
+		result, err = s.db.ExecContext(ctx, `INSERT OR IGNORE INTO route_deleted (device, start_time, end_time) VALUES (?, ?, ?)`,
 			device, from.UnixMilli(), end.UnixMilli())
 		if err != nil {
 			return 0, err
