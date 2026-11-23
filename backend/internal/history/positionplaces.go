@@ -301,7 +301,7 @@ func (s *Store) deleteOldPositionPlaces(ctx context.Context, t time.Time) (int64
 
 // deletePositionPlacesNear deletes the places the user told nothing of (see
 // untoldPlace) within PositionMeters of one of points, as where a phone was
-// on a day of its route that the user deletes.
+// on a day of its route that the user deletes. The caller holds placing.
 func (s *Store) deletePositionPlacesNear(ctx context.Context, points []PhonePoint) (int64, error) {
 	if len(points) == 0 {
 		return 0, nil
@@ -313,8 +313,6 @@ func (s *Store) deletePositionPlacesNear(ctx context.Context, points []PhonePoin
 		key := nearCellOf(p.Lat, p.Lon)
 		cells[key] = append(cells[key], p)
 	}
-	s.placing.Lock()
-	defer s.placing.Unlock()
 	var deleted int64
 	err := s.inTx(ctx, func(tx *sql.Tx) error {
 		rows, err := tx.QueryContext(ctx, `SELECT id, lat, lon FROM position_places WHERE `+untoldPlace)
@@ -355,7 +353,7 @@ func (s *Store) deletePositionPlacesNear(ctx context.Context, points []PhonePoin
 
 // nearCell is the size of the cells deletePositionPlacesNear sorts points
 // into, in degrees: about 1.1 km north to south, and still more than
-// PositionMeters east to west up to 85 degrees north or south.
+// PositionMeters east to west up to 84 degrees north or south.
 const nearCell = 0.01
 
 func nearCellOf(lat, lon float64) [2]int64 {

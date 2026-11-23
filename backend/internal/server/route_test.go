@@ -272,6 +272,9 @@ func TestDeletesAStretchOfAPhonesRouteWithThePassword(t *testing.T) {
 	if rec := send(handler, http.MethodDelete, "/api/phones/pixel/route", `{"password":"correct horse","from":5,"to":5}`); rec.Code != http.StatusBadRequest {
 		t.Errorf("status of an empty stretch = %d, want 400", rec.Code)
 	}
+	if rec := send(handler, http.MethodDelete, "/api/phones/pixel/route", `{"password":"correct horse","from":0,"to":172801}`); rec.Code != http.StatusBadRequest {
+		t.Errorf("status of a stretch longer than two days = %d, want 400", rec.Code)
+	}
 
 	rec := send(handler, http.MethodDelete, "/api/phones/pixel/route", `{"password":"correct horse","from":86400,"to":172800}`)
 

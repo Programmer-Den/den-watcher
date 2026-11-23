@@ -388,6 +388,10 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 			return 0, err
 		}
 	}
+	// Held throughout, so a look at the Wi-Fi map does not start places
+	// again from scans read before they were deleted (see WiFiPositions).
+	s.placing.Lock()
+	defer s.placing.Unlock()
 	points, err := s.routePointsAll(ctx, device, from, to)
 	if err != nil {
 		return 0, err
@@ -400,7 +404,7 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 	if err != nil {
 		return route, err
 	}
-	connections, err := s.deleteChunks(ctx, "wifi_connections", "device, start", `device = ? AND time >= ? AND time < ?`, device, from.UnixMilli(), to.UnixMilli())
+	connections, err := s.cutWiFiConnections(ctx, device, from, to)
 	if err != nil {
 		return route, err
 	}
@@ -416,11 +420,37 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 // takes a phone's points up to 10 seconds in the future (hub.maxClockJitter).
 const deletedRouteSlack = 10 * time.Second
 
+// cutWiFiConnections takes the stretch from from up to to out of the Wi-Fi
+// connections of the phone stored as device: one within it is deleted, one
+// that started in it and ended after it starts at its end, and one that
+// started before it ends at its start. It returns how many were deleted.
+func (s *Store) cutWiFiConnections(ctx context.Context, device string, from, to time.Time) (int64, error) {
+	var deleted int64
+	err := s.inTx(ctx, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `UPDATE wifi_connections SET end_time = ?2 WHERE device = ?1 AND time < ?2 AND end_time > ?2`,
+			device, from.UnixMilli()); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE wifi_connections SET time = ?3 WHERE device = ?1 AND time >= ?2 AND time < ?3 AND end_time > ?3`,
+			device, from.UnixMilli(), to.UnixMilli()); err != nil {
+			return err
+		}
+		result, err := tx.ExecContext(ctx, `DELETE FROM wifi_connections WHERE device = ? AND time >= ? AND time < ?`,
+			device, from.UnixMilli(), to.UnixMilli())
+		if err != nil {
+			return err
+		}
+		deleted, err = result.RowsAffected()
+		return err
+	})
+	return deleted, err
+}
+
 // routePointsAll returns where the phone stored as device was from from up to
-// (not including) to, each place once: the points rounded to about 10 m.
+// (not including) to, each place once.
 func (s *Store) routePointsAll(ctx context.Context, device string, from, to time.Time) ([]PhonePoint, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT DISTINCT round(lat, 4), round(lon, 4) FROM route_points
+		SELECT DISTINCT lat, lon FROM route_points
 		WHERE device = ? AND time >= ? AND time < ?`, device, from.UnixMilli(), to.UnixMilli())
 	if err != nil {
 		return nil, err

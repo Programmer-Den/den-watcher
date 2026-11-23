@@ -236,5 +236,45 @@ func TestDeleteRouteOfTodayKeepsWhatComesAfterIt(t *testing.T) {
 	}
 }
 
+func TestDeleteRouteCutsTheWiFiConnectionsAcrossTheStretch(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	day := time.Date(2026, 11, 5, 0, 0, 0, 0, time.UTC)
+	ms := func(d time.Duration) int64 { return day.Add(d).UnixMilli() }
+	if err := store.AddWiFiConnections(ctx, "pixel", []WiFiConnection{
+		{SSID: "Home", PhoneStart: 1, Start: ms(-2 * time.Hour), End: ms(9 * time.Hour)},
+		{SSID: "Cafe", PhoneStart: 2, Start: ms(12 * time.Hour), End: ms(13 * time.Hour)},
+		{SSID: "Office", PhoneStart: 3, Start: ms(23 * time.Hour), End: ms(32 * time.Hour)},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := store.DeleteRoute(ctx, "pixel", day, day.Add(day24)); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := store.WiFiConnections(ctx, "pixel", day.Add(-day24), day.Add(2*day24))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []PhoneConnection{
+		{SSID: "Home", Start: day.Add(-2 * time.Hour).Unix(), End: day.Unix()},
+		{SSID: "Office", Start: day.Add(day24).Unix(), End: day.Add(32 * time.Hour).Unix()},
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("connections = %+v, want %+v: the day taken out of them", got, want)
+	}
+	// Sent again later, a connection that ends in the day ends at its start.
+	if err := store.AddWiFiConnections(ctx, "pixel", []WiFiConnection{
+		{SSID: "Gym", PhoneStart: 4, Start: ms(-time.Hour), End: ms(2 * time.Hour)},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got, err = store.WiFiConnections(ctx, "pixel", day.Add(-2*time.Hour), day)
+	if err != nil || len(got) != 2 || got[1].SSID != "Gym" || got[1].End != day.Unix() {
+		t.Errorf("connections before the day = %+v, %v; want the gym ending at midnight", got, err)
+	}
+}
+
 // day24 is a day, for the tests of the phones' retention.
 const day24 = 24 * time.Hour
