@@ -37,7 +37,8 @@ type WiFiConnection struct {
 
 // AddWiFiConnections stores which Wi-Fi a phone was connected to. A
 // connection stored already keeps its start and gets the later of the two
-// ends, so an older copy of one sent again does not shorten it.
+// ends, so an older copy of one sent again does not shorten it. One that
+// starts in a stretch the user deleted is left out.
 func (s *Store) AddWiFiConnections(ctx context.Context, device string, connections []WiFiConnection) error {
 	if len(connections) == 0 {
 		return nil
@@ -48,7 +49,8 @@ func (s *Store) AddWiFiConnections(ctx context.Context, device string, connectio
 	}
 	defer func() { _ = tx.Rollback() }()
 	insert, err := tx.PrepareContext(ctx, `
-		INSERT INTO wifi_connections (device, start, time, end_time, ssid) VALUES (?, ?, ?, ?, ?)
+		INSERT INTO wifi_connections (device, start, time, end_time, ssid)
+		SELECT ?1, ?2, ?3, ?4, ?5 WHERE `+notDeleted+`
 		ON CONFLICT (device, start) DO UPDATE SET end_time = max(end_time, excluded.end_time)`)
 	if err != nil {
 		return err

@@ -165,7 +165,7 @@ func TestThePhonesScansCountAtTheirOwnTime(t *testing.T) {
 	}
 	// The phone's clock is an hour behind; it kept a scan from three hours
 	// ago, while it was away, one from now and one from before the
-	// retention, sent out of order.
+	// retention of the minutes, sent out of order.
 	now := time.Now()
 	phoneNow := now.Add(-time.Hour)
 	ap := metrics.NearbyAccessPoint{ID: "0000000000aa", Box: "0000000000bb", SSID: "Office", SignalPercent: 60}
@@ -210,6 +210,11 @@ func TestThePhonesScansCountAtTheirOwnTime(t *testing.T) {
 	}
 	if scan == nil || len(scan.Networks) != 1 || scan.Networks[0].SSID != "Office" {
 		t.Errorf("scan from three hours ago = %+v, want the one with Office", scan)
+	}
+	// The one from before the retention of the minutes too, as the phones'
+	// scans are kept for good by default, but it is not in the hourly sums.
+	if scan, err := store.PhoneScanNear(ctx, "pixel", now.Add(-60*24*time.Hour), time.Minute); err != nil || scan == nil {
+		t.Errorf("scan from 60 days ago = %+v, %v; want it kept", scan, err)
 	}
 
 	if _, err := h.Receive(ctx, "7KQM-X2RP", Push{Now: phoneNow.Unix(), WiFi: make([]PhoneScan, ScansPerPush+1)}); !errors.Is(err, ErrPushTooLarge) {

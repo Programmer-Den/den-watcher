@@ -119,6 +119,7 @@ type spot struct {
 	scans                  int
 	signal                 float64
 	first, last            int64
+	ssidAt                 int64 // the time of the scan ssid is from
 	connected              bool
 }
 
@@ -140,6 +141,9 @@ func (s *spot) add(p positionPoint, n ScannedNetwork, t int64) {
 		s.cos = math.Max(math.Cos(p.lat*math.Pi/180), 0.01)
 		s.first = t
 	}
+	// The scans may come newest first, so neither the first nor the newest
+	// name is simply the one of the first scan.
+	s.first = min(s.first, t)
 	x, y := s.offset(p)
 	w := weight(n.SignalPercent)
 	s.sw += w
@@ -158,8 +162,8 @@ func (s *spot) add(p positionPoint, n ScannedNetwork, t int64) {
 		s.lastPoint = p
 	}
 	s.scans++
-	if n.SSID != "" {
-		s.ssid = n.SSID
+	if n.SSID != "" && (s.ssid == "" || t >= s.ssidAt) {
+		s.ssid, s.ssidAt = n.SSID, t
 	}
 	s.signal = max(s.signal, n.SignalPercent)
 	s.last = max(s.last, t)

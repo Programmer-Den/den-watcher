@@ -2,6 +2,7 @@ package history
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -124,5 +125,18 @@ func TestSpotLeavesOutAScanItLearnedFrom(t *testing.T) {
 	s2.add(p1, ScannedNetwork{ID: "a", SignalPercent: 50}, 1)
 	if _, _, _, ok := s2.at(&p1, 50); ok {
 		t.Error("a spot without its only scan places something")
+	}
+}
+
+func TestSpotKeepsTheFirstTimeAndTheNewestNameWhateverTheOrder(t *testing.T) {
+	p := positionPoint{lat: 53.5, lon: 10}
+	for _, order := range [][]int64{{10, 5, 1}, {1, 5, 10}} {
+		var s spot
+		for _, at := range order {
+			s.add(p, ScannedNetwork{ID: "a", SSID: fmt.Sprintf("Name %d", at), SignalPercent: 50}, at)
+		}
+		if s.first != 1 || s.last != 10 || s.ssid != "Name 10" {
+			t.Errorf("scans at %v: first %d, last %d, name %q; want 1, 10 and the newest name", order, s.first, s.last, s.ssid)
+		}
 	}
 }

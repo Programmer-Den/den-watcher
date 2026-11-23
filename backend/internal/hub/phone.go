@@ -374,8 +374,9 @@ func (p *phone) receive(ctx context.Context, push Push, now time.Time, key []byt
 // Wi-Fi history, at their time on the hub's clock, as the minutes are moved
 // (see fetcher.receive), keeps each of them on its own too, for the points
 // of the phone's route, and returns the phone's time of the newest scan it
-// has. A scan older than the retention or from the future is left out, but
-// counts as had, so the phone deletes it. The caller holds pushing.
+// has. A scan older than the phone's retention or from the future is left
+// out, but counts as had, so the phone deletes it; one older than the
+// retention of the minutes is kept, but not counted into the Wi-Fi history. The caller holds pushing.
 func (p *phone) receiveWiFi(ctx context.Context, push Push, now time.Time) (int64, error) {
 	f := p.minutes
 	if p.wifiAfter > push.Now {
@@ -393,11 +394,15 @@ func (p *phone) receiveWiFi(ctx context.Context, push Push, now time.Time) (int6
 		}
 		after = scan.Time
 		at := time.Unix(scan.Time+f.offset, 0)
-		if at.After(now.Add(maxClockJitter)) || f.retention > 0 && at.Before(now.Add(-f.retention)) {
+		if at.After(now.Add(maxClockJitter)) || p.retention > 0 && at.Before(now.Add(-p.retention)) {
 			continue
 		}
 		cleaned := metrics.CleanNearbyWiFi(&metrics.NearbyWiFi{AccessPoints: scan.AccessPoints})
 		found = append(found, history.FoundScan{At: at, Found: cleaned.AccessPoints})
+		// The hourly sums have the retention of the minutes.
+		if f.retention > 0 && at.Before(now.Add(-f.retention)) {
+			cleaned = nil
+		}
 		nearby = append(nearby, cleaned)
 	}
 	// Stored first, so scans that could not be stored are neither counted
@@ -406,7 +411,9 @@ func (p *phone) receiveWiFi(ctx context.Context, push Push, now time.Time) (int6
 		return 0, err
 	}
 	for i, scan := range found {
-		f.store.AddWiFi(f.device, scan.At, nearby[i])
+		if nearby[i] != nil {
+			f.store.AddWiFi(f.device, scan.At, nearby[i])
+		}
 	}
 	p.wifiAfter = after
 	return p.wifiAfter, nil

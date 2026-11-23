@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -363,15 +364,25 @@ func (s *Store) DeletePhoneDataBefore(ctx context.Context, t time.Time) (int64, 
 	if err != nil {
 		return deleted, err
 	}
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE end_time < ?`, t.UnixMilli()); err != nil {
+		return deleted, err
+	}
 	s.shrinkLog(ctx, deleted)
 	return deleted, nil
 }
 
 // DeleteRoute deletes where a phone was from from up to (not including) to,
-// and the scans of the Wi-Fi networks it made then, which tell the same, as
-// when the user takes a day of its route away. It returns how many points of
-// the route were deleted.
+// and what tells the same: the scans of the Wi-Fi networks it made then, the
+// Wi-Fi connections that started then and the places of the Wi-Fi map the
+// user told nothing of, as when the user takes a day of its route away. The
+// hub remembers the stretch, so what the phone sends of it later, which it
+// had not sent yet, is left out too. It returns how many points of the route
+// were deleted.
 func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Time) (int64, error) {
+	if _, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO route_deleted (device, start_time, end_time) VALUES (?, ?, ?)`,
+		device, from.UnixMilli(), to.UnixMilli()); err != nil {
+		return 0, err
+	}
 	route, err := s.deleteChunks(ctx, "route_points", "device, phone_time", `device = ? AND time >= ? AND time < ?`, device, from.UnixMilli(), to.UnixMilli())
 	if err != nil {
 		return route, err
@@ -380,7 +391,15 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 	if err != nil {
 		return route, err
 	}
-	s.shrinkLog(ctx, route+scans)
+	connections, err := s.deleteChunks(ctx, "wifi_connections", "device, start", `device = ? AND time >= ? AND time < ?`, device, from.UnixMilli(), to.UnixMilli())
+	if err != nil {
+		return route, err
+	}
+	places, err := s.deleteUntoldPositionPlaces(ctx, math.MaxInt64)
+	if err != nil {
+		return route, err
+	}
+	s.shrinkLog(ctx, route+scans+connections+places)
 	return route, nil
 }
 
@@ -432,6 +451,9 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	}
 	phoneScans, err := s.deleteChunks(ctx, "phone_scans", "device, time", `device = ?`, device)
 	if err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device); err != nil {
 		return err
 	}
 	s.brokenInfo.Range(func(key, _ any) bool {

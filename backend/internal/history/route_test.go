@@ -2,6 +2,7 @@ package history
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 )
@@ -127,6 +128,70 @@ func TestDeleteRouteDeletesAStretchOfOnePhone(t *testing.T) {
 	var scans int
 	if err := store.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM phone_scans WHERE device = 'pixel'`).Scan(&scans); err != nil || scans != 1 {
 		t.Errorf("pixel's scans left = %d, %v; want the one after the day", scans, err)
+	}
+}
+
+func TestDeleteRouteTakesWhatTellsWhereThePhoneWasAndKeepsItOut(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	day := time.Date(2026, 11, 5, 0, 0, 0, 0, time.UTC)
+	scanAt(t, store, day.Add(8*time.Hour), 53.5755, 9.9530, "Den")
+	scanAt(t, store, day.Add(9*time.Hour), 53.5400, 9.9800, "Park")
+	if err := store.AddWiFiConnections(ctx, "pixel", []WiFiConnection{
+		{SSID: "Den", PhoneStart: 1, Start: day.Add(8 * time.Hour).UnixMilli(), End: day.Add(9 * time.Hour).UnixMilli()},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	places := placesBy(t, store, day, day.Add(day24))
+	if err := store.RenamePositionPlace(ctx, places["Den"].ID, "Home"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := store.DeleteRoute(ctx, "pixel", day, day.Add(day24)); err != nil {
+		t.Fatal(err)
+	}
+
+	var names []string
+	rows, err := store.db.QueryContext(ctx, `SELECT name FROM position_places`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := scanRows(rows, func() error {
+		var name string
+		err := rows.Scan(&name)
+		names = append(names, name)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(names, []string{"Home"}) {
+		t.Errorf("places left = %q; want only the one the user named", names)
+	}
+	if got, err := store.WiFiConnections(ctx, "pixel", day, day.Add(day24)); err != nil || len(got) != 0 {
+		t.Errorf("connections left = %+v, %v; want none", got, err)
+	}
+
+	// What the phone had not sent yet of the day comes later, and is left out.
+	scanAt(t, store, day.Add(20*time.Hour), 53.5612, 9.9615, "Cafe")
+	if err := store.AddWiFiConnections(ctx, "pixel", []WiFiConnection{
+		{SSID: "Cafe", PhoneStart: 2, Start: day.Add(20 * time.Hour).UnixMilli(), End: day.Add(21 * time.Hour).UnixMilli()},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if left, err := store.RoutePoints(ctx, "pixel", day, day.Add(day24)); err != nil || len(left) != 0 {
+		t.Errorf("points of the deleted day = %+v, %v; want none", left, err)
+	}
+	var scans int
+	if err := store.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM phone_scans`).Scan(&scans); err != nil || scans != 0 {
+		t.Errorf("scans of the deleted day = %d, %v; want none", scans, err)
+	}
+	if got, err := store.WiFiConnections(ctx, "pixel", day, day.Add(day24)); err != nil || len(got) != 0 {
+		t.Errorf("connections of the deleted day = %+v, %v; want none", got, err)
+	}
+	// The next day is stored as before.
+	scanAt(t, store, day.Add(day24+time.Hour), 53.5612, 9.9615, "Cafe")
+	if left, err := store.RoutePoints(ctx, "pixel", day, day.Add(2*day24)); err != nil || len(left) != 1 {
+		t.Errorf("points of the next day = %+v, %v; want one", left, err)
 	}
 }
 
