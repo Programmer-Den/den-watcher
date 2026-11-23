@@ -39,6 +39,12 @@ CREATE TABLE IF NOT EXISTS samples_hourly (
 	PRIMARY KEY (device, time, metric)
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS samples_hourly_by_time ON samples_hourly (time);
+`
+
+// dailySchema is samples_daily (see schema). Open creates it along with
+// dailyBackfill in one transaction, so a backfill cut short is done again at
+// the next start.
+const dailySchema = `
 CREATE TABLE IF NOT EXISTS samples_daily (
 	device TEXT    NOT NULL,
 	time   INTEGER NOT NULL, -- Unix time in seconds, the start of the day in UTC
@@ -50,8 +56,8 @@ CREATE TABLE IF NOT EXISTS samples_daily (
 `
 
 // dailyBackfill fills samples_daily from the hourly averages kept so far,
-// once, when the table is new.
-const dailyBackfill = `
+// once, when the table is new. A variable, so a test can make it fail.
+var dailyBackfill = `
 INSERT OR IGNORE INTO samples_daily (device, time, metric, value, count)
 SELECT device, time / 86400 * 86400, metric, SUM(value * count) / SUM(count), SUM(count)
 FROM samples_hourly
@@ -123,12 +129,29 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		return nil, err
 	}
 	if hadDaily == 0 {
-		if _, err := db.ExecContext(ctx, dailyBackfill); err != nil {
+		if err := store.createDaily(ctx); err != nil {
 			_ = db.Close()
 			return nil, fmt.Errorf("fill the daily averages: %w", err)
 		}
 	}
 	return store, nil
+}
+
+// createDaily creates samples_daily and fills it from the hourly averages, in
+// one transaction.
+func (s *Store) createDaily(ctx context.Context) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if _, err := tx.ExecContext(ctx, dailySchema); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, dailyBackfill); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // uriPath escapes the characters of a file path that a SQLite URI reads as

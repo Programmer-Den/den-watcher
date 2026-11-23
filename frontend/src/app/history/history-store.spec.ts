@@ -140,6 +140,29 @@ describe('HistoryStore with the week before', () => {
     expect(weekBeforeOffered(WEEK)).toBe(true);
     expect(weekBeforeOffered(14 * 86400)).toBe(false);
   });
+
+  it('is offered only while the week before is within the retention', () => {
+    expect(weekBeforeOffered(WEEK, 30)).toBe(true);
+    expect(weekBeforeOffered(WEEK, 14)).toBe(true);
+    expect(weekBeforeOffered(WEEK, 7)).toBe(false);
+    expect(weekBeforeOffered(3600, 7)).toBe(false);
+    expect(weekBeforeOffered(3600, 8)).toBe(true);
+  });
+
+  it('ends the week before a week before the last reading of a device that is not answering', () => {
+    store.span.set(3600);
+    const watching = store.watch.subscribe();
+    tick();
+    const lastReading = Math.floor(Date.now() / 1000) - 86400;
+    reads().forEach((r) =>
+      r.flush({ ...HISTORY, from: lastReading - 3600, to: lastReading, lastReading }),
+    );
+    tick(60_000);
+    const before = reads().find((r) => Number(r.request.params.get('to')) < lastReading);
+    expect(Number(before?.request.params.get('to'))).toBe(lastReading - WEEK);
+    reads().forEach((r) => r.flush(HISTORY));
+    watching.unsubscribe();
+  });
 });
 
 describe('HistoryStore with a short range', () => {

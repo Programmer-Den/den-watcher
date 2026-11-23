@@ -38,6 +38,13 @@ func TestTheDailyAveragesOutlastTheRetention(t *testing.T) {
 	if err != nil || step != time.Hour || len(recent) != 1 || recent[0].Points[0].Value != 50 {
 		t.Errorf("Range(7 d) = %+v, %v, %v; want the hour's value in hours", recent, step, err)
 	}
+	// A range as long as the retention, asked for a moment ago by a browser
+	// whose clock is a little behind, still reads the hours.
+	asked := now.Add(-time.Minute)
+	whole, step, err := reader.Range(ctx, asked.Add(-30*Day), asked)
+	if err != nil || step%Day == 0 || len(whole) != 1 {
+		t.Errorf("Range(30 d) = %+v, %v, %v; want it in steps shorter than a day", whole, step, err)
+	}
 }
 
 func TestDeleteDeviceDeletesItsDailyAverages(t *testing.T) {
@@ -84,5 +91,40 @@ func TestOpenFillsTheDailyAveragesFromTheHoursOnce(t *testing.T) {
 			t.Errorf("the day = %v over %d, %v; want 17.5 over 80", value, count, err)
 		}
 		_ = store.Close()
+	}
+}
+
+func TestOpenFillsTheDailyAveragesAgainWhenTheLastTryFailed(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "history.db")
+	store, err := Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	day := time.Now().Add(-3 * Day).Truncate(Day).Unix()
+	if _, err := store.db.ExecContext(ctx, `DROP TABLE samples_daily;
+		INSERT INTO samples_hourly (device, time, metric, value, count) VALUES ('local', ?, 'cpu', 10, 60)`, day); err != nil {
+		t.Fatal(err)
+	}
+	_ = store.Close()
+
+	// The backfill fails after the table was created, as one cut short would.
+	backfill := dailyBackfill
+	dailyBackfill = "SELECT json('not json');" + backfill
+	store, err = Open(ctx, path)
+	dailyBackfill = backfill
+	if err == nil {
+		_ = store.Close()
+		t.Fatal("Open() with a backfill that fails did not fail")
+	}
+
+	store, err = Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = store.Close() }()
+	var value float64
+	if err := store.db.QueryRowContext(ctx, `SELECT value FROM samples_daily WHERE time = ?`, day).Scan(&value); err != nil || value != 10 {
+		t.Errorf("the day = %v, %v; want 10", value, err)
 	}
 }

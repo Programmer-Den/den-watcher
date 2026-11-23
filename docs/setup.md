@@ -454,7 +454,7 @@ Settings are environment variables. In Docker they go in `.env` next to `compose
 | `DISK_PATHS` | `/`, or the system drive on Windows | comma-separated paths whose disks are shown; in Docker, mount each one read-only first |
 | `DATABASE_PATH` | `den-watcher.db` in the working folder; set by Docker, the Linux service and the Windows installer | the SQLite file for the history, or with `DATA_ONLY` for the usage kept for the hub |
 | `RETENTION_DAYS` | `30` | days of history to keep in minutes and hours, 1 to 3650; the average of each day is kept for good, for the *Long term* ranges ([Retention](database.md#retention)) |
-| `PHONE_RETENTION_DAYS` | empty: for good | days to keep where the phones were and the Wi-Fi they were on and scanned, 1 to 36500 ([Retention](database.md#retention)) |
+| `PHONE_RETENTION_DAYS` | empty: for good | days to keep where the phones were and the Wi-Fi they were on and scanned, 1 to 36500, or 0 for good ([Retention](database.md#retention)) |
 | `HISTORY_MAX_ENTRIES` | `64` | disks, sensors, network cards and GPUs each that the history keeps per device, and 8 times as many values of extras, 1 to 10000 |
 | `HISTORY_FLUSH_MINUTES` | `10` | minutes of history kept in memory before they are written to the database together, 1 to 60; a power cut loses what waits ([Writing](database.md#from-reading-to-chart)) |
 | `DEVICE_NAME` | *Host Hub* | how the page names this device |

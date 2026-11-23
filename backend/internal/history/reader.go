@@ -24,6 +24,11 @@ type Reader struct {
 	Retention time.Duration
 }
 
+// retentionSlack is how far a range may start before the retention and still
+// be read from the hourly averages, of which at most its first hour may
+// already be deleted.
+const retentionSlack = time.Hour
+
 // Range returns the values from from up to (not including) to, averaged over
 // steps so there are at most maxPoints points per metric, and the step.
 // A range of up to RecentSpan comes from the readings in memory. Where they
@@ -34,7 +39,11 @@ type Reader struct {
 // longer range.
 func (r Reader) Range(ctx context.Context, from, to time.Time) ([]Series, time.Duration, error) {
 	span := to.Sub(from)
-	if r.Retention > 0 && from.Before(time.Now().Add(-r.Retention)) {
+	// A range as long as the retention, as the page's 30 days with the default
+	// RETENTION_DAYS, starts a moment before now - Retention by the time it
+	// reaches here, and later still with a browser clock behind; retentionSlack
+	// keeps it on the hourly averages.
+	if r.Retention > 0 && from.Before(time.Now().Add(-r.Retention-retentionSlack)) {
 		step := max(Day, (stepFor(span, SampleInterval)+Day-1)/Day*Day)
 		series, err := r.Store.cachedRange(ctx, r.Device, from, to, step)
 		return series, step, err

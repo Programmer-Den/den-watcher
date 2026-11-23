@@ -14,7 +14,7 @@
 //	                renamed to it)
 //	RETENTION_DAYS  days of history to keep; older values are deleted (default 30)
 //	PHONE_RETENTION_DAYS  days to keep where the phones were and their Wi-Fi,
-//	                from 1 to 36500; empty keeps them for good (the default)
+//	                from 1 to 36500; empty or 0 keeps them for good (the default)
 //	HISTORY_MAX_ENTRIES  how many disks, temperature sensors, network cards and
 //	                GPUs each the history keeps per device (default 64)
 //	HISTORY_FLUSH_MINUTES  how many minutes of history wait in memory before
@@ -169,7 +169,7 @@ func run(ctx context.Context) error {
 	}
 	retention := time.Duration(days) * 24 * time.Hour
 	// Empty keeps where the phones were and their Wi-Fi for good.
-	phoneDays, err := intSettingOr("PHONE_RETENTION_DAYS", 0, 36500, " of days, or leave it empty to keep them for good,")
+	phoneDays, err := phoneRetentionDays()
 	if err != nil {
 		return err
 	}

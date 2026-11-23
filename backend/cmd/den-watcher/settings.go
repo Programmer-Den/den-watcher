@@ -135,3 +135,18 @@ func intSettingOr(name string, fallback, most int, unit string) (int, error) {
 	}
 	return n, nil
 }
+
+// phoneRetentionDays reads PHONE_RETENTION_DAYS: how many days to keep where
+// the phones were and their Wi-Fi, from 1 to 36500, or 0 to keep them for
+// good, as when it is empty.
+func phoneRetentionDays() (int, error) {
+	value := strings.TrimSpace(os.Getenv("PHONE_RETENTION_DAYS"))
+	if value == "" {
+		return 0, nil
+	}
+	n, err := strconv.Atoi(value)
+	if err != nil || n < 0 || n > 36500 {
+		return 0, fmt.Errorf("PHONE_RETENTION_DAYS is %q; set it to a whole number of days from 1 to 36500, or leave it empty or 0 to keep them for good", value)
+	}
+	return n, nil
+}
