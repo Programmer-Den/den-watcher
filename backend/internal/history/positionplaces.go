@@ -314,29 +314,31 @@ func (s *Store) deletePositionPlacesNear(ctx context.Context, points []PhonePoin
 		key := nearCellOf(p.Lat, p.Lon)
 		cells[key] = append(cells[key], p)
 	}
+	// Read first and deleted in a transaction that starts with a write, so
+	// the busy timeout covers a write of another connection meanwhile; the
+	// delete checks again, so a name given meanwhile keeps the place.
+	rows, err := s.db.QueryContext(ctx, `SELECT id, lat, lon FROM position_places WHERE `+untoldPlace)
+	if err != nil {
+		return 0, err
+	}
+	var near []int64
+	err = scanRows(rows, func() error {
+		var id int64
+		var lat, lon float64
+		if err := rows.Scan(&id, &lat, &lon); err != nil {
+			return err
+		}
+		if nearAny(cells, lat, lon) {
+			near = append(near, id)
+		}
+		return nil
+	})
+	if err != nil || len(near) == 0 {
+		return 0, err
+	}
 	var deleted int64
-	err := s.inTx(ctx, func(tx *sql.Tx) error {
-		rows, err := tx.QueryContext(ctx, `SELECT id, lat, lon FROM position_places WHERE `+untoldPlace)
-		if err != nil {
-			return err
-		}
-		var near []int64
-		err = scanRows(rows, func() error {
-			var id int64
-			var lat, lon float64
-			if err := rows.Scan(&id, &lat, &lon); err != nil {
-				return err
-			}
-			if nearAny(cells, lat, lon) {
-				near = append(near, id)
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
+	err = s.inTx(ctx, func(tx *sql.Tx) error {
 		for _, id := range near {
-			// Checked again, so a name given meanwhile keeps the place.
 			result, err := tx.ExecContext(ctx, `DELETE FROM position_places WHERE id = ? AND `+untoldPlace, id)
 			if err != nil {
 				return err

@@ -403,7 +403,9 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 	// again from scans read before they were deleted (see WiFiPositions).
 	s.placing.Lock()
 	defer s.placing.Unlock()
-	points, err := s.routePointsAll(ctx, device, from, to)
+	// A scan is placed at a point up to positionBefore before it or
+	// positionAfter after it, so those points can have started a place too.
+	points, err := s.routePointsAll(ctx, device, from.Add(-positionBefore), to.Add(positionAfter))
 	if err != nil {
 		return 0, err
 	}

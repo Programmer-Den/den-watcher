@@ -81,7 +81,8 @@ const MaxWiFiConnections = 5000
 // WiFiConnections returns which Wi-Fi the phone stored as device was
 // connected to from from up to (not including) to, oldest first, each whole,
 // also one that started before from or ends after to: at most the newest
-// MaxWiFiConnections.
+// MaxWiFiConnections, of which one over a stretch the user deleted (see
+// DeleteRoute) is split in the parts before and after it.
 func (s *Store) WiFiConnections(ctx context.Context, device string, from, to time.Time) ([]PhoneConnection, error) {
 	deleted, err := s.DeletedStretches(ctx, device)
 	if err != nil {
