@@ -412,6 +412,12 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 	if err != nil {
 		return 0, err
 	}
+	// The places first, as they are found by the points: a retry after a
+	// failure later on still finds them.
+	places, err := s.deletePositionPlacesNear(ctx, points)
+	if err != nil {
+		return 0, err
+	}
 	route, err := s.deleteChunks(ctx, "route_points", "device, phone_time", `device = ? AND time >= ? AND time < ?`, device, from.UnixMilli(), to.UnixMilli())
 	if err != nil {
 		return route, err
@@ -421,10 +427,6 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 		return route, err
 	}
 	connections, err := s.cutWiFiConnections(ctx, device, from, to)
-	if err != nil {
-		return route, err
-	}
-	places, err := s.deletePositionPlacesNear(ctx, points)
 	if err != nil {
 		return route, err
 	}
@@ -508,6 +510,14 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	s.wifi.forget(device)
 	s.flushing.Unlock()
 	s.cache.forget(device)
+	// First, so a phone added again under the same id never inherits its
+	// deleted stretches, even when a later step fails or is cut short.
+	s.placing.Lock()
+	_, err := s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device)
+	s.placing.Unlock()
+	if err != nil {
+		return err
+	}
 	deleted, err := s.deleteChunks(ctx, "history_minutes", "device, time", `device = ?`, device)
 	if err != nil {
 		return err
@@ -545,12 +555,6 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 		return err
 	}
 	phoneScans, err := s.deleteChunks(ctx, "phone_scans", "device, time", `device = ?`, device)
-	if err != nil {
-		return err
-	}
-	s.placing.Lock()
-	_, err = s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device)
-	s.placing.Unlock()
 	if err != nil {
 		return err
 	}
