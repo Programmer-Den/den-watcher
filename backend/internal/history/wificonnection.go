@@ -83,7 +83,7 @@ const MaxWiFiConnections = 5000
 // also one that started before from or ends after to: at most the newest
 // MaxWiFiConnections.
 func (s *Store) WiFiConnections(ctx context.Context, device string, from, to time.Time) ([]PhoneConnection, error) {
-	deleted, err := s.deletedStretches(ctx, device)
+	deleted, err := s.DeletedStretches(ctx, device)
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +103,9 @@ func (s *Store) WiFiConnections(ctx context.Context, device string, from, to tim
 			return err
 		}
 		for _, part := range withoutStretches(start, end, deleted) {
+			if part[1] < from.UnixMilli() || part[0] >= to.UnixMilli() {
+				continue
+			}
 			connections = append(connections, PhoneConnection{SSID: ssid, Start: part[0] / 1000, End: part[1] / 1000})
 		}
 		return nil
@@ -113,10 +116,10 @@ func (s *Store) WiFiConnections(ctx context.Context, device string, from, to tim
 	return connections, nil
 }
 
-// deletedStretches returns the stretches of the route of the phone stored as
+// DeletedStretches returns the stretches of the route of the phone stored as
 // device that the user deleted, as [start, end) in Unix milliseconds, the
 // earliest first: a few, as each is a day the user deleted by hand.
-func (s *Store) deletedStretches(ctx context.Context, device string) ([][2]int64, error) {
+func (s *Store) DeletedStretches(ctx context.Context, device string) ([][2]int64, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT start_time, end_time FROM route_deleted WHERE device = ? ORDER BY start_time`, device)
 	if err != nil {

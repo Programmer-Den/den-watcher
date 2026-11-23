@@ -142,8 +142,12 @@ func TestDeleteRouteTakesWhatTellsWhereThePhoneWasAndKeepsItOut(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	// A place the phone was at on another day only stays.
+	// A place the phone was at on another day only stays, also with a point
+	// of the day there too vague to place a scan.
 	scanAt(t, store, day.Add(-day24), 53.5300, 9.9900, "Station")
+	if err := store.AddRoutePoints(ctx, "pixel", []RoutePoint{routePoint(day.Add(10*time.Hour), 53.5300, 9.9900, 1500)}); err != nil {
+		t.Fatal(err)
+	}
 	places := placesBy(t, store, day.Add(-day24), day.Add(day24))
 	if err := store.RenamePositionPlace(ctx, places["Den"].ID, "Home"); err != nil {
 		t.Fatal(err)
@@ -212,8 +216,9 @@ func TestDeleteRouteOfTodayKeepsWhatComesAfterIt(t *testing.T) {
 	if _, err := store.DeleteRoute(ctx, "pixel", now.Add(-2*time.Hour), now.Add(22*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
-	if deleted, err := store.DeletedRouteAt(ctx, "pixel", now.Add(-time.Minute)); err != nil || !deleted {
-		t.Errorf("DeletedRouteAt(a minute ago) = %v, %v; want true", deleted, err)
+	stretches, err := store.DeletedStretches(ctx, "pixel")
+	if err != nil || !DeletedRouteIn(stretches, now.Add(-time.Minute)) {
+		t.Errorf("deleted stretches %v, %v; want one over a minute ago", stretches, err)
 	}
 	// Recorded after the delete, so it is stored.
 	later := time.Now().Add(time.Minute)
@@ -221,8 +226,8 @@ func TestDeleteRouteOfTodayKeepsWhatComesAfterIt(t *testing.T) {
 	if left, err := store.RoutePoints(ctx, "pixel", now.Add(-2*time.Hour), now.Add(22*time.Hour)); err != nil || len(left) != 1 {
 		t.Errorf("points = %+v, %v; want the one after the delete", left, err)
 	}
-	if deleted, err := store.DeletedRouteAt(ctx, "pixel", later); err != nil || deleted {
-		t.Errorf("DeletedRouteAt(after the delete) = %v, %v; want false", deleted, err)
+	if DeletedRouteIn(stretches, later) {
+		t.Errorf("deleted stretches %v reach past the delete", stretches)
 	}
 	// The connection, sent again with its new end, is kept from the end of
 	// the deleted stretch on.

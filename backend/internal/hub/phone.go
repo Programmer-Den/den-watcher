@@ -423,16 +423,15 @@ func (p *phone) receiveWiFi(ctx context.Context, push Push, now time.Time) (int6
 		return 0, err
 	}
 	// A scan of a stretch of the route the user deleted, sent only now, is
-	// left out of the sums too, as it was of the phone's own scans. All are
-	// checked before any is counted, so after an error none was counted and
-	// all come again.
+	// left out of the sums too, as it was of the phone's own scans. After an
+	// error none was counted, and all come again.
+	deleted, err := f.store.DeletedStretches(ctx, f.device)
+	if err != nil {
+		return 0, err
+	}
 	add := counted[:0]
 	for _, scan := range counted {
-		deleted, err := f.store.DeletedRouteAt(ctx, f.device, scan.at)
-		if err != nil {
-			return 0, err
-		}
-		if !deleted {
+		if !history.DeletedRouteIn(deleted, scan.at) {
 			add = append(add, scan)
 		}
 	}
