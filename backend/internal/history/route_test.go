@@ -301,3 +301,26 @@ func TestDeleteRouteCutsTheWiFiConnectionsAcrossTheStretch(t *testing.T) {
 
 // day24 is a day, for the tests of the phones' retention.
 const day24 = 24 * time.Hour
+
+func TestDeleteDeviceForgetsItsDeletedStretches(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	day := time.Date(2026, 11, 5, 0, 0, 0, 0, time.UTC)
+	for _, phone := range []string{"pixel", "other"} {
+		if _, err := store.DeleteRoute(ctx, phone, day, day.Add(day24)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := store.DeleteDevice(ctx, "pixel"); err != nil {
+		t.Fatal(err)
+	}
+
+	// A phone added again under the same id stores that day again.
+	if stretches, err := store.DeletedStretches(ctx, "pixel"); err != nil || len(stretches) != 0 {
+		t.Errorf("pixel's deleted stretches = %v, %v; want none", stretches, err)
+	}
+	if stretches, err := store.DeletedStretches(ctx, "other"); err != nil || len(stretches) != 1 {
+		t.Errorf("other's deleted stretches = %v, %v; want its one", stretches, err)
+	}
+}

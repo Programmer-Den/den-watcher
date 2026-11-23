@@ -378,6 +378,11 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 	// Only what was recorded up to now is left out later: what the phone
 	// records from now on is new, even within the stretch. The slack covers
 	// a phone's clock a little ahead, whose points the hub takes too.
+	// Held throughout, so a look at the Wi-Fi map does not start places
+	// again from scans read before they were deleted (see WiFiPositions), and
+	// two deletions, or one and DeleteDevice, do not mix their stretches.
+	s.placing.Lock()
+	defer s.placing.Unlock()
 	end := to
 	if until := time.Now().Add(deletedRouteSlack); end.After(until) {
 		end = until
@@ -399,10 +404,6 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 			}()
 		}
 	}
-	// Held throughout, so a look at the Wi-Fi map does not start places
-	// again from scans read before they were deleted (see WiFiPositions).
-	s.placing.Lock()
-	defer s.placing.Unlock()
 	// A scan is placed at a point up to positionBefore before it or
 	// positionAfter after it, so those points can have started a place too.
 	points, err := s.routePointsAll(ctx, device, from.Add(-positionBefore), to.Add(positionAfter))
@@ -545,7 +546,10 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device); err != nil {
+	s.placing.Lock()
+	_, err = s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device)
+	s.placing.Unlock()
+	if err != nil {
 		return err
 	}
 	s.brokenInfo.Range(func(key, _ any) bool {
