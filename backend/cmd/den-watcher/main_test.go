@@ -421,3 +421,19 @@ func TestCheckDevices(t *testing.T) {
 		t.Errorf("with a wrong port: %v, want an error naming HUB_CHECKS", err)
 	}
 }
+
+func TestPhoneRetentionDays(t *testing.T) {
+	for value, want := range map[string]int{"": 0, "0": 0, " 7 ": 7, "36500": 36500} {
+		t.Setenv("PHONE_RETENTION_DAYS", value)
+		if got, err := phoneRetentionDays(); err != nil || got != want {
+			t.Errorf("phoneRetentionDays() with %q = %v, %v, want %v", value, got, err, want)
+		}
+	}
+	for _, value := range []string{"-1", "36501", "a week"} {
+		t.Setenv("PHONE_RETENTION_DAYS", value)
+		want := `PHONE_RETENTION_DAYS is "` + value + `"; set it to a whole number of days from 1 to 36500, or leave it empty or 0 to keep them for good`
+		if _, err := phoneRetentionDays(); err == nil || err.Error() != want {
+			t.Errorf("phoneRetentionDays() with %q error = %v, want %q", value, err, want)
+		}
+	}
+}

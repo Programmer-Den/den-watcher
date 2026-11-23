@@ -78,10 +78,16 @@ export const WEEK_BEFORE_STORAGE_KEY = 'weekBefore';
 
 /**
  * Whether the charts can show the same time a week before for a range: from an hour, which the
- * backend reads in minute averages now as a week ago, so the steps line up, up to a week.
+ * backend reads in minute averages now as a week ago, so the steps line up, up to a week. The week
+ * before must also be within the retention (retentionDays, 0 for keeping everything), as the
+ * backend answers older ranges in whole days, whose steps would not line up.
  */
-export function weekBeforeOffered(spanSeconds: number): boolean {
-  return spanSeconds >= 3600 && spanSeconds <= WEEK;
+export function weekBeforeOffered(spanSeconds: number, retentionDays = 0): boolean {
+  return (
+    spanSeconds >= 3600 &&
+    spanSeconds <= WEEK &&
+    (retentionDays <= 0 || WEEK + spanSeconds <= retentionDays * 86400)
+  );
 }
 
 /**
@@ -126,7 +132,9 @@ export class HistoryStore {
   /** Whether the charts show the same time a week before as faint lines; kept for the next visit. */
   readonly weekBefore = signal(readStored(this.window, WEEK_BEFORE_STORAGE_KEY) !== 'false');
   /** Whether the shown range can show the week before. */
-  readonly weekBeforeOffered = computed(() => weekBeforeOffered(this.span()));
+  readonly weekBeforeOffered = computed(() =>
+    weekBeforeOffered(this.span(), this.history()?.retentionDays),
+  );
   /**
    * The history of the same range a week before, as the backend answers it (not moved on), or null
    * while it is not shown or not read yet.
@@ -227,7 +235,8 @@ export class HistoryStore {
 
   /**
    * Reads the same range a week before while it is shown, as often as the range itself. A week
-   * before that cannot be read is left out, without a notice.
+   * before that cannot be read is left out, without a notice. For a device that is not answering,
+   * whose range ends at its last reading, it ends a week before that too.
    */
   private weekBeforeReads(): Observable<History | null> {
     return toObservable(
@@ -242,7 +251,9 @@ export class HistoryStore {
         on
           ? this.page.poll(refreshIntervalMs(span), () =>
               defer(() => {
-                const to = nowSeconds() - WEEK;
+                const shown = this.history();
+                const end = shown?.lastReading !== undefined ? shown.to : nowSeconds();
+                const to = end - WEEK;
                 return this.metrics.history(to - span, to, device).pipe(catchError(() => of(null)));
               }),
             )
