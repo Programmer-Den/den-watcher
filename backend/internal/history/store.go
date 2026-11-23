@@ -422,13 +422,15 @@ const deletedRouteSlack = 10 * time.Second
 
 // cutWiFiConnections takes the stretch from from up to to out of the Wi-Fi
 // connections of the phone stored as device: one within it is deleted, one
-// that started in it and ended after it starts at its end, and one that
-// started before it ends at its start. It returns how many were deleted.
+// that started in it starts at its end, and one that ends in it ends at its
+// start. One over the whole stretch is kept, and WiFiConnections leaves the
+// stretch out of it, as of one the phone sends again with a later end. It
+// returns how many were deleted.
 func (s *Store) cutWiFiConnections(ctx context.Context, device string, from, to time.Time) (int64, error) {
 	var deleted int64
 	err := s.inTx(ctx, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `UPDATE wifi_connections SET end_time = ?2 WHERE device = ?1 AND time < ?2 AND end_time > ?2`,
-			device, from.UnixMilli()); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE wifi_connections SET end_time = ?2 WHERE device = ?1 AND time < ?2 AND end_time > ?2 AND end_time <= ?3`,
+			device, from.UnixMilli(), to.UnixMilli()); err != nil {
 			return err
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE wifi_connections SET time = ?3 WHERE device = ?1 AND time >= ?2 AND time < ?3 AND end_time > ?3`,

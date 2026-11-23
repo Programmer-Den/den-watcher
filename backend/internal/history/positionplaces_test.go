@@ -3,6 +3,7 @@ package history
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -264,5 +265,29 @@ func TestAPlaceIDIsNeverGivenTwice(t *testing.T) {
 	scanAt(t, store, day.Add(48*time.Hour), 53.5300, 9.9900, "Station")
 	if got := placesBy(t, store, day, day.Add(72*time.Hour))["Station"].ID; got <= old {
 		t.Errorf("the new place's ID = %d; want one above %d, the deleted park's", got, old)
+	}
+}
+
+func TestTheLastPlaceIDIsKnownAfterAnUpgrade(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "history.db")
+	store, err := Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A database from before position_place_last_id, with places up to 40.
+	if _, err := store.db.ExecContext(ctx, `DROP TABLE position_place_last_id;
+		INSERT INTO position_places (id, lat, lon, last) VALUES (39, 1, 1, 1), (40, 2, 2, 1)`); err != nil {
+		t.Fatal(err)
+	}
+	_ = store.Close()
+	store, err = Open(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = store.Close() }()
+	var last int64
+	if err := store.db.QueryRowContext(ctx, `SELECT last_id FROM position_place_last_id`).Scan(&last); err != nil || last != 40 {
+		t.Errorf("last place ID = %d, %v; want 40", last, err)
 	}
 }

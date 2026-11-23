@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS position_place_last_id (
 	one     INTEGER PRIMARY KEY CHECK (one = 1),
 	last_id INTEGER NOT NULL -- the highest ID a place ever had, so none is given twice
 );
+INSERT OR IGNORE INTO position_place_last_id (one, last_id) SELECT 1, COALESCE(MAX(id), 0) FROM position_places;
 CREATE TABLE IF NOT EXISTS position_places_apart (
 	a INTEGER NOT NULL, -- the two places, a < b, never suggested as one
 	b INTEGER NOT NULL,

@@ -38,8 +38,8 @@ type WiFiConnection struct {
 // AddWiFiConnections stores which Wi-Fi a phone was connected to. A
 // connection stored already keeps its start and gets the later of the two
 // ends, so an older copy of one sent again does not shorten it. One within a
-// stretch the user deleted is left out, one that started in it and goes on
-// after it starts at its end, and one that ends in it ends at its start.
+// stretch the user deleted is left out; WiFiConnections leaves the stretch
+// out of one that reaches into it.
 func (s *Store) AddWiFiConnections(ctx context.Context, device string, connections []WiFiConnection) error {
 	if len(connections) == 0 {
 		return nil
@@ -51,10 +51,7 @@ func (s *Store) AddWiFiConnections(ctx context.Context, device string, connectio
 	defer func() { _ = tx.Rollback() }()
 	insert, err := tx.PrepareContext(ctx, `
 		INSERT INTO wifi_connections (device, start, time, end_time, ssid)
-		SELECT ?1, ?2, max(?3, COALESCE((SELECT MAX(end_time) FROM route_deleted
-			WHERE device = ?1 AND ?3 >= start_time AND ?3 < end_time), ?3)),
-			COALESCE((SELECT MIN(start_time) FROM route_deleted
-			WHERE device = ?1 AND ?3 < start_time AND ?4 > start_time AND ?4 <= end_time), ?4), ?5
+		SELECT ?1, ?2, ?3, ?4, ?5
 		WHERE NOT EXISTS (SELECT 1 FROM route_deleted WHERE device = ?1 AND ?3 >= start_time AND ?4 <= end_time)
 		ON CONFLICT (device, start) DO UPDATE SET end_time = max(end_time, excluded.end_time)`)
 	if err != nil {
@@ -86,6 +83,10 @@ const MaxWiFiConnections = 5000
 // also one that started before from or ends after to: at most the newest
 // MaxWiFiConnections.
 func (s *Store) WiFiConnections(ctx context.Context, device string, from, to time.Time) ([]PhoneConnection, error) {
+	deleted, err := s.deletedStretches(ctx, device)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT ssid, time, end_time FROM (
 			SELECT ssid, time, end_time FROM wifi_connections
@@ -96,17 +97,58 @@ func (s *Store) WiFiConnections(ctx context.Context, device string, from, to tim
 	}
 	connections := []PhoneConnection{}
 	err = scanRows(rows, func() error {
-		var c PhoneConnection
-		if err := rows.Scan(&c.SSID, &c.Start, &c.End); err != nil {
+		var ssid string
+		var start, end int64
+		if err := rows.Scan(&ssid, &start, &end); err != nil {
 			return err
 		}
-		c.Start /= 1000
-		c.End /= 1000
-		connections = append(connections, c)
+		for _, part := range withoutStretches(start, end, deleted) {
+			connections = append(connections, PhoneConnection{SSID: ssid, Start: part[0] / 1000, End: part[1] / 1000})
+		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	return connections, nil
+}
+
+// deletedStretches returns the stretches of the route of the phone stored as
+// device that the user deleted, as [start, end) in Unix milliseconds, the
+// earliest first: a few, as each is a day the user deleted by hand.
+func (s *Store) deletedStretches(ctx context.Context, device string) ([][2]int64, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT start_time, end_time FROM route_deleted WHERE device = ? ORDER BY start_time`, device)
+	if err != nil {
+		return nil, err
+	}
+	var stretches [][2]int64
+	err = scanRows(rows, func() error {
+		var stretch [2]int64
+		if err := rows.Scan(&stretch[0], &stretch[1]); err != nil {
+			return err
+		}
+		stretches = append(stretches, stretch)
+		return nil
+	})
+	return stretches, err
+}
+
+// withoutStretches returns the parts of start up to end that none of
+// stretches, sorted by their start, covers.
+func withoutStretches(start, end int64, stretches [][2]int64) [][2]int64 {
+	var parts [][2]int64
+	for _, stretch := range stretches {
+		if stretch[1] <= start || stretch[0] > end || stretch[0] == end && start < end {
+			continue
+		}
+		if stretch[0] > start {
+			parts = append(parts, [2]int64{start, stretch[0]})
+		}
+		start = max(start, stretch[1])
+		if start >= end {
+			return parts
+		}
+	}
+	return append(parts, [2]int64{start, end})
 }

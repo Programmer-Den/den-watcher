@@ -245,6 +245,7 @@ func TestDeleteRouteCutsTheWiFiConnectionsAcrossTheStretch(t *testing.T) {
 		{SSID: "Home", PhoneStart: 1, Start: ms(-2 * time.Hour), End: ms(9 * time.Hour)},
 		{SSID: "Cafe", PhoneStart: 2, Start: ms(12 * time.Hour), End: ms(13 * time.Hour)},
 		{SSID: "Office", PhoneStart: 3, Start: ms(23 * time.Hour), End: ms(32 * time.Hour)},
+		{SSID: "Mesh", PhoneStart: 5, Start: ms(-time.Hour), End: ms(26 * time.Hour)},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -257,8 +258,11 @@ func TestDeleteRouteCutsTheWiFiConnectionsAcrossTheStretch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// One over the whole day keeps the hours before and after it.
 	want := []PhoneConnection{
 		{SSID: "Home", Start: day.Add(-2 * time.Hour).Unix(), End: day.Unix()},
+		{SSID: "Mesh", Start: day.Add(-time.Hour).Unix(), End: day.Unix()},
+		{SSID: "Mesh", Start: day.Add(day24).Unix(), End: day.Add(26 * time.Hour).Unix()},
 		{SSID: "Office", Start: day.Add(day24).Unix(), End: day.Add(32 * time.Hour).Unix()},
 	}
 	if !slices.Equal(got, want) {
@@ -270,9 +274,23 @@ func TestDeleteRouteCutsTheWiFiConnectionsAcrossTheStretch(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	got, err = store.WiFiConnections(ctx, "pixel", day.Add(-2*time.Hour), day)
-	if err != nil || len(got) != 2 || got[1].SSID != "Gym" || got[1].End != day.Unix() {
-		t.Errorf("connections before the day = %+v, %v; want the gym ending at midnight", got, err)
+	// So does one cut at its start sent again with a later end.
+	if err := store.AddWiFiConnections(ctx, "pixel", []WiFiConnection{
+		{SSID: "Home", PhoneStart: 1, Start: ms(-2 * time.Hour), End: ms(30 * time.Hour)},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got, err = store.WiFiConnections(ctx, "pixel", day.Add(-2*time.Hour), day.Add(2*day24))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range got {
+		if c.End > day.Unix() && c.Start < day.Add(day24).Unix() {
+			t.Errorf("connection %+v reaches into the deleted day", c)
+		}
+	}
+	if gym := slices.IndexFunc(got, func(c PhoneConnection) bool { return c.SSID == "Gym" }); gym < 0 || got[gym].End != day.Unix() {
+		t.Errorf("connections = %+v; want the gym ending at midnight", got)
 	}
 }
 
