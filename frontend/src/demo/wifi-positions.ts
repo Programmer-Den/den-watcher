@@ -157,7 +157,9 @@ export function demoWifiPositions(
       .sort((a, b) => a.away - b.away)[0];
     if (near) {
       near.e.place.name = n.name;
-      home ??= near.e.place;
+      if (n.name === 'Home') {
+        home = near.e.place;
+      }
     }
   }
   for (const e of places) {

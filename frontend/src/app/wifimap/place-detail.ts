@@ -7,7 +7,7 @@ import { bandText, securityText, signalLevel, wifiBand } from '../compare/wifi';
 import { DeviceService } from '../devices/devices';
 import { I18n } from '../i18n/i18n';
 import { MetricsService, PositionNetwork, WiFiPosition } from '../metrics/metrics';
-import { phoneName } from './phone-name';
+import { phoneName, REMOVED_PHONE_PREFIX } from './phone-name';
 import { SameSuggestion, heardIn, sameAs, yourNetwork } from './places';
 
 /** The bands of a network's frequencies, such as "2.4 GHz · 5 GHz". */
@@ -113,9 +113,14 @@ export class PlaceDetail {
     });
   }
 
-  /** The names of the phones that scanned at the place, each once: removed phones share one. */
+  /** The names of the phones that scanned at the place; the removed ones share one name, given once. */
   protected phones(): string {
-    return [...new Set(this.place().devices.map((id) => this.name(id)))].join(', ');
+    const devices = this.place().devices;
+    const removed = devices.find((id) => id.startsWith(REMOVED_PHONE_PREFIX));
+    return devices
+      .filter((id) => id === removed || !id.startsWith(REMOVED_PHONE_PREFIX))
+      .map((id) => this.name(id))
+      .join(', ');
   }
 
   /** A phone's name, or "A removed phone" (see phoneName). */

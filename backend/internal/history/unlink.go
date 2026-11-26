@@ -47,7 +47,7 @@ func (s *Store) NoteUnlink(ctx context.Context, device string) error {
 // entry per id of each table, not every row.
 func (s *Store) PhoneDataDevices(ctx context.Context) ([]string, error) {
 	var all []string
-	for _, table := range []string{"route_points", "phone_scans", "app_uses", "wifi_connections"} {
+	for _, table := range []string{"route_points", "phone_scans", "app_uses", "wifi_connections", "route_deleted"} {
 		//nolint:gosec // table is one of the fixed names above.
 		rows, err := s.db.QueryContext(ctx, fmt.Sprintf(`
 			WITH RECURSIVE ids(device) AS (
@@ -124,8 +124,10 @@ func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
 	}
 	// A deletion of a stretch of its route that is still running finishes
 	// first, so none of the stretch moves. The move itself does not hold
-	// placing: the Wi-Fi map would wait for all of it. While it runs, the map
-	// may find some of the phone's scans without their points for a moment.
+	// placing: the Wi-Fi map would wait for all of it. The scans move first,
+	// then the points, oldest first: the scans left under the phone's id keep
+	// all their points, and a moved scan finds either its own point or none
+	// yet, never another one, so the map at most leaves it out for a moment.
 	s.placing.Lock()
 	_, err = s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device)
 	s.placing.Unlock()
@@ -134,12 +136,12 @@ func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
 	}
 	var moved int64
 	for _, t := range []struct{ table, keys, set string }{
-		{"route_points", "device, phone_time", ""},
 		// Which of the networks it was connected to goes, as it tells whose
 		// they were.
 		{"phone_scans", "device, time", `, networks = (
 			SELECT json_group_array(json(json_remove(value, '$.connected')) ORDER BY key)
 			FROM json_each(networks))`},
+		{"route_points", "device, phone_time", ""},
 	} {
 		n, err := s.moveChunks(ctx, t.table, t.keys, t.set, device, unlinked)
 		if err != nil {

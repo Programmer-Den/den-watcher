@@ -133,7 +133,8 @@ func (h *Hub) unsave(ctx context.Context, id string, keepHistory bool, phoneCode
 func (h *Hub) forgetExpired(ctx context.Context, now time.Time) error {
 	forgotten, err := h.forgetExpiredDevices(ctx, now)
 	// Without mu, as moving a phone's data takes a while and every page
-	// request needs mu; adding one again waits until it is done (see taken).
+	// request needs mu; adding one again is refused with ProblemRemoving
+	// until it is done (see taken).
 	for _, device := range forgotten {
 		if err := h.unlink(ctx, device); err != nil && ctx.Err() == nil {
 			// Tried again by unlinkPending.
