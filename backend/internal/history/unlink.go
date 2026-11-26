@@ -68,29 +68,37 @@ func (s *Store) PendingUnlinks(ctx context.Context) ([]string, error) {
 // it changes nothing. A move cut short goes on under the same id when it is
 // called again; once done, the note of NoteUnlink goes.
 //
-// The phone must no longer be kept (see DeleteRoute's listed), so no new
-// deletion of a stretch of its route starts.
+// It moves only what NoteUnlink noted, so a phone added again once the move
+// is done keeps its own data, however late another call comes. The phone
+// must no longer be kept (see DeleteRoute's listed), so no new deletion of a
+// stretch of its route starts.
 func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
+	s.unlinking.Lock()
+	defer s.unlinking.Unlock()
+	unlinked, err := s.noted(ctx, device)
+	if err != nil || unlinked == "" {
+		return err
+	}
 	// A deletion of a stretch of its route that is still running finishes
 	// first, so none of the stretch moves. The move itself does not hold
 	// placing: the Wi-Fi map would wait for all of it. While it runs, the map
 	// may find some of the phone's scans without their points for a moment.
 	s.placing.Lock()
-	_, err := s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device)
+	_, err = s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device)
 	s.placing.Unlock()
 	if err != nil {
 		return err
 	}
-	unlinked, err := s.unlinkedID(ctx, device)
-	if err != nil {
-		return err
-	}
 	var moved int64
-	for _, t := range []struct{ table, keys string }{
-		{"route_points", "device, phone_time"},
-		{"phone_scans", "device, time"},
+	for _, t := range []struct{ table, keys, set string }{
+		{"route_points", "device, phone_time", ""},
+		// Which of the networks it was connected to goes, as it tells whose
+		// they were.
+		{"phone_scans", "device, time", `, networks = (
+			SELECT json_group_array(json(json_remove(value, '$.connected')) ORDER BY key)
+			FROM json_each(networks))`},
 	} {
-		n, err := s.moveChunks(ctx, t.table, t.keys, device, unlinked)
+		n, err := s.moveChunks(ctx, t.table, t.keys, t.set, device, unlinked)
 		if err != nil {
 			return err
 		}
@@ -113,16 +121,23 @@ func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
 	return nil
 }
 
-// unlinkedID returns the id device's data moves to: the one a move cut short
-// was giving it, or a new one made at random.
-func (s *Store) unlinkedID(ctx context.Context, device string) (string, error) {
+// noted returns the id NoteUnlink noted for device's data, or "" when none is
+// noted.
+func (s *Store) noted(ctx context.Context, device string) (string, error) {
 	var unlinked string
 	err := s.db.QueryRowContext(ctx, `SELECT unlinked FROM phone_unlinking WHERE device = ?`, device).Scan(&unlinked)
-	if err == nil {
-		return unlinked, nil
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
 	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return "", err
+	return unlinked, err
+}
+
+// unlinkedID returns the id device's data moves to: the one already noted,
+// or a new one made at random, which it notes.
+func (s *Store) unlinkedID(ctx context.Context, device string) (string, error) {
+	unlinked, err := s.noted(ctx, device)
+	if err != nil || unlinked != "" {
+		return unlinked, err
 	}
 	random := make([]byte, 8)
 	if _, err := rand.Read(random); err != nil {
@@ -135,14 +150,15 @@ func (s *Store) unlinkedID(ctx context.Context, device string) (string, error) {
 	return unlinked, nil
 }
 
-// moveChunks gives the rows of device in table the id to instead, in chunks
-// as deleteChunks deletes, so other writes are not held up for long.
-func (s *Store) moveChunks(ctx context.Context, table, keys, device, to string) (int64, error) {
-	//nolint:gosec // table and keys are fixed by the caller; values go in as arguments.
+// moveChunks gives the rows of device in table the id to instead, and sets
+// what set adds (", column = ..."), in chunks as deleteChunks deletes, so
+// other writes are not held up for long.
+func (s *Store) moveChunks(ctx context.Context, table, keys, set, device, to string) (int64, error) {
+	//nolint:gosec // table, keys and set are fixed by the caller; values go in as arguments.
 	query := fmt.Sprintf(`
-		UPDATE %[1]s SET device = ? WHERE (%[2]s) IN (
+		UPDATE %[1]s SET device = ?%[4]s WHERE (%[2]s) IN (
 			SELECT %[2]s FROM %[1]s WHERE device = ? LIMIT %[3]d
-		)`, table, keys, deleteChunkRows)
+		)`, table, keys, deleteChunkRows, set)
 	var total int64
 	for {
 		result, err := s.db.ExecContext(ctx, query, to, device)

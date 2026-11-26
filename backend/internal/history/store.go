@@ -89,6 +89,8 @@ type Store struct {
 	wifi wifiPending
 	// placing lets one WiFiPositions keep new places at a time.
 	placing sync.Mutex
+	// unlinking lets one UnlinkPhoneData run at a time.
+	unlinking sync.Mutex
 }
 
 // Series is the values of one metric over time.

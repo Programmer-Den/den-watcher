@@ -49,6 +49,9 @@ func TestAppUsesAreSplitAtTheStepsAndTheRange(t *testing.T) {
 		t.Errorf("steps %+v, want %+v", usage.Steps, steps)
 	}
 
+	if err := store.NoteUnlink(ctx, "pixel"); err != nil {
+		t.Fatal(err)
+	}
 	if err := store.UnlinkPhoneData(ctx, "pixel"); err != nil {
 		t.Fatal(err)
 	}

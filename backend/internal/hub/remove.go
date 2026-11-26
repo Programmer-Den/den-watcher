@@ -135,8 +135,9 @@ func (h *Hub) forgetExpired(ctx context.Context, now time.Time) error {
 	// Without mu, as moving a phone's data takes a while and every page
 	// request needs mu; adding one again waits until it is done (see taken).
 	for _, device := range forgotten {
-		if err := h.unlink(ctx, device); err != nil {
-			return err
+		if err := h.unlink(ctx, device); err != nil && ctx.Err() == nil {
+			// Tried again by unlinkPending.
+			slog.Error("keep a removed phone's route and Wi-Fi without its name; tried again later", "device", device, "error", err)
 		}
 	}
 	return err

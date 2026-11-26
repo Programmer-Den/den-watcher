@@ -113,11 +113,9 @@ export class PlaceDetail {
     });
   }
 
-  /** The names of the phones that scanned at the place. */
+  /** The names of the phones that scanned at the place, each once: removed phones share one. */
   protected phones(): string {
-    return this.place()
-      .devices.map((id) => this.name(id))
-      .join(', ');
+    return [...new Set(this.place().devices.map((id) => this.name(id)))].join(', ');
   }
 
   /** A phone's name, or "A removed phone" (see phoneName). */

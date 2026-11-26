@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
 func TestUnlinkPhoneDataKeepsTheRouteAndScansButNotWhoseTheyWere(t *testing.T) {
@@ -16,7 +18,11 @@ func TestUnlinkPhoneDataKeepsTheRouteAndScansButNotWhoseTheyWere(t *testing.T) {
 		if err := store.AddRoutePoints(ctx, phone, []RoutePoint{{PhoneTime: 1, Time: ms(hour), Lat: 1, Lon: 1, Accuracy: 5}}); err != nil {
 			t.Fatal(err)
 		}
-		if err := store.AddPhoneScans(ctx, phone, []FoundScan{{At: hour}}); err != nil {
+		found := []metrics.NearbyAccessPoint{
+			{SSID: "Den", SignalPercent: 80, Connected: true},
+			{SSID: "Café", SignalPercent: 40},
+		}
+		if err := store.AddPhoneScans(ctx, phone, []FoundScan{{At: hour, Found: found}}); err != nil {
 			t.Fatal(err)
 		}
 		if err := store.AddWiFiConnections(ctx, phone, []WiFiConnection{{SSID: "Den", PhoneStart: 1, Start: ms(hour), End: ms(hour.Add(time.Minute))}}); err != nil {
@@ -30,6 +36,9 @@ func TestUnlinkPhoneDataKeepsTheRouteAndScansButNotWhoseTheyWere(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := store.NoteUnlink(ctx, "pixel"); err != nil {
+		t.Fatal(err)
+	}
 	if err := store.UnlinkPhoneData(ctx, "pixel"); err != nil {
 		t.Fatal(err)
 	}
@@ -63,6 +72,17 @@ func TestUnlinkPhoneDataKeepsTheRouteAndScansButNotWhoseTheyWere(t *testing.T) {
 			t.Errorf("%d rows of %s under %q, want 1", n, table, unlinked)
 		}
 	}
+	// Which network it was connected to goes from its scans; the networks stay, in order.
+	var networks string
+	if err := store.DB().QueryRowContext(ctx, `SELECT networks FROM phone_scans WHERE device = ?`, unlinked).Scan(&networks); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(networks, "connected") || strings.Index(networks, "Den") > strings.Index(networks, "Café") || !strings.Contains(networks, `"signalPercent":80`) {
+		t.Errorf("networks kept as %s, want both, in order, without which one it was connected to", networks)
+	}
+	if n := count(`SELECT COUNT(*) FROM phone_scans WHERE device = 'other' AND networks LIKE '%connected%'`); n != 1 {
+		t.Errorf("the other phone's scan lost its connected network")
+	}
 	for _, table := range []string{"app_uses", "wifi_connections"} {
 		if n := count(`SELECT COUNT(*) FROM ` + table + ` WHERE device != 'other'`); n != 0 {
 			t.Errorf("%d rows of %s kept, want none", n, table)
@@ -86,6 +106,9 @@ func TestUnlinkPhoneDataMovesMoreThanAChunk(t *testing.T) {
 		points[i] = RoutePoint{PhoneTime: int64(i), Time: start.Add(time.Duration(i) * time.Second).UnixMilli(), Lat: 1, Lon: 1, Accuracy: 5}
 	}
 	if err := store.AddRoutePoints(ctx, "pixel", points); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.NoteUnlink(ctx, "pixel"); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.UnlinkPhoneData(ctx, "pixel"); err != nil {
@@ -133,5 +156,25 @@ func TestUnlinkPhoneDataGoesOnUnderTheSameIDAfterItWasCutShort(t *testing.T) {
 	}
 	if left != 0 {
 		t.Errorf("%d moves still noted, want none once done", left)
+	}
+}
+
+func TestUnlinkPhoneDataMovesNothingThatIsNotNoted(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	hour := time.Date(2026, 11, 5, 10, 0, 0, 0, time.UTC)
+	// A phone added again once its old data moved: a late second call leaves
+	// its new data alone.
+	if err := store.AddRoutePoints(ctx, "pixel", []RoutePoint{{PhoneTime: 1, Time: hour.UnixMilli(), Lat: 1, Lon: 1, Accuracy: 5}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.UnlinkPhoneData(ctx, "pixel"); err != nil {
+		t.Fatal(err)
+	}
+	if points, _, err := store.RoutePoints(ctx, "pixel", hour.Add(-time.Hour), hour.Add(time.Hour)); err != nil || len(points) != 1 {
+		t.Errorf("RoutePoints() = %v, %v; want the phone's point still its own", points, err)
+	}
+	if unlinking, err := store.Unlinking(ctx, "pixel"); err != nil || unlinking {
+		t.Errorf("Unlinking() = %v, %v; want nothing noted", unlinking, err)
 	}
 }

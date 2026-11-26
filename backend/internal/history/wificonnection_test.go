@@ -41,6 +41,9 @@ func TestWiFiConnectionsGrowAndAreReadByTheirRange(t *testing.T) {
 		t.Errorf("connections = %+v, want only %+v", got, want)
 	}
 
+	if err := store.NoteUnlink(ctx, "pixel"); err != nil {
+		t.Fatal(err)
+	}
 	if err := store.UnlinkPhoneData(ctx, "pixel"); err != nil {
 		t.Fatal(err)
 	}

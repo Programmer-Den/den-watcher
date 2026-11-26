@@ -52,6 +52,9 @@ func TestPhoneScansAreReadClosestToATime(t *testing.T) {
 	if got, err := store.PhoneScanNear(ctx, "pixel", hour, 5*time.Minute); err != nil || got == nil || got.Time != hour.Add(5*time.Minute).Unix() {
 		t.Errorf("after the retention: %+v, %v; want only the later scan", got, err)
 	}
+	if err := store.NoteUnlink(ctx, "pixel"); err != nil {
+		t.Fatal(err)
+	}
 	if err := store.UnlinkPhoneData(ctx, "pixel"); err != nil {
 		t.Fatal(err)
 	}
