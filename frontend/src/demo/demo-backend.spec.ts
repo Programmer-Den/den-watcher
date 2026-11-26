@@ -193,8 +193,11 @@ describe('DemoBackend', () => {
     expect(town.moving).toBeGreaterThan(0);
     expect(town.accessPoints.some((a) => a.ssid === 'HVV Bus')).toBe(false);
     expect(town.accessPoints.find((a) => a.ssid === 'Den')?.connected).toBe(true);
-    const [track] = town.tracks;
+    const [track, removed] = town.tracks;
     expect(track.device).toBe(DEMO_PHONE);
+    // And the removed phone's, without its name.
+    expect(removed.device).toBe(DEMO_REMOVED_PHONE);
+    expect(removed.points.length).toBeGreaterThan(0);
     const placed = track.points.filter((p) => p.known > 0);
     expect(placed.length).toBeGreaterThan(track.points.length / 2);
     // Placed by Wi-Fi alone, mostly close to the GPS.
