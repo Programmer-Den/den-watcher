@@ -54,7 +54,8 @@ function way(
 
 /**
  * How many points the demo's route answers at most, the newest: fewer than a hub's 20,000, which
- * the demo's history never reaches, so its longer ranges show how a cut route looks.
+ * the demo's 90 days of history (DEMO_RETENTION_DAYS) do not reach, so its longer ranges show how a
+ * cut route looks.
  */
 export const DEMO_MAX_ROUTE_POINTS = 5000;
 
