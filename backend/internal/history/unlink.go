@@ -122,6 +122,10 @@ func (s *Store) PendingUnlinks(ctx context.Context) ([]string, error) {
 // must no longer be kept (see DeleteRoute's listed), so no new deletion of a
 // stretch of its route starts.
 func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
+	// A device with nothing noted does not wait for another one's move.
+	if unlinked, err := s.noted(ctx, device); err != nil || unlinked == "" {
+		return err
+	}
 	s.unlinking.Lock()
 	defer s.unlinking.Unlock()
 	unlinked, err := s.noted(ctx, device)
@@ -133,7 +137,9 @@ func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
 	// placing: the Wi-Fi map would wait for all of it. The scans move first,
 	// then the points: the scans left under the phone's id keep all their
 	// points, and WiFiPositions leaves out the moved ones until the note
-	// goes, as they would be placed at the points moved so far.
+	// goes, as they would be placed at the points moved so far. In between,
+	// a WiFiPositions that read the scans before they moved finishes (see
+	// below).
 	s.placing.Lock()
 	_, err = s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device)
 	s.placing.Unlock()
@@ -151,6 +157,9 @@ func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
 			FROM json_each(networks)) ELSE networks END`},
 		{"route_points", "device, phone_time", ""},
 	} {
+		if t.table == "route_points" {
+			s.waitPlacing()
+		}
 		n, err := s.moveChunks(ctx, t.table, t.keys, t.set, device, unlinked)
 		if err != nil {
 			return err
@@ -172,6 +181,13 @@ func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
 	}
 	s.shrinkLog(ctx, moved+uses+connections)
 	return nil
+}
+
+// waitPlacing waits until a WiFiPositions running, or anything else under
+// placing, is done.
+func (s *Store) waitPlacing() {
+	s.placing.Lock()
+	defer s.placing.Unlock()
 }
 
 // noted returns the id NoteUnlink noted for device's data, or "" when none is
