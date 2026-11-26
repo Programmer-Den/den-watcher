@@ -172,18 +172,15 @@ func (h *Hub) selectDevices(ctx context.Context, query string, args ...any) ([]s
 	return kept, rows.Err()
 }
 
-// forgetDevice deletes what the forgetters keep about device and the
-// stretches of its route the user deleted, then its availability and kind.
-// Those go last, so a device whose forgetting stopped halfway, as the program
-// stopped, is forgotten again at the next start (see forgetOthers).
+// forgetDevice deletes what the forgetters keep about device, then its
+// availability and kind. Those go last, so a device whose forgetting stopped
+// halfway, as the program stopped, is forgotten again at the next start (see
+// forgetOthers).
 func (h *Hub) forgetDevice(ctx context.Context, device string) error {
 	for _, forgetter := range h.forgetters {
 		if err := forgetter(ctx, device); err != nil {
 			return err
 		}
-	}
-	if err := h.store.ForgetDeletedRoute(ctx, device); err != nil {
-		return err
 	}
 	return forget(ctx, h.store.DB(), device)
 }
