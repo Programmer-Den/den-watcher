@@ -751,3 +751,52 @@ func TestTheRouteOfARemovedPhoneIsNotDeleted(t *testing.T) {
 		t.Errorf("DeleteRoute() of a removed phone error = %v, want history.ErrDeviceGone", err)
 	}
 }
+
+func TestARemovedPhonesRouteAndWiFiAreKeptButNoLongerItsOwn(t *testing.T) {
+	ctx := context.Background()
+	for _, keepHistory := range []bool{false, true} {
+		store := openTestStore(t)
+		h := openTestHub(t, store, nil)
+		if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+			t.Fatalf("AddPhone() error = %v", err)
+		}
+		now := time.Now()
+		if err := store.AddRoutePoints(ctx, "pixel", []history.RoutePoint{{PhoneTime: 1, Time: now.Add(-2 * time.Hour).UnixMilli(), Lat: 1, Lon: 1, Accuracy: 5}}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := h.DeleteRoute(ctx, "pixel", now.Add(-time.Hour), now); err != nil {
+			t.Fatal(err)
+		}
+		if err := h.Remove(ctx, "pixel", keepHistory); err != nil {
+			t.Fatal(err)
+		}
+		if err := h.waitRemoved(ctx, "pixel", time.Minute); err != nil {
+			t.Fatal(err)
+		}
+		count := func(where string) int {
+			var n int
+			if err := store.DB().QueryRow(`SELECT (SELECT COUNT(*) FROM route_points WHERE ` + where + `) + (SELECT COUNT(*) FROM route_deleted WHERE ` + where + `)`).Scan(&n); err != nil {
+				t.Fatal(err)
+			}
+			return n
+		}
+		if keepHistory {
+			// Kept as the phone's while its history is kept.
+			if got := count(`device = 'pixel'`); got != 2 {
+				t.Fatalf("kept with the history: %d rows of the phone, want its point and stretch", got)
+			}
+			if _, err := store.DB().Exec(`UPDATE hub_kept SET removed = removed - 31*86400 WHERE device = 'pixel'`); err != nil {
+				t.Fatal(err)
+			}
+			if err := h.forgetExpired(ctx, time.Now()); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if got := count(`device = 'pixel'`); got != 0 {
+			t.Errorf("keepHistory %t: %d rows left under the phone's id, want none", keepHistory, got)
+		}
+		if got := count(`device LIKE 'removed:%'`); got != 1 {
+			t.Errorf("keepHistory %t: %d rows kept unlinked, want the point", keepHistory, got)
+		}
+	}
+}

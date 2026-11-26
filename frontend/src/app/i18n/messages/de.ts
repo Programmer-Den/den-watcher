@@ -678,6 +678,7 @@ export const de: Messages = {
     'Keine WLAN-Scans mit Position in diesem Zeitraum. Erlaube in der Den-Watcher-App jedes Handys den Standort immer und lass die Standortroute an.',
   'wifiPositions.failed': 'Die Orte der WLAN-Scans konnten nicht gelesen werden.',
   'wifiMap.title': 'WLAN-Karte',
+  'wifiMap.removedPhone': 'Ein entferntes Handy',
   'wifiMap.intro':
     'Jedes WLAN, das deine Handys empfangen haben, auf der Karte dort, wo sie es empfangen haben. Benenne die Orte, die du kennst, und füge die zusammen, die derselbe Ort sind.',
   'wifiMap.search': 'Ort oder Netzwerk suchen',

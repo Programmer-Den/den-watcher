@@ -1,4 +1,5 @@
 import { meters } from '../app/phone/phone-route';
+import { REMOVED_PHONE_PREFIX } from '../app/wifimap/phone-name';
 import {
   PhoneScan,
   PositionNetwork,
@@ -181,8 +182,31 @@ export function demoWifiPositions(
   for (const place of all) {
     place.networks.sort((a, b) => b.signalPercent - a.signalPercent);
   }
+  addRemovedPhone(all.find((p) => p.name === 'Home'));
   relate(all);
   return { from, to, places: all };
+}
+
+/**
+ * The phone the demo's user removed before the demo phone: the hub keeps what it heard at home,
+ * but no longer as that phone's (see REMOVED_PHONE_PREFIX).
+ */
+export const DEMO_REMOVED_PHONE = `${REMOVED_PHONE_PREFIX}4f2a9c1d7b3e8a60`;
+
+/** Adds the removed phone's sightings to the strongest networks of a place, a little weaker. */
+function addRemovedPhone(place: WiFiPosition | undefined): void {
+  if (!place) {
+    return;
+  }
+  place.devices.push(DEMO_REMOVED_PHONE);
+  for (const network of place.networks.slice(0, 3)) {
+    network.devices.push({
+      device: DEMO_REMOVED_PHONE,
+      signalPercent: Math.max(network.signalPercent - 12, 1),
+      last: place.first,
+      scans: 4,
+    });
+  }
 }
 
 function addSighting(

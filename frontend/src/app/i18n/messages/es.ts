@@ -676,6 +676,7 @@ export const es: Messages = {
     'No hay escaneos Wi-Fi con posición en este periodo. En la app Den-Watcher de cada teléfono, permite la ubicación siempre y deja activada la ruta de ubicación.',
   'wifiPositions.failed': 'No se pudieron leer los lugares de los escaneos Wi-Fi.',
   'wifiMap.title': 'Mapa Wi-Fi',
+  'wifiMap.removedPhone': 'Un teléfono quitado',
   'wifiMap.intro':
     'Cada red Wi-Fi que captaron tus teléfonos, en el mapa donde la captaron. Pon nombre a los lugares que conoces y une los que son el mismo.',
   'wifiMap.search': 'Buscar un lugar o una red',

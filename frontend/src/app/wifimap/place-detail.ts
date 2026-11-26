@@ -4,9 +4,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { bandText, securityText, signalLevel, wifiBand } from '../compare/wifi';
-import { DeviceService, deviceName } from '../devices/devices';
+import { DeviceService } from '../devices/devices';
 import { I18n } from '../i18n/i18n';
 import { MetricsService, PositionNetwork, WiFiPosition } from '../metrics/metrics';
+import { phoneName } from './phone-name';
 import { SameSuggestion, heardIn, sameAs, yourNetwork } from './places';
 
 /** The bands of a network's frequencies, such as "2.4 GHz · 5 GHz". */
@@ -119,10 +120,9 @@ export class PlaceDetail {
       .join(', ');
   }
 
-  /** A phone's name, or its id once it was removed. */
+  /** A phone's name, or "A removed phone" (see phoneName). */
   protected name(id: string): string {
-    const device = this.devices.devices().find((d) => d.id === id);
-    return device ? deviceName(device, this.i18n) : id;
+    return phoneName(id, this.devices.devices(), this.i18n);
   }
 
   protected heardIn(network: PositionNetwork): string {

@@ -668,6 +668,7 @@ export const en = {
     "No Wi-Fi scans with a position in this range. In each phone's Den-Watcher app, allow the location all the time and keep Location route on.",
   'wifiPositions.failed': 'Could not read the places of the Wi-Fi scans.',
   'wifiMap.title': 'Wi-Fi map',
+  'wifiMap.removedPhone': 'A removed phone',
   'wifiMap.intro':
     'Every Wi-Fi network your phones heard, on the map where they heard it. Name the places you know, and merge the ones that are the same.',
   'wifiMap.search': 'Find a place or network',

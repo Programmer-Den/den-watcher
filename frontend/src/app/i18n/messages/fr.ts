@@ -677,6 +677,7 @@ export const fr: Messages = {
     'Aucun scan Wi-Fi avec position sur cette période. Dans l’app Den-Watcher de chaque téléphone, autorisez la localisation en permanence et laissez l’itinéraire activé.',
   'wifiPositions.failed': 'Impossible de lire les lieux des scans Wi-Fi.',
   'wifiMap.title': 'Carte Wi-Fi',
+  'wifiMap.removedPhone': 'Un téléphone retiré',
   'wifiMap.intro':
     'Chaque réseau Wi-Fi capté par vos téléphones, sur la carte là où ils l’ont capté. Nommez les lieux que vous connaissez et fusionnez ceux qui sont le même.',
   'wifiMap.search': 'Chercher un lieu ou un réseau',

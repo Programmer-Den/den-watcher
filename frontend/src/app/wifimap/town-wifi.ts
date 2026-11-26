@@ -4,12 +4,13 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { catchError, of, switchMap } from 'rxjs';
 
 import { HubConnection } from '../connection/connection';
-import { DeviceService, deviceName } from '../devices/devices';
+import { DeviceService } from '../devices/devices';
 import { I18n } from '../i18n/i18n';
 import { MessageKey } from '../i18n/messages/en';
 import { MapViewport } from '../map/map-view';
 import { MetricsService, TownWiFi, nowSeconds } from '../metrics/metrics';
 import { PageVisibility } from '../page-visibility';
+import { phoneName } from './phone-name';
 import { MAP_HEIGHT, MAP_WIDTH } from './places-map';
 import { TownDay, accessPointMatches, quantile, townDays, townLines } from './town';
 import { TownMap } from './town-map';
@@ -123,10 +124,9 @@ export class TownWifi {
     }
   }
 
-  /** A phone's name, or its id once it was removed. */
+  /** A phone's name, or "A removed phone" (see phoneName). */
   protected name(id: string): string {
-    const device = this.devices.devices().find((d) => d.id === id);
-    return device ? deviceName(device, this.i18n) : id;
+    return phoneName(id, this.devices.devices(), this.i18n);
   }
 
   protected time(seconds: number, format: MessageKey = 'format.dateTime'): string {
