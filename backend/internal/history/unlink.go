@@ -144,9 +144,10 @@ func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
 	for _, t := range []struct{ table, keys, set string }{
 		// Which of the networks it was connected to goes, as it tells whose
 		// they were.
-		// One that is no valid JSON stays as it is, so it cannot stop the move.
-		{"phone_scans", "device, time", `, networks = CASE WHEN json_valid(networks) THEN (
-			SELECT json_group_array(json(json_remove(value, '$.connected')) ORDER BY key)
+		// What is no array of networks stays as it is, so it cannot stop the
+		// move.
+		{"phone_scans", "device, time", `, networks = CASE WHEN json_valid(networks) AND json_type(networks) = 'array' THEN (
+			SELECT json_group_array(CASE WHEN type = 'object' THEN json(json_remove(value, '$.connected')) ELSE value END ORDER BY key)
 			FROM json_each(networks)) ELSE networks END`},
 		{"route_points", "device, phone_time", ""},
 	} {

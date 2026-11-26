@@ -233,10 +233,39 @@ func TestWiFiPositionsWaitForTheScansOfAPhoneWhosePointsAreMoving(t *testing.T) 
 	if got, err := store.WiFiPositions(ctx, hour, hour.Add(time.Hour)); err != nil || len(got) != 0 {
 		t.Errorf("WiFiPositions() while moving = %+v, %v; want none", got, err)
 	}
+	if town, err := store.TownWiFi(ctx, hour, hour.Add(time.Hour)); err != nil || len(town.Tracks) != 0 {
+		t.Errorf("TownWiFi() tracks while moving = %+v, %v; want none", town.Tracks, err)
+	}
 	if err := store.UnlinkPhoneData(ctx, "pixel"); err != nil {
 		t.Fatal(err)
 	}
 	if got, err := store.WiFiPositions(ctx, hour, hour.Add(time.Hour)); err != nil || len(got) != 1 || got[0].Devices[0] != unlinked {
 		t.Errorf("WiFiPositions() once moved = %+v, %v; want the removed phone's place", got, err)
+	}
+}
+
+func TestUnlinkPhoneDataMovesAScanThatIsNoListOfNetworks(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	if err := store.AddPhoneScans(ctx, "pixel", []FoundScan{{At: time.Date(2026, 11, 5, 10, 0, 0, 0, time.UTC)}}); err != nil {
+		t.Fatal(err)
+	}
+	for _, networks := range []string{`["x",{"ssid":"Den","connected":true}]`, `"x"`, `not json`} {
+		if _, err := store.DB().ExecContext(ctx, `UPDATE phone_scans SET device = 'pixel', networks = ?`, networks); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.NoteUnlink(ctx, "pixel"); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.UnlinkPhoneData(ctx, "pixel"); err != nil {
+			t.Fatalf("UnlinkPhoneData() with networks %s: %v", networks, err)
+		}
+		var moved string
+		if err := store.DB().QueryRowContext(ctx, `SELECT networks FROM phone_scans`).Scan(&moved); err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(moved, "connected") {
+			t.Errorf("networks %s moved as %s, want without connected", networks, moved)
+		}
 	}
 }

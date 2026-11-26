@@ -97,8 +97,13 @@ func (h *Hub) forgetOthers(ctx context.Context, kept []string) error {
 	if err != nil {
 		return err
 	}
+	pending, err := h.store.PendingUnlinks(ctx)
+	if err != nil {
+		return err
+	}
 	for _, device := range phones {
-		if !slices.Contains(devices, device) {
+		// One noted is forgotten already; unlinkPending moves its data.
+		if !slices.Contains(devices, device) && !slices.Contains(pending, device) {
 			devices = append(devices, device)
 		}
 	}

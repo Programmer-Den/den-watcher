@@ -121,7 +121,7 @@ export class PlaceDetail {
   }
 
   /** The phones phones() names: each phone, and the first removed one for all of them. */
-  protected listedPhones(): string[] {
+  private listedPhones(): string[] {
     const devices = this.place().devices;
     const removed = devices.find((id) => id.startsWith(REMOVED_PHONE_PREFIX));
     return devices.filter((id) => id === removed || !id.startsWith(REMOVED_PHONE_PREFIX));
