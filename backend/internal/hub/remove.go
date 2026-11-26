@@ -177,25 +177,26 @@ func (h *Hub) unlink(ctx context.Context, device string) error {
 	return h.store.UnlinkPhoneData(ctx, device)
 }
 
-// unlinkPending finishes the unlinks a hub that stopped meanwhile left, and
-// those forgetting devices at the start noted, in the background, so the hub
-// starts at once.
-func (h *Hub) unlinkPending(ctx context.Context) error {
+// unlinkPending finishes the unlinks still noted: those a hub that stopped
+// meanwhile left, those forgetting devices at the start noted, and those
+// that failed. The hub runs it in the background, at the start and then with
+// forgetExpired.
+func (h *Hub) unlinkPending(ctx context.Context) {
 	pending, err := h.store.PendingUnlinks(ctx)
-	if err != nil || len(pending) == 0 {
-		return err
+	if err != nil {
+		if ctx.Err() == nil {
+			slog.Error("read which removed phones' route and Wi-Fi are still to be kept without their names", "error", err)
+		}
+		return
 	}
-	h.recording.Go(func() {
-		for _, device := range pending {
-			if err := h.unlink(ctx, device); err != nil {
-				if ctx.Err() == nil {
-					slog.Error("keep a removed phone's route and Wi-Fi without its name; tried again at the next start", "device", device, "error", err)
-				}
+	for _, device := range pending {
+		if err := h.unlink(ctx, device); err != nil {
+			if ctx.Err() != nil {
 				return
 			}
+			slog.Error("keep a removed phone's route and Wi-Fi without its name; tried again later", "device", device, "error", err)
 		}
-	})
-	return nil
+	}
 }
 
 // selectDevices returns the ids of the devices query selects.
@@ -243,12 +244,14 @@ func (h *Hub) deleteData(remote *Remote) {
 	if h.beforeDelete != nil {
 		h.beforeDelete(remote.ID)
 	}
+	// Its history first, which goes at once; then a phone's route and Wi-Fi,
+	// whose move a hub that stops meanwhile finishes at its next start.
 	err := h.forgetDevice(h.ctx, remote.ID)
 	if err == nil {
-		err = h.unlink(h.ctx, remote.ID)
+		err = h.store.DeleteDevice(h.ctx, remote.ID)
 	}
 	if err == nil {
-		err = h.store.DeleteDevice(h.ctx, remote.ID)
+		err = h.unlink(h.ctx, remote.ID)
 	}
 	switch {
 	case err == nil:

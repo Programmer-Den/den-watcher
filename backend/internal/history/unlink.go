@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS phone_unlinking (
 ) WITHOUT ROWID;
 `
 
-// RemovedPhonePrefix starts the id a removed phone's route, Wi-Fi scans and
-// Wi-Fi connections are kept under (see UnlinkPhoneData). An id made from a
+// RemovedPhonePrefix starts the id a removed phone's route and Wi-Fi scans
+// are kept under (see UnlinkPhoneData). An id made from a
 // name has only letters, digits and dashes, so none starts with it.
 const RemovedPhonePrefix = "removed:"
 
@@ -58,12 +58,12 @@ func (s *Store) PendingUnlinks(ctx context.Context) ([]string, error) {
 	return devices, err
 }
 
-// UnlinkPhoneData keeps where a phone was and the Wi-Fi networks it scanned
-// and was connected to, for the Wi-Fi map, but no longer as the phone's: they
-// move to a new id of their own, which tells nothing of the phone, and age
-// out with PHONE_RETENTION_DAYS as before. What tells who it was goes: when
-// its apps were in use, and the stretches of its route the user deleted, as
-// what they would leave out never comes under the new id. A phone added later
+// UnlinkPhoneData keeps where a phone was and the Wi-Fi networks it scanned,
+// for the Wi-Fi map, but no longer as the phone's: they move to a new id of
+// their own, which tells nothing of the phone, and age out with
+// PHONE_RETENTION_DAYS as before. What tells who it was goes: when its apps
+// were in use, which Wi-Fi it was connected to, and the stretches of its
+// route the user deleted (DeleteRoute deleted the points and scans in them). A phone added later
 // under the same id starts without any of it. For a device that is no phone,
 // it changes nothing. A move cut short goes on under the same id when it is
 // called again; once done, the note of NoteUnlink goes.
@@ -89,7 +89,6 @@ func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
 	for _, t := range []struct{ table, keys string }{
 		{"route_points", "device, phone_time"},
 		{"phone_scans", "device, time"},
-		{"wifi_connections", "device, start"},
 	} {
 		n, err := s.moveChunks(ctx, t.table, t.keys, device, unlinked)
 		if err != nil {
@@ -101,10 +100,16 @@ func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
 	if err != nil {
 		return err
 	}
+	// The Wi-Fi map does not read them, and one over a stretch the user
+	// deleted is left out only as it is read.
+	connections, err := s.deleteChunks(ctx, "wifi_connections", "device, start", `device = ?`, device)
+	if err != nil {
+		return err
+	}
 	if _, err := s.db.ExecContext(ctx, `DELETE FROM phone_unlinking WHERE device = ?`, device); err != nil {
 		return err
 	}
-	s.shrinkLog(ctx, moved+uses)
+	s.shrinkLog(ctx, moved+uses+connections)
 	return nil
 }
 

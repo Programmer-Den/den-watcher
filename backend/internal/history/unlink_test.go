@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func TestUnlinkPhoneDataKeepsTheRouteAndWiFiButNotWhoseTheyWere(t *testing.T) {
+func TestUnlinkPhoneDataKeepsTheRouteAndScansButNotWhoseTheyWere(t *testing.T) {
 	ctx := context.Background()
 	store := openTestStore(t)
 	hour := time.Date(2026, 11, 5, 10, 0, 0, 0, time.UTC)
@@ -58,13 +58,15 @@ func TestUnlinkPhoneDataKeepsTheRouteAndWiFiButNotWhoseTheyWere(t *testing.T) {
 	if !strings.HasPrefix(unlinked, RemovedPhonePrefix) {
 		t.Fatalf("route kept under %q, want an id of a removed phone", unlinked)
 	}
-	for _, table := range []string{"route_points", "phone_scans", "wifi_connections"} {
+	for _, table := range []string{"route_points", "phone_scans"} {
 		if n := count(`SELECT COUNT(*) FROM `+table+` WHERE device = ?`, unlinked); n != 1 {
 			t.Errorf("%d rows of %s under %q, want 1", n, table, unlinked)
 		}
 	}
-	if n := count(`SELECT COUNT(*) FROM app_uses WHERE device != 'other'`); n != 0 {
-		t.Errorf("%d app uses kept, want none", n)
+	for _, table := range []string{"app_uses", "wifi_connections"} {
+		if n := count(`SELECT COUNT(*) FROM ` + table + ` WHERE device != 'other'`); n != 0 {
+			t.Errorf("%d rows of %s kept, want none", n, table)
+		}
 	}
 	// What a phone added again under the same id sends is its own and kept.
 	if err := store.AddRoutePoints(ctx, "pixel", []RoutePoint{{PhoneTime: 2, Time: ms(hour.Add(90 * time.Minute)), Lat: 1, Lon: 1, Accuracy: 5}}); err != nil {

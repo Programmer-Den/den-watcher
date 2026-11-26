@@ -520,7 +520,8 @@ func DeletedRouteIn(stretches [][2]int64, at time.Time) bool {
 }
 
 // DeleteDevice deletes every value of one device, and how its extras are
-// described, in chunks as DeleteBefore does.
+// described, in chunks as DeleteBefore does. A phone's route, scans, Wi-Fi
+// connections and app uses are left to UnlinkPhoneData.
 func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	// After a flush that is writing its minutes and Wi-Fi sums, which would
 	// bring them back, and before the next one can take them.
@@ -561,22 +562,6 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	if err != nil {
 		return err
 	}
-	uses, err := s.deleteChunks(ctx, "app_uses", "device, app, start", `device = ?`, device)
-	if err != nil {
-		return err
-	}
-	connections, err := s.deleteChunks(ctx, "wifi_connections", "device, start", `device = ?`, device)
-	if err != nil {
-		return err
-	}
-	route, err := s.deleteChunks(ctx, "route_points", "device, phone_time", `device = ?`, device)
-	if err != nil {
-		return err
-	}
-	phoneScans, err := s.deleteChunks(ctx, "phone_scans", "device, time", `device = ?`, device)
-	if err != nil {
-		return err
-	}
 	s.brokenInfo.Range(func(key, _ any) bool {
 		if key.(brokenInfoKey).device == device {
 			s.brokenInfo.Delete(key)
@@ -586,7 +571,7 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	// Again, so a range read while the values were deleted, which may have
 	// some of them, is not kept (see rangeCache.put).
 	s.cache.forget(device)
-	s.shrinkLog(ctx, deleted+hourly+wifi+scans+uses+connections+route+phoneScans)
+	s.shrinkLog(ctx, deleted+hourly+wifi+scans)
 	return nil
 }
 

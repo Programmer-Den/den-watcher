@@ -158,7 +158,8 @@ func newHub(ctx context.Context, store *history.Store, fixed []Device, complete 
 			return nil, err
 		}
 	}
-	if err := h.forgetExpired(ctx, time.Now()); err != nil {
+	// The phones' data moves in the background (see unlinkPending).
+	if _, err := h.forgetExpiredDevices(ctx, time.Now()); err != nil {
 		return nil, err
 	}
 	kept, err := h.selectDevices(ctx, `SELECT device FROM hub_kept`)
@@ -218,10 +219,8 @@ func newHub(ctx context.Context, store *history.Store, fixed []Device, complete 
 		}
 		h.start(device, false, own)
 	}
-	if err := h.unlinkPending(ctx); err != nil {
-		return nil, err
-	}
 	h.recording.Go(func() {
+		h.unlinkPending(ctx)
 		ticker := time.NewTicker(history.PruneInterval)
 		defer ticker.Stop()
 		for {
@@ -232,6 +231,7 @@ func newHub(ctx context.Context, store *history.Store, fixed []Device, complete 
 				if err := h.forgetExpired(ctx, now); err != nil && ctx.Err() == nil {
 					slog.Error("forget the availability of devices removed longer than the retention ago", "error", err)
 				}
+				h.unlinkPending(ctx)
 			}
 		}
 	})

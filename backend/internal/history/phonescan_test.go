@@ -52,10 +52,10 @@ func TestPhoneScansAreReadClosestToATime(t *testing.T) {
 	if got, err := store.PhoneScanNear(ctx, "pixel", hour, 5*time.Minute); err != nil || got == nil || got.Time != hour.Add(5*time.Minute).Unix() {
 		t.Errorf("after the retention: %+v, %v; want only the later scan", got, err)
 	}
-	if err := store.DeleteDevice(ctx, "pixel"); err != nil {
+	if err := store.UnlinkPhoneData(ctx, "pixel"); err != nil {
 		t.Fatal(err)
 	}
 	if got, err := store.PhoneScanNear(ctx, "pixel", hour, time.Hour); err != nil || got != nil {
-		t.Errorf("after the device was deleted: %+v, %v; want none", got, err)
+		t.Errorf("after the phone's data was unlinked: %+v, %v; want none under its id", got, err)
 	}
 }

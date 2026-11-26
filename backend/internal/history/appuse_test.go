@@ -49,11 +49,11 @@ func TestAppUsesAreSplitAtTheStepsAndTheRange(t *testing.T) {
 		t.Errorf("steps %+v, want %+v", usage.Steps, steps)
 	}
 
-	if err := store.DeleteDevice(ctx, "pixel"); err != nil {
+	if err := store.UnlinkPhoneData(ctx, "pixel"); err != nil {
 		t.Fatal(err)
 	}
 	if usage, err := store.AppUses(ctx, "pixel", hour, hour.Add(2*time.Hour), time.Hour); err != nil || len(usage.Apps) != 0 || usage.Unlocks != 0 {
-		t.Errorf("after DeleteDevice: %+v, %v; want nothing", usage, err)
+		t.Errorf("after UnlinkPhoneData: %+v, %v; want nothing", usage, err)
 	}
 }
 

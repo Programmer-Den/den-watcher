@@ -41,11 +41,11 @@ func TestWiFiConnectionsGrowAndAreReadByTheirRange(t *testing.T) {
 		t.Errorf("connections = %+v, want only %+v", got, want)
 	}
 
-	if err := store.DeleteDevice(ctx, "pixel"); err != nil {
+	if err := store.UnlinkPhoneData(ctx, "pixel"); err != nil {
 		t.Fatal(err)
 	}
 	if got, err := store.WiFiConnections(ctx, "pixel", hour.Add(-time.Hour*24), hour.Add(24*time.Hour)); err != nil || len(got) != 0 {
-		t.Errorf("after the device was deleted: %+v, %v; want none", got, err)
+		t.Errorf("after the phone's data was unlinked: %+v, %v; want none under its id", got, err)
 	}
 	if _, err := store.DeletePhoneDataBefore(ctx, hour); err != nil {
 		t.Fatal(err)
