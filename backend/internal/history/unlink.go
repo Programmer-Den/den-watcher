@@ -54,7 +54,6 @@ func (s *Store) NoteUnlink(ctx context.Context, device string) error {
 func (s *Store) PhoneDataDevices(ctx context.Context) ([]string, error) {
 	var all []string
 	for _, table := range []string{"route_points", "phone_scans", "app_uses", "wifi_connections", "route_deleted"} {
-		//nolint:gosec // table is one of the fixed names above.
 		rows, err := s.db.QueryContext(ctx, fmt.Sprintf(`
 			WITH RECURSIVE ids(device) AS (
 				SELECT MIN(device) FROM %[1]s
