@@ -218,6 +218,9 @@ func newHub(ctx context.Context, store *history.Store, fixed []Device, complete 
 		}
 		h.start(device, false, own)
 	}
+	if err := h.unlinkPending(ctx); err != nil {
+		return nil, err
+	}
 	h.recording.Go(func() {
 		ticker := time.NewTicker(history.PruneInterval)
 		defer ticker.Stop()
@@ -550,6 +553,15 @@ func (h *Hub) taken(device Device) error {
 		return &InputError{Problem: ProblemNameTaken, Message: "a device added earlier has the same name; it is not collected from, as another device has its address and port, but it stays saved; give each device its own name"}
 	}
 	if h.removing[device.ID] != nil {
+		return errRemoving
+	}
+	// A removed phone whose route and Wi-Fi are still being unlinked from its
+	// id, which the new device would take over.
+	unlinking, err := h.store.Unlinking(context.WithoutCancel(h.ctx), device.ID)
+	if err != nil {
+		return err
+	}
+	if unlinking {
 		return errRemoving
 	}
 	if other := h.findAddress(device.Address); other != nil {

@@ -24,6 +24,40 @@ CREATE TABLE IF NOT EXISTS phone_unlinking (
 // name has only letters, digits and dashes, so none starts with it.
 const RemovedPhonePrefix = "removed:"
 
+// NoteUnlink notes that device's data is to be unlinked from it (see
+// UnlinkPhoneData), so a hub that stops before that is done finishes it at
+// its next start (see PendingUnlinks), and a phone is not added again under
+// the id meanwhile (see Unlinking). It is quick.
+func (s *Store) NoteUnlink(ctx context.Context, device string) error {
+	_, err := s.unlinkedID(ctx, device)
+	return err
+}
+
+// Unlinking tells whether device's data is still to be unlinked from it.
+func (s *Store) Unlinking(ctx context.Context, device string) (bool, error) {
+	var noted bool
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM phone_unlinking WHERE device = ?)`, device).Scan(&noted)
+	return noted, err
+}
+
+// PendingUnlinks returns the devices whose data is still to be unlinked.
+func (s *Store) PendingUnlinks(ctx context.Context) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT device FROM phone_unlinking ORDER BY device`)
+	if err != nil {
+		return nil, err
+	}
+	var devices []string
+	err = scanRows(rows, func() error {
+		var device string
+		if err := rows.Scan(&device); err != nil {
+			return err
+		}
+		devices = append(devices, device)
+		return nil
+	})
+	return devices, err
+}
+
 // UnlinkPhoneData keeps where a phone was and the Wi-Fi networks it scanned
 // and was connected to, for the Wi-Fi map, but no longer as the phone's: they
 // move to a new id of their own, which tells nothing of the phone, and age
@@ -32,14 +66,21 @@ const RemovedPhonePrefix = "removed:"
 // what they would leave out never comes under the new id. A phone added later
 // under the same id starts without any of it. For a device that is no phone,
 // it changes nothing. A move cut short goes on under the same id when it is
-// called again.
+// called again; once done, the note of NoteUnlink goes.
+//
+// The phone must no longer be kept (see DeleteRoute's listed), so no new
+// deletion of a stretch of its route starts.
 func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
-	// Held throughout, as in DeleteDevice: a deletion of a stretch of the
-	// route that is still running finishes first, so none of the stretch
-	// moves, and the Wi-Fi map does not read the scans and the points of a
-	// move halfway.
+	// A deletion of a stretch of its route that is still running finishes
+	// first, so none of the stretch moves. The move itself does not hold
+	// placing: the Wi-Fi map would wait for all of it. While it runs, the map
+	// may find some of the phone's scans without their points for a moment.
 	s.placing.Lock()
-	defer s.placing.Unlock()
+	_, err := s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device)
+	s.placing.Unlock()
+	if err != nil {
+		return err
+	}
 	unlinked, err := s.unlinkedID(ctx, device)
 	if err != nil {
 		return err
@@ -58,9 +99,6 @@ func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
 	}
 	uses, err := s.deleteChunks(ctx, "app_uses", "device, app, start", `device = ?`, device)
 	if err != nil {
-		return err
-	}
-	if _, err := s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device); err != nil {
 		return err
 	}
 	if _, err := s.db.ExecContext(ctx, `DELETE FROM phone_unlinking WHERE device = ?`, device); err != nil {

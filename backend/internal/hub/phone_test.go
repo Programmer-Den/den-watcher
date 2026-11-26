@@ -800,3 +800,47 @@ func TestARemovedPhonesRouteAndWiFiAreKeptButNoLongerItsOwn(t *testing.T) {
 		}
 	}
 }
+
+func TestAPhoneWhoseDataIsUnlinkedAtTheStartWaitsToBeAddedAgain(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	now := time.Now()
+	// A hub that stopped while it moved a removed phone's route.
+	if err := store.AddRoutePoints(ctx, "pixel", []history.RoutePoint{{PhoneTime: 1, Time: now.Add(-time.Hour).UnixMilli(), Lat: 1, Lon: 1, Accuracy: 5}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.NoteUnlink(ctx, "pixel"); err != nil {
+		t.Fatal(err)
+	}
+	h := openTestHub(t, store, nil)
+	// Finished in the background.
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		unlinking, err := store.Unlinking(ctx, "pixel")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !unlinking {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the unlink noted before the start was not finished")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	var left int
+	if err := store.DB().QueryRow(`SELECT COUNT(*) FROM route_points WHERE device = 'pixel'`).Scan(&left); err != nil {
+		t.Fatal(err)
+	}
+	if left != 0 {
+		t.Errorf("%d points left under the phone's id, want none", left)
+	}
+
+	// While one is still noted, a phone is not added under its id.
+	if err := store.NoteUnlink(ctx, "galaxy"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.AddPhone(ctx, "Galaxy", "7KQM-X2RP"); !errors.Is(err, errRemoving) {
+		t.Errorf("AddPhone() while its id is unlinked error = %v, want errRemoving", err)
+	}
+}

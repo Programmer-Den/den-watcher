@@ -79,9 +79,15 @@ describe('PasswordDialog', () => {
 
   it('says when removing a phone that its route and Wi-Fi stay on the map without its name', async () => {
     await open({ action: 'remove', deviceName: 'Pixel', phone: true, passwordSet: true });
-    expect(element().textContent).toContain(
-      "Its route and Wi-Fi scans stay on the Wi-Fi map, as a removed phone's, without its name.",
-    );
+    const hint =
+      "Its route and Wi-Fi scans stay on the Wi-Fi map, as a removed phone's, without its name.";
+    expect(element().textContent).toContain(hint);
+    // With its history kept, they stay the phone's for now.
+    element().querySelector<HTMLInputElement>('mat-checkbox input')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(element().textContent).not.toContain(hint);
   });
 
   it('asks for the password to change the kind of a device', async () => {
