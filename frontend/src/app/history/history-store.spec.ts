@@ -128,8 +128,15 @@ describe('HistoryStore with the week before', () => {
 
     // A new answer of the range does not start the week before over.
     tick(60_000);
-    reads().forEach((r) => r.flush(r.request.params.get('to') === String(to) ? HISTORY : earlier));
+    const pending = reads();
+    const later = (r: TestRequest) => Number(r.request.params.get('to')) > to;
+    const range = pending.find(later);
+    expect(range).toBeDefined();
+    range!.flush({ ...HISTORY, from: to + 60 - 3600, to: to + 60 });
+    tick();
     expect(store.weekBeforeHistory()).toEqual(earlier);
+    expect(reads()).toEqual([]);
+    pending.filter((r) => !later(r)).forEach((r) => r.flush(earlier));
 
     // Switched off, it is no longer read, and kept so for the next visit.
     store.toggleWeekBefore();

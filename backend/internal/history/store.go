@@ -375,10 +375,14 @@ func (s *Store) DeletePhoneDataBefore(ctx context.Context, t time.Time) (int64, 
 // had not sent yet, is left out too. It returns how many points of the route
 // were deleted.
 //
-// listed tells whether the phone is still kept; it is asked while no
-// DeleteDevice can run, and a phone no longer kept gets ErrDeviceGone instead:
-// its DeleteDevice may already have deleted its stretches, so one remembered
-// now would stay with a phone added again under the same id.
+// listed tells whether the phone is still kept, and a phone no longer kept
+// gets ErrDeviceGone. It is asked under placing, which DeleteDevice takes to
+// delete the stretches, and removing a phone deletes it from hub_devices
+// before its DeleteDevice runs. So the stretch of a phone still listed is
+// deleted by a later DeleteDevice, if it is removed without its history
+// (removed with its history kept, the stretch stays with that history), while
+// for a phone no longer listed DeleteDevice may have run already, and a
+// stretch remembered now would stay with a phone added again under the same id.
 func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Time, listed func(context.Context) (bool, error)) (_ int64, err error) {
 	// Only what was recorded up to now is left out later: what the phone
 	// records from now on is new, even within the stretch. The slack covers
