@@ -762,6 +762,7 @@ export const en = {
   'phoneRoute.distance': '{km} km travelled',
   'phoneRoute.points.one': '{count} point',
   'phoneRoute.points.other': '{count} points',
+  'phoneRoute.cut': 'Too many points: only the newest, since {time}, are shown',
   'phoneRoute.map': 'The route on a map',
   'phoneRoute.attribution': 'Map © OpenStreetMap contributors',
   'map.zoom': 'Zoom the map',

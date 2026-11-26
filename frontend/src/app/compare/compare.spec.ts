@@ -394,25 +394,20 @@ describe('Compare', () => {
     expect(legend()).toEqual([]);
   });
 
-  it('offers only the ranges within the history the hub keeps', () => {
+  it('offers every range, also those past the history the hub keeps', () => {
+    // Older ranges are read in whole days from the daily averages, which the hub keeps for good.
+    answer(false, 7);
     expect(ranges()).toEqual(['1 h', '6 h', '1 d', '7 d', '30 d']);
-    // A range picked before the hub said how long it keeps history.
-    http.match((r) => r.url === '/api/history');
     const choices = (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
       '.choices button',
     );
     choices[4].click();
     fixture.detectChanges();
     vi.advanceTimersByTime(0);
-
-    answer(false, 7);
-    expect(ranges()).toEqual(['1 h', '6 h', '1 d', '7 d']);
-    // The longest range offered stands in for the one picked, and the charts are read for it.
-    expect(pressed()).toBe('7 d');
-    vi.advanceTimersByTime(0);
+    expect(pressed()).toBe('30 d');
     const [read] = http.match((r) => r.url === '/api/history');
     expect(Number(read.request.params.get('to')) - Number(read.request.params.get('from'))).toBe(
-      7 * 86400,
+      30 * 86400,
     );
   });
 

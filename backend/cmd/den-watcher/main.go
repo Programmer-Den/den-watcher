@@ -485,7 +485,7 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 		Password:       devicesPassword,
 		Retention:      retention,
 		PhoneRetention: phoneRetention,
-		Routes:         store,
+		Routes:         others,
 		PagePort:       pagePort,
 		Files:          web.Files(),
 		Update:         func() update.Status { return update.Status{Current: version.Version} },

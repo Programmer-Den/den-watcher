@@ -387,6 +387,8 @@ export interface PhoneRoute {
   from: number;
   to: number;
   points: RoutePoint[];
+  /** Set when the range had more points than the hub returns, so only the newest are in points. */
+  cut?: boolean;
 }
 
 /** One point of a phone's location route. */

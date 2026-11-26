@@ -2,10 +2,38 @@ package history
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"testing"
 	"time"
 )
+
+// kept is DeleteRoute's listed for a phone that is still kept.
+func kept(context.Context) (bool, error) { return true, nil }
+
+func TestDeleteRouteRemembersNothingForAPhoneNoLongerKept(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	day := time.Date(2026, 11, 5, 0, 0, 0, 0, time.UTC)
+	point := []RoutePoint{{PhoneTime: 1, Time: day.Add(8 * time.Hour).UnixMilli(), Lat: 1, Lon: 1, Accuracy: 5}}
+	if err := store.AddRoutePoints(ctx, "pixel", point); err != nil {
+		t.Fatal(err)
+	}
+	gone := func(context.Context) (bool, error) { return false, nil }
+	if _, err := store.DeleteRoute(ctx, "pixel", day, day.Add(day24), gone); !errors.Is(err, ErrDeviceGone) {
+		t.Fatalf("DeleteRoute() error = %v, want ErrDeviceGone", err)
+	}
+	var stretches int
+	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(*) FROM route_deleted`).Scan(&stretches); err != nil {
+		t.Fatal(err)
+	}
+	if stretches != 0 {
+		t.Errorf("%d stretches remembered, want none", stretches)
+	}
+	if points, err := store.RoutePoints(ctx, "pixel", day, day.Add(day24)); err != nil || len(points) != 1 {
+		t.Errorf("RoutePoints() = %v, %v; want the point kept", points, err)
+	}
+}
 
 func TestRoutePointsAreKeptOnceAndReadByTheirRange(t *testing.T) {
 	ctx := context.Background()
@@ -113,7 +141,7 @@ func TestDeleteRouteDeletesAStretchOfOnePhone(t *testing.T) {
 		}
 	}
 
-	deleted, err := store.DeleteRoute(ctx, "pixel", day, day.Add(day24))
+	deleted, err := store.DeleteRoute(ctx, "pixel", day, day.Add(day24), kept)
 
 	if err != nil || deleted != 1 {
 		t.Fatalf("DeleteRoute() = %d, %v; want the one point of the day", deleted, err)
@@ -153,7 +181,7 @@ func TestDeleteRouteTakesWhatTellsWhereThePhoneWasAndKeepsItOut(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := store.DeleteRoute(ctx, "pixel", day, day.Add(day24)); err != nil {
+	if _, err := store.DeleteRoute(ctx, "pixel", day, day.Add(day24), kept); err != nil {
 		t.Fatal(err)
 	}
 
@@ -213,7 +241,7 @@ func TestDeleteRouteOfTodayKeepsWhatComesAfterIt(t *testing.T) {
 	}
 
 	// The stretch reaches into the future, as today until midnight would.
-	if _, err := store.DeleteRoute(ctx, "pixel", now.Add(-2*time.Hour), now.Add(22*time.Hour)); err != nil {
+	if _, err := store.DeleteRoute(ctx, "pixel", now.Add(-2*time.Hour), now.Add(22*time.Hour), kept); err != nil {
 		t.Fatal(err)
 	}
 	stretches, err := store.DeletedStretches(ctx, "pixel")
@@ -255,7 +283,7 @@ func TestDeleteRouteCutsTheWiFiConnectionsAcrossTheStretch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := store.DeleteRoute(ctx, "pixel", day, day.Add(day24)); err != nil {
+	if _, err := store.DeleteRoute(ctx, "pixel", day, day.Add(day24), kept); err != nil {
 		t.Fatal(err)
 	}
 
@@ -307,7 +335,7 @@ func TestDeleteDeviceForgetsItsDeletedStretches(t *testing.T) {
 	store := openTestStore(t)
 	day := time.Date(2026, 11, 5, 0, 0, 0, 0, time.UTC)
 	for _, phone := range []string{"pixel", "other"} {
-		if _, err := store.DeleteRoute(ctx, phone, day, day.Add(day24)); err != nil {
+		if _, err := store.DeleteRoute(ctx, phone, day, day.Add(day24), kept); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -334,7 +362,7 @@ func TestDeleteRouteForgetsTheStretchWhenItFails(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := store.DeleteRoute(ctx, "pixel", day, day.Add(day24)); err == nil {
+	if _, err := store.DeleteRoute(ctx, "pixel", day, day.Add(day24), kept); err == nil {
 		t.Fatal("DeleteRoute() without wifi_connections did not fail")
 	}
 

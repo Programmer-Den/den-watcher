@@ -17,15 +17,34 @@ import (
 	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 )
 
-// fakeRoute returns the same points and keeps what it was asked for.
+// fakeRoute returns the same points, or n copies of them when n is set, and
+// keeps what it was asked for.
 type fakeRoute struct {
 	device   string
 	from, to time.Time
+	n        int
 }
 
 func (f *fakeRoute) RoutePoints(_ context.Context, device string, from, to time.Time) ([]history.PhonePoint, error) {
 	f.device, f.from, f.to = device, from, to
-	return []history.PhonePoint{{Time: 100, Lat: 53.55, Lon: 9.99, Accuracy: 12}}, nil
+	point := history.PhonePoint{Time: 100, Lat: 53.55, Lon: 9.99, Accuracy: 12}
+	return slices.Repeat([]history.PhonePoint{point}, max(f.n, 1)), nil
+}
+
+func TestTellsWhenAPhonesRouteWasCut(t *testing.T) {
+	for _, n := range []int{history.MaxRoutePoints - 1, history.MaxRoutePoints} {
+		source := &fakeRoute{n: n}
+		devices := append(device(fakeCollector{}, nil), Device{ID: "pixel", Kind: hub.KindPhone, Metrics: fakeCollector{}})
+		handler := New(Site{Devices: DeviceList(devices), Files: site, Route: source})
+		rec := get(handler, "/api/phone/route?device=pixel&from=0&to=10", "192.168.1.20:5000")
+		var got routeResponse
+		if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+			t.Fatal(err)
+		}
+		if want := n == history.MaxRoutePoints; got.Cut != want {
+			t.Errorf("with %d points: cut = %t, want %t", n, got.Cut, want)
+		}
+	}
 }
 
 func TestServesAPhonesRouteWithinTheRetention(t *testing.T) {
@@ -249,11 +268,25 @@ func TestServesAPhonesWholeRouteWithoutARetentionOfItsOwn(t *testing.T) {
 type fakeRouteDeleter struct {
 	device   string
 	from, to time.Time
+	err      error
 }
 
 func (f *fakeRouteDeleter) DeleteRoute(_ context.Context, device string, from, to time.Time) (int64, error) {
+	if f.err != nil {
+		return 0, f.err
+	}
 	f.device, f.from, f.to = device, from, to
 	return 3, nil
+}
+
+func TestDeletingTheRouteOfAPhoneRemovedMeanwhileIsNotFound(t *testing.T) {
+	routes := &fakeRouteDeleter{err: history.ErrDeviceGone}
+	devices := append(device(fakeCollector{}, nil), Device{ID: "pixel", Kind: hub.KindPhone, Metrics: fakeCollector{}})
+	handler := New(Site{Devices: DeviceList(devices), Hub: &fakeHub{}, Password: &fakePassword{password: "correct horse"}, Files: site, Routes: routes, Changes: &fakeChangeLog{}})
+
+	if rec := send(handler, http.MethodDelete, "/api/phones/pixel/route", `{"password":"correct horse","from":86400,"to":172800}`); rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
 }
 
 func TestDeletesAStretchOfAPhonesRouteWithThePassword(t *testing.T) {

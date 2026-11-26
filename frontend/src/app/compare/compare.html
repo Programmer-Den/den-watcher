@@ -109,7 +109,7 @@
   <div class="toolbar">
     <h2 id="compare-history">{{ i18n.t('compare.overTime') }}</h2>
     <div class="choices" role="group" [attr.aria-label]="i18n.t('history.range')">
-      @for (r of ranges(); track r.seconds) {
+      @for (r of ranges; track r.seconds) {
         <button type="button" [attr.aria-pressed]="r === range()" (click)="range.set(r)">
           {{ i18n.t(r.label) }}
         </button>

@@ -6,6 +6,9 @@
       <p class="detail">
         {{ i18n.plural(r.points.length, 'phoneRoute.points.one', 'phoneRoute.points.other') }}
       </p>
+      @if (r.cut) {
+        <p class="detail">{{ i18n.t('phoneRoute.cut', { time: time(r.points[0].time) }) }}</p>
+      }
       <figure class="map">
         <app-map-frame [map]="viewport">
           <svg

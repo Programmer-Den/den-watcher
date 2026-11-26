@@ -113,15 +113,22 @@ describe('HistoryStore with the week before', () => {
     store.span.set(3600);
     const watching = store.watch.subscribe();
     tick();
-    const [now, before] = reads().sort(
-      (a, b) => Number(b.request.params.get('to')) - Number(a.request.params.get('to')),
-    );
+    // The week before waits for the range's own answer.
+    const [now, ...early] = reads();
+    expect(early).toEqual([]);
     const to = Number(now.request.params.get('to'));
+    now.flush({ ...HISTORY, from: to - 3600, to });
+    tick();
+    const [before] = reads();
     expect(Number(before.request.params.get('to'))).toBe(to - WEEK);
     expect(Number(before.request.params.get('from'))).toBe(to - WEEK - 3600);
     const earlier = { ...HISTORY, from: to - WEEK - 3600, to: to - WEEK };
     before.flush(earlier);
-    now.flush(HISTORY);
+    expect(store.weekBeforeHistory()).toEqual(earlier);
+
+    // A new answer of the range does not start the week before over.
+    tick(60_000);
+    reads().forEach((r) => r.flush(r.request.params.get('to') === String(to) ? HISTORY : earlier));
     expect(store.weekBeforeHistory()).toEqual(earlier);
 
     // Switched off, it is no longer read, and kept so for the next visit.
@@ -147,6 +154,28 @@ describe('HistoryStore with the week before', () => {
     expect(weekBeforeOffered(WEEK, 7)).toBe(false);
     expect(weekBeforeOffered(3600, 7)).toBe(false);
     expect(weekBeforeOffered(3600, 8)).toBe(true);
+  });
+
+  it('reads the week before of another device only once its own range is in', () => {
+    store.span.set(3600);
+    const watching = store.watch.subscribe();
+    tick();
+    reads().forEach((r) => r.flush(HISTORY));
+    tick();
+    reads().forEach((r) => r.flush(HISTORY));
+
+    TestBed.inject(DeviceService).selectedId.set('nas');
+    tick();
+    const [range, ...early] = reads();
+    expect(early).toEqual([]);
+    const lastReading = Math.floor(Date.now() / 1000) - 3 * 3600;
+    range.flush({ ...HISTORY, from: lastReading - 3600, to: lastReading, lastReading });
+    tick();
+    const [before] = reads();
+    expect(before.request.params.get('device')).toBe('nas');
+    expect(Number(before.request.params.get('to'))).toBe(lastReading - WEEK);
+    before.flush(HISTORY);
+    watching.unsubscribe();
   });
 
   it('ends the week before a week before the last reading of a device that is not answering', () => {

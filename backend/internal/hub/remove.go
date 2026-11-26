@@ -39,6 +39,18 @@ func (h *Hub) Remove(ctx context.Context, id string, keepHistory bool) error {
 	return h.removeRemote(ctx, remote, keepHistory)
 }
 
+// DeleteRoute deletes a stretch of a phone's route as history.Store.DeleteRoute
+// does, but only while the phone is still saved: Remove deletes it from
+// hub_devices before its data, so a stretch is never remembered after its
+// phone's data was deleted.
+func (h *Hub) DeleteRoute(ctx context.Context, id string, from, to time.Time) (int64, error) {
+	return h.store.DeleteRoute(ctx, id, from, to, func(ctx context.Context) (bool, error) {
+		var saved bool
+		err := h.store.DB().QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM hub_devices WHERE id = ?)`, id).Scan(&saved)
+		return saved, err
+	})
+}
+
 // removeRemote stops collecting from a device and forgets it, as Remove
 // does, a fixed one too. The caller holds mu.
 func (h *Hub) removeRemote(ctx context.Context, remote *Remote, keepHistory bool) error {
