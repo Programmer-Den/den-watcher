@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -15,7 +16,7 @@ import (
 
 // RouteSource reads where a phone was.
 type RouteSource interface {
-	RoutePoints(ctx context.Context, device string, from, to time.Time) ([]history.PhonePoint, error)
+	RoutePoints(ctx context.Context, device string, from, to time.Time) (_ []history.PhonePoint, cut bool, _ error)
 }
 
 // routeResponse is the body of GET /api/phone/route. Times are Unix seconds.
@@ -23,6 +24,9 @@ type routeResponse struct {
 	From   int64                `json:"from"`
 	To     int64                `json:"to"`
 	Points []history.PhonePoint `json:"points"`
+	// Cut is set when the range had more than history.MaxRoutePoints
+	// points, so Points holds only the newest.
+	Cut bool `json:"cut,omitempty"`
 }
 
 // routeHandler serves GET /api/phone/route?device=<id>&from=<unix
@@ -45,13 +49,13 @@ func routeHandler(d Device, source RouteSource, retention time.Duration) http.Ha
 		now := time.Now()
 		from = min(max(from, keptSince(now, retention)), now.Unix())
 		to = min(max(to, from+1), now.Unix()+1)
-		points, err := source.RoutePoints(r.Context(), d.ID, time.Unix(from, 0), time.Unix(to, 0))
+		points, cut, err := source.RoutePoints(r.Context(), d.ID, time.Unix(from, 0), time.Unix(to, 0))
 		if err != nil {
 			slog.Error("read where a phone was", "device", d.ID, "error", err)
 			http.Error(w, "could not read where the phone was", http.StatusInternalServerError)
 			return
 		}
-		writeJSON(w, http.StatusOK, routeResponse{From: from, To: to, Points: points})
+		writeJSON(w, http.StatusOK, routeResponse{From: from, To: to, Points: points, Cut: cut})
 	}
 }
 
@@ -238,6 +242,10 @@ func (c *deviceChanges) deleteRoute(devices Devices, routes RouteDeleter) http.H
 				return nil, &hub.InputError{Problem: hub.ProblemNotFound, Message: "there is no phone with this id"}
 			}
 			deleted, err := routes.DeleteRoute(r.Context(), id, time.Unix(request.From, 0), time.Unix(request.To, 0))
+			if errors.Is(err, history.ErrDeviceGone) {
+				// Removed meanwhile.
+				return nil, &hub.InputError{Problem: hub.ProblemNotFound, Message: "there is no phone with this id"}
+			}
 			if err == nil {
 				slog.Info("deleted a stretch of a phone's route", "device", id, "points", deleted)
 			}

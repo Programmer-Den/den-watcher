@@ -773,6 +773,7 @@ export const es: Messages = {
   'phoneRoute.distance': '{km} km recorridos',
   'phoneRoute.points.one': '{count} punto',
   'phoneRoute.points.other': '{count} puntos',
+  'phoneRoute.cut': 'Demasiados puntos: solo se muestran los más recientes, desde el {time}',
   'phoneRoute.map': 'La ruta en un mapa',
   'phoneRoute.attribution': 'Mapa © colaboradores de OpenStreetMap',
   'map.zoom': 'Ampliar el mapa',

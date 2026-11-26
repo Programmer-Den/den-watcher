@@ -84,15 +84,17 @@ type PhonePoint struct {
 const MaxRoutePoints = 20000
 
 // RoutePoints returns where the phone stored as device was from from up to
-// (not including) to, oldest first: at most the newest MaxRoutePoints.
-func (s *Store) RoutePoints(ctx context.Context, device string, from, to time.Time) ([]PhonePoint, error) {
+// (not including) to, oldest first: at most the newest MaxRoutePoints, with
+// cut set when there were more.
+func (s *Store) RoutePoints(ctx context.Context, device string, from, to time.Time) (_ []PhonePoint, cut bool, _ error) {
+	// One more than is returned tells whether there were more.
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT time, lat, lon, accuracy FROM (
 			SELECT time, lat, lon, accuracy FROM route_points
 			WHERE device = ? AND time >= ? AND time < ? ORDER BY time DESC LIMIT ?
-		) ORDER BY time`, device, from.UnixMilli(), to.UnixMilli(), MaxRoutePoints)
+		) ORDER BY time`, device, from.UnixMilli(), to.UnixMilli(), MaxRoutePoints+1)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	points := []PhonePoint{}
 	err = scanRows(rows, func() error {
@@ -105,7 +107,10 @@ func (s *Store) RoutePoints(ctx context.Context, device string, from, to time.Ti
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return points, nil
+	if len(points) > MaxRoutePoints {
+		return points[len(points)-MaxRoutePoints:], true, nil
+	}
+	return points, false, nil
 }

@@ -1,6 +1,17 @@
 import { DOCUMENT, Injectable, computed, inject, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { Observable, catchError, defer, map, merge, of, share, switchMap, tap } from 'rxjs';
+import {
+  Observable,
+  catchError,
+  defer,
+  finalize,
+  map,
+  merge,
+  of,
+  share,
+  switchMap,
+  tap,
+} from 'rxjs';
 
 import { readStored, store } from '../browser';
 
@@ -141,6 +152,13 @@ export class HistoryStore {
    */
   readonly weekBeforeHistory = signal<History | null>(null);
 
+  /**
+   * The range and device the shown history was read for, so the week before is read only once the
+   * picked device's answer for the picked range is in: a not answering device's range ends at its
+   * last reading, which only that answer says.
+   */
+  private readonly answered = signal<{ span: number; device: string } | null>(null);
+
   /** The units and their ranges. */
   readonly units = signal<readonly RangeUnit[]>(UNITS).asReadonly();
 
@@ -179,6 +197,8 @@ export class HistoryStore {
     ).pipe(
       // Another device's history is not shown while the picked one's loads.
       tap(({ device }) => {
+        // The week before waits for the answer of the new range or device.
+        this.answered.set(null);
         if (device !== shownDevice) {
           shownDevice = device;
           this.history.set(null);
@@ -226,25 +246,39 @@ export class HistoryStore {
               live = null;
               return of(null);
             }),
+            tap((history) => {
+              if (history) {
+                this.answered.set({ span, device });
+              }
+            }),
           ),
         );
       }),
       tap((history) => this.received(history)),
+      // Read again from the start when watched again, so the week before waits for that answer.
+      finalize(() => this.answered.set(null)),
     );
   }
 
   /**
    * Reads the same range a week before while it is shown, as often as the range itself. A week
    * before that cannot be read is left out, without a notice. For a device that is not answering,
-   * whose range ends at its last reading, it ends a week before that too.
+   * whose range ends at its last reading, it ends a week before that too, so it is read only once
+   * the history of the picked device and range is in.
    */
   private weekBeforeReads(): Observable<History | null> {
     return toObservable(
-      computed(() => ({
-        span: this.span(),
-        device: this.devices.selectedId(),
-        on: this.weekBefore() && this.weekBeforeOffered(),
-      })),
+      computed(
+        () => {
+          const span = this.span();
+          const device = this.devices.selectedId();
+          const answered = this.answered();
+          const ready = answered?.span === span && answered.device === device;
+          return { span, device, on: ready && this.weekBefore() && this.weekBeforeOffered() };
+        },
+        // A new answer for the same range and device does not start the reads over.
+        { equal: (a, b) => a.span === b.span && a.device === b.device && a.on === b.on },
+      ),
     ).pipe(
       tap(() => this.weekBeforeHistory.set(null)),
       switchMap(({ span, device, on }) =>

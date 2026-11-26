@@ -374,7 +374,12 @@ func (s *Store) DeletePhoneDataBefore(ctx context.Context, t time.Time) (int64, 
 // hub remembers the stretch, so what the phone sends of it later, which it
 // had not sent yet, is left out too. It returns how many points of the route
 // were deleted.
-func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Time) (_ int64, err error) {
+//
+// listed tells whether the phone is still kept; it is asked while no
+// DeleteDevice can run, and a phone no longer kept gets ErrDeviceGone instead:
+// its DeleteDevice may already have deleted its stretches, so one remembered
+// now would stay with a phone added again under the same id.
+func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Time, listed func(context.Context) (bool, error)) (_ int64, err error) {
 	// Only what was recorded up to now is left out later: what the phone
 	// records from now on is new, even within the stretch. The slack covers
 	// a phone's clock a little ahead, whose points the hub takes too.
@@ -383,6 +388,13 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 	// two deletions, or one and DeleteDevice, do not mix their stretches.
 	s.placing.Lock()
 	defer s.placing.Unlock()
+	kept, err := listed(ctx)
+	if err != nil {
+		return 0, err
+	}
+	if !kept {
+		return 0, ErrDeviceGone
+	}
 	end := to
 	if until := time.Now().Add(deletedRouteSlack); end.After(until) {
 		end = until
@@ -433,6 +445,9 @@ func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Ti
 	s.shrinkLog(ctx, route+scans+connections+places)
 	return route, nil
 }
+
+// ErrDeviceGone is DeleteRoute's error for a phone that is no longer kept.
+var ErrDeviceGone = errors.New("the device is no longer kept")
 
 // deletedRouteSlack is how far past now a deleted stretch reaches, as the hub
 // takes a phone's points up to 10 seconds in the future (hub.maxClockJitter).

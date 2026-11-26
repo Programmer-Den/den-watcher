@@ -774,6 +774,7 @@ export const fr: Messages = {
   'phoneRoute.distance': '{km} km parcourus',
   'phoneRoute.points.one': '{count} point',
   'phoneRoute.points.other': '{count} points',
+  'phoneRoute.cut': 'Trop de points : seuls les plus récents, depuis le {time}, sont affichés',
   'phoneRoute.map': 'Le trajet sur une carte',
   'phoneRoute.attribution': 'Carte © les contributeurs d’OpenStreetMap',
   'map.zoom': 'Zoomer sur la carte',

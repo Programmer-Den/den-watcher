@@ -575,7 +575,7 @@ func TestThePhonesRouteIsStoredAtTheHubsTime(t *testing.T) {
 	if answer.RouteAfter != 5 {
 		t.Errorf("RouteAfter = %d, want the largest ID of the push, 5", answer.RouteAfter)
 	}
-	got, err := store.RoutePoints(ctx, "pixel", now.Add(-90*24*time.Hour), now.Add(time.Minute))
+	got, _, err := store.RoutePoints(ctx, "pixel", now.Add(-90*24*time.Hour), now.Add(time.Minute))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -617,7 +617,7 @@ func TestThePhonesRouteHasNoRetentionByDefault(t *testing.T) {
 	if _, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil {
 		t.Fatal(err)
 	}
-	points, err := store.RoutePoints(ctx, "pixel", now.Add(-90*24*time.Hour), now)
+	points, _, err := store.RoutePoints(ctx, "pixel", now.Add(-90*24*time.Hour), now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -692,7 +692,7 @@ func TestThePhonesScansAreKeptAndCountedEachByItsOwnRetention(t *testing.T) {
 	}
 	now := time.Now()
 	// The user deleted the route of a stretch two hours ago.
-	if _, err := store.DeleteRoute(ctx, "pixel", now.Add(-130*time.Minute), now.Add(-110*time.Minute)); err != nil {
+	if _, err := h.DeleteRoute(ctx, "pixel", now.Add(-130*time.Minute), now.Add(-110*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 	ap := metrics.NearbyAccessPoint{ID: "0000000000aa", Box: "0000000000bb", SSID: "Office", SignalPercent: 60}
@@ -730,5 +730,24 @@ func TestThePhonesScansAreKeptAndCountedEachByItsOwnRetention(t *testing.T) {
 	}
 	if len(hours) != 1 || hours[0] != old.Truncate(time.Hour).Unix() {
 		t.Errorf("hours seen %v, want only the one of 3 days ago, %d", hours, old.Truncate(time.Hour).Unix())
+	}
+}
+
+func TestTheRouteOfARemovedPhoneIsNotDeleted(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	h := openTestHub(t, store, nil)
+	if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+		t.Fatalf("AddPhone() error = %v", err)
+	}
+	now := time.Now()
+	if _, err := h.DeleteRoute(ctx, "pixel", now.Add(-time.Hour), now); err != nil {
+		t.Fatalf("DeleteRoute() of a kept phone error = %v", err)
+	}
+	if err := h.Remove(ctx, "pixel", true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.DeleteRoute(ctx, "pixel", now.Add(-time.Hour), now); !errors.Is(err, history.ErrDeviceGone) {
+		t.Errorf("DeleteRoute() of a removed phone error = %v, want history.ErrDeviceGone", err)
 	}
 }

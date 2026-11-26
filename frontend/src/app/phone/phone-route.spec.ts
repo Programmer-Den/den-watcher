@@ -169,6 +169,12 @@ describe('PhoneRouteCard', () => {
     expect(listed[1].textContent).toContain('stayed once');
   });
 
+  it('says when only the newest points of the range are shown', () => {
+    expect(fixture.nativeElement.textContent).not.toContain('Too many points');
+    answer({ ...day(), cut: true });
+    expect(fixture.nativeElement.textContent).toContain('Too many points: only the newest, since');
+  });
+
   it('leaves out the tiles that do not load', () => {
     answer(day());
     const tiles = fixture.nativeElement.querySelectorAll('image');
