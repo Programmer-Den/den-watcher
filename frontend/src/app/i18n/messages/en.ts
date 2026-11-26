@@ -293,6 +293,8 @@ export const en = {
   'passwordDialog.repeat': 'Repeat the password',
   'passwordDialog.mismatch': 'The passwords are not the same',
   'passwordDialog.keepHistory': 'Keep its history',
+  'passwordDialog.removePhoneHint':
+    "Its route and Wi-Fi scans stay on the Wi-Fi map, as a removed phone's, without its name.",
   'passwordDialog.cancel': 'Cancel',
   'passwordDialog.confirmAdd': 'Add',
   'passwordDialog.confirmRemove': 'Remove',

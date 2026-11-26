@@ -296,6 +296,8 @@ export const es: Messages = {
   'passwordDialog.repeat': 'Repetir la contraseña',
   'passwordDialog.mismatch': 'Las contraseñas no coinciden',
   'passwordDialog.keepHistory': 'Conservar su historial',
+  'passwordDialog.removePhoneHint':
+    'Su ruta y sus escaneos Wi-Fi se quedan en el mapa Wi-Fi, como los de un teléfono quitado, sin su nombre.',
   'passwordDialog.cancel': 'Cancelar',
   'passwordDialog.confirmAdd': 'Añadir',
   'passwordDialog.confirmRemove': 'Quitar',

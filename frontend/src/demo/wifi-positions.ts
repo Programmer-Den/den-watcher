@@ -193,18 +193,22 @@ export function demoWifiPositions(
  */
 export const DEMO_REMOVED_PHONE = `${REMOVED_PHONE_PREFIX}4f2a9c1d7b3e8a60`;
 
+/** How many scans the removed phone made at the place. */
+const REMOVED_PHONE_SCANS = 4;
+
 /** Adds the removed phone's sightings to the strongest networks of a place, a little weaker. */
 function addRemovedPhone(place: WiFiPosition | undefined): void {
   if (!place) {
     return;
   }
   place.devices.push(DEMO_REMOVED_PHONE);
+  place.scans += REMOVED_PHONE_SCANS;
   for (const network of place.networks.slice(0, 3)) {
     network.devices.push({
       device: DEMO_REMOVED_PHONE,
       signalPercent: Math.max(network.signalPercent - 12, 1),
       last: place.first,
-      scans: 4,
+      scans: REMOVED_PHONE_SCANS,
     });
   }
 }

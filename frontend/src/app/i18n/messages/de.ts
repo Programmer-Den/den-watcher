@@ -297,6 +297,8 @@ export const de: Messages = {
   'passwordDialog.repeat': 'Passwort wiederholen',
   'passwordDialog.mismatch': 'Die Passwörter stimmen nicht überein',
   'passwordDialog.keepHistory': 'Verlauf behalten',
+  'passwordDialog.removePhoneHint':
+    'Seine Route und WLAN-Scans bleiben auf der WLAN-Karte, als die eines entfernten Handys, ohne seinen Namen.',
   'passwordDialog.cancel': 'Abbrechen',
   'passwordDialog.confirmAdd': 'Hinzufügen',
   'passwordDialog.confirmRemove': 'Entfernen',

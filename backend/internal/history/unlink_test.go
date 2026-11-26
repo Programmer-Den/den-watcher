@@ -2,6 +2,7 @@ package history
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 )
@@ -54,7 +55,7 @@ func TestUnlinkPhoneDataKeepsTheRouteAndWiFiButNotWhoseTheyWere(t *testing.T) {
 	if err := store.DB().QueryRowContext(ctx, `SELECT device FROM route_points WHERE device != 'other'`).Scan(&unlinked); err != nil {
 		t.Fatal(err)
 	}
-	if !IsRemovedPhone(unlinked) {
+	if !strings.HasPrefix(unlinked, RemovedPhonePrefix) {
 		t.Fatalf("route kept under %q, want an id of a removed phone", unlinked)
 	}
 	for _, table := range []string{"route_points", "phone_scans", "wifi_connections"} {
@@ -94,5 +95,41 @@ func TestUnlinkPhoneDataMovesMoreThanAChunk(t *testing.T) {
 	}
 	if left != 0 || moved != len(points) {
 		t.Errorf("%d points left, %d moved; want all %d moved", left, moved, len(points))
+	}
+}
+
+func TestUnlinkPhoneDataGoesOnUnderTheSameIDAfterItWasCutShort(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	hour := time.Date(2026, 11, 5, 10, 0, 0, 0, time.UTC)
+	if err := store.AddRoutePoints(ctx, "pixel", []RoutePoint{{PhoneTime: 1, Time: hour.UnixMilli(), Lat: 1, Lon: 1, Accuracy: 5}}); err != nil {
+		t.Fatal(err)
+	}
+	// Cut short after the route moved: its scans are still the phone's.
+	if _, err := store.DB().ExecContext(ctx, `INSERT INTO phone_unlinking (device, unlinked) VALUES ('pixel', 'removed:0000000000000001')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.DB().ExecContext(ctx, `UPDATE route_points SET device = 'removed:0000000000000001'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.AddPhoneScans(ctx, "pixel", []FoundScan{{At: hour}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.UnlinkPhoneData(ctx, "pixel"); err != nil {
+		t.Fatal(err)
+	}
+	var device string
+	if err := store.DB().QueryRowContext(ctx, `SELECT device FROM phone_scans`).Scan(&device); err != nil {
+		t.Fatal(err)
+	}
+	if device != "removed:0000000000000001" {
+		t.Errorf("scans moved to %q, want the id the route moved to", device)
+	}
+	var left int
+	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(*) FROM phone_unlinking`).Scan(&left); err != nil {
+		t.Fatal(err)
+	}
+	if left != 0 {
+		t.Errorf("%d moves still noted, want none once done", left)
 	}
 }

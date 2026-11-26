@@ -128,30 +128,76 @@ func (h *Hub) unsave(ctx context.Context, id string, keepHistory bool, phoneCode
 }
 
 // forgetExpired forgets the devices removed with their history kept longer
-// than the retention before now, as their history is gone by then too.
+// than the retention before now, as their history is gone by then too (a
+// phone's route and Wi-Fi stay, unlinked from it: see forgetDevice).
 func (h *Hub) forgetExpired(ctx context.Context, now time.Time) error {
-	// Held so a device is not added again while it is forgotten. The
-	// forgetters run under it too: they never wait for the hub.
+	// The devices to forget are picked under mu and marked as being removed,
+	// so none is added again while it is forgotten: adding one waits, as for
+	// a device removed on the page. The forgetting itself runs without mu, as
+	// moving a phone's route and Wi-Fi takes a while and every page request
+	// needs mu.
+	forgetting, err := h.pickExpired(ctx, now)
+	if err != nil {
+		return err
+	}
+	for i, device := range forgetting {
+		err := h.forgetDevice(ctx, device.id)
+		h.mu.Lock()
+		delete(h.removing, device.id)
+		h.mu.Unlock()
+		close(device.done)
+		if err != nil {
+			// The rest stay to be forgotten at the next round.
+			for _, rest := range forgetting[i+1:] {
+				h.mu.Lock()
+				delete(h.removing, rest.id)
+				h.mu.Unlock()
+				close(rest.done)
+			}
+			return err
+		}
+		slog.Info("forgot a device removed longer than the retention ago", "device", device.id)
+	}
+	return nil
+}
+
+// expiredDevice is a device forgetExpired forgets, with the channel that
+// tells adding it again that it is done.
+type expiredDevice struct {
+	id   string
+	done chan struct{}
+}
+
+// pickExpired returns the devices removed with their history kept longer
+// than the retention before now, each marked as being removed. A device
+// collected from again only loses the note that it was removed.
+func (h *Hub) pickExpired(ctx context.Context, now time.Time) ([]expiredDevice, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	expired, err := h.selectDevices(ctx, `SELECT device FROM hub_kept WHERE removed < ?`, now.Add(-h.retention).Unix())
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var picked []expiredDevice
 	for _, device := range expired {
 		if h.find(device) != nil {
 			// Collected from again; only the note that it was removed goes.
 			if err := continueKept(ctx, h.store.DB(), device); err != nil {
-				return err
+				return nil, err
 			}
 			continue
 		}
-		if err := h.forgetDevice(ctx, device); err != nil {
-			return err
+		if h.removing[device] != nil {
+			continue
 		}
-		slog.Info("forgot a device removed longer than the retention ago", "device", device)
+		if h.removing == nil {
+			h.removing = map[string]chan struct{}{}
+		}
+		done := make(chan struct{})
+		h.removing[device] = done
+		picked = append(picked, expiredDevice{id: device, done: done})
 	}
-	return nil
+	return picked, nil
 }
 
 // selectDevices returns the ids of the devices query selects.

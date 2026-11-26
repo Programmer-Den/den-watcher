@@ -74,6 +74,14 @@ describe('PasswordDialog', () => {
     confirmButton().click();
 
     expect(close).toHaveBeenCalledWith({ password: 'x', keepHistory: true });
+    expect(element().textContent).not.toContain('Wi-Fi map');
+  });
+
+  it('says when removing a phone that its route and Wi-Fi stay on the map without its name', async () => {
+    await open({ action: 'remove', deviceName: 'Pixel', phone: true, passwordSet: true });
+    expect(element().textContent).toContain(
+      "Its route and Wi-Fi scans stay on the Wi-Fi map, as a removed phone's, without its name.",
+    );
   });
 
   it('asks for the password to change the kind of a device', async () => {

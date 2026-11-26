@@ -118,7 +118,7 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	if _, err := db.ExecContext(ctx, schema+extraSchema+wifiSchema+appUseSchema+wifiConnectionSchema+routeSchema+phoneScanSchema+positionPlaceSchema); err != nil {
+	if _, err := db.ExecContext(ctx, schema+extraSchema+wifiSchema+appUseSchema+wifiConnectionSchema+routeSchema+phoneScanSchema+positionPlaceSchema+unlinkSchema); err != nil {
 		_ = db.Close()
 		return nil, err
 	}

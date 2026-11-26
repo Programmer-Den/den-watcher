@@ -295,6 +295,8 @@ export const fr: Messages = {
   'passwordDialog.repeat': 'Répéter le mot de passe',
   'passwordDialog.mismatch': 'Les mots de passe ne sont pas identiques',
   'passwordDialog.keepHistory': 'Conserver son historique',
+  'passwordDialog.removePhoneHint':
+    'Son trajet et ses scans Wi-Fi restent sur la carte Wi-Fi, comme ceux d’un téléphone retiré, sans son nom.',
   'passwordDialog.cancel': 'Annuler',
   'passwordDialog.confirmAdd': 'Ajouter',
   'passwordDialog.confirmRemove': 'Retirer',
