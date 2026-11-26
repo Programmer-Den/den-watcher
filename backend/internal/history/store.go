@@ -378,20 +378,20 @@ func (s *Store) DeletePhoneDataBefore(ctx context.Context, t time.Time) (int64, 
 // were deleted.
 //
 // listed tells whether the phone is still kept, and a phone no longer kept
-// gets ErrDeviceGone. It is asked under placing, which DeleteDevice takes to
-// delete the stretches, and removing a phone deletes it from hub_devices
-// before its DeleteDevice runs. So the stretch of a phone still listed is
-// deleted by a later DeleteDevice, if it is removed without its history
-// (removed with its history kept, the stretch stays with that history), while
-// for a phone no longer listed DeleteDevice may have run already, and a
-// stretch remembered now would stay with a phone added again under the same id.
+// gets ErrDeviceGone. It is asked under placing, which DeleteDevice and
+// UnlinkPhoneData take to delete the stretches, and removing a phone deletes
+// it from hub_devices before either runs. So the stretch of a phone still
+// listed is deleted by a later UnlinkPhoneData once the hub forgets the
+// phone (at once without its history, after the retention with it), while
+// for a phone no longer listed that may have run already, and a stretch
+// remembered now would stay with a phone added again under the same id.
 func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Time, listed func(context.Context) (bool, error)) (_ int64, err error) {
 	// Only what was recorded up to now is left out later: what the phone
 	// records from now on is new, even within the stretch. The slack covers
 	// a phone's clock a little ahead, whose points the hub takes too.
 	// Held throughout, so a look at the Wi-Fi map does not start places
 	// again from scans read before they were deleted (see WiFiPositions), and
-	// two deletions, or one and DeleteDevice, do not mix their stretches.
+	// two deletions, or one and DeleteDevice or UnlinkPhoneData, do not mix their stretches.
 	s.placing.Lock()
 	defer s.placing.Unlock()
 	kept, err := listed(ctx)
