@@ -82,12 +82,14 @@ describe('PasswordDialog', () => {
     const hint =
       "Its route and Wi-Fi scans stay on the Wi-Fi map, as a removed phone's, without its name.";
     expect(element().textContent).toContain(hint);
-    // With its history kept, they stay the phone's for now.
+    // With its history kept, they stay the phone's until it is forgotten.
     element().querySelector<HTMLInputElement>('mat-checkbox input')!.click();
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
-    expect(element().textContent).not.toContain(hint);
+    expect(element().textContent).toContain(
+      "Once its history is forgotten, its route and Wi-Fi scans stay on the Wi-Fi map, as a removed phone's, without its name.",
+    );
   });
 
   it('asks for the password to change the kind of a device', async () => {

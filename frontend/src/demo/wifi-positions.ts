@@ -146,6 +146,7 @@ export function demoWifiPositions(
     }
   }
   // Each name on the place closest to its spot, as the user would have picked it.
+  let home: WiFiPosition | undefined;
   for (const n of NAMED) {
     const near = places
       .map((e) => ({
@@ -156,6 +157,7 @@ export function demoWifiPositions(
       .sort((a, b) => a.away - b.away)[0];
     if (near) {
       near.e.place.name = n.name;
+      home ??= near.e.place;
     }
   }
   for (const e of places) {
@@ -182,7 +184,7 @@ export function demoWifiPositions(
   for (const place of all) {
     place.networks.sort((a, b) => b.signalPercent - a.signalPercent);
   }
-  addRemovedPhone(all.find((p) => p.name === 'Home'));
+  addRemovedPhone(home?.scans ? home : undefined);
   relate(all);
   return { from, to, places: all };
 }

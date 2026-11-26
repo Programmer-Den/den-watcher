@@ -58,6 +58,9 @@ type Hub struct {
 	// ctx ends every recorder when the program stops.
 	ctx       context.Context
 	recording sync.WaitGroup
+	// unlinkSoon asks for unlinkPending to run now, as a device is refused
+	// for an unlink still noted.
+	unlinkSoon chan struct{}
 
 	// beforeDelete, when set, is called before a removed device's data is
 	// deleted, for tests.
@@ -219,6 +222,7 @@ func newHub(ctx context.Context, store *history.Store, fixed []Device, complete 
 		}
 		h.start(device, false, own)
 	}
+	h.unlinkSoon = make(chan struct{}, 1)
 	h.recording.Go(func() {
 		h.unlinkPending(ctx)
 		ticker := time.NewTicker(history.PruneInterval)
@@ -231,6 +235,8 @@ func newHub(ctx context.Context, store *history.Store, fixed []Device, complete 
 				if err := h.forgetExpired(ctx, now); err != nil && ctx.Err() == nil {
 					slog.Error("forget the availability of devices removed longer than the retention ago", "error", err)
 				}
+				h.unlinkPending(ctx)
+			case <-h.unlinkSoon:
 				h.unlinkPending(ctx)
 			}
 		}
@@ -562,6 +568,12 @@ func (h *Hub) taken(device Device) error {
 		return err
 	}
 	if unlinking {
+		// One that failed is tried again now, so trying again in a moment
+		// can work.
+		select {
+		case h.unlinkSoon <- struct{}{}:
+		default:
+		}
 		return errRemoving
 	}
 	if other := h.findAddress(device.Address); other != nil {

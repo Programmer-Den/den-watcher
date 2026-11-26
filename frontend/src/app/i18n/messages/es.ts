@@ -298,6 +298,8 @@ export const es: Messages = {
   'passwordDialog.keepHistory': 'Conservar su historial',
   'passwordDialog.removePhoneHint':
     'Su ruta y sus escaneos Wi-Fi se quedan en el mapa Wi-Fi, como los de un teléfono quitado, sin su nombre.',
+  'passwordDialog.removePhoneKeptHint':
+    'Cuando se olvide su historial, su ruta y sus escaneos Wi-Fi se quedan en el mapa Wi-Fi, como los de un teléfono quitado, sin su nombre.',
   'passwordDialog.cancel': 'Cancelar',
   'passwordDialog.confirmAdd': 'Añadir',
   'passwordDialog.confirmRemove': 'Quitar',

@@ -295,6 +295,8 @@ export const en = {
   'passwordDialog.keepHistory': 'Keep its history',
   'passwordDialog.removePhoneHint':
     "Its route and Wi-Fi scans stay on the Wi-Fi map, as a removed phone's, without its name.",
+  'passwordDialog.removePhoneKeptHint':
+    "Once its history is forgotten, its route and Wi-Fi scans stay on the Wi-Fi map, as a removed phone's, without its name.",
   'passwordDialog.cancel': 'Cancel',
   'passwordDialog.confirmAdd': 'Add',
   'passwordDialog.confirmRemove': 'Remove',

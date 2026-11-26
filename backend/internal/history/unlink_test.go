@@ -2,6 +2,7 @@ package history
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -176,5 +177,26 @@ func TestUnlinkPhoneDataMovesNothingThatIsNotNoted(t *testing.T) {
 	}
 	if unlinking, err := store.Unlinking(ctx, "pixel"); err != nil || unlinking {
 		t.Errorf("Unlinking() = %v, %v; want nothing noted", unlinking, err)
+	}
+}
+
+func TestPhoneDataDevicesListsEachPhoneOnceButNotRemovedOnes(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	hour := time.Date(2026, 11, 5, 10, 0, 0, 0, time.UTC)
+	for i, device := range []string{"pixel", "galaxy", "pixel", RemovedPhonePrefix + "0000000000000001"} {
+		if err := store.AddRoutePoints(ctx, device, []RoutePoint{{PhoneTime: int64(i), Time: hour.UnixMilli(), Lat: 1, Lon: 1, Accuracy: 5}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := store.AddAppUses(ctx, "moto", []AppUse{{App: "chat", PhoneStart: 1, Start: hour.UnixMilli(), Millis: 1000}}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := store.PhoneDataDevices(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"galaxy", "pixel", "moto"}; !slices.Equal(got, want) {
+		t.Errorf("PhoneDataDevices() = %v, want %v", got, want)
 	}
 }

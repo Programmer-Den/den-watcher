@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Programmer-Den/den-watcher/backend/internal/history"
 	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
@@ -90,15 +89,18 @@ func forget(ctx context.Context, db *sql.DB, device string) error {
 // phones forgotten before their route and Wi-Fi were unlinked (see unlink),
 // whose data is still under their names.
 func (h *Hub) forgetOthers(ctx context.Context, kept []string) error {
-	devices, err := h.selectDevices(ctx, `
-		SELECT device FROM hub_watched UNION SELECT device FROM hub_outages
-		UNION SELECT device FROM hub_device_kinds UNION SELECT device FROM hub_pairing_codes
-		UNION SELECT * FROM (
-			SELECT DISTINCT device FROM route_points UNION SELECT DISTINCT device FROM phone_scans
-			UNION SELECT DISTINCT device FROM app_uses UNION SELECT DISTINCT device FROM wifi_connections
-		) WHERE device NOT LIKE ?`, history.RemovedPhonePrefix+"%")
+	devices, err := h.selectDevices(ctx, `SELECT device FROM hub_watched UNION SELECT device FROM hub_outages UNION SELECT device FROM hub_device_kinds UNION SELECT device FROM hub_pairing_codes`)
 	if err != nil {
 		return err
+	}
+	phones, err := h.store.PhoneDataDevices(ctx)
+	if err != nil {
+		return err
+	}
+	for _, device := range phones {
+		if !slices.Contains(devices, device) {
+			devices = append(devices, device)
+		}
 	}
 	for _, device := range slices.DeleteFunc(devices, func(d string) bool { return slices.Contains(kept, d) }) {
 		if err := h.forgetDevice(ctx, device); err != nil {

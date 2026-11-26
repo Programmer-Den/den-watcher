@@ -843,6 +843,19 @@ func TestAPhoneWhoseDataIsUnlinkedAtTheStartWaitsToBeAddedAgain(t *testing.T) {
 	if _, err := h.AddPhone(ctx, "Galaxy", "7KQM-X2RP"); !errors.Is(err, errRemoving) {
 		t.Errorf("AddPhone() while its id is unlinked error = %v, want errRemoving", err)
 	}
+	// Refusing it has the move, as one that failed, tried again now, so
+	// trying again in a moment works.
+	deadline = time.Now().Add(10 * time.Second)
+	for {
+		_, err := h.AddPhone(ctx, "Galaxy", "7KQM-X2RP")
+		if err == nil {
+			break
+		}
+		if !errors.Is(err, errRemoving) || time.Now().After(deadline) {
+			t.Fatalf("AddPhone() once the unlink was tried again error = %v, want none", err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 }
 
 func TestTheDataOfAPhoneForgottenBeforeUnlinkingIsUnlinkedAtTheStart(t *testing.T) {

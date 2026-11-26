@@ -299,6 +299,8 @@ export const de: Messages = {
   'passwordDialog.keepHistory': 'Verlauf behalten',
   'passwordDialog.removePhoneHint':
     'Seine Route und WLAN-Scans bleiben auf der WLAN-Karte, als die eines entfernten Handys, ohne seinen Namen.',
+  'passwordDialog.removePhoneKeptHint':
+    'Sobald sein Verlauf vergessen ist, bleiben seine Route und WLAN-Scans auf der WLAN-Karte, als die eines entfernten Handys, ohne seinen Namen.',
   'passwordDialog.cancel': 'Abbrechen',
   'passwordDialog.confirmAdd': 'Hinzufügen',
   'passwordDialog.confirmRemove': 'Entfernen',
