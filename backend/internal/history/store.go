@@ -376,13 +376,10 @@ func (s *Store) DeletePhoneDataBefore(ctx context.Context, t time.Time) (int64, 
 // were deleted.
 //
 // listed tells whether the phone is still kept, and a phone no longer kept
-// gets ErrDeviceGone. It is asked under placing, which DeleteDevice takes to
-// delete the stretches, and removing a phone deletes it from hub_devices
-// before its DeleteDevice runs. So the stretch of a phone still listed is
-// deleted by a later DeleteDevice, if it is removed without its history
-// (removed with its history kept, the stretch stays with that history), while
-// for a phone no longer listed DeleteDevice may have run already, and a
-// stretch remembered now would stay with a phone added again under the same id.
+// gets ErrDeviceGone. It is asked under placing, which ForgetDeletedRoute
+// takes, and removing a phone deletes it from hub_devices before the hub
+// forgets its stretches: a stretch remembered for a phone no longer listed
+// could stay with a phone added again under the same id.
 func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Time, listed func(context.Context) (bool, error)) (_ int64, err error) {
 	// Only what was recorded up to now is left out later: what the phone
 	// records from now on is new, even within the stretch. The slack covers
@@ -519,6 +516,16 @@ func DeletedRouteIn(stretches [][2]int64, at time.Time) bool {
 	return false
 }
 
+// ForgetDeletedRoute forgets the stretches of a phone's route the user
+// deleted (see DeleteRoute), as when the phone is forgotten, so a phone added
+// later under the same id does not inherit them.
+func (s *Store) ForgetDeletedRoute(ctx context.Context, device string) error {
+	s.placing.Lock()
+	defer s.placing.Unlock()
+	_, err := s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device)
+	return err
+}
+
 // DeleteDevice deletes every value of one device, and how its extras are
 // described, in chunks as DeleteBefore does.
 func (s *Store) DeleteDevice(ctx context.Context, device string) error {
@@ -531,10 +538,7 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	s.cache.forget(device)
 	// First, so a phone added again under the same id never inherits its
 	// deleted stretches, even when a later step fails or is cut short.
-	s.placing.Lock()
-	_, err := s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device)
-	s.placing.Unlock()
-	if err != nil {
+	if err := s.ForgetDeletedRoute(ctx, device); err != nil {
 		return err
 	}
 	deleted, err := s.deleteChunks(ctx, "history_minutes", "device, time", `device = ?`, device)
