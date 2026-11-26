@@ -207,7 +207,11 @@ func (s *spot) at(without *positionPoint, signal float64) (lat, lon, meters floa
 // its GPS tells how far off the Wi-Fi alone is. Nothing leaves the hub.
 func (s *Store) TownWiFi(ctx context.Context, from, to time.Time) (TownWiFi, error) {
 	town := TownWiFi{AccessPoints: []TownAccessPoint{}, Tracks: []TownTrack{}}
-	learn, err := s.townScans(ctx, `SELECT device, time, networks FROM phone_scans ORDER BY time DESC LIMIT ?`, MaxPositionScans)
+	// The scans of a removed phone whose points are still moving wait, as in
+	// WiFiPositions.
+	learn, err := s.townScans(ctx, `
+		SELECT device, time, networks FROM phone_scans
+		WHERE device NOT IN (SELECT unlinked FROM phone_unlinking) ORDER BY time DESC LIMIT ?`, MaxPositionScans)
 	if err != nil {
 		return town, err
 	}
@@ -257,7 +261,8 @@ func (s *Store) TownWiFi(ctx context.Context, from, to time.Time) (TownWiFi, err
 
 	scans, err := s.townScans(ctx, `
 		SELECT device, time, networks FROM phone_scans
-		WHERE time >= ? AND time < ? ORDER BY time DESC LIMIT ?`, from.Unix(), to.Unix(), MaxPositionScans)
+		WHERE time >= ? AND time < ? AND device NOT IN (SELECT unlinked FROM phone_unlinking)
+		ORDER BY time DESC LIMIT ?`, from.Unix(), to.Unix(), MaxPositionScans)
 	if err != nil {
 		return town, err
 	}

@@ -128,30 +128,77 @@ func (h *Hub) unsave(ctx context.Context, id string, keepHistory bool, phoneCode
 }
 
 // forgetExpired forgets the devices removed with their history kept longer
-// than the retention before now, as their history is gone by then too.
+// than the retention before now, as their history is gone by then too (a
+// phone's route and Wi-Fi stay, unlinked from it: see unlink).
 func (h *Hub) forgetExpired(ctx context.Context, now time.Time) error {
+	forgotten, err := h.forgetExpiredDevices(ctx, now)
+	// Without mu, as moving a phone's data takes a while and every page
+	// request needs mu; adding one again is refused with ProblemRemoving
+	// until it is done (see taken).
+	for _, device := range forgotten {
+		if err := h.unlink(ctx, device); err != nil && ctx.Err() == nil {
+			// Tried again by unlinkPending.
+			slog.Error("keep a removed phone's route and Wi-Fi without its name; tried again later", "device", device, "error", err)
+		}
+	}
+	return err
+}
+
+// forgetExpiredDevices forgets the devices forgetExpired forgets, but for
+// unlinking a phone's data, and returns them.
+func (h *Hub) forgetExpiredDevices(ctx context.Context, now time.Time) ([]string, error) {
 	// Held so a device is not added again while it is forgotten. The
 	// forgetters run under it too: they never wait for the hub.
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	expired, err := h.selectDevices(ctx, `SELECT device FROM hub_kept WHERE removed < ?`, now.Add(-h.retention).Unix())
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var forgotten []string
 	for _, device := range expired {
 		if h.find(device) != nil {
 			// Collected from again; only the note that it was removed goes.
 			if err := continueKept(ctx, h.store.DB(), device); err != nil {
-				return err
+				return forgotten, err
 			}
 			continue
 		}
 		if err := h.forgetDevice(ctx, device); err != nil {
-			return err
+			return forgotten, err
 		}
+		forgotten = append(forgotten, device)
 		slog.Info("forgot a device removed longer than the retention ago", "device", device)
 	}
-	return nil
+	return forgotten, nil
+}
+
+// unlink moves a forgotten phone's route and Wi-Fi to an id of their own,
+// as forgetDevice noted (see history.Store.UnlinkPhoneData).
+func (h *Hub) unlink(ctx context.Context, device string) error {
+	return h.store.UnlinkPhoneData(ctx, device)
+}
+
+// unlinkPending finishes the unlinks still noted: those a hub that stopped
+// meanwhile left, those forgetting devices at the start noted, and those
+// that failed. The hub runs it in the background, at the start and then with
+// forgetExpired.
+func (h *Hub) unlinkPending(ctx context.Context) {
+	pending, err := h.store.PendingUnlinks(ctx)
+	if err != nil {
+		if ctx.Err() == nil {
+			slog.Error("read which removed phones' route and Wi-Fi are still to be kept without their names", "error", err)
+		}
+		return
+	}
+	for _, device := range pending {
+		if err := h.unlink(ctx, device); err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			slog.Error("keep a removed phone's route and Wi-Fi without its name; tried again later", "device", device, "error", err)
+		}
+	}
 }
 
 // selectDevices returns the ids of the devices query selects.
@@ -172,15 +219,22 @@ func (h *Hub) selectDevices(ctx context.Context, query string, args ...any) ([]s
 	return kept, rows.Err()
 }
 
-// forgetDevice deletes what the forgetters keep about device, then its
-// availability and kind. Those go last, so a device whose forgetting stopped
-// halfway, as the program stopped, is forgotten again at the next start (see
-// forgetOthers).
+// forgetDevice deletes what the forgetters keep about device and notes that
+// a phone's route and Wi-Fi are to be unlinked from it (see unlink), then
+// deletes its availability and kind.
+// Those go last, so a device whose forgetting stopped halfway, as the program
+// stopped, is forgotten again at the next start (see forgetOthers).
 func (h *Hub) forgetDevice(ctx context.Context, device string) error {
 	for _, forgetter := range h.forgetters {
 		if err := forgetter(ctx, device); err != nil {
 			return err
 		}
+	}
+	// For any device: one that is no phone has nothing to unlink, and its
+	// kind may be gone already. Only noted here, which is quick, as the hub
+	// may hold mu; the caller unlinks (see unlink).
+	if err := h.store.NoteUnlink(ctx, device); err != nil {
+		return err
 	}
 	return forget(ctx, h.store.DB(), device)
 }
@@ -192,17 +246,22 @@ func (h *Hub) deleteData(remote *Remote) {
 	if h.beforeDelete != nil {
 		h.beforeDelete(remote.ID)
 	}
+	// Its history first, which goes at once; then a phone's route and Wi-Fi,
+	// whose move a hub that stops meanwhile finishes at its next start.
 	err := h.forgetDevice(h.ctx, remote.ID)
 	if err == nil {
 		err = h.store.DeleteDevice(h.ctx, remote.ID)
+	}
+	if err == nil {
+		err = h.unlink(h.ctx, remote.ID)
 	}
 	switch {
 	case err == nil:
 		slog.Info("deleted the data of a removed device", "name", remote.ShownName())
 	case h.ctx.Err() != nil:
-		slog.Warn("stopped deleting the history of a removed device, as the program stops; the rest is deleted with the retention", "name", remote.ShownName())
+		slog.Warn("stopped deleting the history of a removed device, as the program stops; the rest of its history is deleted with the retention, and a phone's route and Wi-Fi are unlinked at the next start", "name", remote.ShownName())
 	default:
-		slog.Error("delete the data of a removed device; its history is deleted with the retention", "name", remote.ShownName(), "error", err)
+		slog.Error("delete the data of a removed device; its history is deleted with the retention, and a phone's route and Wi-Fi are tried again later", "name", remote.ShownName(), "error", err)
 	}
 }
 

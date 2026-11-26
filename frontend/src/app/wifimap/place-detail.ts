@@ -4,9 +4,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { bandText, securityText, signalLevel, wifiBand } from '../compare/wifi';
-import { DeviceService, deviceName } from '../devices/devices';
+import { DeviceService } from '../devices/devices';
 import { I18n } from '../i18n/i18n';
 import { MetricsService, PositionNetwork, WiFiPosition } from '../metrics/metrics';
+import { phoneName, REMOVED_PHONE_PREFIX } from './phone-name';
 import { SameSuggestion, heardIn, sameAs, yourNetwork } from './places';
 
 /** The bands of a network's frequencies, such as "2.4 GHz · 5 GHz". */
@@ -112,17 +113,23 @@ export class PlaceDetail {
     });
   }
 
-  /** The names of the phones that scanned at the place. */
+  /** The names of the phones that scanned at the place; the removed ones share one name, given once. */
   protected phones(): string {
-    return this.place()
-      .devices.map((id) => this.name(id))
+    return this.listedPhones()
+      .map((id) => this.name(id))
       .join(', ');
   }
 
-  /** A phone's name, or its id once it was removed. */
+  /** The phones phones() names: each phone, and the first removed one for all of them. */
+  private listedPhones(): string[] {
+    const devices = this.place().devices;
+    const removed = devices.find((id) => id.startsWith(REMOVED_PHONE_PREFIX));
+    return devices.filter((id) => id === removed || !id.startsWith(REMOVED_PHONE_PREFIX));
+  }
+
+  /** A phone's name, or "A removed phone" (see phoneName). */
   protected name(id: string): string {
-    const device = this.devices.devices().find((d) => d.id === id);
-    return device ? deviceName(device, this.i18n) : id;
+    return phoneName(id, this.devices.devices(), this.i18n);
   }
 
   protected heardIn(network: PositionNetwork): string {

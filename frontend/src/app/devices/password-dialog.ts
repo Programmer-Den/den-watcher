@@ -34,6 +34,8 @@ export interface PasswordDialogData {
   newName?: string;
   /** For changing the kind: the new kind. */
   kind?: DeviceKind;
+  /** For removing: whether the device is a phone, whose route and Wi-Fi stay on the Wi-Fi map. */
+  phone?: boolean;
   /** For deleting a day of a phone's route: the day, as the page writes it. */
   day?: string;
   /** Whether the password has been chosen; if not, this change chooses it. */

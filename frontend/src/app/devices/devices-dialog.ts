@@ -326,7 +326,8 @@ export class DevicesDialog {
   }
 
   protected remove(device: Device): void {
-    this.change({ action: 'remove', deviceName: device.name }, (result) =>
+    const phone = device.kind === 'phone';
+    this.change({ action: 'remove', deviceName: device.name, phone }, (result) =>
       this.devices
         .remove(device.id, result.password, result.keepHistory)
         // Out of its group too, so a device added later under its name does not land in it.

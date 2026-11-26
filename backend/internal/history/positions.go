@@ -135,12 +135,15 @@ type positionPoint struct {
 func (s *Store) WiFiPositions(ctx context.Context, from, to time.Time) ([]WiFiPosition, error) {
 	// One at a time, so two reads do not both start a place at the same spot,
 	// and from the scans of now, so none start one again from scans that
-	// DeleteRoute deletes meanwhile.
+	// DeleteRoute deletes meanwhile. The scans of a removed phone whose
+	// points are still moving (see UnlinkPhoneData) wait until they are
+	// done, as they would be placed at the points moved so far.
 	s.placing.Lock()
 	defer s.placing.Unlock()
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT device, time, networks FROM phone_scans
-		WHERE time >= ? AND time < ? ORDER BY time DESC LIMIT ?`, from.Unix(), to.Unix(), MaxPositionScans)
+		WHERE time >= ? AND time < ? AND device NOT IN (SELECT unlinked FROM phone_unlinking)
+		ORDER BY time DESC LIMIT ?`, from.Unix(), to.Unix(), MaxPositionScans)
 	if err != nil {
 		return nil, err
 	}

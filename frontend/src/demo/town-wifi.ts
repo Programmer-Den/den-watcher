@@ -2,12 +2,14 @@ import {
   RoutePoint,
   ScannedNetwork,
   TownAccessPoint,
+  TownTrack,
   TownTrackPoint,
   TownWiFi,
 } from '../app/metrics/metrics';
 import { DEMO_PHONE } from './phone-usage';
 import { demoPhoneRoute } from './phone-route';
 import { demoPhoneScan } from './phone-scan';
+import { DEMO_REMOVED_PHONE } from './wifi-positions';
 
 /** How far apart the points that heard an access point may be for it to stay put, as on the hub. */
 const SPREAD_METERS = 1000;
@@ -243,6 +245,21 @@ export function demoTownWifi(from: number, to: number, now: number): TownWiFi {
     moving,
     once,
     accessPoints,
-    tracks: points.length > 0 ? [{ device: DEMO_PHONE, points }] : [],
+    tracks: points.length > 0 ? [{ device: DEMO_PHONE, points }, ...removedPhoneTrack(points)] : [],
   };
 }
+
+/**
+ * The removed phone's way (see DEMO_REMOVED_PHONE): the demo phone's placed scans of the first day
+ * in the range, as if it went the same way, a little later, before it was removed.
+ */
+function removedPhoneTrack(points: TownTrackPoint[]): TownTrack[] {
+  const first = points[0].time;
+  const day = points
+    .filter((p) => p.known > 0 && p.time < first + 86400)
+    .map((p) => ({ ...p, time: p.time + REMOVED_PHONE_LATER }));
+  return day.length > 0 ? [{ device: DEMO_REMOVED_PHONE, points: day }] : [];
+}
+
+/** How much later than the demo phone the removed phone went its way, in seconds. */
+const REMOVED_PHONE_LATER = 7 * 60;

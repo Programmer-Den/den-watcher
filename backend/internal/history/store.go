@@ -89,6 +89,8 @@ type Store struct {
 	wifi wifiPending
 	// placing lets one WiFiPositions keep new places at a time.
 	placing sync.Mutex
+	// unlinking lets one UnlinkPhoneData run at a time.
+	unlinking sync.Mutex
 }
 
 // Series is the values of one metric over time.
@@ -118,7 +120,7 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	if _, err := db.ExecContext(ctx, schema+extraSchema+wifiSchema+appUseSchema+wifiConnectionSchema+routeSchema+phoneScanSchema+positionPlaceSchema); err != nil {
+	if _, err := db.ExecContext(ctx, schema+extraSchema+wifiSchema+appUseSchema+wifiConnectionSchema+routeSchema+phoneScanSchema+positionPlaceSchema+unlinkSchema); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
@@ -376,20 +378,20 @@ func (s *Store) DeletePhoneDataBefore(ctx context.Context, t time.Time) (int64, 
 // were deleted.
 //
 // listed tells whether the phone is still kept, and a phone no longer kept
-// gets ErrDeviceGone. It is asked under placing, which DeleteDevice takes to
-// delete the stretches, and removing a phone deletes it from hub_devices
-// before its DeleteDevice runs. So the stretch of a phone still listed is
-// deleted by a later DeleteDevice, if it is removed without its history
-// (removed with its history kept, the stretch stays with that history), while
-// for a phone no longer listed DeleteDevice may have run already, and a
-// stretch remembered now would stay with a phone added again under the same id.
+// gets ErrDeviceGone. It is asked under placing, which DeleteDevice and
+// UnlinkPhoneData take to delete the stretches, and removing a phone deletes
+// it from hub_devices before either runs. So the stretch of a phone still
+// listed is deleted by a later UnlinkPhoneData once the hub forgets the
+// phone (at once without its history, after the retention with it), while
+// for a phone no longer listed that may have run already, and a stretch
+// remembered now would stay with a phone added again under the same id.
 func (s *Store) DeleteRoute(ctx context.Context, device string, from, to time.Time, listed func(context.Context) (bool, error)) (_ int64, err error) {
 	// Only what was recorded up to now is left out later: what the phone
 	// records from now on is new, even within the stretch. The slack covers
 	// a phone's clock a little ahead, whose points the hub takes too.
 	// Held throughout, so a look at the Wi-Fi map does not start places
 	// again from scans read before they were deleted (see WiFiPositions), and
-	// two deletions, or one and DeleteDevice, do not mix their stretches.
+	// two deletions, or one and DeleteDevice or UnlinkPhoneData, do not mix their stretches.
 	s.placing.Lock()
 	defer s.placing.Unlock()
 	kept, err := listed(ctx)
@@ -520,7 +522,8 @@ func DeletedRouteIn(stretches [][2]int64, at time.Time) bool {
 }
 
 // DeleteDevice deletes every value of one device, and how its extras are
-// described, in chunks as DeleteBefore does.
+// described, in chunks as DeleteBefore does. A phone's route, scans, Wi-Fi
+// connections and app uses are left to UnlinkPhoneData.
 func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	// After a flush that is writing its minutes and Wi-Fi sums, which would
 	// bring them back, and before the next one can take them.
@@ -561,22 +564,6 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	if err != nil {
 		return err
 	}
-	uses, err := s.deleteChunks(ctx, "app_uses", "device, app, start", `device = ?`, device)
-	if err != nil {
-		return err
-	}
-	connections, err := s.deleteChunks(ctx, "wifi_connections", "device, start", `device = ?`, device)
-	if err != nil {
-		return err
-	}
-	route, err := s.deleteChunks(ctx, "route_points", "device, phone_time", `device = ?`, device)
-	if err != nil {
-		return err
-	}
-	phoneScans, err := s.deleteChunks(ctx, "phone_scans", "device, time", `device = ?`, device)
-	if err != nil {
-		return err
-	}
 	s.brokenInfo.Range(func(key, _ any) bool {
 		if key.(brokenInfoKey).device == device {
 			s.brokenInfo.Delete(key)
@@ -586,7 +573,7 @@ func (s *Store) DeleteDevice(ctx context.Context, device string) error {
 	// Again, so a range read while the values were deleted, which may have
 	// some of them, is not kept (see rangeCache.put).
 	s.cache.forget(device)
-	s.shrinkLog(ctx, deleted+hourly+wifi+scans+uses+connections+route+phoneScans)
+	s.shrinkLog(ctx, deleted+hourly+wifi+scans)
 	return nil
 }
 

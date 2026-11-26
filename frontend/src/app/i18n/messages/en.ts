@@ -293,6 +293,10 @@ export const en = {
   'passwordDialog.repeat': 'Repeat the password',
   'passwordDialog.mismatch': 'The passwords are not the same',
   'passwordDialog.keepHistory': 'Keep its history',
+  'passwordDialog.removePhoneHint':
+    "Its route and Wi-Fi scans stay on the Wi-Fi map, as a removed phone's, without its name.",
+  'passwordDialog.removePhoneKeptHint':
+    "Once its history is forgotten, its route and Wi-Fi scans stay on the Wi-Fi map, as a removed phone's, without its name.",
   'passwordDialog.cancel': 'Cancel',
   'passwordDialog.confirmAdd': 'Add',
   'passwordDialog.confirmRemove': 'Remove',
@@ -668,6 +672,7 @@ export const en = {
     "No Wi-Fi scans with a position in this range. In each phone's Den-Watcher app, allow the location all the time and keep Location route on.",
   'wifiPositions.failed': 'Could not read the places of the Wi-Fi scans.',
   'wifiMap.title': 'Wi-Fi map',
+  'wifiMap.removedPhone': 'A removed phone',
   'wifiMap.intro':
     'Every Wi-Fi network your phones heard, on the map where they heard it. Name the places you know, and merge the ones that are the same.',
   'wifiMap.search': 'Find a place or network',

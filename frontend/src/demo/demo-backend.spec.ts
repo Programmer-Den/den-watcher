@@ -26,6 +26,7 @@ import { DEMO_GROUPS, FLEET } from './fleet';
 import { DEMO_MAX_ROUTE_POINTS } from './phone-route';
 import { DEMO_PHONE } from './phone-usage';
 import { DEMO_PLACES, demoWifi } from './wifi';
+import { DEMO_REMOVED_PHONE } from './wifi-positions';
 
 describe('DemoBackend', () => {
   let metrics: MetricsService;
@@ -158,7 +159,10 @@ describe('DemoBackend', () => {
     const answer = await firstValueFrom(metrics.wifiPositions(to - 7 * 86400, to));
     expect(answer.places.length).toBeGreaterThan(4);
     for (const [i, p] of answer.places.entries()) {
-      expect(p.devices).toEqual([DEMO_PHONE]);
+      // At home, a phone the user removed heard some of the networks too.
+      expect(p.devices).toEqual(
+        p.name === 'Home' ? [DEMO_PHONE, DEMO_REMOVED_PHONE] : [DEMO_PHONE],
+      );
       expect(p.networks.length).toBeGreaterThan(0);
       expect(p.first).toBeLessThanOrEqual(p.last);
       const before = answer.places[i - 1];
@@ -189,8 +193,11 @@ describe('DemoBackend', () => {
     expect(town.moving).toBeGreaterThan(0);
     expect(town.accessPoints.some((a) => a.ssid === 'HVV Bus')).toBe(false);
     expect(town.accessPoints.find((a) => a.ssid === 'Den')?.connected).toBe(true);
-    const [track] = town.tracks;
+    const [track, removed] = town.tracks;
     expect(track.device).toBe(DEMO_PHONE);
+    // And the removed phone's, without its name.
+    expect(removed.device).toBe(DEMO_REMOVED_PHONE);
+    expect(removed.points.length).toBeGreaterThan(0);
     const placed = track.points.filter((p) => p.known > 0);
     expect(placed.length).toBeGreaterThan(track.points.length / 2);
     // Placed by Wi-Fi alone, mostly close to the GPS.

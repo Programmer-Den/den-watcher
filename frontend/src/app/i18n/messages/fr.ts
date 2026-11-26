@@ -295,6 +295,10 @@ export const fr: Messages = {
   'passwordDialog.repeat': 'Répéter le mot de passe',
   'passwordDialog.mismatch': 'Les mots de passe ne sont pas identiques',
   'passwordDialog.keepHistory': 'Conserver son historique',
+  'passwordDialog.removePhoneHint':
+    'Son trajet et ses scans Wi-Fi restent sur la carte Wi-Fi, comme ceux d’un téléphone retiré, sans son nom.',
+  'passwordDialog.removePhoneKeptHint':
+    'Une fois son historique oublié, son trajet et ses scans Wi-Fi restent sur la carte Wi-Fi, comme ceux d’un téléphone retiré, sans son nom.',
   'passwordDialog.cancel': 'Annuler',
   'passwordDialog.confirmAdd': 'Ajouter',
   'passwordDialog.confirmRemove': 'Retirer',
@@ -677,6 +681,7 @@ export const fr: Messages = {
     'Aucun scan Wi-Fi avec position sur cette période. Dans l’app Den-Watcher de chaque téléphone, autorisez la localisation en permanence et laissez l’itinéraire activé.',
   'wifiPositions.failed': 'Impossible de lire les lieux des scans Wi-Fi.',
   'wifiMap.title': 'Carte Wi-Fi',
+  'wifiMap.removedPhone': 'Un téléphone retiré',
   'wifiMap.intro':
     'Chaque réseau Wi-Fi capté par vos téléphones, sur la carte là où ils l’ont capté. Nommez les lieux que vous connaissez et fusionnez ceux qui sont le même.',
   'wifiMap.search': 'Chercher un lieu ou un réseau',

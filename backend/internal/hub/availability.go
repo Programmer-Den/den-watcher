@@ -84,12 +84,28 @@ func forget(ctx context.Context, db *sql.DB, device string) error {
 }
 
 // forgetOthers forgets every device but the kept ones: the devices dropped
-// from HUB_DEVICES without being added on the page, and the ones removed on
-// the page without keeping their history whose forgetting did not finish.
+// from HUB_DEVICES without being added on the page, the ones removed on the
+// page without keeping their history whose forgetting did not finish, and
+// phones forgotten before their route and Wi-Fi were unlinked (see unlink),
+// whose data is still under their names.
 func (h *Hub) forgetOthers(ctx context.Context, kept []string) error {
 	devices, err := h.selectDevices(ctx, `SELECT device FROM hub_watched UNION SELECT device FROM hub_outages UNION SELECT device FROM hub_device_kinds UNION SELECT device FROM hub_pairing_codes`)
 	if err != nil {
 		return err
+	}
+	phones, err := h.store.PhoneDataDevices(ctx)
+	if err != nil {
+		return err
+	}
+	pending, err := h.store.PendingUnlinks(ctx)
+	if err != nil {
+		return err
+	}
+	for _, device := range phones {
+		// One noted is forgotten already; unlinkPending moves its data.
+		if !slices.Contains(devices, device) && !slices.Contains(pending, device) {
+			devices = append(devices, device)
+		}
 	}
 	for _, device := range slices.DeleteFunc(devices, func(d string) bool { return slices.Contains(kept, d) }) {
 		if err := h.forgetDevice(ctx, device); err != nil {

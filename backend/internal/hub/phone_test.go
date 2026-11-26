@@ -751,3 +751,146 @@ func TestTheRouteOfARemovedPhoneIsNotDeleted(t *testing.T) {
 		t.Errorf("DeleteRoute() of a removed phone error = %v, want history.ErrDeviceGone", err)
 	}
 }
+
+func TestARemovedPhonesRouteAndWiFiAreKeptButNoLongerItsOwn(t *testing.T) {
+	ctx := context.Background()
+	for _, keepHistory := range []bool{false, true} {
+		store := openTestStore(t)
+		h := openTestHub(t, store, nil)
+		if _, err := h.AddPhone(ctx, "Pixel", "7KQM-X2RP"); err != nil {
+			t.Fatalf("AddPhone() error = %v", err)
+		}
+		now := time.Now()
+		if err := store.AddRoutePoints(ctx, "pixel", []history.RoutePoint{{PhoneTime: 1, Time: now.Add(-2 * time.Hour).UnixMilli(), Lat: 1, Lon: 1, Accuracy: 5}}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := h.DeleteRoute(ctx, "pixel", now.Add(-time.Hour), now); err != nil {
+			t.Fatal(err)
+		}
+		if err := h.Remove(ctx, "pixel", keepHistory); err != nil {
+			t.Fatal(err)
+		}
+		if err := h.waitRemoved(ctx, "pixel", time.Minute); err != nil {
+			t.Fatal(err)
+		}
+		count := func(where string) int {
+			var n int
+			if err := store.DB().QueryRow(`SELECT (SELECT COUNT(*) FROM route_points WHERE ` + where + `) + (SELECT COUNT(*) FROM route_deleted WHERE ` + where + `)`).Scan(&n); err != nil {
+				t.Fatal(err)
+			}
+			return n
+		}
+		if keepHistory {
+			// Kept as the phone's while its history is kept.
+			if got := count(`device = 'pixel'`); got != 2 {
+				t.Fatalf("kept with the history: %d rows of the phone, want its point and stretch", got)
+			}
+			if _, err := store.DB().Exec(`UPDATE hub_kept SET removed = removed - 31*86400 WHERE device = 'pixel'`); err != nil {
+				t.Fatal(err)
+			}
+			if err := h.forgetExpired(ctx, time.Now()); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if got := count(`device = 'pixel'`); got != 0 {
+			t.Errorf("keepHistory %t: %d rows left under the phone's id, want none", keepHistory, got)
+		}
+		if got := count(`device LIKE 'removed:%'`); got != 1 {
+			t.Errorf("keepHistory %t: %d rows kept unlinked, want the point", keepHistory, got)
+		}
+	}
+}
+
+func TestAPhoneWhoseDataIsUnlinkedAtTheStartWaitsToBeAddedAgain(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	now := time.Now()
+	// A hub that stopped while it moved a removed phone's route.
+	if err := store.AddRoutePoints(ctx, "pixel", []history.RoutePoint{{PhoneTime: 1, Time: now.Add(-time.Hour).UnixMilli(), Lat: 1, Lon: 1, Accuracy: 5}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.NoteUnlink(ctx, "pixel"); err != nil {
+		t.Fatal(err)
+	}
+	h := openTestHub(t, store, nil)
+	// Finished in the background.
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		unlinking, err := store.Unlinking(ctx, "pixel")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !unlinking {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the unlink noted before the start was not finished")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	var left int
+	if err := store.DB().QueryRow(`SELECT COUNT(*) FROM route_points WHERE device = 'pixel'`).Scan(&left); err != nil {
+		t.Fatal(err)
+	}
+	if left != 0 {
+		t.Errorf("%d points left under the phone's id, want none", left)
+	}
+
+	// While one is still noted, a phone is not added under its id.
+	if err := store.AddRoutePoints(ctx, "galaxy", []history.RoutePoint{{PhoneTime: 1, Time: now.Add(-time.Hour).UnixMilli(), Lat: 1, Lon: 1, Accuracy: 5}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.NoteUnlink(ctx, "galaxy"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.AddPhone(ctx, "Galaxy", "7KQM-X2RP"); !errors.Is(err, errRemoving) {
+		t.Errorf("AddPhone() while its id is unlinked error = %v, want errRemoving", err)
+	}
+	// Refusing it has the move, as one that failed, tried again now, so
+	// trying again in a moment works.
+	deadline = time.Now().Add(10 * time.Second)
+	for {
+		_, err := h.AddPhone(ctx, "Galaxy", "7KQM-X2RP")
+		if err == nil {
+			break
+		}
+		if !errors.Is(err, errRemoving) || time.Now().After(deadline) {
+			t.Fatalf("AddPhone() once the unlink was tried again error = %v, want none", err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func TestTheDataOfAPhoneForgottenBeforeUnlinkingIsUnlinkedAtTheStart(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	now := time.Now()
+	// Left under its name by a hub from before phones' data was unlinked; a
+	// removed phone's data stays as it is.
+	for _, device := range []string{"pixel", history.RemovedPhonePrefix + "0000000000000001"} {
+		if err := store.AddRoutePoints(ctx, device, []history.RoutePoint{{PhoneTime: 1, Time: now.Add(-time.Hour).UnixMilli(), Lat: 1, Lon: 1, Accuracy: 5}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	openTestHub(t, store, nil)
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		var left, removed int
+		if err := store.DB().QueryRow(`SELECT COUNT(*) FROM route_points WHERE device = 'pixel'`).Scan(&left); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.DB().QueryRow(`SELECT COUNT(DISTINCT device) FROM route_points WHERE device LIKE 'removed:%'`).Scan(&removed); err != nil {
+			t.Fatal(err)
+		}
+		if left == 0 {
+			if removed != 2 {
+				t.Errorf("route kept under %d ids of removed phones, want 2", removed)
+			}
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the old phone's route was not unlinked")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
