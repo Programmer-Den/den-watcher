@@ -17,23 +17,22 @@ import (
 	"github.com/Programmer-Den/den-watcher/backend/internal/hub"
 )
 
-// fakeRoute returns the same points, or n copies of them when n is set, and
-// keeps what it was asked for.
+// fakeRoute returns the same point, cut or not, and keeps what it was asked
+// for.
 type fakeRoute struct {
 	device   string
 	from, to time.Time
-	n        int
+	cut      bool
 }
 
-func (f *fakeRoute) RoutePoints(_ context.Context, device string, from, to time.Time) ([]history.PhonePoint, error) {
+func (f *fakeRoute) RoutePoints(_ context.Context, device string, from, to time.Time) ([]history.PhonePoint, bool, error) {
 	f.device, f.from, f.to = device, from, to
-	point := history.PhonePoint{Time: 100, Lat: 53.55, Lon: 9.99, Accuracy: 12}
-	return slices.Repeat([]history.PhonePoint{point}, max(f.n, 1)), nil
+	return []history.PhonePoint{{Time: 100, Lat: 53.55, Lon: 9.99, Accuracy: 12}}, f.cut, nil
 }
 
 func TestTellsWhenAPhonesRouteWasCut(t *testing.T) {
-	for _, n := range []int{history.MaxRoutePoints - 1, history.MaxRoutePoints} {
-		source := &fakeRoute{n: n}
+	for _, cut := range []bool{false, true} {
+		source := &fakeRoute{cut: cut}
 		devices := append(device(fakeCollector{}, nil), Device{ID: "pixel", Kind: hub.KindPhone, Metrics: fakeCollector{}})
 		handler := New(Site{Devices: DeviceList(devices), Files: site, Route: source})
 		rec := get(handler, "/api/phone/route?device=pixel&from=0&to=10", "192.168.1.20:5000")
@@ -41,8 +40,8 @@ func TestTellsWhenAPhonesRouteWasCut(t *testing.T) {
 		if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 			t.Fatal(err)
 		}
-		if want := n == history.MaxRoutePoints; got.Cut != want {
-			t.Errorf("with %d points: cut = %t, want %t", n, got.Cut, want)
+		if got.Cut != cut {
+			t.Errorf("cut = %t, want %t", got.Cut, cut)
 		}
 	}
 }

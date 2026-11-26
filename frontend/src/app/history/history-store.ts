@@ -1,6 +1,17 @@
 import { DOCUMENT, Injectable, computed, inject, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { Observable, catchError, defer, map, merge, of, share, switchMap, tap } from 'rxjs';
+import {
+  Observable,
+  catchError,
+  defer,
+  finalize,
+  map,
+  merge,
+  of,
+  share,
+  switchMap,
+  tap,
+} from 'rxjs';
 
 import { readStored, store } from '../browser';
 
@@ -186,6 +197,8 @@ export class HistoryStore {
     ).pipe(
       // Another device's history is not shown while the picked one's loads.
       tap(({ device }) => {
+        // The week before waits for the answer of the new range or device.
+        this.answered.set(null);
         if (device !== shownDevice) {
           shownDevice = device;
           this.history.set(null);
@@ -242,6 +255,8 @@ export class HistoryStore {
         );
       }),
       tap((history) => this.received(history)),
+      // Read again from the start when watched again, so the week before waits for that answer.
+      finalize(() => this.answered.set(null)),
     );
   }
 

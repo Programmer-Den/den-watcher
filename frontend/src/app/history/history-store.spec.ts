@@ -178,6 +178,40 @@ describe('HistoryStore with the week before', () => {
     watching.unsubscribe();
   });
 
+  it('reads the week before only after the new answer when watched again or switched back', () => {
+    store.span.set(3600);
+    let watching = store.watch.subscribe();
+    tick();
+    reads().forEach((r) => r.flush(HISTORY));
+    tick();
+    reads().forEach((r) => r.flush(HISTORY));
+    watching.unsubscribe();
+
+    // Watched again: the device has stopped answering meanwhile.
+    watching = store.watch.subscribe();
+    tick();
+    const [range, ...early] = reads();
+    expect(early).toEqual([]);
+    const lastReading = Math.floor(Date.now() / 1000) - 3 * 3600;
+    range.flush({ ...HISTORY, from: lastReading - 3600, to: lastReading, lastReading });
+    tick();
+    const [before] = reads();
+    expect(Number(before.request.params.get('to'))).toBe(lastReading - WEEK);
+    before.flush(HISTORY);
+
+    // Switched to another device and back before its answer.
+    const devices = TestBed.inject(DeviceService);
+    devices.selectedId.set('nas');
+    tick();
+    devices.selectedId.set('local');
+    tick();
+    const [back, ...more] = reads().filter((r) => r.request.params.get('device') !== 'nas');
+    expect(more).toEqual([]);
+    expect(reads().every((r) => r === back || r.request.params.get('device') === 'nas')).toBe(true);
+    reads().forEach((r) => r.flush(HISTORY));
+    watching.unsubscribe();
+  });
+
   it('ends the week before a week before the last reading of a device that is not answering', () => {
     store.span.set(3600);
     const watching = store.watch.subscribe();

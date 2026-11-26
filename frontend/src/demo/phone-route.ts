@@ -53,9 +53,16 @@ function way(
 }
 
 /**
+ * How many points the demo's route answers at most, the newest: fewer than a hub's 20,000, which
+ * the demo's history never reaches, so its longer ranges show how a cut route looks.
+ */
+export const DEMO_MAX_ROUTE_POINTS = 5000;
+
+/**
  * What GET /api/phone/route answers in the demo for the phone, from `from` to `to` in Unix seconds:
  * a point every quarter of an hour at the places its Wi-Fi was connected at, and every two minutes
- * on its way between them, the same on every visit.
+ * on its way between them, the same on every visit. As on a hub, a range with more points than it
+ * answers gets only the newest, with `cut` set.
  */
 export function demoPhoneRoute(from: number, to: number): PhoneRoute {
   // From the day before, so the way to the first place in the range is there too.
@@ -72,5 +79,9 @@ export function demoPhoneRoute(from: number, to: number): PhoneRoute {
       points.push(...way(place, PLACES[next.ssid] ?? PLACES['Den'], c.end, next.start));
     }
   });
-  return { from, to, points: points.filter((p) => p.time >= from && p.time < to) };
+  const inRange = points.filter((p) => p.time >= from && p.time < to);
+  if (inRange.length > DEMO_MAX_ROUTE_POINTS) {
+    return { from, to, points: inRange.slice(-DEMO_MAX_ROUTE_POINTS), cut: true };
+  }
+  return { from, to, points: inRange };
 }

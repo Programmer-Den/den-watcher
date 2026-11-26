@@ -575,7 +575,7 @@ func TestThePhonesRouteIsStoredAtTheHubsTime(t *testing.T) {
 	if answer.RouteAfter != 5 {
 		t.Errorf("RouteAfter = %d, want the largest ID of the push, 5", answer.RouteAfter)
 	}
-	got, err := store.RoutePoints(ctx, "pixel", now.Add(-90*24*time.Hour), now.Add(time.Minute))
+	got, _, err := store.RoutePoints(ctx, "pixel", now.Add(-90*24*time.Hour), now.Add(time.Minute))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -617,7 +617,7 @@ func TestThePhonesRouteHasNoRetentionByDefault(t *testing.T) {
 	if _, err := h.Receive(ctx, "7KQM-X2RP", push); err != nil {
 		t.Fatal(err)
 	}
-	points, err := store.RoutePoints(ctx, "pixel", now.Add(-90*24*time.Hour), now)
+	points, _, err := store.RoutePoints(ctx, "pixel", now.Add(-90*24*time.Hour), now)
 	if err != nil {
 		t.Fatal(err)
 	}

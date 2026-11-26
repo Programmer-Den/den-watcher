@@ -30,7 +30,7 @@ func TestDeleteRouteRemembersNothingForAPhoneNoLongerKept(t *testing.T) {
 	if stretches != 0 {
 		t.Errorf("%d stretches remembered, want none", stretches)
 	}
-	if points, err := store.RoutePoints(ctx, "pixel", day, day.Add(day24)); err != nil || len(points) != 1 {
+	if points, _, err := store.RoutePoints(ctx, "pixel", day, day.Add(day24)); err != nil || len(points) != 1 {
 		t.Errorf("RoutePoints() = %v, %v; want the point kept", points, err)
 	}
 }
@@ -59,7 +59,7 @@ func TestRoutePointsAreKeptOnceAndReadByTheirRange(t *testing.T) {
 	if err := store.AddRoutePoints(ctx, "other", points); err != nil {
 		t.Fatal(err)
 	}
-	got, err := store.RoutePoints(ctx, "pixel", hour, hour.Add(2*time.Hour))
+	got, _, err := store.RoutePoints(ctx, "pixel", hour, hour.Add(2*time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,13 +74,13 @@ func TestRoutePointsAreKeptOnceAndReadByTheirRange(t *testing.T) {
 	if err := store.DeleteDevice(ctx, "pixel"); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := store.RoutePoints(ctx, "pixel", hour.Add(-24*time.Hour), hour.Add(24*time.Hour)); err != nil || len(got) != 0 {
+	if got, _, err := store.RoutePoints(ctx, "pixel", hour.Add(-24*time.Hour), hour.Add(24*time.Hour)); err != nil || len(got) != 0 {
 		t.Errorf("after the device was deleted: %+v, %v; want none", got, err)
 	}
 	if _, err := store.DeletePhoneDataBefore(ctx, hour); err != nil {
 		t.Fatal(err)
 	}
-	got, err = store.RoutePoints(ctx, "other", hour.Add(-24*time.Hour), hour.Add(24*time.Hour))
+	got, _, err = store.RoutePoints(ctx, "other", hour.Add(-24*time.Hour), hour.Add(24*time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,11 +146,11 @@ func TestDeleteRouteDeletesAStretchOfOnePhone(t *testing.T) {
 	if err != nil || deleted != 1 {
 		t.Fatalf("DeleteRoute() = %d, %v; want the one point of the day", deleted, err)
 	}
-	left, err := store.RoutePoints(ctx, "pixel", day.Add(-day24), day.Add(2*day24))
+	left, _, err := store.RoutePoints(ctx, "pixel", day.Add(-day24), day.Add(2*day24))
 	if err != nil || len(left) != 2 {
 		t.Errorf("pixel's points left = %+v, %v; want those before and after the day", left, err)
 	}
-	if other, err := store.RoutePoints(ctx, "other", day.Add(-day24), day.Add(2*day24)); err != nil || len(other) != 3 {
+	if other, _, err := store.RoutePoints(ctx, "other", day.Add(-day24), day.Add(2*day24)); err != nil || len(other) != 3 {
 		t.Errorf("other's points = %+v, %v; want all three", other, err)
 	}
 	var scans int
@@ -212,7 +212,7 @@ func TestDeleteRouteTakesWhatTellsWhereThePhoneWasAndKeepsItOut(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if left, err := store.RoutePoints(ctx, "pixel", day, day.Add(day24)); err != nil || len(left) != 0 {
+	if left, _, err := store.RoutePoints(ctx, "pixel", day, day.Add(day24)); err != nil || len(left) != 0 {
 		t.Errorf("points of the deleted day = %+v, %v; want none", left, err)
 	}
 	var scans int
@@ -224,7 +224,7 @@ func TestDeleteRouteTakesWhatTellsWhereThePhoneWasAndKeepsItOut(t *testing.T) {
 	}
 	// The next day is stored as before.
 	scanAt(t, store, day.Add(day24+time.Hour), 53.5612, 9.9615, "Cafe")
-	if left, err := store.RoutePoints(ctx, "pixel", day, day.Add(2*day24)); err != nil || len(left) != 1 {
+	if left, _, err := store.RoutePoints(ctx, "pixel", day, day.Add(2*day24)); err != nil || len(left) != 1 {
 		t.Errorf("points of the next day = %+v, %v; want one", left, err)
 	}
 }
@@ -251,7 +251,7 @@ func TestDeleteRouteOfTodayKeepsWhatComesAfterIt(t *testing.T) {
 	// Recorded after the delete, so it is stored.
 	later := time.Now().Add(time.Minute)
 	scanAt(t, store, later, 53.5755, 9.9530, "Den")
-	if left, err := store.RoutePoints(ctx, "pixel", now.Add(-2*time.Hour), now.Add(22*time.Hour)); err != nil || len(left) != 1 {
+	if left, _, err := store.RoutePoints(ctx, "pixel", now.Add(-2*time.Hour), now.Add(22*time.Hour)); err != nil || len(left) != 1 {
 		t.Errorf("points = %+v, %v; want the one after the delete", left, err)
 	}
 	if DeletedRouteIn(stretches, later) {
@@ -368,5 +368,30 @@ func TestDeleteRouteForgetsTheStretchWhenItFails(t *testing.T) {
 
 	if stretches, err := store.DeletedStretches(ctx, "pixel"); err != nil || len(stretches) != 0 {
 		t.Errorf("deleted stretches = %v, %v; want none after the failed deletion", stretches, err)
+	}
+}
+
+func TestRoutePointsReturnsTheNewestAndTellsWhenThereWereMore(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	start := time.Date(2026, 11, 5, 0, 0, 0, 0, time.UTC)
+	points := make([]RoutePoint, MaxRoutePoints)
+	for i := range points {
+		points[i] = RoutePoint{PhoneTime: int64(i), Time: start.Add(time.Duration(i) * time.Second).UnixMilli(), Lat: 1, Lon: 1, Accuracy: 5}
+	}
+	if err := store.AddRoutePoints(ctx, "pixel", points); err != nil {
+		t.Fatal(err)
+	}
+	end := start.Add(MaxRoutePoints * time.Second)
+	if got, cut, err := store.RoutePoints(ctx, "pixel", start, end); err != nil || cut || len(got) != MaxRoutePoints {
+		t.Fatalf("with exactly MaxRoutePoints: %d points, cut %t, %v; want all, not cut", len(got), cut, err)
+	}
+	more := []RoutePoint{{PhoneTime: MaxRoutePoints, Time: end.UnixMilli(), Lat: 1, Lon: 1, Accuracy: 5}}
+	if err := store.AddRoutePoints(ctx, "pixel", more); err != nil {
+		t.Fatal(err)
+	}
+	got, cut, err := store.RoutePoints(ctx, "pixel", start, end.Add(time.Second))
+	if err != nil || !cut || len(got) != MaxRoutePoints || got[0].Time != start.Unix()+1 || got[len(got)-1].Time != end.Unix() {
+		t.Fatalf("with one more: %d points, cut %t, %v; want the newest MaxRoutePoints, cut", len(got), cut, err)
 	}
 }

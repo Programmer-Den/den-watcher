@@ -23,6 +23,7 @@ import {
 } from './demo-backend';
 import { demoVersion } from './demo-build';
 import { DEMO_GROUPS, FLEET } from './fleet';
+import { DEMO_MAX_ROUTE_POINTS } from './phone-route';
 import { DEMO_PHONE } from './phone-usage';
 import { DEMO_PLACES, demoWifi } from './wifi';
 
@@ -140,6 +141,16 @@ describe('DemoBackend', () => {
     await expect(
       firstValueFrom(metrics.phoneRoute(to - 86400, to, 'local-x')),
     ).rejects.toBeTruthy();
+  });
+
+  it('answers only the newest points of a long route, as a hub does', async () => {
+    const to = Math.floor(Date.now() / 1000);
+    const week = await firstValueFrom(metrics.phoneRoute(to - 7 * 86400, to, DEMO_PHONE));
+    expect(week.cut).toBeFalsy();
+    const year = await firstValueFrom(metrics.phoneRoute(to - 365 * 86400, to, DEMO_PHONE));
+    expect(year.cut).toBe(true);
+    expect(year.points.length).toBe(DEMO_MAX_ROUTE_POINTS);
+    expect(year.points.at(-1)!.time).toBeGreaterThan(to - 86400);
   });
 
   it('tells the Wi-Fi networks heard at each place, named first, then most scans first, related by the networks', async () => {
