@@ -115,12 +115,16 @@ export class PlaceDetail {
 
   /** The names of the phones that scanned at the place; the removed ones share one name, given once. */
   protected phones(): string {
-    const devices = this.place().devices;
-    const removed = devices.find((id) => id.startsWith(REMOVED_PHONE_PREFIX));
-    return devices
-      .filter((id) => id === removed || !id.startsWith(REMOVED_PHONE_PREFIX))
+    return this.listedPhones()
       .map((id) => this.name(id))
       .join(', ');
+  }
+
+  /** The phones phones() names: each phone, and the first removed one for all of them. */
+  protected listedPhones(): string[] {
+    const devices = this.place().devices;
+    const removed = devices.find((id) => id.startsWith(REMOVED_PHONE_PREFIX));
+    return devices.filter((id) => id === removed || !id.startsWith(REMOVED_PHONE_PREFIX));
   }
 
   /** A phone's name, or "A removed phone" (see phoneName). */

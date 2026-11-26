@@ -30,14 +30,20 @@ const RemovedPhonePrefix = "removed:"
 // UnlinkPhoneData), so a hub that stops before that is done finishes it at
 // its next start (see PendingUnlinks), and a phone is not added again under
 // the id meanwhile (see Unlinking). It is quick.
-// A move already noted keeps its id.
+// A move already noted keeps its id. A device without data of a phone gets
+// no note, so it never waits for one.
 func (s *Store) NoteUnlink(ctx context.Context, device string) error {
 	random := make([]byte, 8)
 	if _, err := rand.Read(random); err != nil {
 		return err
 	}
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO phone_unlinking (device, unlinked) VALUES (?, ?)
+		INSERT INTO phone_unlinking (device, unlinked)
+		SELECT ?1, ?2 WHERE EXISTS (SELECT 1 FROM route_points WHERE device = ?1)
+			OR EXISTS (SELECT 1 FROM phone_scans WHERE device = ?1)
+			OR EXISTS (SELECT 1 FROM app_uses WHERE device = ?1)
+			OR EXISTS (SELECT 1 FROM wifi_connections WHERE device = ?1)
+			OR EXISTS (SELECT 1 FROM route_deleted WHERE device = ?1)
 		ON CONFLICT (device) DO NOTHING`, device, RemovedPhonePrefix+hex.EncodeToString(random))
 	return err
 }
@@ -125,9 +131,9 @@ func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
 	// A deletion of a stretch of its route that is still running finishes
 	// first, so none of the stretch moves. The move itself does not hold
 	// placing: the Wi-Fi map would wait for all of it. The scans move first,
-	// then the points, oldest first: the scans left under the phone's id keep
-	// all their points, and a moved scan finds either its own point or none
-	// yet, never another one, so the map at most leaves it out for a moment.
+	// then the points: the scans left under the phone's id keep all their
+	// points, and WiFiPositions leaves out the moved ones until the note
+	// goes, as they would be placed at the points moved so far.
 	s.placing.Lock()
 	_, err = s.db.ExecContext(ctx, `DELETE FROM route_deleted WHERE device = ?`, device)
 	s.placing.Unlock()
@@ -138,9 +144,10 @@ func (s *Store) UnlinkPhoneData(ctx context.Context, device string) error {
 	for _, t := range []struct{ table, keys, set string }{
 		// Which of the networks it was connected to goes, as it tells whose
 		// they were.
-		{"phone_scans", "device, time", `, networks = (
+		// One that is no valid JSON stays as it is, so it cannot stop the move.
+		{"phone_scans", "device, time", `, networks = CASE WHEN json_valid(networks) THEN (
 			SELECT json_group_array(json(json_remove(value, '$.connected')) ORDER BY key)
-			FROM json_each(networks))`},
+			FROM json_each(networks)) ELSE networks END`},
 		{"route_points", "device, phone_time", ""},
 	} {
 		n, err := s.moveChunks(ctx, t.table, t.keys, t.set, device, unlinked)

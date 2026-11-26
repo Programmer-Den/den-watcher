@@ -259,7 +259,7 @@ func (h *Hub) deleteData(remote *Remote) {
 	case err == nil:
 		slog.Info("deleted the data of a removed device", "name", remote.ShownName())
 	case h.ctx.Err() != nil:
-		slog.Warn("stopped deleting the history of a removed device, as the program stops; the rest is deleted with the retention", "name", remote.ShownName())
+		slog.Warn("stopped deleting the history of a removed device, as the program stops; the rest of its history is deleted with the retention, and a phone's route and Wi-Fi are unlinked at the next start", "name", remote.ShownName())
 	default:
 		slog.Error("delete the data of a removed device; its history is deleted with the retention, and a phone's route and Wi-Fi are tried again later", "name", remote.ShownName(), "error", err)
 	}

@@ -837,6 +837,9 @@ func TestAPhoneWhoseDataIsUnlinkedAtTheStartWaitsToBeAddedAgain(t *testing.T) {
 	}
 
 	// While one is still noted, a phone is not added under its id.
+	if err := store.AddRoutePoints(ctx, "galaxy", []history.RoutePoint{{PhoneTime: 1, Time: now.Add(-time.Hour).UnixMilli(), Lat: 1, Lon: 1, Accuracy: 5}}); err != nil {
+		t.Fatal(err)
+	}
 	if err := store.NoteUnlink(ctx, "galaxy"); err != nil {
 		t.Fatal(err)
 	}

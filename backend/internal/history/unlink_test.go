@@ -200,3 +200,43 @@ func TestPhoneDataDevicesListsEachPhoneOnceButNotRemovedOnes(t *testing.T) {
 		t.Errorf("PhoneDataDevices() = %v, want %v", got, want)
 	}
 }
+
+func TestNoteUnlinkNotesOnlyAPhone(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	if err := store.NoteUnlink(ctx, "nas"); err != nil {
+		t.Fatal(err)
+	}
+	if unlinking, err := store.Unlinking(ctx, "nas"); err != nil || unlinking {
+		t.Errorf("Unlinking() of a device without data of a phone = %v, %v; want false", unlinking, err)
+	}
+}
+
+func TestWiFiPositionsWaitForTheScansOfAPhoneWhosePointsAreMoving(t *testing.T) {
+	ctx := context.Background()
+	store := openTestStore(t)
+	hour := time.Date(2026, 11, 5, 10, 0, 0, 0, time.UTC)
+	const unlinked = RemovedPhonePrefix + "0000000000000001"
+	// Its scans moved, its points not yet.
+	if err := store.AddRoutePoints(ctx, "pixel", []RoutePoint{routePoint(hour, 53.5755, 9.9530, 20)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.AddPhoneScans(ctx, unlinked, []FoundScan{{At: hour.Add(time.Minute), Found: []metrics.NearbyAccessPoint{{ID: "den", SSID: "Den", SignalPercent: 80}}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.DB().ExecContext(ctx, `INSERT INTO phone_unlinking (device, unlinked) VALUES ('pixel', ?)`, unlinked); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.DB().ExecContext(ctx, `UPDATE route_points SET device = ?`, unlinked); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := store.WiFiPositions(ctx, hour, hour.Add(time.Hour)); err != nil || len(got) != 0 {
+		t.Errorf("WiFiPositions() while moving = %+v, %v; want none", got, err)
+	}
+	if err := store.UnlinkPhoneData(ctx, "pixel"); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := store.WiFiPositions(ctx, hour, hour.Add(time.Hour)); err != nil || len(got) != 1 || got[0].Devices[0] != unlinked {
+		t.Errorf("WiFiPositions() once moved = %+v, %v; want the removed phone's place", got, err)
+	}
+}
