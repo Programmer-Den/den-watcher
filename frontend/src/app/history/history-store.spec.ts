@@ -130,7 +130,9 @@ describe('HistoryStore with the week before', () => {
     tick(60_000);
     const pending = reads();
     const later = (r: TestRequest) => Number(r.request.params.get('to')) > to;
-    pending.find(later)!.flush({ ...HISTORY, from: to + 60 - 3600, to: to + 60 });
+    const range = pending.find(later);
+    expect(range).toBeDefined();
+    range!.flush({ ...HISTORY, from: to + 60 - 3600, to: to + 60 });
     tick();
     expect(store.weekBeforeHistory()).toEqual(earlier);
     expect(reads()).toEqual([]);
