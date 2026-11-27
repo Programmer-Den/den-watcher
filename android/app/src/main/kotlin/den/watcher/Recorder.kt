@@ -41,8 +41,10 @@ object Recorder {
                 steps = if (choice.collectsSteps) countSteps(app, settings) else null,
             )
         }
-        // How often to ask for a scan and a position: less often while the phone stands still.
-        val every = Still.every(still(app, settings))
+        // How often to ask for a scan and a position: every minute while tracking
+        // actively, else less often while the phone stands still.
+        val active = Active.on(app)
+        val every = Active.every(active, !active && still(app, settings))
         val rates = reading.ratesSince(settings.lastReading)
         settings.lastReading = reading
         Store(app).use { store ->
@@ -80,7 +82,7 @@ object Recorder {
             } else {
                 store.deleteConnections()
             }
-            recordRoute(app, settings, store, choice, every)
+            recordRoute(app, settings, store, choice, every, active)
             recordUses(app, settings, store, choice)
             push(app, settings, store) { reading.snapshot(rates, Sampler.device(app)) }
         }
@@ -90,11 +92,12 @@ object Recorder {
      * Keeps the newest position Android has as a point of the route when the
      * phone moved since the point before or stayed for a while, and asks
      * Android for a new one every Route.ASK_EVERY_MILLIS (Still.STILL_EVERY_MILLIS
-     * while the phone stands still), which the next reading finds; while saving battery it asks for none. While the route
+     * while the phone stands still, Active.EVERY_MILLIS from GPS while tracking
+     * actively), which the next reading finds; while saving battery it asks for none. While the route
      * is not collected, none is kept and the ones kept before are not sent
      * any more, nor shown on the app's map.
      */
-    private fun recordRoute(context: Context, settings: Settings, store: Store, choice: DataChoice, every: Long) {
+    private fun recordRoute(context: Context, settings: Settings, store: Store, choice: DataChoice, every: Long, active: Boolean) {
         if (!choice.collectsRoute) {
             store.deleteRouteUpTo(Long.MAX_VALUE)
             store.deleteMapRoute()
@@ -107,7 +110,7 @@ object Recorder {
             store.addMapPoint(it)
             settings.lastRoutePoint = it
         }
-        if (!Saving.on(context) && Route.askDue(settings.lastRouteAsk, now, every) && Route.ask(context)) {
+        if (!Saving.on(context) && Route.askDue(settings.lastRouteAsk, now, every) && Route.ask(context, gps = active)) {
             settings.lastRouteAsk = now
             asked(context, settings)
         }
