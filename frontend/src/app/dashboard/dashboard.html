@@ -116,11 +116,9 @@
 }
 
 @let rows = pageView.view() === 'rows' && !kiosk.on;
-<!-- The rows show the main values themselves, so they do without the glance row. -->
+<!-- The main values for the device's kind, the same in every view. -->
 @if (snapshot(); as s) {
-  @if (!rows) {
-    <app-glance [snapshot]="s" [class.stale]="connection.lost()" />
-  }
+  <app-glance [snapshot]="s" [class.stale]="connection.lost()" />
 } @else if (problem() === 'device' && shownAvailability(); as a) {
   <div class="cards alone">
     <ng-container *ngTemplateOutlet="uptimeCard; context: { $implicit: null, availability: a }" />
