@@ -89,6 +89,7 @@ import { DeviceHeader } from './device-header';
 import { DiskForecast } from './disk-forecast';
 import { FitLabels } from './fit-labels';
 import { Glance } from './glance';
+import { GlanceAlso } from './glance-also';
 import { HiddenCard, HiddenCards } from './hidden-cards';
 import { PageView, ViewSwitch } from './page-view';
 import { RowKey, rowKeys } from './row-keys';
@@ -203,6 +204,7 @@ type Problem = 'backend' | 'device';
     EvenColumns,
     FitLabels,
     Glance,
+    GlanceAlso,
     HiddenCards,
     NgTemplateOutlet,
     RangePicker,
