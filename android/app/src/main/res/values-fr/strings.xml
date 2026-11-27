@@ -33,6 +33,9 @@
     <string name="save_battery">Économiser la batterie</string>
     <string name="save_battery_hint">Met en pause les scans Wi-Fi et les demandes de position de l\'app, et écran éteint, elle lit toutes les 5 minutes au lieu de chaque minute. Le verrou du hub ne le bloque jamais : vous pouvez toujours l\'activer. Le hub a alors moins de points, moins de réseaux Wi-Fi et un trajet plus grossier pour cette période.</string>
     <string name="save_battery_auto">Activé de lui-même, car l\'économiseur de batterie d\'Android est activé.</string>
+    <string name="active_tracking">Suivi actif</string>
+    <string name="active_tracking_hint">Désactivé tant que vous ne l\'activez pas. L\'app demande alors une position GPS et scanne les réseaux Wi-Fi à proximité environ chaque minute, même quand le téléphone ne bouge pas, pour un trajet plus précis. Cela consomme nettement plus de batterie. Économiser la batterie et l\'économiseur de batterie d\'Android le mettent en pause. Nécessite la position autorisée en permanence.</string>
+    <string name="active_tracking_paused">En pause, car l\'app économise la batterie.</string>
     <string name="data_title">Ce qui est envoyé</string>
     <string name="data_hint">Uniquement les données que vous avez choisi de collecter ci-dessus, et uniquement au hub de votre réseau. Android ne laisse aucune app lire la charge du processeur.</string>
     <string name="updates_title">Mises à jour</string>

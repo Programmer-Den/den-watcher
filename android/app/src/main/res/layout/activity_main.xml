@@ -203,6 +203,21 @@
                 style="@style/Hint"
                 android:text="@string/save_battery_auto"
                 android:visibility="gone" />
+
+            <Switch
+                android:id="@+id/active_tracking"
+                style="@style/CollectGroup"
+                android:text="@string/active_tracking" />
+
+            <TextView
+                style="@style/Hint"
+                android:text="@string/active_tracking_hint" />
+
+            <TextView
+                android:id="@+id/active_tracking_state"
+                style="@style/Hint"
+                android:text="@string/active_tracking_paused"
+                android:visibility="gone" />
         </LinearLayout>
 
         <LinearLayout style="@style/Card">

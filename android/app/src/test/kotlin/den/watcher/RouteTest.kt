@@ -21,6 +21,16 @@ class RouteTest {
     fun close() = store.close()
 
     @Test
+    fun asksGpsOnlyWhileTrackingActively() {
+        assertEquals("network", Route.provider(gps = false, gpsOn = true, networkOn = true))
+        assertEquals("gps", Route.provider(gps = true, gpsOn = true, networkOn = true))
+        // GPS switched off falls back to the networks.
+        assertEquals("network", Route.provider(gps = true, gpsOn = false, networkOn = true))
+        assertNull(Route.provider(gps = true, gpsOn = false, networkOn = false))
+        assertNull(Route.provider(gps = false, gpsOn = true, networkOn = false))
+    }
+
+    @Test
     fun measuresTheWayAlongTheEarth() {
         // About 1.1 km north.
         val north = home.copy(lat = home.lat + 0.01)

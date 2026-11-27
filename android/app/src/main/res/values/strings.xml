@@ -34,6 +34,9 @@
     <string name="save_battery">Save battery</string>
     <string name="save_battery_hint">Pauses the app\'s own Wi-Fi scans and position requests, and while the screen is off it reads every 5 minutes instead of every minute. The hub\'s lock never blocks this, so you can always switch it on. The hub then has fewer points, fewer Wi-Fi networks and a coarser route for the time.</string>
     <string name="save_battery_auto">On by itself now, as Android\'s battery saver is on.</string>
+    <string name="active_tracking">Track actively</string>
+    <string name="active_tracking_hint">Off unless you switch it on. The app then asks for a GPS position and scans the Wi-Fi networks nearby about every minute, also while the phone stands still, for a finer route. This uses noticeably more battery. Save battery and Android\'s battery saver pause it. Needs the location allowed all the time.</string>
+    <string name="active_tracking_paused">Paused now, as the app saves battery.</string>
     <string name="data_title">What is sent</string>
     <string name="data_hint">Only the data you chose to collect above, and only to the hub on your network. Android lets no app read how busy the processor is.</string>
     <string name="updates_title">Updates</string>
