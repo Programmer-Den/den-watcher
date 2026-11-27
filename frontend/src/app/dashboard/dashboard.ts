@@ -85,6 +85,7 @@ import {
 } from './categories';
 import { CATEGORY_TITLES, CategoryFold } from './category-fold';
 import { Details } from './details';
+import { DeviceHeader } from './device-header';
 import { DiskForecast } from './disk-forecast';
 import { FitLabels } from './fit-labels';
 import { Glance } from './glance';
@@ -197,6 +198,7 @@ type Problem = 'backend' | 'device';
     CategoryRow,
     Details,
     DecimalPipe,
+    DeviceHeader,
     DiskForecast,
     EvenColumns,
     FitLabels,
