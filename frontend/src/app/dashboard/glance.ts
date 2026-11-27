@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AlertKind, AlertLevel } from '../alerts/alert';
 import { worstLevel } from '../alerts/alerts';
-import { DeviceService, readByHub } from '../devices/devices';
+import { Device, DeviceService, readByHub } from '../devices/devices';
 import { ChartPointer } from '../history/chart-pointer';
 import { HistoryStore } from '../history/history-store';
 import { isWan, linesOf, pointsOf, sum } from '../history/history';
@@ -13,12 +13,14 @@ import { I18n } from '../i18n/i18n';
 import { formatBytes } from '../metrics/bytes.pipe';
 import { cpuDetail, loadAverageText, usedOfTotal } from '../metrics/format';
 import { Snapshot } from '../metrics/metrics';
-import { GlanceTile, Tile } from './glance-tile';
+import { GlanceTile, Tile, TileId } from './glance-tile';
 
 /**
- * The main values of the device in a row of large tiles above its cards: CPU, memory, the fullest
- * disk, the hottest sensor and the network, each with a small chart of the range the charts show.
- * A device that does not report a value, such as a router read without a login, has no tile for it.
+ * The main values of the device in a row of large tiles above its cards, each with a small chart of
+ * the range the charts show: at most six, picked and ordered for its kind (TILE_ORDER), so a PC
+ * shows its GPU, a phone its battery and Wi-Fi, a router its internet traffic and devices online,
+ * and the hub's Raspberry Pi its power. A device that does not report a value, such as a router
+ * read without a login, has no tile for it.
  * A router passes each byte it forwards through two interfaces, so its network tile adds up only
  * its internet connection (WAN), and it has none where it does not tell which interface that is.
  */
@@ -69,6 +71,9 @@ export class Glance {
 
   /** Whether the hub reads the device; kept apart, as the list of devices is read every 5 s. */
   private readonly router = computed(() => readByHub(this.devices.selected()));
+
+  /** Which tiles the device shows; kept apart for the same reason. */
+  private readonly kind = computed(() => glanceKind(this.devices.selected()));
 
   /** Whether the network tile counts an interface: on a router only its WAN interfaces. */
   private readonly counted = computed(() => {
@@ -198,7 +203,7 @@ export class Glance {
       const sent = bytes(network.reduce((total, n) => total + n.sendBytesPerSecond, 0));
       tiles.push({
         id: 'network',
-        label: t('dashboard.network'),
+        label: t(this.router() ? 'glance.internet' : 'dashboard.network'),
         value: `↓ ${received}`,
         unit: `${unit}/s`,
         detail: network.length === 1 ? network[0].name : '',
@@ -209,7 +214,98 @@ export class Glance {
         series: 6,
       });
     }
-    return tiles;
+    const gpu = s.gpus?.[0];
+    if (gpu) {
+      const memory =
+        gpu.memoryTotalBytes && gpu.memoryUsedBytes !== undefined
+          ? t('dashboard.gpuMemory', {
+              used: bytes(gpu.memoryUsedBytes),
+              total: bytes(gpu.memoryTotalBytes),
+            })
+          : '';
+      tiles.push({
+        id: 'gpu',
+        label: t('dashboard.gpu'),
+        value: number(gpu.usagePercent),
+        unit: '%',
+        detail: gpu.name,
+        sub: [gpu.celsius !== undefined ? `${number(gpu.celsius, '1.0-0')} °C` : '', memory]
+          .filter(Boolean)
+          .join(' · '),
+        alert: null,
+        points: pointsOf(series, `gpu:${gpu.name}`),
+        chartUnit: 'percent',
+        max: 100,
+        series: 4,
+      });
+    }
+    if (s.battery) {
+      tiles.push({
+        id: 'battery',
+        label: t('dashboard.battery'),
+        value: number(s.battery.percent, '1.0-0'),
+        unit: '%',
+        detail: '',
+        sub: t(s.battery.pluggedIn ? 'dashboard.pluggedIn' : 'dashboard.onBattery'),
+        alert: null,
+        points: pointsOf(series, 'battery'),
+        chartUnit: 'percent',
+        max: 100,
+        series: 5,
+      });
+    }
+    const extra = (group: string, item: string) =>
+      s.extras?.find((e) => e.id === group)?.items.find((i) => i.id === item);
+    // The power add-on's first value is the whole machine where it tells several parts.
+    const power = s.extras?.find((e) => e.id === 'power')?.items[0];
+    if (power?.value !== undefined) {
+      tiles.push({
+        id: 'power',
+        label: t('glance.power'),
+        value: number(power.value),
+        unit: 'W',
+        detail: '',
+        sub: '',
+        alert: null,
+        points: pointsOf(series, `extra:power/${power.id}`),
+        chartUnit: 'watts',
+        series: 7,
+      });
+    }
+    const clients = extra('clients', 'online');
+    if (clients?.value !== undefined) {
+      tiles.push({
+        id: 'clients',
+        label: t('glance.clients'),
+        value: number(clients.value, '1.0-0'),
+        unit: '',
+        detail: '',
+        sub: '',
+        alert: null,
+        points: pointsOf(series, 'extra:clients/online'),
+        chartUnit: 'number',
+        series: 5,
+      });
+    }
+    const wifi = extra('wifi', 'wifi-quality');
+    if (wifi?.value !== undefined) {
+      const signal = extra('wifi', 'wifi-signal')?.value;
+      tiles.push({
+        id: 'wifi',
+        label: t('glance.wifi'),
+        value: number(wifi.value, '1.0-0'),
+        unit: '%',
+        detail: '',
+        sub: signal !== undefined ? `${number(signal, '1.0-0')} dBm` : '',
+        alert: null,
+        points: pointsOf(series, 'extra:wifi/wifi-quality'),
+        chartUnit: 'percent',
+        max: 100,
+        series: 0,
+      });
+    }
+    const order = TILE_ORDER[this.kind()];
+    return order.flatMap((id) => tiles.filter((tile) => tile.id === id)).slice(0, MAX_TILES);
   });
 
   constructor() {
@@ -223,6 +319,31 @@ export class Glance {
       alerts.filter((a) => a.kind === kind && (subject === undefined || a.subject === subject)),
     );
   }
+}
+
+/** The most tiles the row shows, so it stays one row on a wide screen. */
+export const MAX_TILES = 6;
+
+/** The kinds of device whose tiles are picked and ordered alike. */
+export type GlanceKind = 'server' | 'pc' | 'phone' | 'router';
+
+/** The tiles each kind of device shows, most important first; the ones it does not report are left out. */
+export const TILE_ORDER: Record<GlanceKind, readonly TileId[]> = {
+  server: ['cpu', 'memory', 'disk', 'temperature', 'network', 'power', 'gpu', 'battery'],
+  pc: ['cpu', 'gpu', 'memory', 'disk', 'network', 'battery', 'temperature', 'power'],
+  phone: ['battery', 'wifi', 'memory', 'disk', 'network', 'temperature'],
+  router: ['network', 'clients', 'cpu', 'memory', 'temperature'],
+};
+
+/** Which order of tiles a device takes. */
+export function glanceKind(device: Device): GlanceKind {
+  if (readByHub(device)) {
+    return 'router';
+  }
+  if (device.kind === 'phone') {
+    return 'phone';
+  }
+  return device.kind === 'pc' ? 'pc' : 'server';
 }
 
 /** A formatted amount split into its number and its unit, such as "1.5 KiB" into "1.5" and "KiB". */

@@ -6,9 +6,22 @@ import { ChartUnit } from '../history/line-chart';
 import { I18n } from '../i18n/i18n';
 import { Point } from '../metrics/metrics';
 
+/** The values the glance row can show. */
+export type TileId =
+  | 'cpu'
+  | 'memory'
+  | 'disk'
+  | 'temperature'
+  | 'network'
+  | 'gpu'
+  | 'battery'
+  | 'power'
+  | 'clients'
+  | 'wifi';
+
 /** One tile of the glance row: a main value now and its history. */
 export interface Tile {
-  id: 'cpu' | 'memory' | 'disk' | 'temperature' | 'network';
+  id: TileId;
   label: string;
   value: string;
   unit: string;

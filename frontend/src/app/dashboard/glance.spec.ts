@@ -134,11 +134,11 @@ describe('Glance', () => {
         ],
       },
     );
-    expect(tiles()[4]).toBe('Network WAN ↓ 2.0KiB/s↑ 0 B/s');
+    expect(tiles()[0]).toBe('Internet WAN ↓ 2.0KiB/s↑ 0 B/s');
 
     fixture.componentRef.setInput('snapshot', { ...SNAPSHOT, network: [port('LAN', 2048)] });
     fixture.detectChanges();
-    expect(tiles().map((t) => t.split(' ')[0])).not.toContain('Network');
+    expect(tiles().map((t) => t.split(' ')[0])).not.toContain('Internet');
   });
 
   it('marks the tile of a value with an alert on what it shows', () => {
@@ -272,6 +272,90 @@ describe('Glance', () => {
     // The CPU's and the network's, which the history has.
     expect(points()[0]).toBe(before[0]);
     expect(points()[4]).toBe(before[4]);
+  });
+  it("picks a PC's tiles with its GPU and battery, and shows at most six", () => {
+    TestBed.inject(DeviceService).devices.set([{ id: 'local', name: '', kind: 'pc' }]);
+    show({
+      ...SNAPSHOT,
+      gpus: [
+        {
+          name: 'RTX 4070',
+          usagePercent: 12,
+          celsius: 41,
+          memoryUsedBytes: 3 * 1024 ** 3,
+          memoryTotalBytes: 12 * 1024 ** 3,
+        },
+      ],
+      battery: { percent: 64, pluggedIn: false },
+    });
+    expect(tiles().map((t) => t.split(' ')[0])).toEqual([
+      'CPU',
+      'GPU',
+      'Memory',
+      'Fullest',
+      'Network',
+      'Battery',
+    ]);
+    expect(tiles()[1]).toBe('GPU RTX 4070 12%41 °C · 3.0 GiB of 12.0 GiB memory');
+    expect(tiles()[5]).toBe('Battery 64%On battery');
+  });
+
+  it("starts a phone's tiles with its battery and Wi-Fi", () => {
+    TestBed.inject(DeviceService).devices.set([{ id: 'local', name: '', kind: 'phone' }]);
+    show({
+      ...SNAPSHOT,
+      cpu: { usagePercent: 0, cores: 0 },
+      battery: { percent: 80, pluggedIn: true },
+      extras: [
+        {
+          id: 'wifi',
+          title: 'Wi-Fi',
+          items: [
+            { id: 'wifi-quality', label: 'Link quality', unit: 'percent', value: 71 },
+            { id: 'wifi-signal', label: 'Signal (dBm)', unit: 'number', value: -55 },
+          ],
+        },
+      ],
+    });
+    expect(tiles().slice(0, 2)).toEqual(['Battery 80%Plugged in', 'Wi-Fi 71%-55 dBm']);
+  });
+
+  it("shows a router's devices online after its internet, and the Pi's power", () => {
+    const devices = TestBed.inject(DeviceService);
+    devices.devices.set([{ id: 'local', name: '', router: true }]);
+    const clients = {
+      id: 'clients',
+      title: 'Clients',
+      items: [{ id: 'online', label: 'Online', unit: 'number' as const, value: 17 }],
+    };
+    const wan = {
+      name: 'WAN',
+      receivedBytes: 0,
+      sentBytes: 0,
+      receiveBytesPerSecond: 1024,
+      sendBytesPerSecond: 0,
+    };
+    show({ ...SNAPSHOT, network: [wan], extras: [clients] });
+    expect(
+      tiles()
+        .slice(0, 2)
+        .map((t) => t.split(' ')[0]),
+    ).toEqual(['Internet', 'Devices']);
+    expect(tiles()[1]).toBe('Devices online 17');
+
+    devices.devices.set([{ id: 'local', name: '' }]);
+    fixture.componentRef.setInput('snapshot', {
+      ...SNAPSHOT,
+      extras: [
+        {
+          id: 'power',
+          title: 'Power',
+          items: [{ id: 'raspberry-pi', label: 'Raspberry Pi (total)', unit: 'watts', value: 3.1 }],
+        },
+      ],
+    });
+    fixture.detectChanges();
+    expect(tiles()[5]).toBe('Power 3.1W');
   });
 });
 

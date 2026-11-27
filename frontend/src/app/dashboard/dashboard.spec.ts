@@ -1098,7 +1098,8 @@ describe('Dashboard', () => {
     TestBed.inject(PageView).pick('rows');
     respond(snapshot);
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelector('app-glance')).toBeNull();
+    // The main values for the device's kind show above the rows too, as in every view.
+    expect(element.querySelector('app-glance')).not.toBeNull();
     expect(element.querySelector('app-arrange-bar')).toBeNull();
     const heads = () => [...element.querySelectorAll<HTMLButtonElement>('app-category-row button')];
     expect(heads().map((b) => b.querySelector('.title')!.textContent!.trim())).toEqual([
