@@ -60,13 +60,7 @@
             <circle [attr.r]="p.scans > 1 ? 6 : 3.5" />
           }
           <circle class="hit" r="14" (click)="open(c)">
-            <title>
-              @if (c.places.length > 1) {
-              {{ i18n.t('wifiMap.together', { count: c.places.length }) }}
-              } @else {
-              {{ labels()[c.places[0]] }}
-              }
-            </title>
+            <title>{{ tip(c) }}</title>
           </circle>
         </g>
       }

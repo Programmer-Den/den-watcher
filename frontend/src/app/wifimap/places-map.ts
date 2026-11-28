@@ -75,6 +75,16 @@ export class PlacesMap {
     return first === picked ? 2 : alone.has(first) ? 1 : 0;
   }
 
+  /**
+   * The text shown on hovering a circle. SVG's title holds only text, so Angular's @if is not
+   * parsed in it and the choice is made here.
+   */
+  protected tip(c: Cluster): string {
+    return c.places.length > 1
+      ? this.i18n.t('wifiMap.together', { count: c.places.length })
+      : this.labels()[c.places[0]];
+  }
+
   /** A click on a numbered circle zooms in on it; on a place, picks it. */
   protected open(c: Cluster): void {
     const map = this.map();
