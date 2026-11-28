@@ -144,35 +144,37 @@ export class DemoBackend implements HttpBackend {
       const from = Math.max(Number(url.searchParams.get('from')), to - DEMO_RETENTION_DAYS * 86400);
       return respond(request, demoTownWifi(from, to, Math.floor(now)));
     }
-    if (request.method === 'GET' && url.pathname === '/api/phone/usage') {
-      if (device !== DEMO_PHONE) {
+    if (request.method === 'GET' && url.pathname.startsWith('/api/phone/')) {
+      if (machine?.device.kind !== 'phone') {
         return fail(request, 404, null);
       }
+      // Only the phone that is carried around has a day to show; any other phone, such as the
+      // tablet that stays on its charger, answers as one whose app was not allowed to record.
+      const recorded = device === DEMO_PHONE;
       const to = Math.min(Number(url.searchParams.get('to')), Math.floor(now) + 1);
       const from = Math.max(Number(url.searchParams.get('from')), to - DEMO_RETENTION_DAYS * 86400);
-      return respond(request, demoPhoneUsage(from, to));
-    }
-    if (request.method === 'GET' && url.pathname === '/api/phone/wifi') {
-      if (device !== DEMO_PHONE) {
-        return fail(request, 404, null);
+      if (url.pathname === '/api/phone/usage') {
+        const none = {
+          from,
+          to,
+          stepSeconds: 3600,
+          screenSeconds: 0,
+          unlocks: 0,
+          steps: [],
+          apps: [],
+        };
+        return respond(request, recorded ? demoPhoneUsage(from, to) : none);
       }
-      const to = Math.min(Number(url.searchParams.get('to')), Math.floor(now) + 1);
-      const from = Math.max(Number(url.searchParams.get('from')), to - DEMO_RETENTION_DAYS * 86400);
-      return respond(request, demoPhoneWifi(from, to));
-    }
-    if (request.method === 'GET' && url.pathname === '/api/phone/route') {
-      if (device !== DEMO_PHONE) {
-        return fail(request, 404, null);
+      if (url.pathname === '/api/phone/wifi') {
+        return respond(request, recorded ? demoPhoneWifi(from, to) : { from, to, connections: [] });
       }
-      const to = Math.min(Number(url.searchParams.get('to')), Math.floor(now) + 1);
-      const from = Math.max(Number(url.searchParams.get('from')), to - DEMO_RETENTION_DAYS * 86400);
-      return respond(request, demoPhoneRoute(from, to));
-    }
-    if (request.method === 'GET' && url.pathname === '/api/phone/scan') {
-      if (device !== DEMO_PHONE) {
-        return fail(request, 404, null);
+      if (url.pathname === '/api/phone/route') {
+        return respond(request, recorded ? demoPhoneRoute(from, to) : { from, to, points: [] });
       }
-      return respond(request, demoPhoneScan(Number(url.searchParams.get('time'))));
+      if (url.pathname === '/api/phone/scan') {
+        const time = Number(url.searchParams.get('time'));
+        return respond(request, recorded ? demoPhoneScan(time) : { time, scan: null });
+      }
     }
     if (request.method === 'GET' && url.pathname === '/api/devices/suggestion') {
       return respond(request, DEMO_SUGGESTION);

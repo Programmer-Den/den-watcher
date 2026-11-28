@@ -45,6 +45,8 @@ export interface DemoMachine {
   router?: boolean;
   /** A thing the hub only checks for whether it answers, such as a printer: no usage at all. */
   checked?: boolean;
+  /** A device that stays on its charger, so its battery is always plugged in. */
+  onCharger?: boolean;
   bootedDaysAgo: number;
   /** For a device that answers only part of the day, such as a laptop that sleeps at night. */
   online?: (t: number) => boolean;
@@ -2599,6 +2601,48 @@ const camera: DemoMachine = {
 };
 
 /**
+ * A rooted tablet with the hub app, whose phone part sends here: with root, the app also reads
+ * how busy the processor and each core are, its clock and the thermal zones, which no other
+ * phone tells. It stays on its charger, with the charge limit on, and collects the system's
+ * values only.
+ */
+const rootedTablet: DemoMachine = {
+  device: { id: 'rooted-tablet', kind: 'phone', name: 'Rooted tablet', removable: true },
+  os: 'linux',
+  system: {
+    os: 'Android 13',
+    kernel: '4.14.190-perf',
+    architecture: 'aarch64',
+    maker: 'Samsung',
+    model: 'Galaxy Tab S6 Lite',
+  },
+  cores: 8,
+  maxClockMHz: 2304,
+  memoryBytes: 4 * GB,
+  disks: [{ path: '/data', totalBytes: 64 * GB }],
+  network: [{ name: 'wlan0', addresses: ['192.168.1.53'] }],
+  onCharger: true,
+  bootedDaysAgo: 23.4,
+  values: (t, step) => {
+    const cpu = vary(t, step, 151, 9, 1, 100, [5, 40], [10, 2400]);
+    return {
+      cpu,
+      memory: vary(t, step, 152, 54, 0, 100, [4, 900]),
+      'disk:/data': 38.2,
+      battery: 80,
+      'temperature:battery': 30 + cpu * 0.06,
+      // The thermal zones, by the names the kernel gives them.
+      'temperature:cpu-0-0-usr': 37 + cpu * 0.3 + vary(t, step, 153, 0, -3, 3, [1.5, 240]),
+      'temperature:cpu-1-0-usr': 38 + cpu * 0.34 + vary(t, step, 154, 0, -3, 3, [1.5, 200]),
+      'temperature:gpuss-0-usr': 36 + cpu * 0.2 + vary(t, step, 155, 0, -2, 2, [1, 300]),
+      'temperature:xo-therm-adc': 33 + cpu * 0.08,
+      'network.receive:wlan0': vary(t, step, 156, 40e3, 0, 1e9, [30e3, 60]),
+      'network.send:wlan0': vary(t, step, 157, 9e3, 0, 1e9, [8e3, 60]),
+    };
+  },
+};
+
+/**
  * A device the hub asks over the network, which answers in about ms milliseconds: a little slower
  * while it is busy, and over Wi-Fi now and then much slower. Its values get "response", as the hub
  * measures it; the hub itself, routers and checks have none.
@@ -2634,6 +2678,7 @@ export const FLEET: readonly DemoMachine[] = [
   answersIn(linuxServer, 2.5),
   answersIn(linuxLaptop, 22, true),
   androidPhone,
+  rootedTablet,
   garagePi,
   homeRouter,
   meshNode,
@@ -2689,6 +2734,8 @@ export function snapshotOf(machine: DemoMachine, t: number, version: string): Sn
   const v = machine.values(t, 0);
   // A router tells no clock, load, version or time zone.
   const linux = machine.os === 'linux' && !machine.router;
+  // A phone's app tells no load, waiting or processes, also not with root.
+  const phone = machine.device.kind === 'phone';
   const uptimeSeconds = Math.round(machine.bootedDaysAgo * 86400 + (t - openedAt));
   const seed = machine.device.id.length * 17;
   const percentOf = (total: number, percent: number) => Math.round((total * percent) / 100);
@@ -2756,7 +2803,7 @@ export function snapshotOf(machine: DemoMachine, t: number, version: string): Sn
     };
   }
 
-  // A phone tells no processor usage; its page leaves the processor out.
+  // A phone tells no processor usage, unless its app reads it with root; its page leaves the processor out.
   const cpu = v['cpu'] ?? 0;
 
   return {
@@ -2783,7 +2830,7 @@ export function snapshotOf(machine: DemoMachine, t: number, version: string): Sn
               machine.maxClockMHz * (0.45 + (0.55 * Math.min(100, cpu * 3)) / 100),
             ),
           }),
-      ...(linux
+      ...(linux && !phone
         ? {
             loadAverage: { one: load(60), five: load(300), fifteen: load(900) },
             ioWaitPercent: Math.min(
@@ -2837,7 +2884,7 @@ export function snapshotOf(machine: DemoMachine, t: number, version: string): Sn
       ? {
           battery: {
             percent: v['battery'],
-            pluggedIn: charging(t),
+            pluggedIn: machine.onCharger || charging(t),
             ...(machine.batteryDetails
               ? { watts: charging(t) ? 38 : 7 + cpu * 0.2, healthPercent: 91 }
               : {}),

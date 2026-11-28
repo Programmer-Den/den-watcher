@@ -337,12 +337,45 @@ describe('DemoBackend', () => {
       expect(s.cpu.usagePercent).toBeGreaterThanOrEqual(0);
       expect(s.cpu.usagePercent).toBeLessThanOrEqual(100);
       expect(s.disks.map((d) => d.path)).toEqual(machine.disks.map((d) => d.path));
-      // Windows, routers and checks have no load average; Windows and checks no temperature sensors.
+      // Windows, routers, checks and phones have no load average; Windows and checks no temperature sensors.
       expect(s.cpu.loadAverage === undefined).toBe(
-        machine.os === 'windows' || !!machine.router || !!machine.checked,
+        machine.os === 'windows' ||
+          !!machine.router ||
+          !!machine.checked ||
+          machine.device.kind === 'phone',
       );
       expect(s.temperatures.length === 0).toBe(machine.os === 'windows' || !!machine.checked);
     }
+  });
+
+  it('shows a rooted tablet with the processor and thermal zones its app reads with root', async () => {
+    const tablet = await firstValueFrom(metrics.current('rooted-tablet'));
+    expect(tablet.cpu.cores).toBe(8);
+    expect(tablet.cpu.coreUsagePercent).toHaveLength(8);
+    expect(tablet.cpu.clockMHz).toBeGreaterThan(0);
+    expect(tablet.temperatures.map((t) => t.sensor)).toEqual([
+      'battery',
+      'cpu-0-0-usr',
+      'cpu-1-0-usr',
+      'gpuss-0-usr',
+      'xo-therm-adc',
+    ]);
+    expect(tablet.battery?.pluggedIn).toBe(true);
+    // An ordinary phone's app cannot read the processor.
+    expect((await firstValueFrom(metrics.current('android-phone'))).cpu.cores).toBe(0);
+    const to = Math.floor(Date.now() / 1000);
+    const history = await firstValueFrom(metrics.history(to - 3600, to, 'rooted-tablet'));
+    expect(history.series.find((s) => s.metric === 'cpu')?.points.length).toBeGreaterThan(0);
+    // It stays on its charger: its phone cards say that nothing was recorded, not that they load.
+    expect(
+      (await firstValueFrom(metrics.phoneUsage(to - 86400, to, 'rooted-tablet'))).apps,
+    ).toEqual([]);
+    expect(
+      (await firstValueFrom(metrics.phoneWifi(to - 86400, to, 'rooted-tablet'))).connections,
+    ).toEqual([]);
+    expect(
+      (await firstValueFrom(metrics.phoneRoute(to - 86400, to, 'rooted-tablet'))).points,
+    ).toEqual([]);
   });
 
   it('shows a router with what an ASUS router tells and no disks', async () => {
