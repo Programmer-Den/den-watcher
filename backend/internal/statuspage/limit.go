@@ -24,9 +24,13 @@ const (
 	// owner out; visitors who are signed in already keep seeing the page.
 	maxWrongAll = 50
 	allWindow   = time.Hour
-	// maxClients is how many clients are kept track of. Past it, new
-	// clients may still ask, but not guess.
+	// maxClients is how many clients are kept track of. Past it, a new
+	// client takes the place of another (see evict), so a full table keeps
+	// nobody out, not even the owner coming from a new address.
 	maxClients = 10_000
+	// evictSample is how many clients are looked at to forget one of them
+	// for a new client, so making room does not walk the whole table.
+	evictSample = 8
 	// sweepEvery is how often a full table of clients is swept of those
 	// that need not be kept any more, so a client that is new while it is
 	// full does not walk the whole table each time.
@@ -66,9 +70,6 @@ func (l *limiter) allow(addr netip.Addr, now time.Time) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	c := l.client(addr, now)
-	if c == nil {
-		return true
-	}
 	if now.Sub(c.minute) >= time.Minute {
 		c.minute, c.requests = now, 0
 	}
@@ -93,9 +94,6 @@ func (l *limiter) guess(addr netip.Addr, now time.Time, known bool) bool {
 		return false
 	}
 	c := l.client(addr, now)
-	if c == nil {
-		return false
-	}
 	if c.wrong >= maxWrong && now.Sub(c.lastWrong) >= lockout {
 		c.wrong = 0
 	}
@@ -131,7 +129,11 @@ func (l *limiter) succeeded(addr netip.Addr) {
 }
 
 // client returns what is kept of the client at addr, keeping track of it
-// from now on; nil when too many clients are kept track of already.
+// from now on. A full table is first swept of the clients that need not be
+// kept, at most once per sweepEvery; while it stays full, the new client
+// takes the place of another. Refusing it instead let whoever kept the
+// table full, as with the many networks of one IPv6 prefix, keep everyone
+// else from signing in, a known browser too.
 func (l *limiter) client(addr netip.Addr, now time.Time) *clientLimits {
 	key := password.Client(addr)
 	if c := l.clients[key]; c != nil {
@@ -146,11 +148,37 @@ func (l *limiter) client(addr netip.Addr, now time.Time) *clientLimits {
 		}
 	}
 	if len(l.clients) >= maxClients {
-		return nil
+		l.evict()
 	}
 	c := &clientLimits{minute: now}
 	l.clients[key] = c
 	return c
+}
+
+// evict forgets one client: of the first evictSample a walk of the table
+// meets, which Go starts at a random place, the one that asked or guessed
+// longest ago. Its count of requests and wrong passwords starts anew when
+// it comes back; the wrong passwords of all clients together still limit
+// what guessing from many addresses gets.
+func (l *limiter) evict() {
+	var (
+		oldest netip.Addr
+		seen   time.Time
+		looked int
+	)
+	for addr, c := range l.clients {
+		last := c.minute
+		if c.lastWrong.After(last) {
+			last = c.lastWrong
+		}
+		if looked == 0 || last.Before(seen) {
+			oldest, seen = addr, last
+		}
+		if looked++; looked == evictSample {
+			break
+		}
+	}
+	delete(l.clients, oldest)
 }
 
 // retryAfter is d as the seconds of a Retry-After header.
