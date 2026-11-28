@@ -1,4 +1,4 @@
-package main
+package program
 
 import (
 	"cmp"
@@ -20,17 +20,17 @@ func logPairingCode(p *pairing.Pairing) {
 	slog.Info("to collect from this device, a hub asks for its pairing code, which den-watcher pairing-code prints too", "code", p.Code())
 }
 
-// healthcheckArgument makes the program check that the den-watcher running on
+// HealthcheckArgument makes the program check that the den-watcher running on
 // this machine answers, for Docker's health check: the image has no shell or
 // curl to ask it with.
-const healthcheckArgument = "healthcheck"
+const HealthcheckArgument = "healthcheck"
 
-// checkHealth asks the den-watcher running on this machine, at LISTEN_ADDR,
+// CheckHealth asks the den-watcher running on this machine, at LISTEN_ADDR,
 // whether it answers. It asks GET /api/hub, which both the website and
 // DATA_ONLY serve and which reads nothing but memory. Any answer but a
 // server error counts: with LISTEN_ADDR set to one address of the machine,
 // the request comes from that address instead of localhost and is refused.
-func checkHealth() error {
+func CheckHealth() error {
 	url, err := localURL("/api/hub")
 	if err != nil {
 		return err
@@ -63,13 +63,13 @@ func localURL(path string) (string, error) {
 	return "http://" + net.JoinHostPort(host, port) + path, nil
 }
 
-// pairingCodeArgument makes the program print the pairing code of the
+// PairingCodeArgument makes the program print the pairing code of the
 // den-watcher running on this machine, for a device without a website.
-const pairingCodeArgument = "pairing-code"
+const PairingCodeArgument = "pairing-code"
 
-// printPairingCode asks the den-watcher running on this machine, at
+// PrintPairingCode asks the den-watcher running on this machine, at
 // LISTEN_ADDR, for its pairing code and writes it to out.
-func printPairingCode(out io.Writer) error {
+func PrintPairingCode(out io.Writer) error {
 	url, err := localURL("/api/pairing")
 	if err != nil {
 		return err
