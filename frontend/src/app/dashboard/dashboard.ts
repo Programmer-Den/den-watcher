@@ -85,9 +85,11 @@ import {
 } from './categories';
 import { CATEGORY_TITLES, CategoryFold } from './category-fold';
 import { Details } from './details';
+import { DeviceHeader } from './device-header';
 import { DiskForecast } from './disk-forecast';
 import { FitLabels } from './fit-labels';
 import { Glance } from './glance';
+import { GlanceAlso } from './glance-also';
 import { HiddenCard, HiddenCards } from './hidden-cards';
 import { PageView, ViewSwitch } from './page-view';
 import { RowKey, rowKeys } from './row-keys';
@@ -197,10 +199,12 @@ type Problem = 'backend' | 'device';
     CategoryRow,
     Details,
     DecimalPipe,
+    DeviceHeader,
     DiskForecast,
     EvenColumns,
     FitLabels,
     Glance,
+    GlanceAlso,
     HiddenCards,
     NgTemplateOutlet,
     RangePicker,

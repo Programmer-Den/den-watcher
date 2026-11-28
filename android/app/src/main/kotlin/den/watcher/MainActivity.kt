@@ -95,6 +95,18 @@ class MainActivity : Activity() {
             }
         }
 
+        // Off until switched on, and never locked by the hub either.
+        findViewById<Switch>(R.id.active_tracking).setOnCheckedChangeListener { _, on ->
+            if (on != settings.activeTracking) {
+                settings.activeTracking = on
+                if (settings.recording) {
+                    // Asks for a position and a scan at once, at the new pace.
+                    RecordAlarm.start(this)
+                }
+                showStatus()
+            }
+        }
+
         findViewById<Button>(R.id.apps).setOnClickListener { openUsageAccess() }
 
         findViewById<Button>(R.id.bluetooth).setOnClickListener { allowBluetooth() }
@@ -388,6 +400,9 @@ class MainActivity : Activity() {
         findViewById<Switch>(R.id.save_battery).isChecked = settings.saveBattery
         findViewById<TextView>(R.id.save_battery_state).visibility =
             if (!settings.saveBattery && Saving.on(this)) View.VISIBLE else View.GONE
+        findViewById<Switch>(R.id.active_tracking).isChecked = settings.activeTracking
+        findViewById<TextView>(R.id.active_tracking_state).visibility =
+            if (settings.activeTracking && Saving.on(this)) View.VISIBLE else View.GONE
         showAddress(recording)
         val other = settings.otherNetwork
         findViewById<View>(R.id.network_group).visibility = if (other == null) View.GONE else View.VISIBLE

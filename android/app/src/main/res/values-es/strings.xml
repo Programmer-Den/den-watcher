@@ -33,6 +33,9 @@
     <string name="save_battery">Ahorrar batería</string>
     <string name="save_battery_hint">Pausa los escaneos de Wi-Fi y las peticiones de posición propios de la app y, con la pantalla apagada, lee cada 5 minutos en lugar de cada minuto. El bloqueo del hub nunca lo impide, así que siempre puedes activarlo. El hub tiene entonces menos puntos, menos redes Wi-Fi y una ruta más aproximada de ese tiempo.</string>
     <string name="save_battery_auto">Activado solo ahora, porque el ahorro de batería de Android está activado.</string>
+    <string name="active_tracking">Seguimiento activo</string>
+    <string name="active_tracking_hint">Desactivado hasta que lo actives. La app pide entonces una posición GPS y busca las redes Wi-Fi cercanas aproximadamente cada minuto, también cuando el teléfono está quieto, para una ruta más precisa. Gasta bastante más batería. Ahorrar batería y el ahorro de batería de Android lo pausan. Necesita la ubicación permitida todo el tiempo.</string>
+    <string name="active_tracking_paused">En pausa ahora, porque la app ahorra batería.</string>
     <string name="data_title">Qué se envía</string>
     <string name="data_hint">Solo los datos que has elegido recopilar arriba, y solo al hub de tu red. Android no deja que ninguna app lea lo ocupado que está el procesador.</string>
     <string name="updates_title">Actualizaciones</string>

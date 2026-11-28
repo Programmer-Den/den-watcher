@@ -72,6 +72,23 @@ class Screenshots {
     }
 
     @Test
+    fun activeTracking() = shot("16-active-tracking") {
+        hubAddress = "192.168.1.20:9393"
+        recording = true
+        lastPush = LAST_PUSH
+        activeTracking = true
+    }
+
+    @Test
+    fun activeTrackingPaused() = shot("17-active-tracking-paused") {
+        hubAddress = "192.168.1.20:9393"
+        recording = true
+        lastPush = LAST_PUSH
+        activeTracking = true
+        saveBattery = true
+    }
+
+    @Test
     fun dataChoice() = shot("10-data-choice") {
         hubAddress = "192.168.1.20:9393"
         recording = true

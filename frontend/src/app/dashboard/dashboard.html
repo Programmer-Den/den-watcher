@@ -92,6 +92,11 @@
   </h3>
 </ng-template>
 
+<!-- Which device the page is on and how it is doing; a wall display names it in the page's header. -->
+@if (!kiosk.on) {
+  <app-device-header [snapshot]="snapshot()" [unanswered]="problem() === 'device'" />
+}
+
 <!-- A PC or laptop that does not answer is just not in use, so that is told without the warning's color. -->
 @if (problemNotice(); as notice) {
   <p
@@ -111,11 +116,10 @@
 }
 
 @let rows = pageView.view() === 'rows' && !kiosk.on;
-<!-- The rows show the main values themselves, so they do without the glance row. -->
+<!-- The main values for the device's kind, the same in every view. -->
 @if (snapshot(); as s) {
-  @if (!rows) {
-    <app-glance [snapshot]="s" [class.stale]="connection.lost()" />
-  }
+  <app-glance [snapshot]="s" [class.stale]="connection.lost()" />
+  <app-glance-also [snapshot]="s" [class.stale]="connection.lost()" />
 } @else if (problem() === 'device' && shownAvailability(); as a) {
   <div class="cards alone">
     <ng-container *ngTemplateOutlet="uptimeCard; context: { $implicit: null, availability: a }" />

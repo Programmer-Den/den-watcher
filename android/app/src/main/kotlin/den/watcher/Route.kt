@@ -44,8 +44,9 @@ data class RoutePoint(val time: Long, val lat: Double, val lon: Double, val accu
  * Keeps the phone's location route: at every reading the newest position
  * Android has, from any app that asked for one, which costs nothing, and
  * every ASK_EVERY_MILLIS (Still.STILL_EVERY_MILLIS while the phone stands
- * still) a position from the mobile and Wi-Fi networks, which costs little,
- * never from GPS. While saving battery the app asks for none
+ * still, Active.EVERY_MILLIS while tracking actively) a position from the
+ * mobile and Wi-Fi networks, which costs little, never from GPS unless the
+ * user switched on active tracking. While saving battery the app asks for none
  * and only keeps what Android has anyway. Android gives it only with the
  * location permission, the same one the Wi-Fi networks need, and while the
  * app is in the background only when it is allowed all the time.
@@ -94,12 +95,13 @@ object Route {
     }
 
     /**
-     * Asks Android for a position from the mobile and Wi-Fi networks, which
-     * the next reading finds as the newest one, from Android 11 on. Returns
-     * whether it asked.
+     * Asks Android for a position from the mobile and Wi-Fi networks, or from
+     * GPS when gps is set (while tracking actively, see Active) and GPS is
+     * on, which the next reading finds as the newest one, from Android 11
+     * on. Returns whether it asked.
      */
     @SuppressLint("MissingPermission")
-    fun ask(context: Context): Boolean {
+    fun ask(context: Context, gps: Boolean = false): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             return false
         }
@@ -107,12 +109,21 @@ object Route {
             return false
         }
         val manager = context.getSystemService(LocationManager::class.java) ?: return false
-        if (!runCatching { manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) }.getOrDefault(false)) {
-            return false
-        }
+        val enabled = { provider: String -> runCatching { manager.isProviderEnabled(provider) }.getOrDefault(false) }
+        val provider = provider(gps, enabled(LocationManager.GPS_PROVIDER), enabled(LocationManager.NETWORK_PROVIDER)) ?: return false
         return runCatching {
-            manager.getCurrentLocation(LocationManager.NETWORK_PROVIDER, null, context.mainExecutor) { }
+            manager.getCurrentLocation(provider, null, context.mainExecutor) { }
         }.isSuccess
+    }
+
+    /**
+     * Which of Android's location providers to ask: GPS when gps is wanted
+     * and on, else the mobile and Wi-Fi networks when they are on, else none.
+     */
+    fun provider(gps: Boolean, gpsOn: Boolean, networkOn: Boolean): String? = when {
+        gps && gpsOn -> LocationManager.GPS_PROVIDER
+        networkOn -> LocationManager.NETWORK_PROVIDER
+        else -> null
     }
 
     /**

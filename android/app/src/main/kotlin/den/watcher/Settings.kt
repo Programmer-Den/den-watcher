@@ -151,6 +151,15 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(SAVE_BATTERY, false)
         set(value) = prefs.edit().putBoolean(SAVE_BATTERY, value).apply()
 
+    /**
+     * Whether the user switched on active tracking (see Active): a GPS
+     * position and a Wi-Fi scan about every minute. Off until then, and
+     * never locked by the hub.
+     */
+    var activeTracking: Boolean
+        get() = prefs.getBoolean(ACTIVE_TRACKING, false)
+        set(value) = prefs.edit().putBoolean(ACTIVE_TRACKING, value).apply()
+
     /** When the newest scan of the networks nearby that was kept was made, in Unix seconds. */
     var lastScan: Long
         get() = prefs.getLong(LAST_SCAN, 0)
@@ -266,6 +275,7 @@ class Settings(context: Context) {
         const val LAST_SCAN = "lastScan"
         const val COLLECT_SYSTEM = "collectSystem"
         const val SAVE_BATTERY = "saveBattery"
+        const val ACTIVE_TRACKING = "activeTracking"
         const val COLLECT_BATTERY = "collectBattery"
         const val COLLECT_MEMORY = "collectMemory"
         const val COLLECT_STORAGE = "collectStorage"
