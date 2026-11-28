@@ -41,7 +41,7 @@ RUN mkdir /out/addons && for cmd in cmd/den-watcher-*/; do \
 RUN mkdir /out/data
 
 # A minimal image without a shell or package manager, running as a non-root user.
-FROM gcr.io/distroless/static-debian13:nonroot@sha256:aafe993665bf6200db38a02c11a9351e782a84b6a45e7f33b6695638c88e3931
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:8ce6dd87e9823c5b48dcfb2c8604714ccb351ce59607327bcc4957448da279b5
 COPY --from=backend /out/den-watcher /out/addons/ /
 # Owned by the nonroot user (65532), so a new volume mounted here is writable.
 COPY --from=backend --chown=65532:65532 /out/data /data
