@@ -50,8 +50,20 @@ class HubScreenshots {
         }
     }
 
-    /** Saves the main screen with the hub as set, as <name>-light.png and <name>-dark.png. */
-    private fun shot(name: String, language: String? = null, recording: Boolean = false, set: HubState.() -> Unit) {
+    @Test
+    fun otherHub() = shot("hub-7-other-hub", otherHub = "192.168.1.30:9393") { running = true }
+
+    /**
+     * Saves the main screen with the hub as set, as <name>-light.png and
+     * <name>-dark.png; with otherHub, this device's recording sends there.
+     */
+    private fun shot(
+        name: String,
+        language: String? = null,
+        recording: Boolean = false,
+        otherHub: String? = null,
+        set: HubState.() -> Unit,
+    ) {
         folder.mkdirs()
         LanAddress.lookup = { "192.168.1.20" }
         try {
@@ -62,6 +74,7 @@ class HubScreenshots {
                 app.getSharedPreferences("settings", 0).edit().clear().commit()
                 app.getSharedPreferences("hub", 0).edit().clear().commit()
                 HubState(app).set()
+                otherHub?.let { Settings(app).hubAddress = it }
                 if (recording) {
                     Settings(app).apply {
                         this.recording = true

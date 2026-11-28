@@ -338,18 +338,7 @@ class MainActivity : Activity() {
                 showStatus()
                 return
             }
-            if (scanned != settings.hubAddress) {
-                // Another hub is locked once it takes a push; until then the
-                // address can be scanned again, as when the phone was not added.
-                settings.paired = false
-                settings.releasedUntil = 0
-                settings.releasedAt = 0
-                settings.hubKey = ""
-                // The network the new hub is first reached on is the usual one.
-                settings.usualNetworks = emptySet()
-                settings.otherNetwork = null
-            }
-            settings.hubAddress = scanned
+            settings.changeHub(scanned)
         }
         Toast.makeText(this, R.string.address_saved, Toast.LENGTH_SHORT).show()
         if (settings.recording) {

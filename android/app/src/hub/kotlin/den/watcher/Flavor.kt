@@ -66,9 +66,36 @@ object Flavor {
                 Toast.makeText(activity, R.string.no_browser, Toast.LENGTH_SHORT).show()
             }
         }
+        card.findViewById<Button>(R.id.hub_send_here).setOnClickListener { sendHere(activity) }
         if (state.wanted) {
             HubService.start(activity)
         }
+    }
+
+    /**
+     * Sends this device's recording to its own hub again, after another
+     * hub's code was scanned; this device cannot scan the code on its own
+     * screen. As after a scan, the pairing starts anew, and not while the
+     * other hub locks the address. A hub that runs is started again, as it
+     * pairs the phone part of its device at its start.
+     */
+    private fun sendHere(activity: Activity) {
+        val settings = Settings(activity)
+        synchronized(Recorder.hubLock) {
+            if (settings.locked()) {
+                onShow(activity)
+                return
+            }
+            settings.changeHub(HubConfig.LOCAL_ADDRESS)
+        }
+        val state = HubState(activity)
+        if (state.wanted) {
+            HubService.stop(activity)
+            state.running = false
+            HubService.start(activity)
+        }
+        // The whole screen anew, as the cards below show the hub's address too.
+        activity.recreate()
     }
 
     fun onShow(activity: Activity) {
@@ -86,8 +113,14 @@ object Flavor {
         card.findViewById<View>(R.id.hub_code_hint).visibility = code.visibility
         card.findViewById<View>(R.id.hub_open).isEnabled = state.wanted && state.running
         // Only while this device's recording sends to its own hub.
-        card.findViewById<View>(R.id.hub_own_phone).visibility =
-            if (Settings(activity).hubAddress == HubConfig.LOCAL_ADDRESS) View.VISIBLE else View.GONE
+        val settings = Settings(activity)
+        val own = settings.hubAddress == HubConfig.LOCAL_ADDRESS
+        card.findViewById<View>(R.id.hub_own_phone).visibility = if (own) View.VISIBLE else View.GONE
+        // While it sends to another hub: which, and the way back, unless that hub locks the address, as it locks scanning.
+        val other = card.findViewById<TextView>(R.id.hub_other_hub)
+        other.text = activity.getString(R.string.hub_other_hub, settings.hubAddress)
+        other.visibility = if (own) View.GONE else View.VISIBLE
+        card.findViewById<View>(R.id.hub_send_here).visibility = if (own || settings.locked()) View.GONE else View.VISIBLE
         // Known once the recording took its first reading.
         val root = card.findViewById<TextView>(R.id.hub_root)
         when (Root.granted) {
