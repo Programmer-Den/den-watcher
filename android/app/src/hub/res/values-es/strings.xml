@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hub_title">Hub</string>
+    <string name="hub_running">El hub está funcionando en %1$s.</string>
+    <string name="hub_running_no_network">El hub está funcionando, pero este dispositivo no está en ninguna red.</string>
+    <string name="hub_starting">El hub se está iniciando…</string>
+    <string name="hub_off">El hub está apagado.</string>
+    <string name="hub_failed">El hub se ha detenido: %1$s. Lo vuelve a intentar cada minuto.</string>
+    <string name="hub_run">Ejecutar el hub</string>
+    <string name="hub_open">Abrir la página del hub</string>
+    <string name="hub_code_description">Código con la dirección de la página del hub</string>
+    <string name="hub_code_hint">Para añadir otro teléfono, escanea este código en su app Den-Watcher. Los demás dispositivos se añaden en la página del hub, en Dispositivos.</string>
+    <string name="hub_tips">Deja este dispositivo en su cargador, con el límite de carga de la batería activado si lo tiene. Dale una dirección fija en tu router y, en sus ajustes de Wi-Fi, usa la dirección MAC propia del dispositivo, para que los demás dispositivos lo sigan encontrando.</string>
+    <string name="hub_own_phone">Este dispositivo también envía al hub su propia batería, su Wi-Fi y su uso, como un teléfono aparte, en cuanto la grabación esté activada abajo.</string>
+
+    <string name="hub_channel_name">Hub</string>
+    <string name="hub_channel_description">Se muestra mientras el hub funciona en este dispositivo</string>
+    <string name="hub_notification_title">Hub de Den-Watcher</string>
+</resources>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The hub app's own text; the rest is the phone app's. -->
+<resources>
+    <string name="app_name" translatable="false">Den-Watcher Hub</string>
+
+    <string name="hub_title">Hub</string>
+    <string name="hub_running">The hub is running at %1$s.</string>
+    <string name="hub_running_no_network">The hub is running, but this device is not on a network.</string>
+    <string name="hub_starting">The hub is starting…</string>
+    <string name="hub_off">The hub is switched off.</string>
+    <string name="hub_failed">The hub stopped: %1$s. It tries again every minute.</string>
+    <string name="hub_run">Run the hub</string>
+    <string name="hub_open">Open the hub\'s page</string>
+    <string name="hub_code_description">Code with the address of the hub\'s page</string>
+    <string name="hub_code_hint">To add another phone, scan this code in its Den-Watcher app. Other devices are added on the hub\'s page, under Devices.</string>
+    <string name="hub_tips">Keep this device on its charger with the battery\'s charge limit on, if it has one. Give it a fixed address on your router, and in its Wi-Fi settings use the device\'s own MAC address, so the other devices keep finding it.</string>
+    <string name="hub_own_phone">This device also sends its own battery, Wi-Fi and use to the hub, as a phone of its own, once recording is on below.</string>
+
+    <string name="hub_channel_name">Hub</string>
+    <string name="hub_channel_description">Shown while the hub runs on this device</string>
+    <string name="hub_notification_title">Den-Watcher hub</string>
+</resources>
