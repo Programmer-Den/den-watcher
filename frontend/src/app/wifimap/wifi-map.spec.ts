@@ -313,6 +313,13 @@ describe('the Wi-Fi map', () => {
     reply(close);
     const cluster = element.querySelector('circle.cluster')!.parentElement!;
     expect(cluster.querySelector('text')?.textContent).toBe('3');
+    expect(cluster.querySelector('title')?.textContent).toBe(
+      '3 places close together; click to zoom in',
+    );
+    // A single place shows its name.
+    expect(element.querySelector('g.place.picked title')?.textContent).toBe(
+      element.querySelector('g.place.picked text')?.textContent,
+    );
     cluster.querySelector<SVGCircleElement>('circle.hit')!.dispatchEvent(new MouseEvent('click'));
     fixture.detectChanges();
     expect(element.querySelector<HTMLButtonElement>('app-map-frame .whole')!.disabled).toBe(false);
