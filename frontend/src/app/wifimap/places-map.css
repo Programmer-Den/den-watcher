@@ -38,14 +38,17 @@ figcaption {
   text-anchor: middle;
 }
 
-/* A name on the map, with a casing so it reads on any tile. */
+/* A name on the map, with a casing and a dark rim so it reads on any tile. */
 .place text.name {
   font-size: 13px;
   text-anchor: start;
   paint-order: stroke;
   stroke: var(--place-casing);
-  stroke-width: 3.5px;
+  stroke-width: 4px;
   stroke-linejoin: round;
+  /* A dark rim around the casing, so the name stands out on light and dark tiles alike. */
+  filter: drop-shadow(0.75px 0 0 rgb(0 0 0 / 75%)) drop-shadow(-0.75px 0 0 rgb(0 0 0 / 75%))
+    drop-shadow(0 0.75px 0 rgb(0 0 0 / 75%)) drop-shadow(0 -0.75px 0 rgb(0 0 0 / 75%));
 }
 
 .place.picked circle:not(.hit) {
