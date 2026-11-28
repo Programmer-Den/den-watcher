@@ -2601,11 +2601,6 @@ const camera: DemoMachine = {
 };
 
 /**
- * A device the hub asks over the network, which answers in about ms milliseconds: a little slower
- * while it is busy, and over Wi-Fi now and then much slower. Its values get "response", as the hub
- * measures it; the hub itself, routers and checks have none.
- */
-/**
  * A rooted tablet with the hub app, whose phone part sends here: with root, the app also reads
  * how busy the processor and each core are, its clock and the thermal zones, which no other
  * phone tells. It stays on its charger, with the charge limit on, and collects the system's
@@ -2647,6 +2642,11 @@ const rootedTablet: DemoMachine = {
   },
 };
 
+/**
+ * A device the hub asks over the network, which answers in about ms milliseconds: a little slower
+ * while it is busy, and over Wi-Fi now and then much slower. Its values get "response", as the hub
+ * measures it; the hub itself, routers and checks have none.
+ */
 function answersIn(machine: DemoMachine, ms: number, wifi = false): DemoMachine {
   const seed = machine.device.id.length * 13;
   const swings: [number, number][] = wifi
