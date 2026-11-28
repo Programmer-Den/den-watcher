@@ -1,6 +1,6 @@
 # Den-Watcher
 
-A small website that shows the usage of the hardware it runs on: CPU, memory, disks, network, temperatures, GPU, battery and more, live and as charts over time. It runs on a Raspberry Pi or any Linux machine with Docker or as a service, on Windows PCs with an installer, and Android phones send theirs with an app. One device, the hub, can collect from the others on the network and show them all on one page.
+A small website that shows the usage of the hardware it runs on: CPU, memory, disks, network, temperatures, GPU, battery and more, live and as charts over time. It runs on a Raspberry Pi or any Linux machine with Docker or as a service, on Windows PCs with an installer, and Android phones send theirs with an app; a spare Android phone or tablet can also be the hub, with an app of its own. One device, the hub, can collect from the others on the network and show them all on one page.
 
 - **Lightweight:** one Go binary serves the page and the API, reads the machine only when asked (every 5 seconds, every 2 while a page is open), and keeps its history in a single SQLite file
 - **Local only:** answers only the local network (all but the optional status page), needs no account and no cloud; the only call outside is an optional daily check for a newer release
