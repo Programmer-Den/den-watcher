@@ -320,6 +320,24 @@ describe('Glance', () => {
     expect(tiles().slice(0, 2)).toEqual(['Battery 80%Plugged in', 'Wi-Fi 71%-55 dBm']);
   });
 
+  it("shows a rooted phone's processor after its Wi-Fi", () => {
+    TestBed.inject(DeviceService).devices.set([{ id: 'local', name: '', kind: 'phone' }]);
+    show({
+      ...SNAPSHOT,
+      cpu: { usagePercent: 30, cores: 8 },
+      battery: { percent: 80, pluggedIn: true },
+      extras: [
+        {
+          id: 'wifi',
+          title: 'Wi-Fi',
+          items: [{ id: 'wifi-quality', label: 'Link quality', unit: 'percent', value: 71 }],
+        },
+      ],
+    });
+    expect(tiles().map((tile) => tile.split(' ')[0])).toContain('CPU');
+    expect(tiles()[2]).toMatch(/^CPU /);
+  });
+
   it("shows a router's devices online after its internet, and the Pi's power", () => {
     const devices = TestBed.inject(DeviceService);
     devices.devices.set([{ id: 'local', name: '', router: true }]);
