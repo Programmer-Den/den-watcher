@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/netip"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -17,13 +18,42 @@ import (
 // every day.
 const prefixesRefresh = time.Minute
 
+// systemAddrs lists the machine's addresses as the system tells them; tests
+// replace it.
+var systemAddrs = net.InterfaceAddrs
+
+// told are the machine's addresses as SetAddresses was told them; nil
+// before.
+var told atomic.Pointer[[]net.Addr]
+
+// SetAddresses tells the machine's addresses, each with its subnet, for a
+// system that does not let the program list them itself: Android 11 and
+// later refuse that to apps, so the Android hub app passes what Android
+// tells it, again whenever they may have changed. See InterfaceAddrs.
+func SetAddresses(addrs []net.Addr) {
+	told.Store(&addrs)
+}
+
+// InterfaceAddrs lists the machine's addresses as net.InterfaceAddrs does.
+// Where the system refuses that, it lists the ones SetAddresses was told
+// last, if it was told any.
+func InterfaceAddrs() ([]net.Addr, error) {
+	addrs, err := systemAddrs()
+	if err != nil {
+		if list := told.Load(); list != nil {
+			return *list, nil
+		}
+	}
+	return addrs, err
+}
+
 // Checker decides whether an address is on the local network. Loopback,
 // private (RFC 1918 and IPv6 unique local) and link-local addresses always
 // are. A global IPv6 address is too when it lies in the subnet of one of the
 // machine's own addresses: devices on a home network with IPv6 from the
 // provider carry such global addresses, not private ones.
 type Checker struct {
-	// Interfaces lists the machine's addresses; net.InterfaceAddrs when nil.
+	// Interfaces lists the machine's addresses; InterfaceAddrs when nil.
 	Interfaces func() ([]net.Addr, error)
 
 	mu        sync.Mutex
@@ -81,7 +111,7 @@ func (c *Checker) ownPrefixes() []netip.Prefix {
 	}
 	list := c.Interfaces
 	if list == nil {
-		list = net.InterfaceAddrs
+		list = InterfaceAddrs
 	}
 	addrs, err := list()
 	if err != nil {

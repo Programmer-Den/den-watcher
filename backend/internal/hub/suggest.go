@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/Programmer-Den/den-watcher/backend/internal/lan"
 	"github.com/Programmer-Den/den-watcher/backend/internal/metrics"
 )
 
@@ -38,7 +39,7 @@ type Suggestion struct {
 type suggester struct {
 	// port is the port the suggested address gets and the device is asked on.
 	port int
-	// ownAddrs lists the machine's addresses; net.InterfaceAddrs when nil.
+	// ownAddrs lists the machine's addresses; lan.InterfaceAddrs when nil.
 	ownAddrs func() ([]net.Addr, error)
 	// gateways lists the default gateways of the machine's network.
 	gateways func() []netip.Addr
@@ -52,7 +53,7 @@ type suggester struct {
 func defaultSuggester() suggester {
 	return suggester{
 		port:       DefaultPort,
-		ownAddrs:   net.InterfaceAddrs,
+		ownAddrs:   lan.InterfaceAddrs,
 		gateways:   defaultGateways,
 		ask:        askOnce,
 		lookupAddr: net.DefaultResolver.LookupAddr,
@@ -163,7 +164,7 @@ func (s suggester) isOwn(addr netip.Addr, own []netip.Addr) bool {
 	}
 	ownAddrs := s.ownAddrs
 	if ownAddrs == nil {
-		ownAddrs = net.InterfaceAddrs
+		ownAddrs = lan.InterfaceAddrs
 	}
 	addrs, err := ownAddrs()
 	if err != nil {

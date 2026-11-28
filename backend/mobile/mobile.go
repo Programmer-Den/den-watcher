@@ -3,8 +3,9 @@
 // so Android sees one app and does not stop the hub as a stray program. The
 // phone app does not use it.
 //
-// Android has no /etc/resolv.conf and Go does not know its time zone, so the
-// app passes both, read from Android, besides the settings.
+// Android has no /etc/resolv.conf, Go does not know its time zone, and
+// Android 11 and later do not let it list the device's addresses, so the
+// app passes them, read from Android, besides the settings.
 package mobile
 
 import (
@@ -20,6 +21,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Programmer-Den/den-watcher/backend/internal/lan"
 	"github.com/Programmer-Den/den-watcher/backend/internal/program"
 )
 
@@ -45,11 +47,12 @@ var (
 	// effect when the app starts again.
 	localOnce sync.Once
 	// resolverOnce puts the resolver that asks dnsServers in place of Go's
-	// at the first Start that passes servers.
+	// at the first Start or SetNetwork, before any den-watcher runs: Go
+	// reads net.DefaultResolver without a lock, so it cannot change later.
 	resolverOnce sync.Once
-	// dnsServers are the servers the resolver asks, host:port each; each
-	// Start that passes servers replaces them, as they change with the
-	// network.
+	// dnsServers are the servers the resolver asks, host:port each; nil
+	// until some were passed. Each Start or SetNetwork that passes servers
+	// replaces them, as they change with the network.
 	dnsServers atomic.Pointer[[]string]
 )
 
@@ -59,7 +62,8 @@ var (
 // lines are skipped. timeZone is the IANA name of Android's time zone, such as
 // Europe/Berlin, or empty to keep UTC; only the first Start sets it. servers
 // are the addresses of the network's DNS servers, comma-separated, for the
-// daily check for a newer release, or empty to keep the ones before.
+// daily check for a newer release, or empty to keep the ones before (see
+// SetNetwork, which also passes them while den-watcher runs).
 //
 // Start returns an error for a setting it cannot read, an unknown time zone or
 // a DNS server that is no address, and when den-watcher runs already; why
@@ -109,10 +113,7 @@ func Start(settings, timeZone, servers string) error {
 	if location != nil {
 		localOnce.Do(func() { time.Local = location })
 	}
-	if len(addrs) > 0 {
-		dnsServers.Store(&addrs)
-		resolverOnce.Do(func() { net.DefaultResolver = newResolver(&dnsServers) })
-	}
+	setServers(addrs)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	stop, done, failure = cancel, make(chan struct{}), ""
@@ -131,6 +132,41 @@ func Start(settings, timeZone, servers string) error {
 		close(done)
 	}(done)
 	return nil
+}
+
+// SetNetwork tells den-watcher the network as Android knows it, which Go
+// cannot read there. The app calls it before Start and again every minute
+// while den-watcher runs, as both change with the network: a hub started
+// before the Wi-Fi was up has no DNS server and no address yet. servers are
+// the DNS servers as for Start, or empty to keep the ones before. addresses
+// are the device's own addresses with the length of their subnet,
+// comma-separated, such as 192.168.1.20/24,2001:db8::20/64; they replace the
+// ones before, and tell the hub which addresses are its own and which IPv6
+// subnet of the provider is its local network.
+//
+// SetNetwork returns an error, and changes nothing, for a DNS server that is
+// no address or an address that is none with a subnet.
+func SetNetwork(servers, addresses string) error {
+	addrs, err := parseServers(servers)
+	if err != nil {
+		return err
+	}
+	own, err := parseAddresses(addresses)
+	if err != nil {
+		return err
+	}
+	setServers(addrs)
+	lan.SetAddresses(own)
+	return nil
+}
+
+// setServers puts the resolver that asks dnsServers in place, once, and has
+// it ask addrs from now on, unless there are none.
+func setServers(addrs []string) {
+	resolverOnce.Do(func() { net.DefaultResolver = newResolver(&dnsServers) })
+	if len(addrs) > 0 {
+		dnsServers.Store(&addrs)
+	}
 }
 
 // Stop ends den-watcher and waits until it has written what waits in memory
@@ -207,17 +243,40 @@ func parseServers(servers string) ([]string, error) {
 	return addrs, nil
 }
 
+// parseAddresses reads SetNetwork's addresses, each with its subnet, as
+// net.InterfaceAddrs lists a machine's.
+func parseAddresses(addresses string) ([]net.Addr, error) {
+	addrs := []net.Addr{}
+	for _, field := range strings.Split(addresses, ",") {
+		field = strings.TrimSpace(field)
+		if field == "" {
+			continue
+		}
+		prefix, err := netip.ParsePrefix(field)
+		if err != nil {
+			return nil, fmt.Errorf("address %q is no IP address with a subnet: %w", field, err)
+		}
+		addr := prefix.Addr()
+		addrs = append(addrs, &net.IPNet{IP: addr.AsSlice(), Mask: net.CIDRMask(prefix.Bits(), addr.BitLen())})
+	}
+	return addrs, nil
+}
+
 // newResolver returns a resolver that asks the servers in order, as they are
-// at each lookup.
+// at each lookup; while there are none yet, the one Go would ask.
 func newResolver(servers *atomic.Pointer[[]string]) *net.Resolver {
 	return &net.Resolver{
 		PreferGo: true,
 		// Go would ask the servers of /etc/resolv.conf, which Android does
 		// not have.
-		Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
 			var dialer net.Dialer
+			list := servers.Load()
+			if list == nil {
+				return dialer.DialContext(ctx, network, address)
+			}
 			var errs []error
-			for _, server := range *servers.Load() {
+			for _, server := range *list {
 				conn, err := dialer.DialContext(ctx, network, server)
 				if err == nil {
 					return conn, nil

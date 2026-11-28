@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/Programmer-Den/den-watcher/backend/internal/lan"
 )
 
 func TestParseSettings(t *testing.T) {
@@ -76,6 +78,66 @@ func TestNewResolverAsksTheServersInOrder(t *testing.T) {
 		t.Errorf("Dial() reached %s, want %s", got, listener.Addr())
 	}
 	_ = conn.Close()
+}
+
+func TestNewResolverAsksGosServerWhileNoneWasPassed(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = listener.Close() }()
+	var servers atomic.Pointer[[]string]
+	conn, err := newResolver(&servers).Dial(context.Background(), "tcp", listener.Addr().String())
+	if err != nil {
+		t.Fatalf("Dial() error = %v", err)
+	}
+	if got := conn.RemoteAddr().String(); got != listener.Addr().String() {
+		t.Errorf("Dial() reached %s, want %s, the server Go asked for", got, listener.Addr())
+	}
+	_ = conn.Close()
+}
+
+func TestParseAddresses(t *testing.T) {
+	if got, err := parseAddresses(" , "); err != nil || got == nil || len(got) != 0 {
+		t.Errorf("parseAddresses(empty) = %v, %v, want an empty list", got, err)
+	}
+	for _, wrong := range []string{"192.168.1.20", "192.168.1.20/33", "fe80::1%wlan0/64", "wlan0/24"} {
+		if _, err := parseAddresses("192.168.1.20/24," + wrong); err == nil || !strings.Contains(err.Error(), wrong) {
+			t.Errorf("parseAddresses() with %s error = %v, want one naming it", wrong, err)
+		}
+	}
+	got, err := parseAddresses("192.168.1.20/24, 2001:db8:1:2::20/64")
+	if err != nil || len(got) != 2 || got[0].String() != "192.168.1.20/24" || got[1].String() != "2001:db8:1:2::20/64" {
+		t.Errorf("parseAddresses() = %v, %v, want both with their subnets", got, err)
+	}
+}
+
+func TestSetNetworkTellsTheServersAndTheAddresses(t *testing.T) {
+	before := dnsServers.Load()
+	t.Cleanup(func() {
+		dnsServers.Store(before)
+		lan.SetAddresses(nil)
+	})
+	if err := SetNetwork("192.168.1.1", "192.168.1.20/24,2001:db8:1:2::20/64"); err != nil {
+		t.Fatalf("SetNetwork() error = %v", err)
+	}
+	if got := *dnsServers.Load(); len(got) != 1 || got[0] != "192.168.1.1:53" {
+		t.Errorf("the DNS servers = %v, want 192.168.1.1:53", got)
+	}
+	// No servers keeps the ones before, as while the network is away.
+	if err := SetNetwork("", ""); err != nil {
+		t.Fatalf("SetNetwork() without a network error = %v", err)
+	}
+	if got := *dnsServers.Load(); len(got) != 1 || got[0] != "192.168.1.1:53" {
+		t.Errorf("the DNS servers = %v after none were passed, want the ones before", got)
+	}
+	// Wrong input changes nothing.
+	if err := SetNetwork("192.168.1.2", "192.168.1.20"); err == nil {
+		t.Error("SetNetwork() with an address without a subnet error = nil")
+	}
+	if got := *dnsServers.Load(); got[0] != "192.168.1.1:53" {
+		t.Errorf("the DNS servers = %v after a refused call, want the ones before", got)
+	}
 }
 
 func TestStartRefusesWrongInput(t *testing.T) {
