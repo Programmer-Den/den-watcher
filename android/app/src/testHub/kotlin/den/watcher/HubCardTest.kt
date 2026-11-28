@@ -110,6 +110,56 @@ class HubCardTest {
             shadowOf(android.os.Looper.getMainLooper()).idle()
             assertEquals("192.168.1.30:9393", Settings(activity).hubAddress)
             assertEquals(View.GONE, activity.findViewById<View>(R.id.hub_own_phone).visibility)
+            assertEquals(
+                "This device's own recording sends to another hub, 192.168.1.30:9393, not to this one.",
+                activity.findViewById<TextView>(R.id.hub_other_hub).text.toString(),
+            )
+            assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.hub_send_here).visibility)
+        } finally {
+            controller.pause().stop().destroy()
+        }
+    }
+
+    @Test
+    fun sendingToThisHubAgainLetsGoOfTheOtherHubAndStartsTheHubAgain() {
+        val app = RuntimeEnvironment.getApplication()
+        Settings(app).apply {
+            hubAddress = "192.168.1.30:9393"
+            hubKey = "00ff"
+            usualNetworks = setOf("192.168.1.0/24 via 192.168.1.1")
+        }
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        try {
+            val activity = controller.get()
+            shadowOf(android.os.Looper.getMainLooper()).idle()
+            // The start with the screen.
+            shadowOf(app).clearStartedServices()
+            activity.findViewById<View>(R.id.hub_send_here).performClick()
+            val settings = Settings(app)
+            assertEquals(HubConfig.LOCAL_ADDRESS, settings.hubAddress)
+            assertEquals("", settings.hubKey)
+            assertTrue(settings.usualNetworks.isEmpty())
+            // Stopped and started again, so it pairs this device's phone part.
+            assertEquals(HubService::class.java.name, shadowOf(app).nextStoppedService.component?.className)
+            assertEquals(HubService::class.java.name, shadowOf(app).nextStartedService.component?.className)
+        } finally {
+            controller.pause().stop().destroy()
+        }
+    }
+
+    @Test
+    fun aHubThatLocksTheAddressOffersNoWayBack() {
+        val app = RuntimeEnvironment.getApplication()
+        Settings(app).apply {
+            hubAddress = "192.168.1.30:9393"
+            paired = true
+        }
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        try {
+            val activity = controller.get()
+            shadowOf(android.os.Looper.getMainLooper()).idle()
+            assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.hub_other_hub).visibility)
+            assertEquals(View.GONE, activity.findViewById<View>(R.id.hub_send_here).visibility)
         } finally {
             controller.pause().stop().destroy()
         }

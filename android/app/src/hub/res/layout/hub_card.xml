@@ -54,6 +54,19 @@
         style="@style/Hint"
         android:text="@string/hub_own_phone" />
 
+    <!-- Only while this device's recording sends to another hub, which was scanned (see Flavor). -->
+    <TextView
+        android:id="@+id/hub_other_hub"
+        style="@style/Hint"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/hub_send_here"
+        style="@style/Button.Outlined"
+        android:layout_marginTop="8dp"
+        android:text="@string/hub_send_here"
+        android:visibility="gone" />
+
     <!-- Whether root adds the processor and temperatures (see Root), once known. -->
     <TextView
         android:id="@+id/hub_root"

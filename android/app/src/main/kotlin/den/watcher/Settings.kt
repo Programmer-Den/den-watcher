@@ -31,6 +31,26 @@ class Settings(context: Context) {
         set(value) = prefs.edit().putString(HUB_ADDRESS, value.trim()).apply()
 
     /**
+     * Takes the address of the hub to send to from now on. Another hub than
+     * the one before is locked once it takes a push; until then the address
+     * can change again, as when the phone was not added, and the network
+     * that hub is first reached on is the usual one. The caller holds
+     * Recorder.hubLock, so a push that is taking the old hub's answer
+     * finishes first.
+     */
+    fun changeHub(address: String) {
+        if (address != hubAddress) {
+            paired = false
+            releasedUntil = 0
+            releasedAt = 0
+            hubKey = ""
+            usualNetworks = emptySet()
+            otherNetwork = null
+        }
+        hubAddress = address
+    }
+
+    /**
      * Whether the hub at hubAddress took a push. From then on the app keeps
      * the hub's address and recording locked until the hub allows a change,
      * so whoever has the phone cannot move it to another hub or stop it.
