@@ -278,6 +278,25 @@ func (h *Hub) AddPhone(ctx context.Context, name, code string) (Device, error) {
 	return device, nil
 }
 
+// KeepPhone adds the phone with the pairing code as AddPhone does, unless
+// the hub has a phone with that code already, under whatever name it was
+// given since. The Android hub app pairs the phone part of its own device so,
+// at every start, without the Devices dialog.
+func (h *Hub) KeepPhone(ctx context.Context, name, code string) error {
+	normalized, err := checkCode(code)
+	if err != nil {
+		return err
+	}
+	h.mu.Lock()
+	known := h.phoneWith(normalized) != nil
+	h.mu.Unlock()
+	if known {
+		return nil
+	}
+	_, err = h.AddPhone(ctx, name, code)
+	return err
+}
+
 // phoneWith returns the phone with the pairing code, or nil. Every phone's
 // code is compared in full, so how long that takes does not tell how much
 // of a code was right. No code is no phone's, also not one whose code could

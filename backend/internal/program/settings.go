@@ -150,3 +150,25 @@ func phoneRetentionDays() (int, error) {
 	}
 	return n, nil
 }
+
+// ownPhone is the phone part of this device, from HUB_OWN_PHONE: the Android
+// hub app records its own device as a phone too, which the hub pairs at
+// every start (see hub.KeepPhone). Its Name is empty when the setting is.
+type ownPhone struct {
+	Name, Code string
+}
+
+// ownPhoneSetting reads HUB_OWN_PHONE, name=pairing code, such as
+// Old Pixel=7KQM-X2RP.
+func ownPhoneSetting() (ownPhone, error) {
+	value := strings.TrimSpace(os.Getenv("HUB_OWN_PHONE"))
+	if value == "" {
+		return ownPhone{}, nil
+	}
+	name, code, ok := strings.Cut(value, "=")
+	name, code = strings.TrimSpace(name), strings.TrimSpace(code)
+	if !ok || name == "" || code == "" {
+		return ownPhone{}, fmt.Errorf("HUB_OWN_PHONE is %q; set it to the phone's name and pairing code, such as Old Pixel=7KQM-X2RP, or leave it empty", value)
+	}
+	return ownPhone{Name: name, Code: code}, nil
+}
