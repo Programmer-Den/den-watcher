@@ -8,7 +8,7 @@ require (
 	github.com/gosnmp/gosnmp v1.47.0
 	github.com/shirou/gopsutil/v4 v4.26.10
 	golang.org/x/sys v0.50.0
-	modernc.org/sqlite v1.62.0
+	modernc.org/sqlite v1.63.0
 )
 
 require (
