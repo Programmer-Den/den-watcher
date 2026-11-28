@@ -189,11 +189,14 @@ object Recorder {
             settings.problem = Problem.NO_ADDRESS
             return
         }
-        if (!unmetered(context)) {
+        // The hub on this device itself, as in the hub app, is reached without
+        // any network: none to wait for, to spare or to tell from the usual one.
+        val own = HubAddress.onThisDevice(address)
+        if (!own && !unmetered(context)) {
             settings.problem = Problem.NOT_HOME
             return
         }
-        val network = Networks.current(context)
+        val network = if (own) null else Networks.current(context)
         if (Hub.waits(address, network, settings.usualNetworks, settings.unreachable, System.currentTimeMillis() / 1000)) {
             settings.problem = Problem.UNREACHABLE
             return
@@ -245,7 +248,7 @@ object Recorder {
                             settings.releasedAt = now
                             settings.releasedUntil = now + minOf(answer.releaseSeconds, Release.MAX_SECONDS)
                         }
-                        if (newest != null) {
+                        if (newest != null && !own) {
                             checkNetwork(context, settings)
                         }
                         newest = null

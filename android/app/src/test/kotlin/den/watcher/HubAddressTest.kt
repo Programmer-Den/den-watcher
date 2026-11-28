@@ -1,7 +1,9 @@
 package den.watcher
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HubAddressTest {
@@ -29,6 +31,25 @@ class HubAddressTest {
         assertNull(HubAddress.pushUrl("user@pi"))
         assertNull(HubAddress.pushUrl("pi:99999"))
         assertNull(HubAddress.pushUrl("my pi"))
+    }
+
+    @Test
+    fun tellsAHubOnThisDevice() {
+        assertTrue(HubAddress.onThisDevice("127.0.0.1:9393"))
+        assertTrue(HubAddress.onThisDevice("http://127.0.0.1/"))
+        assertTrue(HubAddress.onThisDevice("127.4.5.6:8080"))
+        assertTrue(HubAddress.onThisDevice("localhost:9393"))
+        assertTrue(HubAddress.onThisDevice("[::1]:9393"))
+    }
+
+    @Test
+    fun tellsAHubElsewhere() {
+        assertFalse(HubAddress.onThisDevice("192.168.1.20:9393"))
+        assertFalse(HubAddress.onThisDevice("127.example:9393"))
+        assertFalse(HubAddress.onThisDevice("localhost.lan"))
+        assertFalse(HubAddress.onThisDevice("[fd00::1]:9393"))
+        assertFalse(HubAddress.onThisDevice(""))
+        assertFalse(HubAddress.onThisDevice("https://127.0.0.1"))
     }
 
     @Test
