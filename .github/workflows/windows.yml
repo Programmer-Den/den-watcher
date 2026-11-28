@@ -179,7 +179,7 @@ jobs:
                 -ldflags="-s -w -H=windowsgui -X github.com/Programmer-Den/den-watcher/backend/internal/version.Version=$VERSION" \
                 -o "../dist/$arch/den-watcher-tray.exe" ./cmd/den-watcher-tray
           done
-          for pkg in cmd/den-watcher internal/{metrics,winservice,router,addons} internal/addons/{smart,power,pressure,kernel,wifi,memory,processes,bluetooth}; do
+          for pkg in internal/{program,metrics,winservice,router,addons} internal/addons/{smart,power,pressure,kernel,wifi,memory,processes,bluetooth}; do
             GOOS=windows GOARCH=amd64 go test -c -o "../dist/tests/$(basename "$pkg")-tests.exe" "./$pkg"
           done
 
@@ -207,7 +207,7 @@ jobs:
           # A test program that fails ends the step.
           $PSNativeCommandUseErrorActionPreference = $true
           # Quoted: PowerShell would split -test.v into -test and .v.
-          dist\tests\den-watcher-tests.exe '-test.v'
+          dist\tests\program-tests.exe '-test.v'
           # Only the GPU and network card tests: the other metrics tests assume Linux paths.
           dist\tests\metrics-tests.exe '-test.v' '-test.run=GPU|IsHardware'
           dist\tests\winservice-tests.exe '-test.v'
