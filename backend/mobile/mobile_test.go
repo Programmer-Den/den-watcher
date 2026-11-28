@@ -178,11 +178,19 @@ func TestFailureTellsWhyItStopped(t *testing.T) {
 		t.Errorf("Failure() = %q, want the listen error", Failure())
 	}
 
-	// A setting left out at the next start goes back to its default.
-	if err := Start("", "", ""); err == nil {
-		defer Stop()
+	// A setting left out at the next start goes back to its default. The
+	// port is still taken, so this start stops on its own too.
+	var without []string
+	for line := range strings.Lines(settings) {
+		if !strings.HasPrefix(line, "UPDATE_CHECK=") {
+			without = append(without, strings.TrimSpace(line))
+		}
 	}
-	if got := os.Getenv("UPDATE_CHECK"); got != "" {
+	if err := Start(strings.Join(without, "\n"), "", ""); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	if got, ok := os.LookupEnv("UPDATE_CHECK"); ok {
 		t.Errorf("UPDATE_CHECK = %q after a start without it, want it unset", got)
 	}
+	Stop()
 }
