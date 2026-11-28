@@ -1,4 +1,4 @@
-package main
+package program
 
 import (
 	"bytes"
@@ -197,14 +197,14 @@ func TestPrintPairingCodeAsksTheRunningDevice(t *testing.T) {
 	for _, addr := range []string{":" + port, "0.0.0.0:" + port, device.Listener.Addr().String()} {
 		t.Setenv("LISTEN_ADDR", addr)
 		var out strings.Builder
-		if err := printPairingCode(&out); err != nil || out.String() != "7KQM-X2RP\n" {
-			t.Fatalf("printPairingCode() with LISTEN_ADDR %s = %q, %v; want the code on a line", addr, out.String(), err)
+		if err := PrintPairingCode(&out); err != nil || out.String() != "7KQM-X2RP\n" {
+			t.Fatalf("PrintPairingCode() with LISTEN_ADDR %s = %q, %v; want the code on a line", addr, out.String(), err)
 		}
 	}
 	device.Close()
 	var out strings.Builder
-	if err := printPairingCode(&out); err == nil || !strings.Contains(err.Error(), "is it running") {
-		t.Fatalf("printPairingCode() without a running device = %v, want an error that asks whether it runs", err)
+	if err := PrintPairingCode(&out); err == nil || !strings.Contains(err.Error(), "is it running") {
+		t.Fatalf("PrintPairingCode() without a running device = %v, want an error that asks whether it runs", err)
 	}
 }
 
@@ -213,12 +213,12 @@ func TestCheckHealthAsksTheRunningDevice(t *testing.T) {
 	defer device.Close()
 	t.Setenv("LISTEN_ADDR", device.Listener.Addr().String())
 
-	if err := checkHealth(); err != nil {
-		t.Fatalf("checkHealth() with a running device = %v, want nil", err)
+	if err := CheckHealth(); err != nil {
+		t.Fatalf("CheckHealth() with a running device = %v, want nil", err)
 	}
 	device.Close()
-	if err := checkHealth(); err == nil {
-		t.Fatal("checkHealth() without a running device = nil, want an error")
+	if err := CheckHealth(); err == nil {
+		t.Fatal("CheckHealth() without a running device = nil, want an error")
 	}
 }
 
@@ -228,8 +228,8 @@ func TestCheckHealthFailsOnAServerError(t *testing.T) {
 			w.WriteHeader(status)
 		}))
 		t.Setenv("LISTEN_ADDR", device.Listener.Addr().String())
-		if err := checkHealth(); (err == nil) != healthy {
-			t.Errorf("checkHealth() when it answers %d = %v, want healthy %v", status, err, healthy)
+		if err := CheckHealth(); (err == nil) != healthy {
+			t.Errorf("CheckHealth() when it answers %d = %v, want healthy %v", status, err, healthy)
 		}
 		device.Close()
 	}
@@ -257,14 +257,14 @@ func TestRunStopsBeforeTheSetupWhenThePortIsTaken(t *testing.T) {
 	defer func() { _ = taken.Close() }()
 	database := setUpRun(t, taken.Addr().String())
 
-	err = run(context.Background())
+	err = Run(context.Background())
 
 	var opErr *net.OpError
 	if !errors.As(err, &opErr) || opErr.Op != "listen" {
-		t.Errorf("run() with a taken port error = %v, want the listen error", err)
+		t.Errorf("Run() with a taken port error = %v, want the listen error", err)
 	}
 	if _, statErr := os.Stat(database); !errors.Is(statErr, os.ErrNotExist) {
-		t.Errorf("run() with a taken port opened the database (%v); it should stop before the setup", statErr)
+		t.Errorf("Run() with a taken port opened the database (%v); it should stop before the setup", statErr)
 	}
 }
 
@@ -272,11 +272,11 @@ func TestRunStopsBeforeTheSetupWhenUpdateCheckIsInvalid(t *testing.T) {
 	database := setUpRun(t, "127.0.0.1:0")
 	t.Setenv("UPDATE_CHECK", "no")
 
-	if err := run(context.Background()); err == nil || !strings.Contains(err.Error(), "UPDATE_CHECK") {
-		t.Errorf("run() with UPDATE_CHECK=no error = %v, want one naming UPDATE_CHECK", err)
+	if err := Run(context.Background()); err == nil || !strings.Contains(err.Error(), "UPDATE_CHECK") {
+		t.Errorf("Run() with UPDATE_CHECK=no error = %v, want one naming UPDATE_CHECK", err)
 	}
 	if _, statErr := os.Stat(database); !errors.Is(statErr, os.ErrNotExist) {
-		t.Errorf("run() with UPDATE_CHECK=no opened the database (%v); it should stop before the setup", statErr)
+		t.Errorf("Run() with UPDATE_CHECK=no opened the database (%v); it should stop before the setup", statErr)
 	}
 }
 
@@ -300,11 +300,11 @@ func TestRunRefusesPrometheusWithDataOnly(t *testing.T) {
 	t.Setenv("DATA_ONLY", "true")
 	t.Setenv("PROMETHEUS", "true")
 
-	if err := run(context.Background()); err == nil || !strings.Contains(err.Error(), "PROMETHEUS") {
-		t.Errorf("run() with DATA_ONLY and PROMETHEUS error = %v, want one naming PROMETHEUS", err)
+	if err := Run(context.Background()); err == nil || !strings.Contains(err.Error(), "PROMETHEUS") {
+		t.Errorf("Run() with DATA_ONLY and PROMETHEUS error = %v, want one naming PROMETHEUS", err)
 	}
 	if _, statErr := os.Stat(database); !errors.Is(statErr, os.ErrNotExist) {
-		t.Errorf("run() with DATA_ONLY and PROMETHEUS opened the database (%v); it should stop before the setup", statErr)
+		t.Errorf("Run() with DATA_ONLY and PROMETHEUS opened the database (%v); it should stop before the setup", statErr)
 	}
 }
 
@@ -339,7 +339,7 @@ func TestRunServesUntilStopped(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	stopped := make(chan error, 1)
-	go func() { stopped <- run(ctx) }()
+	go func() { stopped <- Run(ctx) }()
 
 	answered := false
 	for range 100 {
@@ -352,10 +352,10 @@ func TestRunServesUntilStopped(t *testing.T) {
 	}
 	cancel()
 	if err := <-stopped; err != nil {
-		t.Errorf("run() error = %v, want nil after it was stopped", err)
+		t.Errorf("Run() error = %v, want nil after it was stopped", err)
 	}
 	if !answered {
-		t.Error("run() did not answer on its port")
+		t.Error("Run() did not answer on its port")
 	}
 }
 
