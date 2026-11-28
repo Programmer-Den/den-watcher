@@ -36,6 +36,10 @@
 //	                to connect to a TCP port, or name=host to ping, such as
 //	                Printer=192.168.1.50:631 or NAS=192.168.1.10 (default
 //	                none)
+//	HUB_OWN_PHONE   the phone part of this device, name=pairing code such as
+//	                Old Pixel=7KQM-X2RP, which the hub pairs at every start
+//	                unless it has it; set by the Android hub app, which
+//	                records its own device as a phone too (default none)
 //	ROUTER_PASSWORDS_FILE  file with the passwords of the routers that need a
 //	                login, and the SNMPv2c community where it is not public,
 //	                one name=password per line (default the file

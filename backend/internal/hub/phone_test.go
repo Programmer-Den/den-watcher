@@ -894,3 +894,29 @@ func TestTheDataOfAPhoneForgottenBeforeUnlinkingIsUnlinkedAtTheStart(t *testing.
 		time.Sleep(10 * time.Millisecond)
 	}
 }
+
+func TestKeepPhoneAddsThePhoneOnce(t *testing.T) {
+	ctx := context.Background()
+	h := openTestHub(t, openTestStore(t), nil)
+
+	if err := h.KeepPhone(ctx, "Old Pixel", "7kqm-x2rp"); err != nil {
+		t.Fatalf("KeepPhone() error = %v", err)
+	}
+	// Renamed on the page since, it keeps its name; the code is the same,
+	// written another way.
+	if err := h.KeepPhone(ctx, "Another name", "7KQM X2RP"); err != nil {
+		t.Errorf("KeepPhone() again error = %v, want nil for a phone the hub has", err)
+	}
+	var phones []string
+	for _, r := range h.Remotes() {
+		if r.Kind() == KindPhone {
+			phones = append(phones, r.ID)
+		}
+	}
+	if len(phones) != 1 || phones[0] != "old-pixel" {
+		t.Errorf("phones = %v, want only old-pixel", phones)
+	}
+	if err := h.KeepPhone(ctx, "Tablet", "7KQM_X2RP"); problemOf(err) != ProblemPairingWrong {
+		t.Errorf("KeepPhone() with a wrong code error = %v, want problem %q", err, ProblemPairingWrong)
+	}
+}

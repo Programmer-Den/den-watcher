@@ -243,7 +243,7 @@ func setUpRun(t *testing.T, addr string) string {
 	t.Setenv("LISTEN_ADDR", addr)
 	t.Setenv("DATABASE_PATH", database)
 	t.Setenv("DISK_PATHS", t.TempDir())
-	for _, name := range []string{"PUBLIC_PORT", "RETENTION_DAYS", "HISTORY_MAX_ENTRIES", "HUB_DEVICES", "DATA_ONLY", "BUFFER_HOURS", "RESET_PASSWORD", "UPDATE_CHECK", "ADDONS_DIR", "ALLOWED_HOSTS", "PROMETHEUS"} {
+	for _, name := range []string{"PUBLIC_PORT", "RETENTION_DAYS", "HISTORY_MAX_ENTRIES", "HUB_DEVICES", "DATA_ONLY", "BUFFER_HOURS", "RESET_PASSWORD", "UPDATE_CHECK", "ADDONS_DIR", "ALLOWED_HOSTS", "PROMETHEUS", "HUB_OWN_PHONE"} {
 		t.Setenv(name, "")
 	}
 	return database
@@ -435,5 +435,68 @@ func TestPhoneRetentionDays(t *testing.T) {
 		if _, err := phoneRetentionDays(); err == nil || err.Error() != want {
 			t.Errorf("phoneRetentionDays() with %q error = %v, want %q", value, err, want)
 		}
+	}
+}
+
+func TestOwnPhoneSetting(t *testing.T) {
+	t.Setenv("HUB_OWN_PHONE", " Old Pixel = 7KQM-X2RP ")
+	if got, err := ownPhoneSetting(); err != nil || got != (ownPhone{Name: "Old Pixel", Code: "7KQM-X2RP"}) {
+		t.Errorf("ownPhoneSetting() = %+v, %v, want Old Pixel and its code", got, err)
+	}
+	t.Setenv("HUB_OWN_PHONE", "")
+	if got, err := ownPhoneSetting(); err != nil || got.Name != "" {
+		t.Errorf("ownPhoneSetting() when empty = %+v, %v, want none", got, err)
+	}
+	for _, value := range []string{"7KQM-X2RP", "=7KQM-X2RP", "Old Pixel="} {
+		t.Setenv("HUB_OWN_PHONE", value)
+		if _, err := ownPhoneSetting(); err == nil || !strings.Contains(err.Error(), "HUB_OWN_PHONE") {
+			t.Errorf("ownPhoneSetting() with %q error = %v, want one naming HUB_OWN_PHONE", value, err)
+		}
+	}
+}
+
+func TestRunRefusesTheOwnPhoneWithDataOnly(t *testing.T) {
+	database := setUpRun(t, "127.0.0.1:0")
+	t.Setenv("DATA_ONLY", "true")
+	t.Setenv("HUB_OWN_PHONE", "Old Pixel=7KQM-X2RP")
+	if err := Run(context.Background()); err == nil || !strings.Contains(err.Error(), "HUB_OWN_PHONE") {
+		t.Errorf("Run() with DATA_ONLY and HUB_OWN_PHONE error = %v, want one naming HUB_OWN_PHONE", err)
+	}
+	if _, statErr := os.Stat(database); !errors.Is(statErr, os.ErrNotExist) {
+		t.Errorf("Run() with DATA_ONLY and HUB_OWN_PHONE opened the database (%v); it should stop before the setup", statErr)
+	}
+}
+
+func TestRunPairsTheOwnPhone(t *testing.T) {
+	free, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen() error = %v", err)
+	}
+	addr := free.Addr().String()
+	_ = free.Close()
+	setUpRun(t, addr)
+	t.Setenv("HUB_OWN_PHONE", "Old Pixel=7KQM-X2RP")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	stopped := make(chan error, 1)
+	go func() { stopped <- Run(ctx) }()
+	defer func() {
+		cancel()
+		if err := <-stopped; err != nil {
+			t.Errorf("Run() error = %v, want nil after it was stopped", err)
+		}
+	}()
+
+	var body []byte
+	for range 100 {
+		if response, err := http.Get("http://" + addr + "/api/devices"); err == nil {
+			body, _ = io.ReadAll(response.Body)
+			_ = response.Body.Close()
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if !strings.Contains(string(body), `"old-pixel"`) {
+		t.Errorf("GET /api/devices = %s, want the own phone old-pixel", body)
 	}
 }

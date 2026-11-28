@@ -124,6 +124,14 @@ func Run(ctx context.Context) error {
 		return errors.New("STATUS_ADDR is set, but DATA_ONLY turns off the website and history the status page needs; set it on the hub instead, or unset one of the two")
 	}
 
+	phone, err := ownPhoneSetting()
+	if err != nil {
+		return err
+	}
+	if dataOnly && phone.Name != "" {
+		return errors.New("HUB_OWN_PHONE is set, but DATA_ONLY turns off the hub that would pair it; unset one of the two")
+	}
+
 	hours, err := intSettingOr("BUFFER_HOURS", int(history.DefaultBufferSpan/time.Hour), 168, " of hours")
 	if err != nil {
 		return err
@@ -190,7 +198,7 @@ func Run(ctx context.Context) error {
 		}
 		defer func() { _ = store.Close() }()
 		store.SetFlushInterval(time.Duration(flushMinutes) * time.Minute)
-		site, wait, err := withHistory(ctx, sampler, store, remotes, complete, retention, phoneRetention, historyEntries, port, checkUpdates)
+		site, wait, err := withHistory(ctx, sampler, store, remotes, phone, complete, retention, phoneRetention, historyEntries, port, checkUpdates)
 		if err != nil {
 			return err
 		}
@@ -286,7 +294,7 @@ func Run(ctx context.Context) error {
 // function waits until they have stopped. Of each device's disks, sensors,
 // network cards and GPUs, the first historyEntries are kept. With
 // checkUpdates, a release asks GitHub for a newer one.
-func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.Store, fixed []hub.Device, complete bool, retention, phoneRetention time.Duration, historyEntries int, pagePort string, checkUpdates bool) (server.Site, func(), error) {
+func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.Store, fixed []hub.Device, phone ownPhone, complete bool, retention, phoneRetention time.Duration, historyEntries int, pagePort string, checkUpdates bool) (server.Site, func(), error) {
 	devicesPassword, err := password.Open(ctx, store.DB())
 	if err != nil {
 		return server.Site{}, nil, err
@@ -346,6 +354,13 @@ func withHistory(ctx context.Context, sampler *metrics.Sampler, store *history.S
 	others, err = hub.New(ctx, store, fixed, complete, historyEntries, retention, phoneRetention, pagePort, sampler.Reusing(reuseFor), watcher.Forget, happenings.Forget)
 	if err != nil {
 		return server.Site{}, nil, err
+	}
+	if phone.Name != "" {
+		// A wrong code or a name another device has must not stop the hub:
+		// it runs without its own phone, and the log says why.
+		if err := others.KeepPhone(ctx, phone.Name, phone.Code); err != nil {
+			slog.Error("the phone in HUB_OWN_PHONE is left out", "error", err)
+		}
 	}
 
 	recent := &history.Recent{}
