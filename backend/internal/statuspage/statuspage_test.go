@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -391,25 +393,69 @@ func TestAKnownBrowserSignsInWhileManyClientsGuess(t *testing.T) {
 	}
 }
 
+func TestAFullTableOfClientsMakesRoomForANewOne(t *testing.T) {
+	l := newLimiter()
+	now := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
+	for i := range maxClients {
+		l.allow(netip.AddrFrom4([4]byte{10, byte(i >> 16), byte(i >> 8), byte(i)}), now)
+	}
+	// Many clients guessed wrong meanwhile, so only a known browser may.
+	l.allStart, l.allWrong = now, maxWrongAll
+	owner := netip.MustParseAddr("198.51.100.7")
+	if !l.guess(owner, now, true) {
+		t.Error("guess() of a known browser from a new address while the table is full = false, want true")
+	}
+	if l.guess(netip.MustParseAddr("198.51.100.8"), now, false) {
+		t.Error("guess() of an unknown browser after the wrong passwords of all clients = true, want false")
+	}
+	if len(l.clients) != maxClients {
+		t.Errorf("the table keeps %d clients, want %d", len(l.clients), maxClients)
+	}
+	// A client that asks too often is still told so while the table is full.
+	for range requestsPerMinute {
+		l.allow(owner, now)
+	}
+	if l.clients[owner] == nil || l.allow(owner, now) {
+		t.Error("allow() past the requests a minute while the table is full = true, want false")
+	}
+}
+
+func TestEvictForgetsTheClientSeenLongestAgo(t *testing.T) {
+	l := newLimiter()
+	now := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
+	// Fewer clients than evict looks at, so it looks at all of them.
+	idle := netip.MustParseAddr("10.0.0.1")
+	guessed := netip.MustParseAddr("10.0.0.2")
+	busy := netip.MustParseAddr("10.0.0.3")
+	l.allow(idle, now.Add(-10*time.Minute))
+	l.allow(guessed, now.Add(-20*time.Minute))
+	l.guess(guessed, now.Add(-5*time.Minute), false)
+	l.allow(busy, now)
+
+	l.evict()
+	if l.clients[idle] != nil || l.clients[guessed] == nil || l.clients[busy] == nil {
+		t.Errorf("evict() kept %v, want the one that guessed 5 minutes ago and the one that asked now", slices.Collect(maps.Keys(l.clients)))
+	}
+}
+
 func TestAFullTableOfClientsIsSweptNowAndThen(t *testing.T) {
 	l := newLimiter()
 	now := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
 	for i := range maxClients {
 		l.allow(netip.AddrFrom4([4]byte{10, byte(i >> 16), byte(i >> 8), byte(i)}), now)
 	}
-	newcomer := netip.MustParseAddr("198.51.100.7")
-	if l.guess(newcomer, now, false) {
-		t.Fatal("guess() of a new client while the table is full = true, want false")
-	}
 	// The table was swept a moment ago, so it is not swept again yet, even
-	// though its clients need not be kept any more.
+	// though its clients need not be kept any more: the new one takes the
+	// place of one of them.
 	now = now.Add(lockout)
 	l.swept = now.Add(-sweepEvery / 2)
-	if l.guess(newcomer, now, false) {
-		t.Fatal("guess() right after a sweep = true, want false")
+	l.allow(netip.MustParseAddr("198.51.100.7"), now)
+	if len(l.clients) != maxClients {
+		t.Fatalf("the table keeps %d clients right after a sweep, want %d", len(l.clients), maxClients)
 	}
 	now = now.Add(sweepEvery)
-	if !l.guess(newcomer, now, false) {
-		t.Fatal("guess() once the table may be swept again = false, want true")
+	l.allow(netip.MustParseAddr("198.51.100.8"), now)
+	if len(l.clients) != 1 {
+		t.Fatalf("the table keeps %d clients once it may be swept again, want only the new one", len(l.clients))
 	}
 }
