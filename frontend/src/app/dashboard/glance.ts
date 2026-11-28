@@ -331,7 +331,8 @@ export type GlanceKind = 'server' | 'pc' | 'phone' | 'router';
 export const TILE_ORDER: Record<GlanceKind, readonly TileId[]> = {
   server: ['cpu', 'memory', 'disk', 'temperature', 'network', 'power', 'gpu', 'battery'],
   pc: ['cpu', 'gpu', 'memory', 'disk', 'network', 'battery', 'temperature', 'power'],
-  phone: ['battery', 'wifi', 'memory', 'disk', 'network', 'temperature'],
+  // Only a rooted hub app reads a phone's processor; its CPU then goes before the network.
+  phone: ['battery', 'wifi', 'cpu', 'memory', 'disk', 'temperature', 'network'],
   router: ['network', 'clients', 'cpu', 'memory', 'temperature'],
 };
 

@@ -194,3 +194,28 @@ func TestFailureTellsWhyItStopped(t *testing.T) {
 	}
 	Stop()
 }
+
+func TestStartWaitsUntilTheStoppedOneReturned(t *testing.T) {
+	settings, _ := settingsFor(t)
+	// A den-watcher that was stopped but still writes its database.
+	previous := make(chan struct{})
+	mu.Lock()
+	done = previous
+	mu.Unlock()
+
+	started := make(chan error, 1)
+	go func() { started <- Start(settings, "", "") }()
+	select {
+	case err := <-started:
+		t.Fatalf("Start() returned %v before the stopped one returned", err)
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(previous)
+	if err := <-started; err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	if !Running() {
+		t.Errorf("Running() = false after Start; Failure() = %q", Failure())
+	}
+	Stop()
+}

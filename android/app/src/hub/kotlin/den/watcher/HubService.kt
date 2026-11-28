@@ -61,12 +61,14 @@ class HubService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacks(check)
+        // The locks are let go only once the hub has written its database,
+        // so the device does not sleep while it stops.
         worker.execute {
             Mobile.stop()
             HubState(this).running = false
+            releaseLocks()
         }
         worker.shutdown()
-        releaseLocks()
         super.onDestroy()
     }
 

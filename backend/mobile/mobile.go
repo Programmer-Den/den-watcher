@@ -31,7 +31,8 @@ var (
 	mu sync.Mutex
 	// stop ends the running den-watcher; nil while none runs.
 	stop context.CancelFunc
-	// done is closed when the running den-watcher has returned.
+	// done is closed when the last den-watcher started has returned; nil
+	// before the first Start.
 	done chan struct{}
 	// failure is why the last den-watcher stopped on its own.
 	failure string
@@ -81,6 +82,17 @@ func Start(settings, timeZone, servers string) error {
 
 	mu.Lock()
 	defer mu.Unlock()
+	// A den-watcher that was just stopped may still be writing its database
+	// and hold its port; the new one waits until it has returned.
+	for done != nil && stop == nil {
+		previous := done
+		mu.Unlock()
+		<-previous
+		mu.Lock()
+		if done == previous {
+			done = nil
+		}
+	}
 	if stop != nil {
 		return errors.New("den-watcher runs already; stop it first")
 	}
