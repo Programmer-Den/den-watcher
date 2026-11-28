@@ -83,4 +83,23 @@ class ReadingTest {
         assertEquals(2, snapshot.getJSONArray("network").length())
         assertEquals(80.0, snapshot.getJSONObject("battery").getDouble("percent"), 0.0)
     }
+
+    @Test
+    fun tellsTheProcessorAndTemperaturesReadWithRoot() {
+        val device = DeviceInfo("Pixel", "3.6.0", "Android 15", "6.1", "aarch64", "Google", "Pixel 8", "CET", 3600)
+        val now = reading(1_030, 530, Traffic(4_000, 400)).copy(
+            processor = Processor(30.0, listOf(50.0, 10.0), 2419.2),
+            sensors = listOf(Sensor("gpuss-0", 39.8)),
+        )
+        val cpu = now.snapshot(emptyMap(), device).getJSONObject("cpu")
+        assertEquals(2, cpu.getInt("cores"))
+        assertEquals(30.0, cpu.getDouble("usagePercent"), 0.0)
+        assertEquals(10.0, cpu.getJSONArray("coreUsagePercent").getDouble(1), 0.0)
+        assertEquals(2419.2, cpu.getDouble("clockMHz"), 0.0)
+        val temperatures = now.snapshot(emptyMap(), device).getJSONArray("temperatures")
+        assertEquals("gpuss-0", temperatures.getJSONObject(1).getString("sensor"))
+        val values = now.values(emptyMap())
+        assertEquals(30.0, values["cpu"])
+        assertEquals(39.8, values["temperature:gpuss-0"])
+    }
 }

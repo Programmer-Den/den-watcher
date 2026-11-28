@@ -31,7 +31,9 @@ object Recorder {
         if (!choice.collectsSteps) {
             settings.stepCount = null
         }
-        val reading = Sampler.read(app).limitedTo(choice).let {
+        // The hub app adds what it reads with root, unless the system's data is off.
+        val sampled = Sampler.read(app).let { if (choice.system) Flavor.read(app, it) else it }
+        val reading = sampled.limitedTo(choice).let {
             // Read only while collected, as they take a moment or open Android's Bluetooth profiles or start the step counter.
             val now = System.currentTimeMillis()
             it.copy(

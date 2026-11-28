@@ -53,4 +53,10 @@
         android:id="@+id/hub_own_phone"
         style="@style/Hint"
         android:text="@string/hub_own_phone" />
+
+    <!-- Whether root adds the processor and temperatures (see Root), once known. -->
+    <TextView
+        android:id="@+id/hub_root"
+        style="@style/Hint"
+        android:visibility="gone" />
 </LinearLayout>

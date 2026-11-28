@@ -12,6 +12,8 @@
     <string name="hub_code_hint">Um ein weiteres Handy hinzuzufügen, scanne diesen Code in seiner Den-Watcher-App. Andere Geräte fügst du auf der Seite des Hubs unter Geräte hinzu.</string>
     <string name="hub_tips">Lass dieses Gerät am Ladegerät und schalte die Ladebegrenzung des Akkus ein, falls es eine hat. Gib ihm im Router eine feste Adresse und nutze in seinen WLAN-Einstellungen die eigene MAC-Adresse des Geräts, damit die anderen Geräte es weiter finden.</string>
     <string name="hub_own_phone">Dieses Gerät sendet auch seinen eigenen Akku, sein WLAN und seine Nutzung als eigenes Handy an den Hub, sobald unten die Aufzeichnung an ist.</string>
+    <string name="hub_root_on">Mit Root: Dieses Gerät sendet auch die Auslastung und den Takt seines Prozessors und seine Temperaturen.</string>
+    <string name="hub_root_off">Ohne Root: Dieses Gerät sendet, was Android jeder App gibt. Auf einem gerooteten Gerät sendet es auch Prozessor und Temperaturen, sobald Root für diese App erlaubt ist.</string>
 
     <string name="hub_channel_name">Hub</string>
     <string name="hub_channel_description">Wird angezeigt, solange der Hub auf diesem Gerät läuft</string>

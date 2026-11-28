@@ -64,4 +64,18 @@ class DataChoiceTest {
         assertTrue(reading.limitedTo(noNetwork).traffic.isEmpty())
         assertEquals(0L, reading.limitedTo(noSystem).memoryTotalBytes)
     }
+
+    @Test
+    fun keepsTheProcessorWithTheSystemAndTheTemperaturesWithTheHeat() {
+        val rooted = reading.copy(processor = Processor(30.0, listOf(30.0), null), sensors = listOf(Sensor("gpuss-0", 39.8)))
+        assertEquals(rooted, rooted.limitedTo(DataChoice()))
+        val noHeat = rooted.limitedTo(DataChoice(thermal = false))
+        assertEquals(rooted.processor, noHeat.processor)
+        assertTrue(noHeat.sensors.isEmpty())
+        assertNull(rooted.limitedTo(DataChoice(system = false)).processor)
+        assertFalse(DataChoice(thermal = false).keeps("temperature:gpuss-0"))
+        assertTrue(DataChoice(thermal = false).keeps("temperature:battery"))
+        assertFalse(DataChoice(system = false).keeps("cpu"))
+        assertTrue(DataChoice(network = false).keeps("cpu"))
+    }
 }
