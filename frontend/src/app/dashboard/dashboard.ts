@@ -482,7 +482,8 @@ export class Dashboard {
     const fixed = (kind: keyof typeof CARD_TITLES, category: Category, shows: unknown) =>
       shows ? [{ id: kind, kind, category }] : [];
     return [
-      ...fixed('cpu', 'system', !readsLess || s.cpu.cores > 0),
+      // No cores is no processor to show, also of the hub in the Android app, which cannot read it.
+      ...fixed('cpu', 'system', s.cpu.cores > 0),
       ...fixed('memory', 'system', !readsLess || s.memory.totalBytes > 0),
       ...fixed('disks', 'storage', !readsLess || s.disks.length > 0),
       ...fixed('diskActivity', 'storage', hasDiskActivity(s)),

@@ -1580,6 +1580,18 @@ describe('Dashboard', () => {
     expect(titles).not.toContain('Network');
   });
 
+  it('leaves out the processor of a hub in the Android app, which cannot read it', () => {
+    respond({ ...snapshot, cpu: { usagePercent: 0, cores: 0 } });
+
+    const titles = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.card h3'),
+      (h) => shown(h).trim(),
+    );
+    expect(titles).not.toContain('CPU');
+    expect(titles).toContain('Memory');
+    expect(titles).toContain('Disks');
+  });
+
   it('shows how long another device was offline since it was added', () => {
     vi.setSystemTime(new Date('2026-10-02T12:00:00Z'));
     respond(snapshot);

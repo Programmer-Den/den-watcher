@@ -78,6 +78,19 @@ func TestTemperaturesOfNumbersSensorsWithTheSameName(t *testing.T) {
 	}
 }
 
+func TestWithoutCPUTimesOnlyAndroidCarriesOn(t *testing.T) {
+	failure := errors.New("the OS reported no CPU times")
+	usage, err := withoutCPUTimes("android", failure)
+	if err != nil || usage.Cores != 0 || usage.UsagePercent != 0 {
+		t.Errorf(`withoutCPUTimes("android") = %+v, %v, want no processor and no error`, usage, err)
+	}
+	for _, goos := range []string{"linux", "windows", "darwin"} {
+		if _, err := withoutCPUTimes(goos, failure); !errors.Is(err, failure) {
+			t.Errorf("withoutCPUTimes(%q) error = %v, want %v", goos, err, failure)
+		}
+	}
+}
+
 func TestBusyPercent(t *testing.T) {
 	previous := cpu.TimesStat{User: 100, System: 50, Idle: 800, Iowait: 50}
 	tests := []struct {
