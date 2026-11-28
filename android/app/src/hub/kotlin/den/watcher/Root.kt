@@ -101,18 +101,36 @@ object Root {
         fields[0] to CpuTimes(times.sum() - idle, times.sum())
     }.toMap()
 
+    /** Below this, a thermal zone's value is taken as whole degrees. */
+    private const val DEGREES_BELOW = 200L
+
+    /** Below this, and from DEGREES_BELOW, a thermal zone's value is taken as tenths of a degree. */
+    private const val TENTHS_BELOW = 2_000L
+
     /**
-     * The thermal zones that tell a temperature, by their name, in °C from
-     * the millidegrees Linux keeps; a name used again gets its count, as
-     * den-watcher numbers sensors of the same name. The battery's zone is
-     * left out, as Android tells its temperature already.
+     * A thermal zone's value in °C. Linux keeps millidegrees, but some
+     * Android kernels tell single zones in whole degrees (38) or in tenths
+     * (385), which as millidegrees were 0.04 °C or 0.4 °C. No zone of a
+     * running device is colder than 2 °C, so a value that small is one of
+     * those.
+     */
+    internal fun toCelsius(value: Long): Double = when {
+        value < DEGREES_BELOW -> value.toDouble()
+        value < TENTHS_BELOW -> value / 10.0
+        else -> value / 1000.0
+    }
+
+    /**
+     * The thermal zones that tell a temperature, by their name, in °C (see
+     * toCelsius); a name used again gets its count, as den-watcher numbers
+     * sensors of the same name. The battery's zone is left out, as Android
+     * tells its temperature already.
      */
     private fun sensors(zones: String): List<Sensor> {
         val seen = mutableMapOf<String, Int>()
         return zones.lines().mapNotNull { line ->
             val name = line.substringBeforeLast(' ').trim()
-            val milli = line.substringAfterLast(' ').trim().toLongOrNull() ?: return@mapNotNull null
-            val celsius = milli / 1000.0
+            val celsius = toCelsius(line.substringAfterLast(' ').trim().toLongOrNull() ?: return@mapNotNull null)
             if (name.isEmpty() || name == Reading.BATTERY_SENSOR || celsius <= 0 || celsius > MAX_CELSIUS) {
                 return@mapNotNull null
             }

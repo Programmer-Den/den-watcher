@@ -22,6 +22,20 @@ object HubAddress {
     /** Returns the hub's page for the saved address, or null as pushUrl does. */
     fun pageUrl(typed: String): String? = origin(typed)?.let { "$it/" }
 
+    /**
+     * Whether the address is this device itself: 127.0.0.1, localhost or
+     * ::1, as the hub in the hub app is for the app's own recording. No
+     * network lies between the two, so what the app does about networks,
+     * such as sending only without a data limit, does not apply to it.
+     */
+    fun onThisDevice(typed: String): Boolean {
+        val host = origin(typed)?.removePrefix("http://")?.substringBeforeLast(':') ?: return false
+        return host.equals("localhost", ignoreCase = true) || host == "[::1]" || LOOPBACK_IPV4.matches(host)
+    }
+
+    /** An IPv4 address of the device itself, 127.0.0.0/8. */
+    private val LOOPBACK_IPV4 = Regex("127(\\.\\d{1,3}){3}")
+
     /** http://host:port for an address, or null. */
     private fun origin(typed: String): String? {
         var address = typed.trim().trimEnd('/')

@@ -32,9 +32,6 @@ import java.util.concurrent.Executors
  */
 class HubService : Service() {
     private val handler = Handler(Looper.getMainLooper())
-
-    /** Starts and stops the hub, which can take a few seconds, off the main thread. */
-    private val worker: ExecutorService = Executors.newSingleThreadExecutor()
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null
     private var multicastLock: WifiManager.MulticastLock? = null
@@ -68,7 +65,6 @@ class HubService : Service() {
             HubState(this).running = false
             releaseLocks()
         }
-        worker.shutdown()
         super.onDestroy()
     }
 
@@ -140,6 +136,16 @@ class HubService : Service() {
     companion object {
         const val NOTIFICATION_ID = 2
         private const val CHANNEL = "hub"
+
+        /**
+         * Starts and stops the hub, which can take a few seconds, off the
+         * main thread. One for every instance of the service, so the stop of
+         * one that was switched off runs before the start of the next, also
+         * while the first still waits to see whether its hub stays up: with
+         * a worker each, the new one found the hub running, and the old
+         * one's stop then ended it until the next check.
+         */
+        private val worker: ExecutorService = Executors.newSingleThreadExecutor()
 
         /** How often the service checks that the hub still runs. */
         private const val CHECK_MILLIS = 60_000L

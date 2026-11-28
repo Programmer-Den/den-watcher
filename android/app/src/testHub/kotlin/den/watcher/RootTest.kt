@@ -49,6 +49,23 @@ class RootTest {
     }
 
     @Test
+    fun readsZonesInWholeDegreesAndInTenths() {
+        val zones = "xo-therm 38\nquiet-therm 385\npa-therm 38500\nodd 1999\noff 0\nbroken 200000"
+        val reading = Root.parse(output.replace("cpu-0-0-usr 41200", zones))!!
+        assertEquals(
+            listOf(
+                Sensor("xo-therm", 38.0),
+                Sensor("quiet-therm", 38.5),
+                Sensor("pa-therm", 38.5),
+                // 199.9 °C in tenths is no temperature.
+                Sensor("gpuss-0", 39.8),
+                Sensor("cpu-0-0-usr", 43.0),
+            ),
+            reading.sensors,
+        )
+    }
+
+    @Test
     fun countsOnlyTheCoresOnInBothReadings() {
         val reading = Root.parse(output.replace("cpu1 100 0 100 650 150 0 0 0 0 0", ""))!!
         assertEquals(listOf(40.0), reading.processor.coreUsagePercent)
