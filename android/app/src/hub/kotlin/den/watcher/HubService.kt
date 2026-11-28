@@ -70,9 +70,20 @@ class HubService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    /** Starts the hub unless it runs, and keeps how it went for the screen. */
+    /**
+     * Starts the hub unless it runs, and keeps how it went for the screen.
+     * Each time, also while it runs, the hub is told the network's DNS
+     * servers and this device's addresses, which it cannot read on Android
+     * and which change with the network: a hub started before the Wi-Fi was
+     * up, as after the device started, has neither yet.
+     */
     private fun keepRunning() {
         val state = HubState(this)
+        try {
+            Mobile.setNetwork(LanAddress.dnsServers(this), LanAddress.addresses(this))
+        } catch (_: Exception) {
+            // An address the hub cannot read: it keeps the network it was told before.
+        }
         if (Mobile.running()) {
             state.running = true
             return

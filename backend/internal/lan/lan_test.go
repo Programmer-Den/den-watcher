@@ -143,3 +143,33 @@ func TestControlRefusesAddressesOutsideTheLocalNetwork(t *testing.T) {
 		t.Error("Control(8.8.8.8) = nil, want an error")
 	}
 }
+
+func TestInterfaceAddrsFallsBackOnTheAddressesToldWhereTheSystemRefuses(t *testing.T) {
+	system, before := systemAddrs, told.Load()
+	t.Cleanup(func() {
+		systemAddrs = system
+		told.Store(before)
+	})
+	refused := errors.New("netlinkrib: permission denied")
+	systemAddrs = func() ([]net.Addr, error) { return nil, refused }
+	told.Store(nil)
+
+	if _, err := InterfaceAddrs(); !errors.Is(err, refused) {
+		t.Fatalf("InterfaceAddrs() error = %v with nothing told, want the system's", err)
+	}
+	addrs, _ := ownAddresses()
+	SetAddresses(addrs)
+	if got, err := InterfaceAddrs(); err != nil || len(got) != len(addrs) {
+		t.Fatalf("InterfaceAddrs() = %v, %v, want the %d addresses told", got, err, len(addrs))
+	}
+	// A provider's IPv6 subnet counts as local from the addresses told.
+	if checker := (&Checker{}); !checker.Local(netip.MustParseAddr("2001:db8:1:2::20")) {
+		t.Error("Local() = false for a device in the subnet told, want true")
+	}
+
+	// What the system lists itself comes first.
+	systemAddrs = func() ([]net.Addr, error) { return addrs[:1], nil }
+	if got, err := InterfaceAddrs(); err != nil || len(got) != 1 {
+		t.Errorf("InterfaceAddrs() = %v, %v, want the system's own list", got, err)
+	}
+}
