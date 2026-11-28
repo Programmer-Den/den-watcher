@@ -40,6 +40,16 @@ class HubScreenshots {
     @Test
     fun german() = shot("hub-5-german", "de") { running = true }
 
+    @Test
+    fun rooted() {
+        Root.granted = true
+        try {
+            shot("hub-6-rooted") { running = true }
+        } finally {
+            Root.granted = null
+        }
+    }
+
     /** Saves the main screen with the hub as set, as <name>-light.png and <name>-dark.png. */
     private fun shot(name: String, language: String? = null, recording: Boolean = false, set: HubState.() -> Unit) {
         folder.mkdirs()

@@ -3,7 +3,8 @@ package den.watcher
 /**
  * Which data the app collects, as chosen under Which data do you want to
  * collect, in the same groups as den-watcher's installers: System basics
- * (the battery, memory and storage, and the phone's heat) and Network (the
+ * (the battery, memory and storage, and the phone's heat, and in a rooted hub app
+ * the processor and the other temperatures) and Network (the
  * traffic and signal of Wi-Fi and mobile data, the Wi-Fi networks nearby, and the Wi-Fi
  * networks the phone was connected to and when), and App usage (the screen
  * time, which apps were used and how long, the unlocks and the data each
@@ -48,6 +49,8 @@ data class DataChoice(
         name == "battery" || name == "temperature:${Reading.BATTERY_SENSOR}" -> collectsBattery
         name.startsWith("extra:${Health.BATTERY}/") -> collectsBattery
         name.startsWith("extra:${Health.THERMAL}/") -> collectsThermal
+        name.startsWith("temperature:") -> collectsThermal
+        name == "cpu" -> system
         name == "memory" -> collectsMemory
         name.startsWith("disk:") -> collectsStorage
         name.startsWith("network.") -> collectsTraffic
@@ -80,4 +83,6 @@ fun Reading.limitedTo(choice: DataChoice): Reading = copy(
     mobileSignal = mobileSignal.takeIf { choice.collectsTraffic },
     bluetooth = bluetooth.takeIf { choice.collectsBluetooth },
     steps = steps.takeIf { choice.collectsSteps },
+    processor = processor.takeIf { choice.system },
+    sensors = if (choice.collectsThermal) sensors else emptyList(),
 )

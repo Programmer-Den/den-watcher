@@ -10,6 +10,16 @@ data class Traffic(val received: Long, val sent: Long)
 data class Rates(val receive: Double, val send: Double)
 
 /**
+ * How busy the processor was, in all and per core, in percent, and its
+ * highest clock in MHz, or null when unknown. Android lets no app read it,
+ * so only the hub app reads it, on a rooted device.
+ */
+data class Processor(val usagePercent: Double, val coreUsagePercent: List<Double>, val clockMHz: Double?)
+
+/** The temperature of one sensor, as den-watcher names it. */
+data class Sensor(val name: String, val celsius: Double)
+
+/**
  * One reading of the phone. Times are Unix seconds on the phone's clock;
  * null is a value the phone does not tell.
  */
@@ -43,6 +53,10 @@ data class Reading(
     val bluetooth: List<BluetoothDevice>? = null,
     /** The steps counted today. */
     val steps: Long? = null,
+    /** The processor, which only a rooted hub app reads. */
+    val processor: Processor? = null,
+    /** The temperatures besides the battery's, which only a rooted hub app reads. */
+    val sensors: List<Sensor> = emptyList(),
 ) {
     val memoryUsedBytes: Long get() = (memoryTotalBytes - memoryAvailableBytes).coerceAtLeast(0)
     val memoryUsedPercent: Double get() = percent(memoryUsedBytes, memoryTotalBytes)
@@ -74,11 +88,14 @@ data class Reading(
     /**
      * The values the hub keeps in its history, named as den-watcher names
      * them: the battery's charge and temperature, memory and storage used in
-     * percent, and each network's speed.
+     * percent, and each network's speed, and on a rooted hub app the
+     * processor's usage and the other temperatures.
      */
     fun values(rates: Map<String, Rates>): Map<String, Double> = buildMap {
+        processor?.let { put("cpu", it.usagePercent) }
         batteryPercent?.let { put("battery", it) }
         batteryCelsius?.let { put("temperature:$BATTERY_SENSOR", it) }
+        sensors.forEach { put("temperature:${it.name}", it.celsius) }
         if (memoryTotalBytes > 0) put("memory", memoryUsedPercent)
         if (storageTotalBytes > 0) put("disk:$STORAGE_PATH", storageUsedPercent)
         for ((name, rate) in rates) {
@@ -102,8 +119,8 @@ data class Reading(
 
     /**
      * The reading as the hub's page shows it, in the form of den-watcher's
-     * own: no processor, which an app cannot read, so it tells no cores and
-     * the page leaves the processor out.
+     * own. Without the processor, which an app cannot read without root, it
+     * tells no cores and the page leaves the processor out.
      */
     fun snapshot(rates: Map<String, Rates>, device: DeviceInfo): JSONObject = JSONObject().apply {
         put("name", device.name)
@@ -111,7 +128,16 @@ data class Reading(
         put("time", java.time.Instant.ofEpochSecond(time).toString())
         put("timeZone", JSONObject().put("name", device.timeZoneName).put("offsetSeconds", device.timeZoneOffsetSeconds))
         put("uptimeSeconds", uptimeSeconds)
-        put("cpu", JSONObject().put("usagePercent", 0).put("cores", 0))
+        put(
+            "cpu",
+            processor?.let {
+                JSONObject()
+                    .put("usagePercent", it.usagePercent)
+                    .put("cores", it.coreUsagePercent.size)
+                    .put("coreUsagePercent", JSONArray(it.coreUsagePercent))
+                    .apply { it.clockMHz?.let { clock -> put("clockMHz", clock) } }
+            } ?: JSONObject().put("usagePercent", 0).put("cores", 0),
+        )
         put(
             "memory",
             JSONObject()
@@ -124,6 +150,7 @@ data class Reading(
             "temperatures",
             JSONArray().apply {
                 batteryCelsius?.let { put(JSONObject().put("sensor", BATTERY_SENSOR).put("celsius", it)) }
+                sensors.forEach { put(JSONObject().put("sensor", it.name).put("celsius", it.celsius)) }
             },
         )
         put(

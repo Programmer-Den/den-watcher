@@ -22,6 +22,26 @@ class HubCardTest {
     @After
     fun resetAddress() {
         LanAddress.lookup = { null }
+        Root.granted = null
+    }
+
+    @Test
+    fun tellsWhetherRootAddsDataOnceKnown() {
+        for ((granted, text) in listOf(null to null, true to "With root:", false to "Without root:")) {
+            Root.granted = granted
+            val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+            try {
+                val root = controller.get().findViewById<TextView>(R.id.hub_root)
+                if (text == null) {
+                    assertEquals(View.GONE, root.visibility)
+                } else {
+                    assertEquals(View.VISIBLE, root.visibility)
+                    assertTrue(root.text.startsWith(text))
+                }
+            } finally {
+                controller.pause().stop().destroy()
+            }
+        }
     }
 
     @Test

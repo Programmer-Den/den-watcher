@@ -15,6 +15,8 @@
     <string name="hub_code_hint">To add another phone, scan this code in its Den-Watcher app. Other devices are added on the hub\'s page, under Devices.</string>
     <string name="hub_tips">Keep this device on its charger with the battery\'s charge limit on, if it has one. Give it a fixed address on your router, and in its Wi-Fi settings use the device\'s own MAC address, so the other devices keep finding it.</string>
     <string name="hub_own_phone">This device also sends its own battery, Wi-Fi and use to the hub, as a phone of its own, once recording is on below.</string>
+    <string name="hub_root_on">With root: this device also sends how busy its processor is, its clock and its temperatures.</string>
+    <string name="hub_root_off">Without root: this device sends what Android gives every app. On a rooted device it also sends its processor and temperatures, once root is allowed for this app.</string>
 
     <string name="hub_channel_name">Hub</string>
     <string name="hub_channel_description">Shown while the hub runs on this device</string>

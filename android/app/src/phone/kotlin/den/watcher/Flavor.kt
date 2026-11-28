@@ -1,6 +1,7 @@
 package den.watcher
 
 import android.app.Activity
+import android.content.Context
 
 /**
  * What the app adds to the main screen besides recording: nothing in the
@@ -12,4 +13,7 @@ object Flavor {
 
     /** Called by MainActivity each time it shows its status again. */
     fun onShow(activity: Activity) {}
+
+    /** Called by Recorder with each reading, to add what the app reads beyond Sampler: nothing here. */
+    fun read(context: Context, reading: Reading): Reading = reading
 }

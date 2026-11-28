@@ -2,6 +2,7 @@ package den.watcher
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
@@ -87,7 +88,19 @@ object Flavor {
         // Only while this device's recording sends to its own hub.
         card.findViewById<View>(R.id.hub_own_phone).visibility =
             if (Settings(activity).hubAddress == HubConfig.LOCAL_ADDRESS) View.VISIBLE else View.GONE
+        // Known once the recording took its first reading.
+        val root = card.findViewById<TextView>(R.id.hub_root)
+        when (Root.granted) {
+            true -> root.setText(R.string.hub_root_on)
+            false -> root.setText(R.string.hub_root_off)
+            null -> {}
+        }
+        root.visibility = if (Root.granted == null) View.GONE else View.VISIBLE
     }
+
+    /** Adds what root reads to the phone part's reading, on a rooted device. */
+    fun read(context: Context, reading: Reading): Reading =
+        Root.read()?.let { reading.copy(processor = it.processor, sensors = it.sensors) } ?: reading
 
     /** The code of the page's address, as the phone app scans it from the hub's page, or null. */
     private fun drawCode(page: String): Bitmap? = try {
