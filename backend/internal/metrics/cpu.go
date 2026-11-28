@@ -38,11 +38,11 @@ func (c *Collector) readCPUUsage(ctx context.Context) (CPU, error) {
 	// The times of each core come from the same file or call as the total, so
 	// reading them costs no more than the total alone.
 	perCore, err := cpu.TimesWithContext(ctx, true)
-	if err != nil {
-		return CPU{}, err
+	if err == nil && len(perCore) == 0 {
+		err = errors.New("the OS reported no CPU times")
 	}
-	if len(perCore) == 0 {
-		return CPU{}, errors.New("the OS reported no CPU times")
+	if err != nil {
+		return withoutCPUTimes(runtime.GOOS, err)
 	}
 	sum := sumTimes(perCore)
 
@@ -64,6 +64,17 @@ func (c *Collector) readCPUUsage(ctx context.Context) (CPU, error) {
 	}
 	c.cpuTimes, c.coreTimes = sum, perCore
 	return usage, nil
+}
+
+// withoutCPUTimes is the processor of a reading whose CPU times could not be
+// read, for err. Android lets no app read them (/proc/stat), so the hub in
+// the Android app tells no processor, as a phone does, and still reads the
+// memory and the storage; anywhere else the reading fails.
+func withoutCPUTimes(goos string, err error) (CPU, error) {
+	if goos == "android" {
+		return CPU{}, nil
+	}
+	return CPU{}, err
 }
 
 // waitPercents returns how much of the time between two readings the
