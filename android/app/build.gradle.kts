@@ -23,6 +23,23 @@ android {
         versionName = appVersion
     }
 
+    // Two apps from the same code: the phone app, and the hub app, which is
+    // the phone app plus a den-watcher hub running in its own process (src/hub).
+    flavorDimensions += "app"
+    productFlavors {
+        create("phone") {
+            dimension = "app"
+        }
+        create("hub") {
+            dimension = "app"
+            applicationIdSuffix = ".hub"
+            // The hub library is built for arm64 only.
+            ndk {
+                abiFilters += "arm64-v8a"
+            }
+        }
+    }
+
     signingConfigs {
         if (keystore != null) {
             create("release") {
@@ -67,6 +84,9 @@ dependencies {
     // Scans the code on the hub's page that holds its address, with the
     // camera, without Google Play services.
     implementation(libs.zxing.embedded)
+    // The den-watcher hub, built from backend/mobile with gomobile bind into
+    // libs/ before Gradle runs, as the Android app workflow does.
+    "hubImplementation"(files("libs/den-watcher-hub.aar"))
     testImplementation(libs.junit)
     // Android's own org.json is only a stub in unit tests.
     testImplementation(libs.json)
@@ -77,11 +97,13 @@ dependencies {
 // Screenshots are taken only when asked for, with -Pscreenshots=<folder>, as
 // Robolectric first downloads a whole Android for them.
 val screenshots = providers.gradleProperty("screenshots").orNull
+// The hub app's own screenshots are HubScreenshots (src/testHub).
 tasks.withType<Test>().configureEach {
     if (screenshots == null) {
         filter.excludeTestsMatching("den.watcher.Screenshots")
+        filter.excludeTestsMatching("den.watcher.HubScreenshots")
     } else {
-        filter.includeTestsMatching("den.watcher.Screenshots")
+        filter.includeTestsMatching(if (name.contains("Hub")) "den.watcher.HubScreenshots" else "den.watcher.Screenshots")
         systemProperty("screenshots", file(screenshots).absolutePath)
     }
 }

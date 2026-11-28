@@ -44,6 +44,7 @@ class MainActivity : Activity() {
     private val refresh = object : Runnable {
         override fun run() {
             showStatus()
+            Flavor.onShow(this@MainActivity)
             handler.postDelayed(this, REFRESH_MILLIS)
         }
     }
@@ -54,6 +55,8 @@ class MainActivity : Activity() {
         settings = Settings(this)
 
         findViewById<TextView>(R.id.code).text = PairingCode.format(settings.code)
+        // The hub app's hub, before the rest reads the settings it may set.
+        Flavor.onCreate(this)
 
         address = findViewById(R.id.address)
         addressHint = findViewById(R.id.address_hint)

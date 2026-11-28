@@ -31,11 +31,12 @@ require (
 	github.com/urfave/cli/v2 v2.25.7 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	golang.org/x/image v0.46.0 // indirect
-	golang.org/x/mod v0.42.0 // indirect
-	golang.org/x/sync v0.24.0 // indirect
-	golang.org/x/telemetry v0.0.0-20261009151841-97e8ea77aa2a // indirect
-	golang.org/x/tools v0.52.0 // indirect
+	golang.org/x/image v0.48.0 // indirect
+	golang.org/x/mobile v0.0.0-20261117202452-47699113848a // indirect
+	golang.org/x/mod v0.43.0 // indirect
+	golang.org/x/sync v0.25.0 // indirect
+	golang.org/x/telemetry v0.0.0-20261116191925-e77a43154acb // indirect
+	golang.org/x/tools v0.53.0 // indirect
 	golang.org/x/vuln v1.8.0 // indirect
 	modernc.org/libc v1.80.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
@@ -44,5 +45,7 @@ require (
 
 tool (
 	github.com/tc-hib/go-winres
+	golang.org/x/mobile/cmd/gobind
+	golang.org/x/mobile/cmd/gomobile
 	golang.org/x/vuln/cmd/govulncheck
 )

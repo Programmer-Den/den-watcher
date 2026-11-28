@@ -7,3 +7,5 @@ local.properties
 # A release key never goes into the repository.
 *.jks
 *.keystore
+# The hub library, built by gomobile bind (see the Android app workflow).
+app/libs/
